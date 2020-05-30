@@ -117,14 +117,14 @@ defmodule AshGraphql.Api.Schema do
   defp resource_types(api) do
     api
     |> Ash.resources()
-    |> Enum.filter(&(AshGraphql.GraphqlResource in &1.mix_ins))
+    |> Enum.filter(&(AshGraphql.GraphqlResource in &1.extensions))
     |> Enum.flat_map(&resource_types(api, &1))
   end
 
   defp add_query_fields(acc, api) do
     api
     |> Ash.resources()
-    |> Enum.filter(&(AshGraphql.GraphqlResource in &1.mix_ins))
+    |> Enum.filter(&(AshGraphql.GraphqlResource in &1.extensions))
     |> Enum.flat_map(&query_fields(api, &1))
     |> Enum.reduce(acc, fn query_field, acc ->
       Map.put(acc, query_field.identifier, query_field)
@@ -269,7 +269,6 @@ defmodule AshGraphql.Api.Schema do
           limit: %Absinthe.Type.Argument{
             identifier: :limit,
             type: :integer,
-            default_value: Ash.max_page_size(api, resource),
             name: "limit"
           },
           offset: %Absinthe.Type.Argument{

@@ -1,7 +1,7 @@
 defmodule AshGraphql.Api do
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
-      @mix_ins AshGraphql.Api
+      @extensions AshGraphql.Api
       @authorize Keyword.get(opts, :authorize?, true)
       @max_complexity Keyword.get(opts, :max_complexity, 50)
     end

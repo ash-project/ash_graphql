@@ -1,7 +1,7 @@
 defmodule AshGraphql.GraphqlResource do
   defmacro __using__(_) do
     quote do
-      @mix_ins AshGraphql.GraphqlResource
+      @extensions AshGraphql.GraphqlResource
     end
   end
 
