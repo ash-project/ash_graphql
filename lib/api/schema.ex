@@ -133,17 +133,111 @@ defmodule AshGraphql.Api.Schema do
 
   defp query_fields(api, resource) do
     resource
-    |> Ash.actions()
-    |> Enum.flat_map(fn action ->
-      case action do
-        %{type: :read, primary?: true} ->
-          read_action(api, resource, action)
+    |> AshGraphql.fields()
+    |> Enum.map(fn field ->
+      get_one_identifier = AshGraphql.type(resource)
 
-        _ ->
-          # TODO: Only support reads
-          []
+      case field.type do
+        :get ->
+          %Absinthe.Type.Field{
+            __private__: [],
+            __reference__: %{
+              location: %{file: "nofile", line: 1},
+              module: AshExample.Api.Schema
+            },
+            args: %{
+              id: %Absinthe.Type.Argument{
+                __reference__: nil,
+                default_value: nil,
+                definition: nil,
+                deprecation: nil,
+                description: nil,
+                identifier: :id,
+                name: "id",
+                type: %Absinthe.Type.NonNull{of_type: :id}
+              }
+            },
+            # TODO: DO THIS
+            complexity: 2,
+            config: %{},
+            default_value: nil,
+            definition: AshExample.Api.Schema,
+            deprecation: nil,
+            description: nil,
+            identifier: field.name,
+            middleware: [
+              {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, :get, field.action}}
+            ],
+            name: Atom.to_string(field.name),
+            triggers: [],
+            type: get_one_identifier
+          }
+
+        :read ->
+          %Absinthe.Type.Field{
+            __private__: [],
+            __reference__: %{
+              location: %{file: "nofile", line: 1},
+              module: AshExample.Api.Schema
+            },
+            args: %{
+              limit: %Absinthe.Type.Argument{
+                identifier: :limit,
+                type: :integer,
+                name: "limit"
+              },
+              offset: %Absinthe.Type.Argument{
+                identifier: :offset,
+                default_value: 0,
+                type: :integer,
+                name: "offset"
+              }
+              # TODO: Generate types for the filter, sort, and paginate args
+              # Also figure out graphql pagination
+              # filter: %Absinthe.Type.Argument
+              # id: %Absinthe.Type.Argument{
+              #   __reference__: nil,
+              #   default_value: nil,
+              #   definition: nil,
+              #   deprecation: nil,
+              #   description: nil,
+              #   identifier: :id,
+              #   name: "id",
+              #   type: %Absinthe.Type.NonNull{of_type: :id}
+              # }
+            },
+            complexity: 1,
+            config: %{},
+            default_value: nil,
+            definition: AshExample.Api.Schema,
+            deprecation: nil,
+            description: nil,
+            identifier: field.name,
+            middleware: [
+              {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, :read, field.action}}
+            ],
+            name: Atom.to_string(field.name),
+            triggers: [],
+            type: String.to_atom("page_of_#{get_one_identifier}")
+          }
       end
     end)
+
+    # for field <- AshGraphql.fields(resource) do
+
+    # end
+    # resource
+    # |> Ash.actions()
+    # |> Enum.flat_map(fn action ->
+    #   case action do
+    #     %{type: :read, primary?: true} ->
+    #       read_action(api, resource, action)
+
+    #     _ ->
+    #       # TODO: Only support reads
+    #       []
+    #   end
+    # end)
   end
 
   # defp resource_types(api, resource) do
@@ -164,8 +258,7 @@ defmodule AshGraphql.Api.Schema do
     #       raise "Invalid primary key #{primary_key} for graphql resource"
     #   end
 
-    get_one_identifier = String.to_atom(Ash.type(resource))
-    get_many_identifier = String.to_atom(Ash.name(resource))
+    get_one_identifier = AshGraphql.type(resource)
 
     [
       %Absinthe.Type.Object{
@@ -187,7 +280,7 @@ defmodule AshGraphql.Api.Schema do
         is_type_of: :object,
         name: String.capitalize(Atom.to_string(get_one_identifier))
       },
-      page_of(get_one_identifier, get_many_identifier)
+      page_of(get_one_identifier)
     ]
   end
 
@@ -220,95 +313,7 @@ defmodule AshGraphql.Api.Schema do
     # }
   end
 
-  defp read_action(api, resource, action) do
-    # If not primary action, we need to give it a different name
-    get_one_identifier = String.to_atom(Ash.type(resource))
-    get_many_identifier = String.to_atom(Ash.name(resource))
-
-    [
-      %Absinthe.Type.Field{
-        __private__: [],
-        __reference__: %{
-          location: %{file: "nofile", line: 1},
-          module: AshExample.Api.Schema
-        },
-        args: %{
-          id: %Absinthe.Type.Argument{
-            __reference__: nil,
-            default_value: nil,
-            definition: nil,
-            deprecation: nil,
-            description: nil,
-            identifier: :id,
-            name: "id",
-            type: %Absinthe.Type.NonNull{of_type: :id}
-          }
-        },
-        # TODO: DO THIS
-        complexity: 2,
-        config: %{},
-        default_value: nil,
-        definition: AshExample.Api.Schema,
-        deprecation: nil,
-        description: nil,
-        identifier: get_one_identifier,
-        middleware: [
-          {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, :get, action.name}}
-        ],
-        name: Atom.to_string(get_one_identifier),
-        triggers: [],
-        type: get_one_identifier
-      },
-      %Absinthe.Type.Field{
-        __private__: [],
-        __reference__: %{
-          location: %{file: "nofile", line: 1},
-          module: AshExample.Api.Schema
-        },
-        args: %{
-          limit: %Absinthe.Type.Argument{
-            identifier: :limit,
-            type: :integer,
-            name: "limit"
-          },
-          offset: %Absinthe.Type.Argument{
-            identifier: :offset,
-            default_value: 0,
-            type: :integer,
-            name: "offset"
-          }
-          # TODO: Generate types for the filter, sort, and paginate args
-          # Also figure out graphql pagination
-          # filter: %Absinthe.Type.Argument
-          # id: %Absinthe.Type.Argument{
-          #   __reference__: nil,
-          #   default_value: nil,
-          #   definition: nil,
-          #   deprecation: nil,
-          #   description: nil,
-          #   identifier: :id,
-          #   name: "id",
-          #   type: %Absinthe.Type.NonNull{of_type: :id}
-          # }
-        },
-        complexity: 1,
-        config: %{},
-        default_value: nil,
-        definition: AshExample.Api.Schema,
-        deprecation: nil,
-        description: nil,
-        identifier: get_many_identifier,
-        middleware: [
-          {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, :read, action.name}}
-        ],
-        name: Atom.to_string(get_many_identifier),
-        triggers: [],
-        type: String.to_atom("page_of_#{get_many_identifier}")
-      }
-    ]
-  end
-
-  defp page_of(get_one_identifier, get_many_identifier) do
+  defp page_of(get_one_identifier) do
     %Absinthe.Type.Object{
       __private__: [__absinthe_referenced__: true],
       __reference__: %{
@@ -316,7 +321,7 @@ defmodule AshGraphql.Api.Schema do
         module: AshExample.Api.Schema
       },
       definition: AshExample.Api.Schema,
-      description: "A page of #{get_many_identifier}",
+      description: "A page of #{get_one_identifier}",
       fields: %{
         __typename: type_name_type(),
         offset: %Absinthe.Type.Field{
@@ -384,10 +389,10 @@ defmodule AshGraphql.Api.Schema do
           }
         }
       },
-      identifier: String.to_atom("page_of_#{get_many_identifier}"),
+      identifier: String.to_atom("page_of_#{get_one_identifier}"),
       interfaces: [],
       is_type_of: :object,
-      name: "pageOf#{String.capitalize(Atom.to_string(get_many_identifier))}"
+      name: "pageOf#{String.capitalize(Atom.to_string(get_one_identifier))}"
     }
   end
 

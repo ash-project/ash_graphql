@@ -3,12 +3,14 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{id: id}, context: context} = resolution,
         {api, resource, :get, action}
       ) do
-    result =
-      api.get(resource, id,
-        action: action,
-        authorize?: api.graphql_authorize?,
-        actor: Map.get(context, :actor)
-      )
+    opts =
+      if api.graphql_authorize?() do
+        [actor: Map.get(context, :actor), action: action]
+      else
+        [action: action]
+      end
+
+    result = api.get(resource, id, opts)
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
   end
@@ -17,16 +19,19 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{limit: limit, offset: offset}, context: context} = resolution,
         {api, resource, :read, action}
       ) do
+    opts =
+      if api.graphql_authorize?() do
+        [actor: Map.get(context, :actor), action: action]
+      else
+        [action: action]
+      end
+
     result =
       resource
       |> api.query
       |> Ash.Query.limit(limit)
       |> Ash.Query.offset(offset)
-      |> api.read(
-        action: action,
-        actor: Map.get(context, :actor),
-        authorize?: api.graphql_authorize?()
-      )
+      |> api.read(opts)
       |> case do
         {:ok, results} ->
           {:ok, %AshGraphql.Paginator{results: results, limit: limit, offset: offset}}

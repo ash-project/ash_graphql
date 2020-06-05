@@ -6,6 +6,7 @@
   "elixir_make": {:hex, :elixir_make, "0.6.0", "38349f3e29aff4864352084fc736fa7fa0f2995a819a737554f7ebd28b85aaab", [:mix], [], "hexpm", "d522695b93b7f0b4c0fcb2dfe73a6b905b1c301226a5a55cb42e5b14d509e050"},
   "ets": {:hex, :ets, "0.8.0", "90153faafd289bb0801a537d5b05661f46d5e70b2bb55cccf5ab7f0d41d07832", [:mix], [], "hexpm", "bda4e05b16eada36798cfda16db551dc5243c0adc9a6dfe655b1bc1279b99cb8"},
   "machinery": {:hex, :machinery, "1.0.0", "df6968d84c651b9971a33871c78c10157b6e13e4f3390b0bee5b0e8bdea8c781", [:mix], [{:ecto, "~> 3.0", [hex: :ecto, repo: "hexpm", optional: false]}], "hexpm", "4f6eb4185a48e7245360bedf653af4acc6fa6ae8ff4690619395543fa1a8395f"},
+  "nimble_options": {:hex, :nimble_options, "0.2.1", "7eac99688c2544d4cc3ace36ee8f2bf4d738c14d031bd1e1193aab096309d488", [:mix], [], "hexpm", "ca48293609306791ce2634818d849b7defe09330adb7e4e1118a0bc59bed1cf4"},
   "nimble_parsec": {:hex, :nimble_parsec, "0.5.3", "def21c10a9ed70ce22754fdeea0810dafd53c2db3219a0cd54cf5526377af1c6", [:mix], [], "hexpm", "589b5af56f4afca65217a1f3eb3fee7e79b09c40c742fddc1c312b3ac0b3399f"},
   "picosat_elixir": {:hex, :picosat_elixir, "0.1.3", "1e4eab27786b7dc7764c307555d8943cbba82912ed943737372760377be05ec8", [:make, :mix], [{:elixir_make, "~> 0.4", [hex: :elixir_make, repo: "hexpm", optional: false]}], "hexpm", "3add4d5ea1afa49f51bb7576bae000fe88091969804cc25baf47ffec48a9c626"},
   "telemetry": {:hex, :telemetry, "0.4.1", "ae2718484892448a24470e6aa341bc847c3277bfb8d4e9289f7474d752c09c7f", [:rebar3], [], "hexpm", "4738382e36a0a9a2b6e25d67c960e40e1a2c95560b9f936d8e29de8cd858480f"},

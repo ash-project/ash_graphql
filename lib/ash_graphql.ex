@@ -3,16 +3,11 @@ defmodule AshGraphql do
   Documentation for `AshGraphql`.
   """
 
-  @doc """
-  Hello world.
+  def fields(resource) do
+    resource.graphql_fields()
+  end
 
-  ## Examples
-
-      iex> AshGraphql.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  def type(resource) do
+    resource.graphql_type()
   end
 end
