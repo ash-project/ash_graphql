@@ -1,4 +1,5 @@
 defmodule AshGraphql.Graphql.Resolver do
+  @moduledoc false
   def resolve(
         %{arguments: %{id: id}, context: context} = resolution,
         {api, resource, :get, action}
@@ -63,7 +64,7 @@ defmodule AshGraphql.Graphql.Resolver do
       |> api.read(opts)
       |> case do
         {:ok, results} ->
-          {:ok, %AshGraphql.Paginator{results: results, count: Enum.count(results)}}
+          {:ok, %{results: results, count: Enum.count(results)}}
 
         error ->
           error
@@ -229,7 +230,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_assoc(%{source: parent} = resolution, {:many, name}) do
     values = Map.get(parent, name)
-    paginator = %AshGraphql.Paginator{results: values, count: Enum.count(values)}
+    paginator = %{results: values, count: Enum.count(values)}
 
     Absinthe.Resolution.put_result(resolution, {:ok, paginator})
   end

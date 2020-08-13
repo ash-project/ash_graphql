@@ -1,6 +1,9 @@
 defmodule AshGraphql do
   @moduledoc """
-  Documentation for `AshGraphql`.
+  AshGraphql is a graphql front extension for the Ash framework.
+
+  See the getting started guide for information on setting it up, and
+  see the `AshGraphql.Resource` documentation for docs on its DSL
   """
 
   defmacro __using__(opts) do
