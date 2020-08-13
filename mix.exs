@@ -21,8 +21,21 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:absinthe, "~> 1.5.0-rc.5"},
+      {:absinthe, "~> 1.5.2"},
+      {:jason, "~> 1.2"},
       {:ash, path: "../ash"}
     ]
   end
 end
+
+# defmodule Foo do
+#   use Absinthe.Schema.Notation
+
+#   object :foo do
+#     field :item, :string do
+#       resolve fn _, _, _ ->
+#         "hello"
+#       end
+#     end
+#   end
+# end
