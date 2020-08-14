@@ -77,14 +77,7 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{input: input}, context: context} = resolution,
         {api, resource, :create, action}
       ) do
-    {attributes, relationships} =
-      Enum.reduce(input, {%{}, %{}}, fn {key, value}, {attrs, rels} ->
-        if Ash.Resource.attribute(resource, key) do
-          {Map.put(attrs, key, value), rels}
-        else
-          {attrs, Map.put(rels, key, value)}
-        end
-      end)
+    {attributes, relationships} = split_attrs_and_rels(input, resource)
 
     selections =
       case Enum.find(resolution.definition.selections, &(&1.schema_node.identifier == :result)) do
@@ -132,15 +125,7 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, %{result: nil, errors: [to_errors("not found")]}}
 
       initial ->
-        {attributes, relationships} =
-          Enum.reduce(input, {%{}, %{}}, fn {key, value}, {attrs, rels} ->
-            if Ash.Resource.attribute(resource, key) do
-              {Map.put(attrs, key, value), rels}
-            else
-              {attrs, Map.put(rels, key, value)}
-            end
-          end)
-
+        {attributes, relationships} = split_attrs_and_rels(input, resource)
         changeset = Ash.Changeset.new(initial, attributes)
 
         changeset_with_relationships =
@@ -205,6 +190,16 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp split_attrs_and_rels(input, resource) do
+    Enum.reduce(input, {%{}, %{}}, fn {key, value}, {attrs, rels} ->
+      if Ash.Resource.attribute(resource, key) do
+        {Map.put(attrs, key, value), rels}
+      else
+        {attrs, Map.put(rels, key, value)}
+      end
+    end)
+  end
+
   defp to_errors(errors) do
     errors
     |> List.wrap()
@@ -244,36 +239,13 @@ defmodule AshGraphql.Graphql.Resolver do
           field.schema_node.identifier
 
         relationship.cardinality == :many ->
-          trimmed_nested =
-            Enum.flat_map(field.selections, fn nested ->
-              if nested.schema_node.identifier == :results do
-                nested.selections
-              else
-                [nested]
-              end
-            end)
+          trimmed_nested = nested_selections_with_pagination(field)
 
           nested_loads = load_nested(relationship.destination, trimmed_nested)
 
           query = Ash.Query.load(relationship.destination, nested_loads)
 
-          query =
-            Enum.reduce(field.arguments, query, fn
-              %{name: "limit", value: value}, query ->
-                Ash.Query.limit(query, value)
-
-              %{name: "offset", value: value}, query ->
-                Ash.Query.offset(query, value)
-
-              %{name: "filter", value: value}, query ->
-                case Jason.decode(value) do
-                  {:ok, decoded} ->
-                    Ash.Query.filter(query, to_snake_case(decoded))
-
-                  {:error, error} ->
-                    raise "Error parsing filter: #{inspect(error)}"
-                end
-            end)
+          query = apply_load_arguments(field, query)
 
           {field.schema_node.identifier, query}
 
@@ -284,6 +256,39 @@ defmodule AshGraphql.Graphql.Resolver do
           {field.schema_node.identifier, query}
       end
     end)
+  end
+
+  defp apply_load_arguments(field, query) do
+    Enum.reduce(field.arguments, query, fn
+      %{name: "limit", value: value}, query ->
+        Ash.Query.limit(query, value)
+
+      %{name: "offset", value: value}, query ->
+        Ash.Query.offset(query, value)
+
+      %{name: "filter", value: value}, query ->
+        decode_and_filter(query, value)
+    end)
+  end
+
+  defp nested_selections_with_pagination(field) do
+    Enum.flat_map(field.selections, fn nested ->
+      if nested.schema_node.identifier == :results do
+        nested.selections
+      else
+        []
+      end
+    end)
+  end
+
+  defp decode_and_filter(query, value) do
+    case Jason.decode(value) do
+      {:ok, decoded} ->
+        Ash.Query.filter(query, to_snake_case(decoded))
+
+      {:error, error} ->
+        raise "Error parsing filter: #{inspect(error)}"
+    end
   end
 
   defp to_snake_case(map) when is_map(map) do

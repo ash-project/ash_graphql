@@ -1,4 +1,15 @@
 defmodule AshGraphql.Resource do
+  @moduledoc """
+  This Ash resource extension adds configuration for exposing a resource in a graphql.
+
+  See `graphql/1` for more information
+  """
+
+  alias Ash.Dsl.Extension
+  alias Ash.Query.Aggregate
+  alias AshGraphql.Resource
+  alias AshGraphql.Resource.{Mutation, Query}
+
   @get %Ash.Dsl.Entity{
     name: :get,
     args: [:name, :action],
@@ -6,8 +17,8 @@ defmodule AshGraphql.Resource do
     examples: [
       "get :get_post, :default"
     ],
-    schema: AshGraphql.Resource.Query.get_schema(),
-    target: AshGraphql.Resource.Query,
+    schema: Query.get_schema(),
+    target: Query,
     auto_set_fields: [
       type: :get
     ]
@@ -15,13 +26,13 @@ defmodule AshGraphql.Resource do
 
   @list %Ash.Dsl.Entity{
     name: :list,
-    schema: AshGraphql.Resource.Query.list_schema(),
+    schema: Query.list_schema(),
     args: [:name, :action],
     describe: "A query to fetch a list of records",
     examples: [
       "list :list_posts, :default"
     ],
-    target: AshGraphql.Resource.Query,
+    target: Query,
     auto_set_fields: [
       type: :list
     ]
@@ -29,13 +40,13 @@ defmodule AshGraphql.Resource do
 
   @create %Ash.Dsl.Entity{
     name: :create,
-    schema: AshGraphql.Resource.Mutation.create_schema(),
+    schema: Mutation.create_schema(),
     args: [:name, :action],
     describe: "A mutation to create a record",
     examples: [
       "create :create_post, :default"
     ],
-    target: AshGraphql.Resource.Mutation,
+    target: Mutation,
     auto_set_fields: [
       type: :create
     ]
@@ -43,13 +54,13 @@ defmodule AshGraphql.Resource do
 
   @update %Ash.Dsl.Entity{
     name: :update,
-    schema: AshGraphql.Resource.Mutation.update_schema(),
+    schema: Mutation.update_schema(),
     args: [:name, :action],
     describe: "A mutation to update a record",
     examples: [
       "update :update_post, :default"
     ],
-    target: AshGraphql.Resource.Mutation,
+    target: Mutation,
     auto_set_fields: [
       type: :update
     ]
@@ -57,13 +68,13 @@ defmodule AshGraphql.Resource do
 
   @destroy %Ash.Dsl.Entity{
     name: :destroy,
-    schema: AshGraphql.Resource.Mutation.destroy_schema(),
+    schema: Mutation.destroy_schema(),
     args: [:name, :action],
     describe: "A mutation to destroy a record",
     examples: [
       "destroy :destroy_post, :default"
     ],
-    target: AshGraphql.Resource.Mutation,
+    target: Mutation,
     auto_set_fields: [
       type: :destroy
     ]
@@ -127,30 +138,30 @@ defmodule AshGraphql.Resource do
   end
 
   @transformers [
-    AshJsonApi.Resource.Transformers.RequireIdPkey
+    AshGraphql.Resource.Transformers.RequireIdPkey
   ]
 
-  use Ash.Dsl.Extension, sections: [@graphql], transformers: @transformers
+  use Extension, sections: [@graphql], transformers: @transformers
 
   def queries(resource) do
-    Ash.Dsl.Extension.get_entities(resource, [:graphql, :queries])
+    Extension.get_entities(resource, [:graphql, :queries])
   end
 
   def mutations(resource) do
-    Ash.Dsl.Extension.get_entities(resource, [:graphql, :mutations])
+    Extension.get_entities(resource, [:graphql, :mutations])
   end
 
   def type(resource) do
-    Ash.Dsl.Extension.get_opt(resource, [:graphql], :type, nil)
+    Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
   def fields(resource) do
-    Ash.Dsl.Extension.get_opt(resource, [:graphql], :fields, [])
+    Extension.get_opt(resource, [:graphql], :fields, [])
   end
 
   @doc false
   def queries(api, resource, schema) do
-    type = AshGraphql.Resource.type(resource)
+    type = Resource.type(resource)
 
     resource
     |> queries()
@@ -168,6 +179,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   @doc false
   def mutations(api, resource, schema) do
     resource
@@ -246,6 +258,7 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
   def mutation_types(resource, schema) do
     resource
     |> mutations()
@@ -265,7 +278,7 @@ defmodule AshGraphql.Resource do
             identifier: :result,
             module: schema,
             name: "result",
-            type: AshGraphql.Resource.type(resource)
+            type: Resource.type(resource)
           },
           %Absinthe.Blueprint.Schema.FieldDefinition{
             description: "Any errors generated, if the mutation failed",
@@ -298,7 +311,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp mutation_fields(resource, schema, query) do
-    fields = AshGraphql.Resource.fields(resource)
+    fields = Resource.fields(resource)
 
     attribute_fields =
       resource
@@ -331,7 +344,7 @@ defmodule AshGraphql.Resource do
       |> Ash.Resource.relationships()
       |> Enum.filter(&(&1.name in fields))
       |> Enum.filter(fn relationship ->
-        AshGraphql.Resource in Ash.Resource.extensions(relationship.destination)
+        Resource in Ash.Resource.extensions(relationship.destination)
       end)
       |> Enum.map(fn
         %{cardinality: :one} = relationship ->
@@ -368,6 +381,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp query_type(:get, type), do: type
+  # sobelow_skip ["DOS.StringToAtom"]
   defp query_type(:list, type), do: String.to_atom("page_of_#{type}")
 
   defp args(:get) do
@@ -414,8 +428,9 @@ defmodule AshGraphql.Resource do
     ]
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp page_of(resource, schema) do
-    type = AshGraphql.Resource.type(resource)
+    type = Resource.type(resource)
 
     %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
       description: "A page of #{inspect(type)}",
@@ -444,7 +459,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp type_definition(resource, schema) do
-    type = AshGraphql.Resource.type(resource)
+    type = Resource.type(resource)
 
     %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
       description: Ash.Resource.description(resource),
@@ -456,7 +471,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp fields(resource, schema) do
-    fields = AshGraphql.Resource.fields(resource)
+    fields = Resource.fields(resource)
 
     attributes(resource, schema, fields) ++
       relationships(resource, schema, fields) ++
@@ -488,16 +503,17 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp relationships(resource, schema, fields) do
     resource
     |> Ash.Resource.relationships()
     |> Enum.filter(&(&1.name in fields))
     |> Enum.filter(fn relationship ->
-      AshGraphql.Resource in Ash.Resource.extensions(relationship.destination)
+      Resource in Ash.Resource.extensions(relationship.destination)
     end)
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->
-        type = AshGraphql.Resource.type(relationship.destination)
+        type = Resource.type(relationship.destination)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
@@ -511,7 +527,7 @@ defmodule AshGraphql.Resource do
         }
 
       %{cardinality: :many} = relationship ->
-        type = AshGraphql.Resource.type(relationship.destination)
+        type = Resource.type(relationship.destination)
         query_type = String.to_atom("page_of_#{type}")
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -532,7 +548,7 @@ defmodule AshGraphql.Resource do
     |> Ash.Resource.aggregates()
     |> Enum.filter(&(&1.name in fields))
     |> Enum.map(fn aggregate ->
-      {:ok, type} = Ash.Query.Aggregate.kind_to_type(aggregate.kind)
+      {:ok, type} = Aggregate.kind_to_type(aggregate.kind)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: aggregate.name,

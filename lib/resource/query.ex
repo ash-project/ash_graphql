@@ -1,4 +1,5 @@
 defmodule AshGraphql.Resource.Query do
+  @moduledoc "Represents a configured query on a resource"
   defstruct [:name, :action, :type]
 
   @get_schema [

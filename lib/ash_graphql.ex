@@ -9,7 +9,8 @@ defmodule AshGraphql do
   defmacro __using__(opts) do
     quote bind_quoted: [api: opts[:api]] do
       defmodule AshTypes do
-        alias Absinthe.{Phase, Pipeline, Blueprint}
+        @moduledoc false
+        alias Absinthe.{Blueprint, Phase, Pipeline}
 
         def pipeline(pipeline) do
           Pipeline.insert_before(
@@ -53,5 +54,26 @@ defmodule AshGraphql do
 
       @pipeline_modifier AshTypes
     end
+  end
+
+  defguard is_digit(x) when x in ?0..?0
+
+  def roll(schema) do
+    Enum.map(schema, fn
+      <<?d, x, y>> when is_digit(x) and is_digit(y) ->
+        Enum.random(1..String.to_integer(<<x, y>>))
+
+      <<?d, x, y, z>> when is_digit(x) and is_digit(y) and is_digit(z) ->
+        Enum.random(1..String.to_integer(<<x, y, z>>))
+
+      "adv" ->
+        {:max, roll(["d20", "d20"])}
+
+      "dis" ->
+        {:min, roll(["d20", "d20"])}
+
+      x ->
+        x
+    end)
   end
 end
