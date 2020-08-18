@@ -55,7 +55,7 @@ jobs:
           status: |
             Alpha version "${{ steps.tagName.outputs.tag }}" of AshGraphql released!
 
-            #my-elixir-status
+            #myelixirstatus
 
             See the changelog for more info:
             https://github.com/ash-project/ash_graphql/blob/master/CHANGELOG.md
