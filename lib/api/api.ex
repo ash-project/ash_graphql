@@ -55,7 +55,7 @@ defmodule AshGraphql.Api do
   end
 
   defp relationship_change(schema) do
-    %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
       description: "A set of changes to apply to a relationship",
       fields: relationship_change_fields(schema),
       identifier: :relationship_change,
