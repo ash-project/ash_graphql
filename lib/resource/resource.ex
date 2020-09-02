@@ -562,6 +562,7 @@ defmodule AshGraphql.Resource do
   defp field_type(Ash.Type.String), do: :string
   defp field_type(Ash.Type.UUID), do: :string
   defp field_type(Ash.Type.Integer), do: :integer
+  defp field_type(Ash.Type.Boolean), do: :boolean
 
   defp field_type({:array, type}) do
     %Absinthe.Blueprint.TypeReference.List{

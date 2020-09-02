@@ -8,7 +8,7 @@ defmodule AshGraphql do
 
   defmacro __using__(opts) do
     quote bind_quoted: [api: opts[:api]] do
-      defmodule AshTypes do
+      defmodule Module.concat(api, AshTypes) do
         @moduledoc false
         alias Absinthe.{Blueprint, Phase, Pipeline}
 
@@ -58,7 +58,7 @@ defmodule AshGraphql do
         end
       end
 
-      @pipeline_modifier AshTypes
+      @pipeline_modifier Module.concat(api, AshTypes)
     end
   end
 
