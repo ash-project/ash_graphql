@@ -263,6 +263,11 @@ defmodule AshGraphql.Resource do
     resource
     |> mutations()
     |> Enum.flat_map(fn mutation ->
+      mutation = %{
+        mutation
+        | action: Ash.Resource.action(resource, mutation.action, mutation.type)
+      }
+
       description =
         if mutation.type == :destroy do
           "The record that was successfully deleted"
@@ -310,19 +315,22 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp mutation_fields(resource, schema, query) do
+  defp mutation_fields(resource, schema, mutation) do
     fields = Resource.fields(resource)
 
     attribute_fields =
       resource
       |> Ash.Resource.attributes()
+      |> Enum.filter(fn attribute ->
+        is_nil(mutation.action.accept) || attribute.name in mutation.action.accept
+      end)
       |> Enum.filter(&(&1.name in fields))
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
         type = field_type(attribute.type)
 
         field_type =
-          if attribute.allow_nil? || query.type == :update do
+          if attribute.allow_nil? || mutation.type == :update do
             type
           else
             %Absinthe.Blueprint.TypeReference.NonNull{
@@ -356,7 +364,7 @@ defmodule AshGraphql.Resource do
           }
 
         %{cardinality: :many} = relationship ->
-          case query.type do
+          case mutation.type do
             :update ->
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 identifier: relationship.name,
@@ -421,9 +429,9 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def type_definitions(resource, schema) do
+  def type_definitions(resource, api, schema) do
     [
-      type_definition(resource, schema),
+      type_definition(resource, api, schema),
       page_of(resource, schema)
     ]
   end
@@ -458,23 +466,23 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp type_definition(resource, schema) do
+  defp type_definition(resource, api, schema) do
     type = Resource.type(resource)
 
     %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
       description: Ash.Resource.description(resource),
-      fields: fields(resource, schema),
+      fields: fields(resource, api, schema),
       identifier: type,
       module: schema,
       name: Macro.camelize(to_string(type))
     }
   end
 
-  defp fields(resource, schema) do
+  defp fields(resource, api, schema) do
     fields = Resource.fields(resource)
 
     attributes(resource, schema, fields) ++
-      relationships(resource, schema, fields) ++
+      relationships(resource, api, schema, fields) ++
       aggregates(resource, schema, fields)
   end
 
@@ -504,7 +512,7 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp relationships(resource, schema, fields) do
+  defp relationships(resource, api, schema, fields) do
     resource
     |> Ash.Resource.relationships()
     |> Enum.filter(&(&1.name in fields))
@@ -520,7 +528,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(relationship.name),
           middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {:one, relationship.name}}
+            {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
           arguments: [],
           type: type
@@ -535,7 +543,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(relationship.name),
           middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {:many, relationship.name}}
+            {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
           arguments: args(:list),
           type: query_type

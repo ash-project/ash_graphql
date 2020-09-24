@@ -18,7 +18,7 @@ defmodule AshGraphql.Api do
   use Ash.Dsl.Extension, sections: [@graphql]
 
   def authorize?(api) do
-    Extension.get_opt(api, :api, :authorize?, true)
+    Extension.get_opt(api, [:graphql], :authorize?, true)
   end
 
   @doc false
@@ -39,7 +39,7 @@ defmodule AshGraphql.Api do
   end
 
   @doc false
-  def type_definitions(api, schema) do
+  def type_definitions(api, schema, first?) do
     resource_types =
       api
       |> Ash.Api.resources()
@@ -47,11 +47,15 @@ defmodule AshGraphql.Api do
         AshGraphql.Resource in Ash.Resource.extensions(resource)
       end)
       |> Enum.flat_map(fn resource ->
-        AshGraphql.Resource.type_definitions(resource, schema) ++
+        AshGraphql.Resource.type_definitions(resource, api, schema) ++
           AshGraphql.Resource.mutation_types(resource, schema)
       end)
 
-    [mutation_error(schema), relationship_change(schema)] ++ resource_types
+    if first? do
+      [mutation_error(schema), relationship_change(schema)] ++ resource_types
+    else
+      resource_types
+    end
   end
 
   defp relationship_change(schema) do

@@ -16,6 +16,7 @@ defmodule AshGraphql.MixProject do
       package: package(),
       aliases: aliases(),
       deps: deps(),
+      dialyzer: [plt_add_apps: [:ash]],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
@@ -68,7 +69,8 @@ defmodule AshGraphql.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 1.11.0")},
-      {:absinthe, "~> 1.5.2"},
+      {:absinthe, "~> 1.5.3"},
+      {:dataloader, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:ex_check, "~> 0.12.0", only: :dev},

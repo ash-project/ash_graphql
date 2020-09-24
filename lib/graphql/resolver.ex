@@ -11,8 +11,6 @@ defmodule AshGraphql.Graphql.Resolver do
         [action: action]
       end
 
-    opts = Keyword.put(opts, :load, load_nested(resource, resolution.definition.selections))
-
     result = api.get(resource, id, opts)
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
@@ -29,20 +27,10 @@ defmodule AshGraphql.Graphql.Resolver do
         [action: action]
       end
 
-    selections =
-      case Enum.find(resolution.definition.selections, &(&1.schema_node.identifier == :results)) do
-        nil ->
-          []
-
-        field ->
-          field.selections
-      end
-
     query =
       resource
       |> Ash.Query.limit(limit)
       |> Ash.Query.offset(offset)
-      |> Ash.Query.load(load_nested(resource, selections))
 
     query =
       case Map.fetch(args, :filter) do
@@ -79,17 +67,6 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     {attributes, relationships} = split_attrs_and_rels(input, resource)
 
-    selections =
-      case Enum.find(resolution.definition.selections, &(&1.schema_node.identifier == :result)) do
-        nil ->
-          []
-
-        field ->
-          field.selections
-      end
-
-    load = load_nested(resource, selections)
-
     changeset = Ash.Changeset.new(resource, attributes)
 
     changeset_with_relationships =
@@ -105,10 +82,10 @@ defmodule AshGraphql.Graphql.Resolver do
       end
 
     result =
-      with {:ok, value} <- api.create(changeset_with_relationships, opts),
-           {:ok, value} <- api.load(value, load) do
-        {:ok, %{result: value, errors: []}}
-      else
+      case api.create(changeset_with_relationships, opts) do
+        {:ok, value} ->
+          {:ok, %{result: value, errors: []}}
+
         {:error, error} ->
           {:ok, %{result: nil, errors: to_errors(error)}}
       end
@@ -140,25 +117,11 @@ defmodule AshGraphql.Graphql.Resolver do
             [action: action]
           end
 
-        selections =
-          case Enum.find(
-                 resolution.definition.selections,
-                 &(&1.schema_node.identifier == :result)
-               ) do
-            nil ->
-              []
-
-            field ->
-              field.selections
-          end
-
-        load = load_nested(resource, selections)
-
         result =
-          with {:ok, value} <- api.update(changeset_with_relationships, opts),
-               {:ok, value} <- api.load(value, load) do
-            {:ok, %{result: value, errors: []}}
-          else
+          case api.update(changeset_with_relationships, opts) do
+            {:ok, value} ->
+              {:ok, %{result: value, errors: []}}
+
             {:error, error} ->
               {:ok, %{result: nil, errors: List.wrap(error)}}
           end
@@ -219,65 +182,59 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  def resolve_assoc(%{source: parent} = resolution, {:one, name}) do
-    Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent, name)})
+  def resolve_assoc(
+        %{source: parent, arguments: args, context: %{ash_loader: loader}} = resolution,
+        {api, relationship}
+      ) do
+    opts = [query: apply_load_arguments(args, Ash.Query.new(relationship.destination))]
+    {batch_key, parent} = {{relationship.name, opts}, parent}
+
+    do_dataloader(resolution, loader, api, batch_key, args, parent, opts)
   end
 
-  def resolve_assoc(%{source: parent} = resolution, {:many, name}) do
-    values = Map.get(parent, name)
-    paginator = %{results: values, count: Enum.count(values)}
+  defp do_dataloader(
+         resolution,
+         loader,
+         api,
+         batch_key,
+         args,
+         parent,
+         opts
+       ) do
+    loader = Dataloader.load(loader, api, batch_key, parent)
 
-    Absinthe.Resolution.put_result(resolution, {:ok, paginator})
+    fun = fn loader ->
+      callback = Keyword.get(opts, :callback, default_callback(loader))
+
+      loader
+      |> Dataloader.get(api, batch_key, parent)
+      |> callback.(parent, args)
+    end
+
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:middleware, Absinthe.Middleware.Dataloader, {loader, fun}}
+    )
   end
 
-  defp load_nested(resource, fields) do
-    Enum.map(fields, fn field ->
-      relationship = Ash.Resource.relationship(resource, field.schema_node.identifier)
-
-      cond do
-        !relationship ->
-          field.schema_node.identifier
-
-        relationship.cardinality == :many ->
-          trimmed_nested = nested_selections_with_pagination(field)
-
-          nested_loads = load_nested(relationship.destination, trimmed_nested)
-
-          query = Ash.Query.load(relationship.destination, nested_loads)
-
-          query = apply_load_arguments(field, query)
-
-          {field.schema_node.identifier, query}
-
-        true ->
-          nested_loads = load_nested(relationship.destination, field.selections)
-
-          query = Ash.Query.load(relationship.destination, nested_loads)
-          {field.schema_node.identifier, query}
-      end
-    end)
+  defp default_callback(%{options: loader_options}) do
+    if loader_options[:get_policy] == :tuples do
+      fn result, _parent, _args -> result end
+    else
+      fn result, _parent, _args -> {:ok, result} end
+    end
   end
 
-  defp apply_load_arguments(field, query) do
-    Enum.reduce(field.arguments, query, fn
-      %{name: "limit", value: value}, query ->
-        Ash.Query.limit(query, value)
+  defp apply_load_arguments(arguments, query) do
+    Enum.reduce(arguments, query, fn
+      {:limit, limit}, query ->
+        Ash.Query.limit(query, limit)
 
-      %{name: "offset", value: value}, query ->
-        Ash.Query.offset(query, value)
+      {:offset, offset}, query ->
+        Ash.Query.offset(query, offset)
 
-      %{name: "filter", value: value}, query ->
+      {:filter, value}, query ->
         decode_and_filter(query, value)
-    end)
-  end
-
-  defp nested_selections_with_pagination(field) do
-    Enum.flat_map(field.selections, fn nested ->
-      if nested.schema_node.identifier == :results do
-        nested.selections
-      else
-        []
-      end
     end)
   end
 
