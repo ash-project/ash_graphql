@@ -111,8 +111,8 @@ defmodule AshGraphql.Dataloader do
       batches != %{}
     end
 
-    def timeout(%{options: options}) do
-      options[:timeout]
+    def timeout(_) do
+      Dataloader.default_timeout()
     end
 
     defp related(path, resource) do
@@ -124,8 +124,8 @@ defmodule AshGraphql.Dataloader do
 
     defp get_keys({assoc_field, opts}, %resource{} = record) when is_atom(assoc_field) do
       validate_resource(resource)
-      primary_keys = Ash.Resource.primary_key(resource)
-      id = Enum.map(primary_keys, &Map.get(record, &1))
+      destination_field = Ash.Resource.relationship(resource, assoc_field).destination_field
+      id = [Map.get(record, destination_field)]
 
       queryable = related([assoc_field], resource)
 
@@ -214,12 +214,13 @@ defmodule AshGraphql.Dataloader do
          ) do
       {ids, records} = Enum.unzip(records)
       query = opts[:query]
+      api_opts = opts[:api_opts]
       empty = source_resource |> struct |> Map.fetch!(field)
       records = records |> Enum.map(&Map.put(&1, field, empty))
 
       cardinality = Ash.Resource.relationship(source_resource, field).cardinality
 
-      loaded = source.api.load!(records, [{field, Ash.Query.new(query)}], source.api_opts)
+      loaded = source.api.load!(records, [{field, Ash.Query.new(query)}], api_opts || [])
 
       results =
         case cardinality do
