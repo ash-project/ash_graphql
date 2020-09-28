@@ -4,12 +4,11 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{id: id}, context: context} = resolution,
         {api, resource, :get, action}
       ) do
-    opts =
-      if AshGraphql.Api.authorize?(api) do
-        [actor: Map.get(context, :actor), action: action]
-      else
-        [action: action]
-      end
+    opts = [
+      actor: Map.get(context, :actor),
+      authorize?: AshGraphql.Api.authorize?(api),
+      action: action
+    ]
 
     result = api.get(resource, id, opts)
 
@@ -20,12 +19,11 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{limit: limit, offset: offset} = args, context: context} = resolution,
         {api, resource, :list, action}
       ) do
-    opts =
-      if AshGraphql.Api.authorize?(api) do
-        [actor: Map.get(context, :actor), action: action]
-      else
-        [action: action]
-      end
+    opts = [
+      actor: Map.get(context, :actor),
+      authorize?: AshGraphql.Api.authorize?(api),
+      action: action
+    ]
 
     query =
       resource
@@ -74,12 +72,11 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Changeset.replace_relationship(changeset, relationship, replacement)
       end)
 
-    opts =
-      if AshGraphql.Api.authorize?(api) do
-        [actor: Map.get(context, :actor), action: action]
-      else
-        [action: action]
-      end
+    opts = [
+      actor: Map.get(context, :actor),
+      authorize?: AshGraphql.Api.authorize?(api),
+      action: action
+    ]
 
     result =
       case api.create(changeset_with_relationships, opts) do
@@ -110,12 +107,11 @@ defmodule AshGraphql.Graphql.Resolver do
             Ash.Changeset.replace_relationship(changeset, relationship, replacement)
           end)
 
-        opts =
-          if AshGraphql.Api.authorize?(api) do
-            [actor: Map.get(context, :actor), action: action]
-          else
-            [action: action]
-          end
+        opts = [
+          actor: Map.get(context, :actor),
+          authorize?: AshGraphql.Api.authorize?(api),
+          action: action
+        ]
 
         result =
           case api.update(changeset_with_relationships, opts) do
@@ -183,13 +179,19 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve_assoc(
-        %{source: parent, arguments: args, context: %{ash_loader: loader}} = resolution,
+        %{source: parent, arguments: args, context: %{ash_loader: loader} = context} = resolution,
         {api, relationship}
       ) do
-    opts = [query: apply_load_arguments(args, Ash.Query.new(relationship.destination))]
+    api_opts = [actor: Map.get(context, :actor), authorize?: AshGraphql.Api.authorize?(api)]
+
+    opts = [
+      query: apply_load_arguments(args, Ash.Query.new(relationship.destination)),
+      api_opts: api_opts
+    ]
+
     {batch_key, parent} = {{relationship.name, opts}, parent}
 
-    do_dataloader(resolution, loader, api, batch_key, args, parent, opts)
+    do_dataloader(resolution, loader, api, batch_key, args, parent)
   end
 
   defp do_dataloader(
@@ -198,13 +200,12 @@ defmodule AshGraphql.Graphql.Resolver do
          api,
          batch_key,
          args,
-         parent,
-         opts
+         parent
        ) do
     loader = Dataloader.load(loader, api, batch_key, parent)
 
     fun = fn loader ->
-      callback = Keyword.get(opts, :callback, default_callback(loader))
+      callback = default_callback(loader)
 
       loader
       |> Dataloader.get(api, batch_key, parent)
