@@ -81,5 +81,43 @@ defmodule MyApp.Schema do
     [Absinthe.Middleware.Dataloader | Absinthe.Plugin.defaults()]
   end
 end
-
 ```
+
+## Connect your schema
+
+### Using Plug
+
+If you are unfamiliar with how plug works, this [guide](https://elixirschool.com/en/lessons/specifics/plug/#dependencies) will be helpful for understanding it. It also guides you through
+adding plug to your application.
+
+Then you can use a `Plug.Router` and [forward](https://hexdocs.pm/plug/Plug.Router.html#forward/2) to your plugs similar to how it is done for phoenix:
+
+```elixir
+forward "/gql", Absinthe.Plug, schema: YourSchema
+
+forward "/playground",
+        Absinthe.Plug.GraphiQL,
+        schema: YourSchema
+        interface: :playground
+```
+
+### Using Phoenix
+
+You will simply want to add some code to your router, like so:
+
+You will also likely want to set up the "playground" for trying things out.
+
+```elixir
+scope "/" do
+  forward "/gql", Absinthe.Plug, schema: YourSchema
+
+  forward "/playground",
+          Absinthe.Plug.GraphiQL,
+          schema: YourSchema
+          interface: :playground
+end
+```
+
+If you started with `mix new ...` instead of `mix phx.new ...` and you want to
+still use phoenix, the fastest path that way is typically to just create a new
+phoenix application and copy your resources/config over.
