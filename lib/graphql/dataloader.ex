@@ -132,26 +132,6 @@ defmodule AshGraphql.Dataloader do
       {{:assoc, resource, self(), assoc_field, queryable, opts}, id, record}
     end
 
-    # defp get_keys({{cardinality, resource}, opts}, value) when is_atom(resource) do
-    #   validate_resource(resource)
-    #   {_, col, value} = normalize_value(resource, value)
-    #   {{:resource, self(), resource, cardinality, col, opts}, value, value}
-    # end
-
-    # defp get_keys({resource, opts}, value) when is_atom(resource) do
-    #   validate_resource(resource)
-
-    #   case normalize_value(resource, value) do
-    #     {:primary, col, value} ->
-    #       {{:resource, self(), resource, :one, col, opts}, value, value}
-
-    #     {:not_primary, col, _value} ->
-    #       raise """
-    #       Cardinality required unless using primary key
-    #       The non-primary key column specified was: #{inspect(col)}
-    #       """
-    #   end
-    # end
 
     defp get_keys(key, item) do
       raise """
