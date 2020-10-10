@@ -35,7 +35,7 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, filter} ->
           case Jason.decode(filter) do
             {:ok, decoded} ->
-              Ash.Query.filter(query, to_snake_case(decoded))
+              Ash.Query.filter(query, ^to_snake_case(decoded))
 
             {:error, error} ->
               raise "Error parsing filter: #{inspect(error)}"
@@ -242,7 +242,7 @@ defmodule AshGraphql.Graphql.Resolver do
   defp decode_and_filter(query, value) do
     case Jason.decode(value) do
       {:ok, decoded} ->
-        Ash.Query.filter(query, to_snake_case(decoded))
+        Ash.Query.filter(query, ^to_snake_case(decoded))
 
       {:error, error} ->
         raise "Error parsing filter: #{inspect(error)}"
