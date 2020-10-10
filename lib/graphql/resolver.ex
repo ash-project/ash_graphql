@@ -1,5 +1,7 @@
 defmodule AshGraphql.Graphql.Resolver do
   @moduledoc false
+
+  require Ash.Query
   def resolve(
         %{arguments: %{id: id}, context: context} = resolution,
         {api, resource, :get, action}
