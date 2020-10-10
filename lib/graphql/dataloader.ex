@@ -132,7 +132,6 @@ defmodule AshGraphql.Dataloader do
       {{:assoc, resource, self(), assoc_field, queryable, opts}, id, record}
     end
 
-
     defp get_keys(key, item) do
       raise """
       Invalid: #{inspect(key)}
