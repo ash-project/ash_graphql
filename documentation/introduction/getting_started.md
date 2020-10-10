@@ -93,12 +93,16 @@ adding plug to your application.
 Then you can use a `Plug.Router` and [forward](https://hexdocs.pm/plug/Plug.Router.html#forward/2) to your plugs similar to how it is done for phoenix:
 
 ```elixir
-forward "/gql", Absinthe.Plug, schema: YourSchema
+forward "/gql",
+  to: Absinthe.Plug,
+  init_opts: [schema: YourSchema]
 
 forward "/playground",
-        Absinthe.Plug.GraphiQL,
-        schema: YourSchema
-        interface: :playground
+  to: Absinthe.Plug.GraphiQL,
+  init_opts: [
+    schema: YourSchema,
+    interface: :playground
+  ]
 ```
 
 ### Using Phoenix
