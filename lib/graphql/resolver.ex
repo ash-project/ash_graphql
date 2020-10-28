@@ -13,7 +13,12 @@ defmodule AshGraphql.Graphql.Resolver do
       action: action
     ]
 
-    result = api.get(resource, id, opts)
+    result =
+      resource
+      |> Ash.Query.new()
+      |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> Ash.Query.filter(id == ^id)
+      |> api.read_one(opts)
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
   end
@@ -50,6 +55,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
     result =
       query
+      |> Ash.Query.set_tenant(Map.get(context, :tenant))
       |> api.read(opts)
       |> case do
         {:ok, results} ->
@@ -82,7 +88,10 @@ defmodule AshGraphql.Graphql.Resolver do
     ]
 
     result =
-      case api.create(changeset_with_relationships, opts) do
+      changeset_with_relationships
+      |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> api.create(opts)
+      |> case do
         {:ok, value} ->
           {:ok, %{result: value, errors: []}}
 
@@ -97,7 +106,11 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{id: id, input: input}, context: context} = resolution,
         {api, resource, :update, action}
       ) do
-    case api.get(resource, id) do
+    resource
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.set_tenant(Map.get(context, :tenant))
+    |> api.read_one!()
+    |> case do
       nil ->
         {:ok, %{result: nil, errors: [to_errors("not found")]}}
 
@@ -117,7 +130,10 @@ defmodule AshGraphql.Graphql.Resolver do
         ]
 
         result =
-          case api.update(changeset_with_relationships, opts) do
+          changeset_with_relationships
+          |> Ash.Query.set_tenant(Map.get(context, :tenant))
+          |> api.update(opts)
+          |> case do
             {:ok, value} ->
               {:ok, %{result: value, errors: []}}
 
@@ -129,8 +145,15 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  def mutate(%{arguments: %{id: id}, context: context} = resolution, {api, resource, action}) do
-    case api.get(resource, id) do
+  def mutate(
+        %{arguments: %{id: id}, context: context} = resolution,
+        {api, resource, :destroy, action}
+      ) do
+    resource
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.set_tenant(Map.get(context, :tenant))
+    |> api.read_one!()
+    |> case do
       nil ->
         {:ok, %{result: nil, errors: [to_errors("not found")]}}
 
@@ -143,7 +166,11 @@ defmodule AshGraphql.Graphql.Resolver do
           end
 
         result =
-          case api.destroy(initial, opts) do
+          initial
+          |> Ash.Changeset.new()
+          |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+          |> api.destroy(opts)
+          |> case do
             :ok -> {:ok, %{result: initial, errors: []}}
             {:error, error} -> {:ok, %{result: nil, errors: to_errors(error)}}
           end
@@ -182,14 +209,15 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve_assoc(
-        %{source: parent, arguments: args, context: %{ash_loader: loader} = context} = resolution,
+        %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
         {api, relationship}
       ) do
     api_opts = [actor: Map.get(context, :actor), authorize?: AshGraphql.Api.authorize?(api)]
 
     opts = [
       query: apply_load_arguments(args, Ash.Query.new(relationship.destination)),
-      api_opts: api_opts
+      api_opts: api_opts,
+      tenant: Map.get(context, :tenant)
     ]
 
     {batch_key, parent} = {{relationship.name, opts}, parent}
@@ -202,31 +230,19 @@ defmodule AshGraphql.Graphql.Resolver do
          loader,
          api,
          batch_key,
-         args,
+         _args,
          parent
        ) do
     loader = Dataloader.load(loader, api, batch_key, parent)
 
     fun = fn loader ->
-      callback = default_callback(loader)
-
-      loader
-      |> Dataloader.get(api, batch_key, parent)
-      |> callback.(parent, args)
+      {:ok, Dataloader.get(loader, api, batch_key, parent)}
     end
 
     Absinthe.Resolution.put_result(
       resolution,
       {:middleware, Absinthe.Middleware.Dataloader, {loader, fun}}
     )
-  end
-
-  defp default_callback(%{options: loader_options}) do
-    if loader_options[:get_policy] == :tuples do
-      fn result, _parent, _args -> result end
-    else
-      fn result, _parent, _args -> {:ok, result} end
-    end
   end
 
   defp apply_load_arguments(arguments, query) do

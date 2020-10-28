@@ -124,8 +124,8 @@ defmodule AshGraphql.Dataloader do
 
     defp get_keys({assoc_field, opts}, %resource{} = record) when is_atom(assoc_field) do
       validate_resource(resource)
-      destination_field = Ash.Resource.relationship(resource, assoc_field).destination_field
-      id = [Map.get(record, destination_field)]
+      pkey = Ash.Resource.primary_key(resource)
+      id = Enum.map(pkey, &Map.get(record, &1))
 
       queryable = related([assoc_field], resource)
 
@@ -194,12 +194,18 @@ defmodule AshGraphql.Dataloader do
       {ids, records} = Enum.unzip(records)
       query = opts[:query]
       api_opts = opts[:api_opts]
+      tenant = opts[:tenant] || tenant_from_records(records)
       empty = source_resource |> struct |> Map.fetch!(field)
       records = records |> Enum.map(&Map.put(&1, field, empty))
 
       cardinality = Ash.Resource.relationship(source_resource, field).cardinality
 
-      loaded = source.api.load!(records, [{field, Ash.Query.new(query)}], api_opts || [])
+      query =
+        query
+        |> Ash.Query.new()
+        |> Ash.Query.set_tenant(tenant)
+
+      loaded = source.api.load!(records, [{field, query}], api_opts || [])
 
       results =
         case cardinality do
@@ -217,6 +223,12 @@ defmodule AshGraphql.Dataloader do
 
       {key, Map.new(Enum.zip(ids, results))}
     end
+
+    defp tenant_from_records([%{__metadata__: %{tenant: tenant}}]) when not is_nil(tenant) do
+      tenant
+    end
+
+    defp tenant_from_records(_), do: nil
 
     defp emit_start_event(id, system_time, batch) do
       :telemetry.execute(

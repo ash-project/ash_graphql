@@ -83,6 +83,6 @@ defmodule AshGraphql do
         )
       end)
 
-    Map.put(ctx, :ash_loader, dataloader)
+    Map.put(ctx, :loader, dataloader)
   end
 end
