@@ -36,7 +36,8 @@ defmodule AshGraphql.MixProject do
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
       extras: [
-        "documentation/introduction/getting_started.md"
+        "documentation/introduction/getting_started.md",
+        "documentation/multitenancy.md"
       ],
       groups_for_extras: [
         Introduction: Path.wildcard("documentation/introduction/*.md")
