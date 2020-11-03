@@ -89,7 +89,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
     result =
       changeset_with_relationships
-      |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
       |> api.create(opts)
       |> case do
         {:ok, value} ->
@@ -131,7 +131,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
         result =
           changeset_with_relationships
-          |> Ash.Query.set_tenant(Map.get(context, :tenant))
+          |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
           |> api.update(opts)
           |> case do
             {:ok, value} ->
