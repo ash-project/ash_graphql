@@ -421,7 +421,7 @@ defmodule AshGraphql.Resource do
         end
 
       limit_type =
-        if action.pagination.required? && is_nil(action.pagination.default_page_size) do
+        if action.pagination.required? && is_nil(action.pagination.default_limit) do
           %Absinthe.Blueprint.TypeReference.NonNull{
             of_type: :integer
           }
@@ -434,7 +434,7 @@ defmodule AshGraphql.Resource do
           name: "limit",
           identifier: :limit,
           type: limit_type,
-          default_value: action.pagination.default_page_size,
+          default_value: action.pagination.default_limit,
           description: "The number of records to return." <> max_message
         }
       ] ++ keyset_pagination_args(action) ++ offset_pagination_args(action)
