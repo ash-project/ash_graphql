@@ -211,8 +211,7 @@ defmodule AshGraphql.Dataloader do
         case cardinality do
           :many ->
             Enum.map(loaded, fn record ->
-              related = List.wrap(Map.get(record, field))
-              %{results: related, count: Enum.count(related)}
+              List.wrap(Map.get(record, field))
             end)
 
           :one ->

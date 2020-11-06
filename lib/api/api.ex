@@ -52,10 +52,32 @@ defmodule AshGraphql.Api do
       end)
 
     if first? do
-      [mutation_error(schema), relationship_change(schema)] ++ resource_types
+      [mutation_error(schema), relationship_change(schema), sort_order(schema)] ++ resource_types
     else
       resource_types
     end
+  end
+
+  defp sort_order(schema) do
+    %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+      module: schema,
+      name: "SortOrder",
+      values: [
+        %Absinthe.Blueprint.Schema.EnumValueDefinition{
+          module: schema,
+          identifier: :desc,
+          name: "DESC",
+          value: :desc
+        },
+        %Absinthe.Blueprint.Schema.EnumValueDefinition{
+          module: schema,
+          identifier: :asc,
+          name: "ASC",
+          value: :asc
+        }
+      ],
+      identifier: :sort_order
+    }
   end
 
   defp relationship_change(schema) do

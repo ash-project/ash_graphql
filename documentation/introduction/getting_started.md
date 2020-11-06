@@ -4,6 +4,20 @@
 
 If you haven't already, read the getting started guide for Ash. This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/apis.
 
+## Bring in the ash_graphql, and absinthe_plug dependencies
+
+```elixir
+def deps()
+  [
+    ...
+    {:ash_graphql, "~> x.x"}
+    {:absinthe_plug, "~> x.x"},
+  ]
+end
+```
+
+Use `mix hex.info ash_graphql` and `mix hex.info absinthe_plug` to quickly find the latest versions.
+
 ## Add the API Extension
 
 ```elixir
@@ -29,8 +43,6 @@ defmodule Post do
 
   graphql do
     type :post
-
-    fields [:name, :count_of_comments, :comments] # <- a list of all of the attributes/relationships/aggregates to include in the graphql API
 
     queries do
       get :get_post, :default # <- create a field called `get_post` that uses the `default` read action to fetch a single post

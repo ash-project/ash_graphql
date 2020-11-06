@@ -113,11 +113,6 @@ defmodule AshGraphql.Resource do
         type: :atom,
         required: true,
         doc: "The type to use for this entity in the graphql schema"
-      ],
-      fields: [
-        type: {:custom, __MODULE__, :__fields, []},
-        required: true,
-        doc: "The fields from this entity to include in the graphql"
       ]
     ],
     sections: [
@@ -125,17 +120,6 @@ defmodule AshGraphql.Resource do
       @mutations
     ]
   }
-
-  @doc false
-  def __fields(fields) do
-    fields = List.wrap(fields)
-
-    if Enum.all?(fields, &is_atom/1) do
-      {:ok, fields}
-    else
-      {:error, "Expected `fields` to be a list of atoms"}
-    end
-  end
 
   @transformers [
     AshGraphql.Resource.Transformers.RequireIdPkey
@@ -155,10 +139,6 @@ defmodule AshGraphql.Resource do
     Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
-  def fields(resource) do
-    Extension.get_opt(resource, [:graphql], :fields, [])
-  end
-
   @doc false
   def queries(api, resource, schema) do
     type = Resource.type(resource)
@@ -166,15 +146,17 @@ defmodule AshGraphql.Resource do
     resource
     |> queries()
     |> Enum.map(fn query ->
+      query_action = Ash.Resource.action(resource, query.action, :read)
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
-        arguments: args(query.type),
+        arguments: args(query.type, resource, query_action),
         identifier: query.name,
         middleware: [
           {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query.type, query.action}}
         ],
         module: schema,
         name: to_string(query.name),
-        type: query_type(query.type, type)
+        type: query_type(query.type, query_action, type)
       }
     end)
   end
@@ -316,18 +298,15 @@ defmodule AshGraphql.Resource do
   end
 
   defp mutation_fields(resource, schema, mutation) do
-    fields = Resource.fields(resource)
-
     attribute_fields =
       resource
-      |> Ash.Resource.attributes()
+      |> Ash.Resource.public_attributes()
       |> Enum.filter(fn attribute ->
         is_nil(mutation.action.accept) || attribute.name in mutation.action.accept
       end)
-      |> Enum.filter(&(&1.name in fields))
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
-        type = field_type(attribute.type)
+        type = field_type(attribute.type, attribute, resource)
 
         field_type =
           if attribute.allow_nil? || mutation.type == :update do
@@ -349,8 +328,7 @@ defmodule AshGraphql.Resource do
 
     relationship_fields =
       resource
-      |> Ash.Resource.relationships()
-      |> Enum.filter(&(&1.name in fields))
+      |> Ash.Resource.public_relationships()
       |> Enum.filter(fn relationship ->
         Resource in Ash.Resource.extensions(relationship.destination)
       end)
@@ -388,11 +366,23 @@ defmodule AshGraphql.Resource do
     attribute_fields ++ relationship_fields
   end
 
-  defp query_type(:get, type), do: type
+  defp query_type(:get, _, type), do: type
   # sobelow_skip ["DOS.StringToAtom"]
-  defp query_type(:list, type), do: String.to_atom("page_of_#{type}")
+  defp query_type(:list, action, type) do
+    if action.pagination do
+      String.to_atom("page_of_#{type}")
+    else
+      %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: %Absinthe.Blueprint.TypeReference.List{
+          of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: type
+          }
+        }
+      }
+    end
+  end
 
-  defp args(:get) do
+  defp args(:get, _resource, _action) do
     [
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "id",
@@ -403,67 +393,197 @@ defmodule AshGraphql.Resource do
     ]
   end
 
-  defp args(:list) do
+  defp args(:list, resource, action) do
     [
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: "limit",
-        identifier: :limit,
-        type: :integer,
-        description: "The limit of records to return",
-        default_value: 20
-      },
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: "offset",
-        identifier: :offset,
-        type: :integer,
-        description: "The count of records to skip",
-        default_value: 0
-      },
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "filter",
         identifier: :filter,
         type: :string,
         description: "A json encoded filter to apply"
+      },
+      %Absinthe.Blueprint.Schema.InputValueDefinition{
+        name: "sort",
+        identifier: :sort,
+        type: resource_sort_type(resource),
+        description: "How to sort the records in the response"
       }
-    ]
+    ] ++
+      pagination_args(action)
+  end
+
+  defp pagination_args(action) do
+    if action.pagination do
+      max_message =
+        if action.pagination.max_page_size do
+          " Maximum #{action.pagination.max_page_size}"
+        else
+          ""
+        end
+
+      limit_type =
+        if action.pagination.required? && is_nil(action.pagination.default_page_size) do
+          %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: :integer
+          }
+        else
+          :integer
+        end
+
+      [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "limit",
+          identifier: :limit,
+          type: limit_type,
+          default_value: action.pagination.default_page_size,
+          description: "The number of records to return." <> max_message
+        }
+      ] ++ keyset_pagination_args(action) ++ offset_pagination_args(action)
+    else
+      []
+    end
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp resource_sort_type(resource) do
+    String.to_atom(to_string(AshGraphql.Resource.type(resource)) <> "_sort_input")
+  end
+
+  defp keyset_pagination_args(action) do
+    if action.pagination.keyset? do
+      [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "before",
+          identifier: :before,
+          type: :string,
+          description: "Show records before the specified keyset."
+        },
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "after",
+          identifier: :after,
+          type: :string,
+          description: "Show records after the specified keyset."
+        }
+      ]
+    else
+      []
+    end
+  end
+
+  defp offset_pagination_args(action) do
+    if action.pagination.offset? do
+      [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "offset",
+          identifier: :offset,
+          type: :integer,
+          description: "The number of records to skip."
+        }
+      ]
+    else
+      []
+    end
   end
 
   @doc false
   def type_definitions(resource, api, schema) do
     [
       type_definition(resource, api, schema),
-      page_of(resource, schema)
-    ]
+      sort_input(resource, schema)
+    ] ++ List.wrap(page_of(resource, schema)) ++ enum_definitions(resource, schema)
+  end
+
+  defp sort_input(resource, schema) do
+    type = resource_sort_type(resource)
+
+    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+      fields: sort_fields(resource, schema),
+      identifier: type,
+      module: schema,
+      name: type |> to_string() |> Macro.camelize()
+    }
+  end
+
+  defp sort_fields(resource, schema) do
+    resource
+    |> Ash.Resource.attributes()
+    |> Enum.map(fn attribute ->
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: attribute.name,
+        module: schema,
+        name: to_string(attribute.name),
+        type: %Absinthe.Blueprint.TypeReference.NonNull{
+          of_type: :sort_order
+        }
+      }
+    end)
+  end
+
+  defp enum_definitions(resource, schema) do
+    resource
+    |> Ash.Resource.public_attributes()
+    |> Enum.filter(&(&1.type == Ash.Type.Atom))
+    |> Enum.filter(&is_list(&1.constraints[:one_of]))
+    |> Enum.map(fn attribute ->
+      type_name = atom_enum_type(resource, attribute.name)
+
+      %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+        module: schema,
+        name: type_name |> to_string() |> Macro.camelize(),
+        values:
+          Enum.map(attribute.constraints[:one_of], fn value ->
+            %Absinthe.Blueprint.Schema.EnumValueDefinition{
+              module: schema,
+              identifier: value,
+              name: String.upcase(to_string(value)),
+              value: value
+            }
+          end),
+        identifier: type_name
+      }
+    end)
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp page_of(resource, schema) do
     type = Resource.type(resource)
 
-    %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-      description: "A page of #{inspect(type)}",
-      fields: [
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: "The records contained in the page",
-          identifier: :results,
-          module: schema,
-          name: "results",
-          type: %Absinthe.Blueprint.TypeReference.List{
-            of_type: type
+    paginatable? =
+      resource
+      |> Ash.Resource.actions()
+      |> Enum.any?(fn action ->
+        action.type == :read && action.pagination
+      end)
+
+    if paginatable? do
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        description: "A page of #{inspect(type)}",
+        fields: [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "The records contained in the page",
+            identifier: :results,
+            module: schema,
+            name: "results",
+            type: %Absinthe.Blueprint.TypeReference.List{
+              of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                of_type: type
+              }
+            }
+          },
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "The count of records",
+            identifier: :count,
+            module: schema,
+            name: "count",
+            type: :integer
           }
-        },
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: "The count of records",
-          identifier: :count,
-          module: schema,
-          name: "count",
-          type: :integer
-        }
-      ],
-      identifier: String.to_atom("page_of_#{type}"),
-      module: schema,
-      name: Macro.camelize("page_of_#{type}")
-    }
+        ],
+        identifier: String.to_atom("page_of_#{type}"),
+        module: schema,
+        name: Macro.camelize("page_of_#{type}")
+      }
+    else
+      nil
+    end
   end
 
   defp type_definition(resource, api, schema) do
@@ -479,17 +599,15 @@ defmodule AshGraphql.Resource do
   end
 
   defp fields(resource, api, schema) do
-    fields = Resource.fields(resource)
-
-    attributes(resource, schema, fields) ++
-      relationships(resource, api, schema, fields) ++
-      aggregates(resource, schema, fields)
+    attributes(resource, schema) ++
+      relationships(resource, api, schema) ++
+      aggregates(resource, schema) ++
+      calculations(resource, schema)
   end
 
-  defp attributes(resource, schema, fields) do
+  defp attributes(resource, schema) do
     resource
-    |> Ash.Resource.attributes()
-    |> Enum.filter(&(&1.name in fields))
+    |> Ash.Resource.public_attributes()
     |> Enum.map(fn
       %{name: :id} = attribute ->
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -506,16 +624,15 @@ defmodule AshGraphql.Resource do
           identifier: attribute.name,
           module: schema,
           name: to_string(attribute.name),
-          type: field_type(attribute.type)
+          type: field_type(attribute.type, attribute, resource)
         }
     end)
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp relationships(resource, api, schema, fields) do
+  defp relationships(resource, api, schema) do
     resource
-    |> Ash.Resource.relationships()
-    |> Enum.filter(&(&1.name in fields))
+    |> Ash.Resource.public_relationships()
     |> Enum.filter(fn relationship ->
       Resource in Ash.Resource.extensions(relationship.destination)
     end)
@@ -535,8 +652,17 @@ defmodule AshGraphql.Resource do
         }
 
       %{cardinality: :many} = relationship ->
+        read_action = Ash.Resource.primary_action!(relationship.destination, :read)
+
         type = Resource.type(relationship.destination)
-        query_type = String.to_atom("page_of_#{type}")
+
+        query_type = %Absinthe.Blueprint.TypeReference.NonNull{
+          of_type: %Absinthe.Blueprint.TypeReference.List{
+            of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: type
+            }
+          }
+        }
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
@@ -545,16 +671,15 @@ defmodule AshGraphql.Resource do
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
-          arguments: args(:list),
+          arguments: args(:list, relationship.destination, read_action),
           type: query_type
         }
     end)
   end
 
-  defp aggregates(resource, schema, fields) do
+  defp aggregates(resource, schema) do
     resource
-    |> Ash.Resource.aggregates()
-    |> Enum.filter(&(&1.name in fields))
+    |> Ash.Resource.public_aggregates()
     |> Enum.map(fn aggregate ->
       {:ok, type} = Aggregate.kind_to_type(aggregate.kind)
 
@@ -562,19 +687,76 @@ defmodule AshGraphql.Resource do
         identifier: aggregate.name,
         module: schema,
         name: to_string(aggregate.name),
-        type: field_type(type)
+        type: field_type(type, nil, resource)
       }
     end)
   end
 
-  defp field_type(Ash.Type.String), do: :string
-  defp field_type(Ash.Type.UUID), do: :string
-  defp field_type(Ash.Type.Integer), do: :integer
-  defp field_type(Ash.Type.Boolean), do: :boolean
+  defp calculations(resource, schema) do
+    resource
+    |> Ash.Resource.public_calculations()
+    |> Enum.map(fn calculation ->
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: calculation.name,
+        module: schema,
+        name: to_string(calculation.name),
+        type: field_type(calculation.type, nil, resource)
+      }
+    end)
+  end
 
-  defp field_type({:array, type}) do
-    %Absinthe.Blueprint.TypeReference.List{
-      of_type: field_type(type)
-    }
+  defp field_type({:array, type}, attribute, resource) do
+    new_attribute =
+      if attribute do
+        new_constraints = attribute.constraints[:items] || []
+        %{attribute | constraints: new_constraints, type: type}
+      end
+
+    if attribute.constraints[:nil_items?] do
+      %Absinthe.Blueprint.TypeReference.List{
+        of_type: field_type(type, new_attribute, resource)
+      }
+    else
+      %Absinthe.Blueprint.TypeReference.List{
+        of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+          of_type: field_type(type, new_attribute, resource)
+        }
+      }
+    end
+  end
+
+  defp field_type(type, attribute, resource) do
+    if Ash.Type.builtin?(type) do
+      do_field_type(type, attribute, resource)
+    else
+      type.graphql_type(attribute, resource)
+    end
+  end
+
+  defp do_field_type(Ash.Type.Atom, %{constraints: constraints, name: name}, resource) do
+    if is_list(constraints[:one_of]) do
+      atom_enum_type(resource, name)
+    else
+      :string
+    end
+  end
+
+  defp do_field_type(Ash.Type.Map, _, _), do: :json
+  defp do_field_type(Ash.Type.Term, _, _), do: :string
+  defp do_field_type(Ash.Type.String, _, _), do: :string
+  defp do_field_type(Ash.Type.Integer, _, _), do: :integer
+  defp do_field_type(Ash.Type.Boolean, _, _), do: :boolean
+  defp do_field_type(Ash.Type.UUID, _, _), do: :string
+  defp do_field_type(Ash.Type.Date, _, _), do: :date
+  defp do_field_type(Ash.Type.UtcDatetime, _, _), do: :naive_datetime
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp atom_enum_type(resource, attribute_name) do
+    resource
+    |> AshGraphql.Resource.type()
+    |> to_string()
+    |> Kernel.<>("_")
+    |> Kernel.<>(to_string(attribute_name))
+    |> String.to_atom()
   end
 end

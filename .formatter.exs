@@ -6,7 +6,6 @@ locals_without_parens = [
   create: 3,
   destroy: 2,
   destroy: 3,
-  fields: 1,
   get: 2,
   get: 3,
   list: 2,

@@ -24,7 +24,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
-        %{arguments: %{limit: limit, offset: offset} = args, context: context} = resolution,
+        %{arguments: args, context: context, definition: %{selections: selections}} = resolution,
         {api, resource, :list, action}
       ) do
     opts = [
@@ -33,24 +33,38 @@ defmodule AshGraphql.Graphql.Resolver do
       action: action
     ]
 
-    query =
-      resource
-      |> Ash.Query.limit(limit)
-      |> Ash.Query.offset(offset)
+    page_opts =
+      args
+      |> Map.take([:limit, :offset, :after, :before])
+      |> Enum.reject(fn {_, val} -> is_nil(val) end)
+
+    opts =
+      case page_opts do
+        [] ->
+          opts
+
+        page_opts ->
+          if Enum.any?(selections, &(&1.name == :count)) do
+            page_opts = Keyword.put(page_opts, :count, true)
+            Keyword.put(opts, :page, page_opts)
+          else
+            Keyword.put(opts, :page, page_opts)
+          end
+      end
 
     query =
       case Map.fetch(args, :filter) do
         {:ok, filter} ->
           case Jason.decode(filter) do
             {:ok, decoded} ->
-              Ash.Query.filter(query, ^to_snake_case(decoded))
+              Ash.Query.filter(resource, ^to_snake_case(decoded))
 
             {:error, error} ->
               raise "Error parsing filter: #{inspect(error)}"
           end
 
         _ ->
-          query
+          Ash.Query.new(resource)
       end
 
     result =
@@ -58,8 +72,11 @@ defmodule AshGraphql.Graphql.Resolver do
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
       |> api.read(opts)
       |> case do
+        {:ok, %{results: results, count: count}} ->
+          {:ok, %{results: results, count: count}}
+
         {:ok, results} ->
-          {:ok, %{results: results, count: Enum.count(results)}}
+          {:ok, results}
 
         error ->
           error
@@ -181,7 +198,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp split_attrs_and_rels(input, resource) do
     Enum.reduce(input, {%{}, %{}}, fn {key, value}, {attrs, rels} ->
-      if Ash.Resource.attribute(resource, key) do
+      if Ash.Resource.public_attribute(resource, key) do
         {Map.put(attrs, key, value), rels}
       else
         {attrs, Map.put(rels, key, value)}
