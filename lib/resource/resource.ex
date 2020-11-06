@@ -511,9 +511,7 @@ defmodule AshGraphql.Resource do
         identifier: attribute.name,
         module: schema,
         name: to_string(attribute.name),
-        type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: :sort_order
-        }
+        type: :sort_order
       }
     end)
   end
