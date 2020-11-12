@@ -334,11 +334,20 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.map(fn
         %{cardinality: :one} = relationship ->
+          type =
+            if relationship.type == :belongs_to and relationship.required? do
+              %Absinthe.Blueprint.TypeReference.NonNull{
+                of_type: :id
+              }
+            else
+              :id
+            end
+
           %Absinthe.Blueprint.Schema.FieldDefinition{
             identifier: relationship.name,
             module: schema,
             name: to_string(relationship.name),
-            type: :id
+            type: type
           }
 
         %{cardinality: :many} = relationship ->
