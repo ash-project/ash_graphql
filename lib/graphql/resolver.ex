@@ -67,6 +67,20 @@ defmodule AshGraphql.Graphql.Resolver do
           Ash.Query.new(resource)
       end
 
+    query =
+      case Map.fetch(args, :sort) do
+        {:ok, sort} ->
+          keyword_sort =
+            Enum.map(sort, fn %{order: order, field: field} ->
+              {field, order}
+            end)
+
+          Ash.Query.sort(query, keyword_sort)
+
+        _ ->
+          query
+      end
+
     result =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
@@ -234,6 +248,7 @@ defmodule AshGraphql.Graphql.Resolver do
     opts = [
       query: apply_load_arguments(args, Ash.Query.new(relationship.destination)),
       api_opts: api_opts,
+      args: args,
       tenant: Map.get(context, :tenant)
     ]
 
@@ -272,6 +287,14 @@ defmodule AshGraphql.Graphql.Resolver do
 
       {:filter, value}, query ->
         decode_and_filter(query, value)
+
+      {:sort, value}, query ->
+        keyword_sort =
+          Enum.map(value, fn %{order: order, field: field} ->
+            {field, order}
+          end)
+
+        Ash.Query.sort(query, keyword_sort)
     end)
   end
 
@@ -285,17 +308,17 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp to_snake_case(map) when is_map(map) do
+  def to_snake_case(map) when is_map(map) do
     Enum.into(map, %{}, fn {key, value} ->
       {Macro.underscore(key), to_snake_case(value)}
     end)
   end
 
-  defp to_snake_case(list) when is_list(list) do
+  def to_snake_case(list) when is_list(list) do
     Enum.map(list, &to_snake_case/1)
   end
 
-  defp to_snake_case(other), do: other
+  def to_snake_case(other), do: other
 
   defp to_resolution({:ok, value}), do: {:ok, value}
 

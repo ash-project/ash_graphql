@@ -404,7 +404,9 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "sort",
         identifier: :sort,
-        type: resource_sort_type(resource),
+        type: %Absinthe.Blueprint.TypeReference.List{
+          of_type: resource_sort_type(resource)
+        },
         description: "How to sort the records in the response"
       }
     ] ++
@@ -493,52 +495,79 @@ defmodule AshGraphql.Resource do
   end
 
   defp sort_input(resource, schema) do
-    type = resource_sort_type(resource)
-
     %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-      fields: sort_fields(resource, schema),
-      identifier: type,
+      fields: [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :order,
+          module: schema,
+          name: "order",
+          default_value: :asc,
+          type: :sort_order
+        },
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :field,
+          module: schema,
+          name: "field",
+          type: resource_sort_field_type(resource)
+        }
+      ],
+      identifier: resource_sort_type(resource),
       module: schema,
-      name: type |> to_string() |> Macro.camelize()
+      name: resource |> resource_sort_type() |> to_string() |> Macro.camelize()
     }
   end
 
-  defp sort_fields(resource, schema) do
-    resource
-    |> Ash.Resource.attributes()
-    |> Enum.map(fn attribute ->
-      %Absinthe.Blueprint.Schema.FieldDefinition{
-        identifier: attribute.name,
-        module: schema,
-        name: to_string(attribute.name),
-        type: :sort_order
-      }
-    end)
+  defp resource_sort_field_type(resource) do
+    type = AshGraphql.Resource.type(resource)
+    String.to_atom(to_string(type) <> "_sort_field")
   end
 
   defp enum_definitions(resource, schema) do
-    resource
-    |> Ash.Resource.public_attributes()
-    |> Enum.filter(&(&1.type == Ash.Type.Atom))
-    |> Enum.filter(&is_list(&1.constraints[:one_of]))
-    |> Enum.map(fn attribute ->
-      type_name = atom_enum_type(resource, attribute.name)
+    atom_enums =
+      resource
+      |> Ash.Resource.public_attributes()
+      |> Enum.filter(&(&1.type == Ash.Type.Atom))
+      |> Enum.filter(&is_list(&1.constraints[:one_of]))
+      |> Enum.map(fn attribute ->
+        type_name = atom_enum_type(resource, attribute.name)
 
-      %Absinthe.Blueprint.Schema.EnumTypeDefinition{
-        module: schema,
-        name: type_name |> to_string() |> Macro.camelize(),
-        values:
-          Enum.map(attribute.constraints[:one_of], fn value ->
-            %Absinthe.Blueprint.Schema.EnumValueDefinition{
-              module: schema,
-              identifier: value,
-              name: String.upcase(to_string(value)),
-              value: value
-            }
-          end),
-        identifier: type_name
-      }
-    end)
+        %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+          module: schema,
+          name: type_name |> to_string() |> Macro.camelize(),
+          values:
+            Enum.map(attribute.constraints[:one_of], fn value ->
+              %Absinthe.Blueprint.Schema.EnumValueDefinition{
+                module: schema,
+                identifier: value,
+                name: String.upcase(to_string(value)),
+                value: value
+              }
+            end),
+          identifier: type_name
+        }
+      end)
+
+    attribute_sort_values = Enum.map(Ash.Resource.attributes(resource), & &1.name)
+    aggregate_sort_values = Enum.map(Ash.Resource.aggregates(resource), & &1.name)
+
+    sort_values = attribute_sort_values ++ aggregate_sort_values
+
+    sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+      module: schema,
+      name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
+      identifier: resource_sort_field_type(resource),
+      values:
+        Enum.map(sort_values, fn sort_value ->
+          %Absinthe.Blueprint.Schema.EnumValueDefinition{
+            module: schema,
+            identifier: sort_value,
+            name: String.upcase(to_string(sort_value)),
+            value: sort_value
+          }
+        end)
+    }
+
+    [sort_order | atom_enums]
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -617,12 +646,23 @@ defmodule AshGraphql.Resource do
         }
 
       attribute ->
+        field_type = field_type(attribute.type, attribute, resource)
+
+        field_type =
+          if attribute.allow_nil? do
+            field_type
+          else
+            %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: field_type
+            }
+          end
+
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
           identifier: attribute.name,
           module: schema,
           name: to_string(attribute.name),
-          type: field_type(attribute.type, attribute, resource)
+          type: field_type
         }
     end)
   end
