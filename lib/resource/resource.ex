@@ -387,7 +387,7 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "id",
         identifier: :id,
-        type: :id,
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
         description: "The id of the record"
       }
     ]
@@ -642,7 +642,7 @@ defmodule AshGraphql.Resource do
           identifier: :id,
           module: schema,
           name: "id",
-          type: :id
+          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
         }
 
       attribute ->
@@ -676,7 +676,14 @@ defmodule AshGraphql.Resource do
     end)
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->
-        type = Resource.type(relationship.destination)
+        type =
+          if relationship.type == :belongs_to && relationship.required? do
+            %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: Resource.type(relationship.destination)
+            }
+          else
+            Resource.type(relationship.destination)
+          end
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
