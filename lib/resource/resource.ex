@@ -526,6 +526,7 @@ defmodule AshGraphql.Resource do
     }
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp resource_sort_field_type(resource) do
     type = AshGraphql.Resource.type(resource)
     String.to_atom(to_string(type) <> "_sort_field")
