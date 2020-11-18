@@ -1,6 +1,6 @@
 defmodule AshGraphql.Resource.Mutation do
   @moduledoc "Represents a configured mutation on a resource"
-  defstruct [:name, :action, :type]
+  defstruct [:name, :action, :type, :identity]
 
   @create_schema [
     name: [
@@ -25,6 +25,10 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc: "The action to use for the mutation.",
       required: true
+    ],
+    identity: [
+      type: :atom,
+      doc: "The identity to use to fetch the record to be updated."
     ]
   ]
 
@@ -38,6 +42,10 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc: "The action to use for the mutation.",
       required: true
+    ],
+    identity: [
+      type: :atom,
+      doc: "The identity to use to fetch the record to be destroyed."
     ]
   ]
 
