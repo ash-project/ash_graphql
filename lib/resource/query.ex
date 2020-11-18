@@ -1,6 +1,6 @@
 defmodule AshGraphql.Resource.Query do
   @moduledoc "Represents a configured query on a resource"
-  defstruct [:name, :action, :type]
+  defstruct [:name, :action, :type, :identity]
 
   @get_schema [
     name: [
@@ -12,6 +12,11 @@ defmodule AshGraphql.Resource.Query do
       type: :atom,
       doc: "The action to use for the query.",
       required: true
+    ],
+    identity: [
+      type: :atom,
+      doc: "The identity to use for looking up the user",
+      required: false
     ]
   ]
 

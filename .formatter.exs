@@ -8,6 +8,7 @@ locals_without_parens = [
   destroy: 3,
   get: 2,
   get: 3,
+  identity: 1,
   list: 2,
   list: 3,
   type: 1,

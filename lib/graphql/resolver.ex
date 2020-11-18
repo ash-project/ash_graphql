@@ -4,8 +4,8 @@ defmodule AshGraphql.Graphql.Resolver do
   require Ash.Query
 
   def resolve(
-        %{arguments: %{id: id}, context: context} = resolution,
-        {api, resource, :get, action}
+        %{arguments: arguments, context: context} = resolution,
+        {api, resource, %{type: :get, action: action, identity: identity}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -13,11 +13,24 @@ defmodule AshGraphql.Graphql.Resolver do
       action: action
     ]
 
+    filter =
+      if identity do
+        resource
+        |> Ash.Resource.identities()
+        |> Enum.find(&(&1.name == identity))
+        |> Map.get(:keys)
+        |> Enum.map(fn key ->
+          {key, Map.get(arguments, key)}
+        end)
+      else
+        [id: Map.get(arguments, :id)]
+      end
+
     result =
       resource
       |> Ash.Query.new()
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
-      |> Ash.Query.filter(id == ^id)
+      |> Ash.Query.filter(^filter)
       |> api.read_one(opts)
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
@@ -25,7 +38,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context, definition: %{selections: selections}} = resolution,
-        {api, resource, :list, action}
+        {api, resource, %{type: :list, action: action}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -101,7 +114,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def mutate(
         %{arguments: %{input: input}, context: context} = resolution,
-        {api, resource, :create, action}
+        {api, resource, %{type: :create, action: action}}
       ) do
     {attributes, relationships} = split_attrs_and_rels(input, resource)
 
@@ -134,11 +147,24 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def mutate(
-        %{arguments: %{id: id, input: input}, context: context} = resolution,
-        {api, resource, :update, action}
+        %{arguments: %{input: input} = arguments, context: context} = resolution,
+        {api, resource, %{type: :update, action: action, identity: identity}}
       ) do
+    filter =
+      if identity do
+        resource
+        |> Ash.Resource.identities()
+        |> Enum.find(&(&1.name == identity))
+        |> Map.get(:keys)
+        |> Enum.map(fn key ->
+          {key, Map.get(arguments, key)}
+        end)
+      else
+        [id: Map.get(arguments, :id)]
+      end
+
     resource
-    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.filter(^filter)
     |> Ash.Query.set_tenant(Map.get(context, :tenant))
     |> api.read_one!()
     |> case do
@@ -177,11 +203,24 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def mutate(
-        %{arguments: %{id: id}, context: context} = resolution,
-        {api, resource, :destroy, action}
+        %{arguments: arguments, context: context} = resolution,
+        {api, resource, %{type: :destroy, action: action, identity: identity}}
       ) do
+    filter =
+      if identity do
+        resource
+        |> Ash.Resource.identities()
+        |> Enum.find(&(&1.name == identity))
+        |> Map.get(:keys)
+        |> Enum.map(fn key ->
+          {key, Map.get(arguments, key)}
+        end)
+      else
+        [id: Map.get(arguments, :id)]
+      end
+
     resource
-    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.filter(^filter)
     |> Ash.Query.set_tenant(Map.get(context, :tenant))
     |> api.read_one!()
     |> case do
