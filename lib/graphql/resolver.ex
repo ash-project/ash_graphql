@@ -38,7 +38,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context, definition: %{selections: selections}} = resolution,
-        {api, resource, :list, action}
+        {api, resource, %{type: :get, action: action}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
