@@ -4,8 +4,8 @@ defmodule AshGraphql.Graphql.Resolver do
   require Ash.Query
 
   def resolve(
-        %{arguments: %{id: id}, context: context} = resolution,
-        {api, resource, :get, action}
+        %{arguments: arguments, context: context} = resolution,
+        {api, resource, %{type: :get, action: action, identity: identity}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -13,11 +13,24 @@ defmodule AshGraphql.Graphql.Resolver do
       action: action
     ]
 
+    filter =
+      if identity do
+        resource
+        |> Ash.Resource.identities()
+        |> Enum.find(&(&1.name == identity))
+        |> Map.get(:keys)
+        |> Enum.map(fn key ->
+          {key, Map.get(arguments, key)}
+        end)
+      else
+        [id: Map.get(arguments, :id)]
+      end
+
     result =
       resource
       |> Ash.Query.new()
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
-      |> Ash.Query.filter(id == ^id)
+      |> Ash.Query.filter(^filter)
       |> api.read_one(opts)
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
