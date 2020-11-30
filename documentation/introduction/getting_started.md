@@ -137,3 +137,65 @@ end
 If you started with `mix new ...` instead of `mix phx.new ...` and you want to
 still use phoenix, the fastest path that way is typically to just create a new
 phoenix application and copy your resources/config over.
+
+### Setting context
+
+Both queries and changesets support setting `context`, which can be used later on in
+validations/authorization. Absinthe, the tool that backs AshGraphql, also has a `context` (easy to get the two confused). In order to provide context to the `Ash.Changeset` or `Ash.Query` that a given operation will perform, you'll need to set that absinthe context
+Additionally, there is a special piece of context that Ash looks for to get the current user, or "actor" in Ash terms. This assign is called `:actor`. Ash does not declaratively manage things like authentication, because that tooling exists already in various forms for both Phoenix and Plug. An extension for authentication may very well exist at some point though.
+
+ Here is an example of what your authorization plug might look like (see `Plug` for more information):
+
+```elixir
+defmodule MyApp.Plugs.Authentication do
+  require Ash.Query
+
+  def init(opts), do: opts
+
+  def call(conn, params) do
+    user_id = get_user_id(conn, params) 
+    # how you go from `Plug.Conn` -> a user is all dependent on how your authentication
+    # works 
+    case Plug.Conn.get_req_header(conn, "authorization") do
+      ["Bearer " <> token] ->
+        %{"user_id" => firebase_id} = verify!(token)
+
+        member =
+          MilyAsh.Member
+          |> Ash.Query.filter(firebase_id == ^firebase_id)
+          |> MilyAsh.Api.read_one!()
+
+        if member do
+          Logger.info("User logged in #{member.id}")
+        else
+          Logger.info("No user existed with id #{firebase_id}")
+        end
+
+        Plug.Conn.assign(conn, :actor, member)
+
+      _ ->
+        Logger.info("No firebase context given")
+        Plug.Conn.assign(conn, :actor, nil)
+    end
+  end
+
+  def load_user(_, _), do: nil
+  def load_groups(_, _), do: []
+
+  def verify!(token) do
+    {:ok, 200, _headers, ref} = :hackney.get(@cert_url)
+    {:ok, body} = :hackney.body(ref)
+    {:ok, %{"kid" => kid}} = Joken.peek_header(token)
+
+    {true, %{fields: fields}, _} =
+      body
+      |> Jason.decode!()
+      |> JOSE.JWK.from_firebase()
+      |> Map.fetch!(kid)
+      |> JOSE.JWT.verify(token)
+
+    fields
+  end
+end
+
+```

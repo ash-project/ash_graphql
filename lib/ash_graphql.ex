@@ -15,7 +15,7 @@ defmodule AshGraphql do
         |> Enum.map(&{&1, false})
         |> List.update_at(0, fn {api, _} -> {api, true} end)
 
-      for {api, first?} <- apis do
+      for {api, first?} do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
