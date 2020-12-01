@@ -12,8 +12,10 @@ defmodule AshGraphql do
         api
         |> List.wrap()
         |> Kernel.++(List.wrap(apis))
+        |> Enum.map(&{&1, false})
+        |> List.update_at(0, fn {api, _} -> {api, true} end)
 
-      for api <- apis do
+      for {api, first?} <- IO.inspect(apis) do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
@@ -46,8 +48,12 @@ defmodule AshGraphql do
                   end)
 
                 type_definitions =
-                  AshGraphql.Api.global_type_definitions(__MODULE__) ++
+                  if unquote(first?) do
+                    AshGraphql.Api.global_type_definitions(__MODULE__) ++
+                      AshGraphql.Api.type_definitions(api, __MODULE__)
+                  else
                     AshGraphql.Api.type_definitions(api, __MODULE__)
+                  end
 
                 new_defs =
                   List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
