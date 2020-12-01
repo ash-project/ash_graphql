@@ -12,10 +12,8 @@ defmodule AshGraphql do
         api
         |> List.wrap()
         |> Kernel.++(List.wrap(apis))
-        |> Enum.map(&{&1, false})
-        |> List.update_at(0, fn {api, _} -> {api, true} end)
 
-      for {api, first?} do
+      for api <- apis do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
@@ -47,14 +45,16 @@ defmodule AshGraphql do
                     Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
                   end)
 
+                type_definitions =
+                  AshGraphql.Api.global_type_definitions(__MODULE__) ++
+                    AshGraphql.Api.type_definitions(api, __MODULE__)
+
                 new_defs =
                   List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
                     %{
                       schema_def
                       | imports: [{Absinthe.Type.Custom, []} | List.wrap(schema_def.imports)],
-                        type_definitions:
-                          schema_def.type_definitions ++
-                            AshGraphql.Api.type_definitions(api, __MODULE__, unquote(first?))
+                        type_definitions: schema_def.type_definitions ++ type_definitions
                     }
                   end)
 

@@ -39,7 +39,7 @@ defmodule AshGraphql.Api do
   end
 
   @doc false
-  def type_definitions(api, schema, first?) do
+  def type_definitions(api, schema) do
     resource_types =
       api
       |> Ash.Api.resources()
@@ -51,11 +51,11 @@ defmodule AshGraphql.Api do
           AshGraphql.Resource.mutation_types(resource, schema)
       end)
 
-    if first? do
-      [mutation_error(schema), relationship_change(schema), sort_order(schema)] ++ resource_types
-    else
-      resource_types
-    end
+    resource_types
+  end
+
+  def global_type_definitions(schema) do
+    [mutation_error(schema), relationship_change(schema), sort_order(schema)]
   end
 
   defp sort_order(schema) do
