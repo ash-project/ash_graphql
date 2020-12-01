@@ -324,7 +324,7 @@ defmodule AshGraphql.Resource do
         type = field_type(attribute.type, attribute, resource)
 
         field_type =
-          if attribute.allow_nil? || mutation.type == :update do
+          if attribute.allow_nil? || attribute.default || mutation.type == :update do
             type
           else
             %Absinthe.Blueprint.TypeReference.NonNull{
