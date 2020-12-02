@@ -12,6 +12,9 @@ defmodule AshGraphql do
         api
         |> List.wrap()
         |> Kernel.++(List.wrap(apis))
+
+      apis =
+        apis
         |> Enum.map(&{&1, false})
         |> List.update_at(0, fn {api, _} -> {api, true} end)
 
@@ -19,6 +22,8 @@ defmodule AshGraphql do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
+
+          Code.ensure_compiled(api)
 
           def pipeline(pipeline) do
             Pipeline.insert_before(
@@ -31,45 +36,40 @@ defmodule AshGraphql do
           def run(blueprint, _opts) do
             api = unquote(api)
 
-            case Code.ensure_compiled(api) do
-              {:module, _} ->
-                blueprint_with_queries =
-                  api
-                  |> AshGraphql.Api.queries(__MODULE__)
-                  |> Enum.reduce(blueprint, fn query, blueprint ->
-                    Absinthe.Blueprint.add_field(blueprint, "RootQueryType", query)
-                  end)
+            Code.ensure_compiled(api)
 
-                blueprint_with_mutations =
-                  api
-                  |> AshGraphql.Api.mutations(__MODULE__)
-                  |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
-                    Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
-                  end)
+            blueprint_with_queries =
+              api
+              |> AshGraphql.Api.queries(__MODULE__)
+              |> Enum.reduce(blueprint, fn query, blueprint ->
+                Absinthe.Blueprint.add_field(blueprint, "RootQueryType", query)
+              end)
 
-                type_definitions =
-                  if unquote(first?) do
-                    AshGraphql.Api.global_type_definitions(__MODULE__) ++
-                      AshGraphql.Api.type_definitions(api, __MODULE__)
-                  else
-                    AshGraphql.Api.type_definitions(api, __MODULE__)
-                  end
+            blueprint_with_mutations =
+              api
+              |> AshGraphql.Api.mutations(__MODULE__)
+              |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
+                Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
+              end)
 
-                new_defs =
-                  List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
-                    %{
-                      schema_def
-                      | imports: [{Absinthe.Type.Custom, []} | List.wrap(schema_def.imports)],
-                        type_definitions: schema_def.type_definitions ++ type_definitions
-                    }
-                  end)
+            type_definitions =
+              if unquote(first?) do
+                AshGraphql.Api.global_type_definitions(__MODULE__) ++
+                  AshGraphql.Api.type_definitions(api, __MODULE__)
+              else
+                AshGraphql.Api.type_definitions(api, __MODULE__)
+              end
 
-                {:ok, %{blueprint_with_mutations | schema_definitions: new_defs}}
+            new_defs =
+              List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
+                %{
+                  schema_def
+                  | imports: [{Absinthe.Type.Custom, []} | List.wrap(schema_def.imports)],
+                    type_definitions: schema_def.type_definitions ++ type_definitions
+                }
+              end)
 
-              {:error, _} ->
-                # Something else will fail here, so we don't need to
-                {:ok, blueprint}
-            end
+            {:ok, %{blueprint_with_mutations | schema_definitions: new_defs}}
           end
         end
 

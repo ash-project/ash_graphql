@@ -1,4 +1,6 @@
 defmodule AshGraphql.Test.Schema do
+  @moduledoc false
+
   use Absinthe.Schema
 
   @apis [AshGraphql.Test.Api]
@@ -15,7 +17,7 @@ defmodule AshGraphql.Test.Schema do
     AshGraphql.add_context(ctx, @apis)
   end
 
-  def plugins() do
+  def plugins do
     [Absinthe.Middleware.Dataloader | Absinthe.Plugin.defaults()]
   end
 end

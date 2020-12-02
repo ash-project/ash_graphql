@@ -1,5 +1,12 @@
 defmodule AshGraphql.CreateTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
+
+  setup do
+    on_exit(fn ->
+      nil
+      # ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Post))
+    end)
+  end
 
   test "a create with arguments works" do
     resp =
