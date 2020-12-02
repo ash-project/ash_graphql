@@ -116,7 +116,7 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: %{input: input}, context: context} = resolution,
         {api, resource, %{type: :create, action: action}}
       ) do
-    {attributes, relationships} = split_attrs_and_rels(input, resource)
+    {attributes, relationships, arguments} = split_attrs_rels_and_args(input, resource)
 
     changeset = Ash.Changeset.new(resource, attributes)
 
@@ -134,6 +134,7 @@ defmodule AshGraphql.Graphql.Resolver do
     result =
       changeset_with_relationships
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+      |> Ash.Changeset.set_arguments(arguments)
       |> api.create(opts)
       |> case do
         {:ok, value} ->
@@ -172,7 +173,7 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, %{result: nil, errors: [to_errors("not found")]}}
 
       initial ->
-        {attributes, relationships} = split_attrs_and_rels(input, resource)
+        {attributes, relationships, arguments} = split_attrs_rels_and_args(input, resource)
         changeset = Ash.Changeset.new(initial, attributes)
 
         changeset_with_relationships =
@@ -189,6 +190,7 @@ defmodule AshGraphql.Graphql.Resolver do
         result =
           changeset_with_relationships
           |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+          |> Ash.Changeset.set_arguments(arguments)
           |> api.update(opts)
           |> case do
             {:ok, value} ->
@@ -249,12 +251,17 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp split_attrs_and_rels(input, resource) do
-    Enum.reduce(input, {%{}, %{}}, fn {key, value}, {attrs, rels} ->
-      if Ash.Resource.public_attribute(resource, key) do
-        {Map.put(attrs, key, value), rels}
-      else
-        {attrs, Map.put(rels, key, value)}
+  defp split_attrs_rels_and_args(input, resource) do
+    Enum.reduce(input, {%{}, %{}, %{}}, fn {key, value}, {attrs, rels, args} ->
+      cond do
+        Ash.Resource.public_attribute(resource, key) ->
+          {Map.put(attrs, key, value), rels, args}
+
+        Ash.Resource.public_relationship(resource, key) ->
+          {attrs, Map.put(rels, key, value), args}
+
+        true ->
+          {attrs, rels, Map.put(args, key, value)}
       end
     end)
   end

@@ -387,7 +387,26 @@ defmodule AshGraphql.Resource do
           end
       end)
 
-    attribute_fields ++ relationship_fields
+    argument_fields =
+      Enum.map(mutation.action.arguments, fn argument ->
+        type =
+          if argument.allow_nil? do
+            %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: field_type(argument.type, argument, resource)
+            }
+          else
+            field_type(argument.type, argument, resource)
+          end
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: argument.name,
+          module: schema,
+          name: to_string(argument.name),
+          type: type
+        }
+      end)
+
+    attribute_fields ++ relationship_fields ++ argument_fields
   end
 
   defp query_type(:get, _, type), do: type

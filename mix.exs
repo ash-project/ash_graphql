@@ -16,6 +16,7 @@ defmodule AshGraphql.MixProject do
       package: package(),
       aliases: aliases(),
       deps: deps(),
+      elixirc_paths: elixirc_paths(Mix.env()),
       dialyzer: [plt_add_apps: [:ash]],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
@@ -27,6 +28,14 @@ defmodule AshGraphql.MixProject do
       source_url: "https://github.com/ash-project/ash_graphql",
       homepage_url: "https://github.com/ash-project/ash_graphql"
     ]
+  end
+
+  defp elixirc_paths(:test) do
+    elixirc_paths(:dev) ++ ["test/support"]
+  end
+
+  defp elixirc_paths(_) do
+    ["lib"]
   end
 
   defp docs do
@@ -69,7 +78,7 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 1.23")},
+      {:ash, ash_version("~> 1.25.1")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.5.3"},
       {:dataloader, "~> 1.0"},
