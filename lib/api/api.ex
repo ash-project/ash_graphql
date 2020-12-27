@@ -1,5 +1,4 @@
 defmodule AshGraphql.Api do
-
   @graphql %Ash.Dsl.Section{
     name: :graphql,
     describe: """
