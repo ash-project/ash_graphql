@@ -1,11 +1,17 @@
 defmodule AshGraphql.Api do
-  @moduledoc "The entrypoint for adding graphql behavior to an Ash API"
 
   @graphql %Ash.Dsl.Section{
     name: :graphql,
     describe: """
     Global configuration for graphql
     """,
+    examples: [
+      """
+      graphql do
+        authorize? false # To skip authorization for this API
+      end
+      """
+    ],
     schema: [
       authorize?: [
         type: :boolean,
@@ -15,7 +21,18 @@ defmodule AshGraphql.Api do
     ]
   }
 
-  use Ash.Dsl.Extension, sections: [@graphql]
+  @sections [@graphql]
+
+  @moduledoc """
+  The entrypoint for adding graphql behavior to an Ash API
+
+  # Table of Contents
+  #{Ash.Dsl.Extension.doc_index(@sections)}
+
+  #{Ash.Dsl.Extension.doc(@sections)}
+  """
+
+  use Ash.Dsl.Extension, sections: @sections
 
   def authorize?(api) do
     Extension.get_opt(api, [:graphql], :authorize?, true)

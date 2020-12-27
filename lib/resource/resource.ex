@@ -1,10 +1,4 @@
 defmodule AshGraphql.Resource do
-  @moduledoc """
-  This Ash resource extension adds configuration for exposing a resource in a graphql.
-
-  See `graphql/1` for more information
-  """
-
   alias Ash.Dsl.Extension
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
@@ -85,6 +79,14 @@ defmodule AshGraphql.Resource do
     describe: """
     Queries (read actions) to expose for the resource.
     """,
+    examples: [
+      """
+      queries do
+        get :get_post, :default
+        list :list_posts, :default
+      end
+      """
+    ],
     entities: [
       @get,
       @list
@@ -96,6 +98,15 @@ defmodule AshGraphql.Resource do
     describe: """
     Mutations (create/update/destroy actions) to expose for the resource.
     """,
+    examples: [
+      """
+      mutations do
+        create :create_post, :default
+        update :update_post, :default
+        destroy :destroy_post, :default
+      end
+      """
+    ],
     entities: [
       @create,
       @update,
@@ -108,6 +119,24 @@ defmodule AshGraphql.Resource do
     describe: """
     Configuration for a given resource in graphql
     """,
+    examples: [
+      """
+      graphql do
+        type :post
+
+        queries do
+          get :get_post, :default
+          list :list_posts, :default
+        end
+
+        mutations do
+          create :create_post, :default
+          update :update_post, :default
+          destroy :destroy_post, :default
+        end
+      end
+      """
+    ],
     schema: [
       type: [
         type: :atom,
@@ -125,7 +154,18 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Transformers.RequireIdPkey
   ]
 
-  use Extension, sections: [@graphql], transformers: @transformers
+  @sections [@graphql]
+
+  @moduledoc """
+  This Ash resource extension adds configuration for exposing a resource in a graphql.
+
+  # Table of Contents
+  #{Ash.Dsl.Extension.doc_index(@sections)}
+
+  #{Ash.Dsl.Extension.doc(@sections)}
+  """
+
+  use Extension, sections: @sections, transformers: @transformers
 
   def queries(resource) do
     Extension.get_entities(resource, [:graphql, :queries])
