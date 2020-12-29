@@ -183,22 +183,26 @@ defmodule AshGraphql.Resource do
   def queries(api, resource, schema) do
     type = Resource.type(resource)
 
-    resource
-    |> queries()
-    |> Enum.map(fn query ->
-      query_action = Ash.Resource.action(resource, query.action, :read)
+    if type do
+      resource
+      |> queries()
+      |> Enum.map(fn query ->
+        query_action = Ash.Resource.action(resource, query.action, :read)
 
-      %Absinthe.Blueprint.Schema.FieldDefinition{
-        arguments: args(query.type, resource, query_action, query.identity),
-        identifier: query.name,
-        middleware: [
-          {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
-        ],
-        module: schema,
-        name: to_string(query.name),
-        type: query_type(query.type, query_action, type)
-      }
-    end)
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          arguments: args(query.type, resource, query_action, query.identity),
+          identifier: query.name,
+          middleware: [
+            {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+          ],
+          module: schema,
+          name: to_string(query.name),
+          type: query_type(query.type, query_action, type)
+        }
+      end)
+    else
+      []
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -502,8 +506,8 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "filter",
         identifier: :filter,
-        type: :string,
-        description: "A json encoded filter to apply"
+        type: resource_filter_type(resource),
+        description: "A filter to limit the results"
       },
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "sort",
@@ -554,6 +558,18 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(AshGraphql.Resource.type(resource)) <> "_sort_input")
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp resource_filter_type(resource) do
+    String.to_atom(to_string(AshGraphql.Resource.type(resource)) <> "_filter_input")
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp attribute_filter_field_type(resource, attribute) do
+    String.to_atom(
+      to_string(AshGraphql.Resource.type(resource)) <> "_filter_" <> to_string(attribute.name)
+    )
+  end
+
   defp keyset_pagination_args(action) do
     if action.pagination.keyset? do
       [
@@ -594,8 +610,127 @@ defmodule AshGraphql.Resource do
   def type_definitions(resource, api, schema) do
     [
       type_definition(resource, api, schema),
-      sort_input(resource, schema)
-    ] ++ List.wrap(page_of(resource, schema)) ++ enum_definitions(resource, schema)
+      sort_input(resource, schema),
+      filter_input(resource, schema)
+    ] ++
+      filter_field_types(resource, schema) ++
+      List.wrap(page_of(resource, schema)) ++ enum_definitions(resource, schema)
+  end
+
+  defp filter_field_types(resource, schema) do
+    filter_attribute_types(resource, schema) ++ filter_aggregate_types(resource, schema)
+  end
+
+  defp filter_attribute_types(resource, schema) do
+    resource
+    |> Ash.Resource.public_attributes()
+    |> Enum.flat_map(&filter_type(&1, resource, schema))
+  end
+
+  defp filter_aggregate_types(resource, schema) do
+    resource
+    |> Ash.Resource.public_aggregates()
+    |> Enum.flat_map(&filter_type(&1, resource, schema))
+  end
+
+  defp attribute_or_aggregate_type(%Ash.Resource.Attribute{type: type}, _resource), do: type
+
+  defp attribute_or_aggregate_type(%Ash.Resource.Aggregate{kind: kind, field: field}, resource) do
+    field_type =
+      if field do
+        Ash.Resource.attribute(resource, field).type
+      end
+
+    {:ok, aggregate_type} = Ash.Query.Aggregate.kind_to_type(kind, field_type)
+    aggregate_type
+  end
+
+  defp filter_type(attribute_or_aggregate, resource, schema) do
+    type = attribute_or_aggregate_type(attribute_or_aggregate, resource)
+
+    fields =
+      Enum.flat_map(Ash.Filter.builtin_operators(), fn operator ->
+        expressable_types =
+          Enum.filter(operator.types(), fn
+            [_, {:ref, _}] ->
+              false
+
+            [{:ref, :any}, _] ->
+              true
+
+            [{:ref, type}, _] ->
+              type in [type, Ash.Type.storage_type(type)]
+
+            :any_same_or_ref ->
+              true
+          end)
+
+        if Enum.any?(expressable_types, &(&1 == :any_same_or_ref)) do
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: operator.name(),
+              module: schema,
+              name: to_string(operator.name()),
+              type: field_type(type, attribute_or_aggregate, resource)
+            }
+          ]
+        else
+          type =
+            case Enum.at(expressable_types, 0) do
+              [_, {:array, :any}] ->
+                {:array, Ash.Type.String}
+
+              [_, {:array, :same}] ->
+                {:array, type}
+
+              [_, :same] ->
+                type
+
+              [_, :any] ->
+                Ash.Type.String
+
+              [_, type] when is_atom(type) ->
+                case Ash.Type.get_type(type) do
+                  nil ->
+                    nil
+
+                  type ->
+                    type
+                end
+
+              _ ->
+                nil
+            end
+
+          if type do
+            [
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                identifier: operator.name(),
+                module: schema,
+                name: to_string(operator.name()),
+                type: field_type({:array, Ash.Type.String}, attribute_or_aggregate, resource)
+              }
+            ]
+          else
+            []
+          end
+        end
+      end)
+
+    if fields == [] do
+      []
+    else
+      identifier = attribute_filter_field_type(resource, attribute_or_aggregate)
+
+      [
+        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          identifier: identifier,
+          fields: fields,
+          module: schema,
+          name: identifier |> to_string() |> Macro.camelize()
+        }
+      ]
+    end
   end
 
   defp sort_input(resource, schema) do
@@ -619,6 +754,96 @@ defmodule AshGraphql.Resource do
       module: schema,
       name: resource |> resource_sort_type() |> to_string() |> Macro.camelize()
     }
+  end
+
+  defp filter_input(resource, schema) do
+    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+      identifier: resource_filter_type(resource),
+      module: schema,
+      name: resource |> resource_filter_type() |> to_string() |> Macro.camelize(),
+      fields: resource_filter_fields(resource, schema)
+    }
+  end
+
+  defp resource_filter_fields(resource, schema) do
+    boolean_filter_fields(resource, schema) ++
+      attribute_filter_fields(resource, schema) ++
+      relationship_filter_fields(resource, schema) ++ aggregate_filter_fields(resource, schema)
+  end
+
+  defp attribute_filter_fields(resource, schema) do
+    resource
+    |> Ash.Resource.public_attributes()
+    |> Enum.flat_map(fn attribute ->
+      [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: attribute.name,
+          module: schema,
+          name: to_string(attribute.name),
+          type: attribute_filter_field_type(resource, attribute)
+        }
+      ]
+    end)
+  end
+
+  defp aggregate_filter_fields(resource, schema) do
+    resource
+    |> Ash.Resource.public_aggregates()
+    |> Enum.flat_map(fn aggregate ->
+      [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: aggregate.name,
+          module: schema,
+          name: to_string(aggregate.name),
+          type: attribute_filter_field_type(resource, aggregate)
+        }
+      ]
+    end)
+  end
+
+  defp relationship_filter_fields(resource, schema) do
+    resource
+    |> Ash.Resource.public_relationships()
+    |> Enum.filter(fn relationship ->
+      AshGraphql.Resource.type(relationship.destination)
+    end)
+    |> Enum.map(fn relationship ->
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: relationship.name,
+        module: schema,
+        name: to_string(relationship.name),
+        type: resource_filter_type(relationship.destination)
+      }
+    end)
+  end
+
+  defp boolean_filter_fields(resource, schema) do
+    if Ash.DataLayer.can?(:boolean_filter, resource) do
+      [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :and,
+          module: schema,
+          name: "and",
+          type: %Absinthe.Blueprint.TypeReference.List{
+            of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: resource_filter_type(resource)
+            }
+          }
+        },
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :or,
+          module: schema,
+          name: "or",
+          type: %Absinthe.Blueprint.TypeReference.List{
+            of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: resource_filter_type(resource)
+            }
+          }
+        }
+      ]
+    else
+      []
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -831,7 +1056,12 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.public_aggregates()
     |> Enum.map(fn aggregate ->
-      {:ok, type} = Aggregate.kind_to_type(aggregate.kind)
+      field_type =
+        if aggregate.field do
+          Ash.Resource.attribute(resource, aggregate.field).type
+        end
+
+      {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: aggregate.name,
@@ -855,12 +1085,15 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  defp field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource) do
+    %Absinthe.Blueprint.TypeReference.List{
+      of_type: field_type(type, aggregate, resource)
+    }
+  end
+
   defp field_type({:array, type}, attribute, resource) do
-    new_attribute =
-      if attribute do
-        new_constraints = attribute.constraints[:items] || []
-        %{attribute | constraints: new_constraints, type: type}
-      end
+    new_constraints = attribute.constraints[:items] || []
+    new_attribute = %{attribute | constraints: new_constraints, type: type}
 
     if attribute.constraints[:nil_items?] do
       %Absinthe.Blueprint.TypeReference.List{

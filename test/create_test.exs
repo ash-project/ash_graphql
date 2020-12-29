@@ -65,6 +65,6 @@ defmodule AshGraphql.CreateTest do
     assert %{data: %{"createPost" => %{"result" => nil, "errors" => [%{"message" => message}]}}} =
              result
 
-    assert message =~ ~r/Value did not match confirmation/
+    assert message =~ "Value did not match confirmation"
   end
 end
