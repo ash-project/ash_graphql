@@ -97,7 +97,11 @@ defmodule AshGraphql.Graphql.Resolver do
           {:ok, %{results: results, count: count}}
 
         {:ok, results} ->
-          {:ok, results}
+          if Ash.Resource.action(resource, action, :read).pagination do
+            {:ok, %{results: results, count: Enum.count(results)}}
+          else
+            {:ok, results}
+          end
 
         error ->
           error
