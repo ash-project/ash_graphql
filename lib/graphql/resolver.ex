@@ -68,13 +68,7 @@ defmodule AshGraphql.Graphql.Resolver do
     query =
       case Map.fetch(args, :filter) do
         {:ok, filter} ->
-          case Jason.decode(filter) do
-            {:ok, decoded} ->
-              Ash.Query.filter(resource, ^to_snake_case(decoded))
-
-            {:error, error} ->
-              raise "Error parsing filter: #{inspect(error)}"
-          end
+          Ash.Query.filter(resource, ^filter)
 
         _ ->
           Ash.Query.new(resource)
@@ -345,26 +339,8 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp decode_and_filter(query, value) do
-    case Jason.decode(value) do
-      {:ok, decoded} ->
-        Ash.Query.filter(query, ^to_snake_case(decoded))
-
-      {:error, error} ->
-        raise "Error parsing filter: #{inspect(error)}"
-    end
+    Ash.Query.filter(query, ^value)
   end
-
-  def to_snake_case(map) when is_map(map) do
-    Enum.into(map, %{}, fn {key, value} ->
-      {Macro.underscore(key), to_snake_case(value)}
-    end)
-  end
-
-  def to_snake_case(list) when is_list(list) do
-    Enum.map(list, &to_snake_case/1)
-  end
-
-  def to_snake_case(other), do: other
 
   defp to_resolution({:ok, value}), do: {:ok, value}
 
