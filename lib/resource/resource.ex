@@ -703,6 +703,19 @@ defmodule AshGraphql.Resource do
             end
 
           if type do
+            attribute_or_aggregate =
+              case {type, attribute_or_aggregate} do
+                {{:array, _type},
+                 %Ash.Resource.Attribute{constraints: constraints, allow_nil?: allow_nil?}} ->
+                  %{
+                    attribute_or_aggregate
+                    | constraints: [items: constraints, nil_items?: allow_nil?]
+                  }
+
+                _ ->
+                  attribute_or_aggregate
+              end
+
             [
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 identifier: operator.name(),
