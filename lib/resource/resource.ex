@@ -708,7 +708,7 @@ defmodule AshGraphql.Resource do
                 identifier: operator.name(),
                 module: schema,
                 name: to_string(operator.name()),
-                type: field_type({:array, Ash.Type.String}, attribute_or_aggregate, resource)
+                type: field_type(type, attribute_or_aggregate, resource)
               }
             ]
           else
