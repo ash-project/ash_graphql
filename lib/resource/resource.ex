@@ -703,18 +703,7 @@ defmodule AshGraphql.Resource do
             end
 
           if type do
-            attribute_or_aggregate =
-              case {type, attribute_or_aggregate} do
-                {{:array, _type},
-                 %Ash.Resource.Attribute{constraints: constraints, allow_nil?: allow_nil?}} ->
-                  %{
-                    attribute_or_aggregate
-                    | constraints: [items: constraints, nil_items?: allow_nil?]
-                  }
-
-                _ ->
-                  attribute_or_aggregate
-              end
+            attribute_or_aggregate = constraints_to_item_constraints(type, attribute_or_aggregate)
 
             [
               %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -745,6 +734,21 @@ defmodule AshGraphql.Resource do
       ]
     end
   end
+
+  defp constraints_to_item_constraints(
+         {:array, _},
+         %Ash.Resource.Attribute{
+           constraints: constraints,
+           allow_nil?: allow_nil?
+         } = attribute
+       ) do
+    %{
+      attribute
+      | constraints: [items: constraints, nil_items?: allow_nil?]
+    }
+  end
+
+  defp constraints_to_item_constraints(_, attribute_or_aggregate), do: attribute_or_aggregate
 
   defp sort_input(resource, schema) do
     %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
