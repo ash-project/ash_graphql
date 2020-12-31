@@ -129,7 +129,7 @@ scope "/" do
 
   forward "/playground",
           Absinthe.Plug.GraphiQL,
-          schema: YourSchema
+          schema: YourSchema,
           interface: :playground
 end
 ```
