@@ -142,6 +142,11 @@ defmodule AshGraphql.Resource do
         type: :atom,
         required: true,
         doc: "The type to use for this entity in the graphql schema"
+      ],
+      primary_key_delimiter: [
+        type: :string,
+        doc:
+          "If a composite primary key exists, this must be set to determine the `id` field value"
       ]
     ],
     sections: [
@@ -179,6 +184,44 @@ defmodule AshGraphql.Resource do
     Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
+  def primary_key_delimiter(resource) do
+    Extension.get_opt(resource, [:graphql], :primary_key_delimiter, [], false)
+  end
+
+  def encode_primary_key(%resource{} = record) do
+    case Ash.Resource.primary_key(resource) do
+      [field] ->
+        Map.get(record, field)
+
+      keys ->
+        delimiter = primary_key_delimiter(resource)
+
+        [_ | concatenated_keys] =
+          keys
+          |> Enum.reverse()
+          |> Enum.reduce([], fn key, acc -> [delimiter, to_string(Map.get(record, key)), acc] end)
+
+        IO.iodata_to_binary(concatenated_keys)
+    end
+  end
+
+  def decode_primary_key(resource, value) do
+    case Ash.Resource.primary_key(resource) do
+      [_field] ->
+        {:ok, value}
+
+      fields ->
+        delimiter = primary_key_delimiter(resource)
+        parts = String.split(value, delimiter)
+
+        if Enum.count(parts) == Enum.count(fields) do
+          {:ok, Enum.zip(fields, parts)}
+        else
+          {:error, "Invalid primary key"}
+        end
+    end
+  end
+
   @doc false
   def queries(api, resource, schema) do
     type = Resource.type(resource)
@@ -190,7 +233,7 @@ defmodule AshGraphql.Resource do
         query_action = Ash.Resource.action(resource, query.action, :read)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: args(query.type, resource, query_action, query.identity),
+          arguments: args(query.type, resource, query_action, schema, query.identity),
           identifier: query.name,
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
@@ -356,6 +399,35 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+  def embedded_type_input(resource, schema) do
+    attribute_fields =
+      resource
+      |> Ash.Resource.public_attributes()
+      |> Enum.filter(& &1.writable?)
+      |> Enum.map(fn attribute ->
+        type = field_type(attribute.type, attribute, resource)
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: attribute.description,
+          identifier: attribute.name,
+          module: schema,
+          name: to_string(attribute.name),
+          type: type
+        }
+      end)
+
+    name = AshGraphql.Resource.type(resource)
+
+    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+      fields: attribute_fields,
+      identifier: String.to_atom("#{name}_input"),
+      module: schema,
+      name: Macro.camelize("#{name}_input")
+    }
+  end
+
   defp mutation_fields(resource, schema, mutation) do
     attribute_fields =
       resource
@@ -365,7 +437,7 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
-        type = field_type(attribute.type, attribute, resource)
+        type = field_type(attribute.type, attribute, resource, true)
 
         field_type =
           if attribute.allow_nil? || attribute.default || mutation.type == :update do
@@ -436,10 +508,10 @@ defmodule AshGraphql.Resource do
         type =
           if argument.allow_nil? do
             %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: field_type(argument.type, argument, resource)
+              of_type: field_type(argument.type, argument, resource, true)
             }
           else
-            field_type(argument.type, argument, resource)
+            field_type(argument.type, argument, resource, true)
           end
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -469,9 +541,9 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp args(action_type, resource, action, identity \\ nil)
+  defp args(action_type, resource, action, schema, identity \\ nil)
 
-  defp args(:get, _resource, _action, nil) do
+  defp args(:get, _resource, _action, _schema, nil) do
     [
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "id",
@@ -482,7 +554,7 @@ defmodule AshGraphql.Resource do
     ]
   end
 
-  defp args(:get, resource, _action, identity) do
+  defp args(:get, resource, _action, _schema, identity) do
     resource
     |> Ash.Resource.identities()
     |> Enum.find(&(&1.name == identity))
@@ -494,31 +566,50 @@ defmodule AshGraphql.Resource do
         name: to_string(key),
         identifier: key,
         type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: field_type(attribute.type, attribute, resource)
+          of_type: field_type(attribute.type, attribute, resource, true)
         },
         description: attribute.description || ""
       }
     end)
   end
 
-  defp args(:list, resource, action, _) do
-    [
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: "filter",
-        identifier: :filter,
-        type: resource_filter_type(resource),
-        description: "A filter to limit the results"
-      },
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: "sort",
-        identifier: :sort,
-        type: %Absinthe.Blueprint.TypeReference.List{
-          of_type: resource_sort_type(resource)
-        },
-        description: "How to sort the records in the response"
-      }
-    ] ++
-      pagination_args(action)
+  defp args(:list, resource, action, schema, _) do
+    args =
+      case resource_filter_fields(resource, schema) do
+        [] ->
+          []
+
+        _ ->
+          [
+            %Absinthe.Blueprint.Schema.InputValueDefinition{
+              name: "filter",
+              identifier: :filter,
+              type: resource_filter_type(resource),
+              description: "A filter to limit the results"
+            }
+          ]
+      end
+
+    args =
+      case sort_values(resource) do
+        [] ->
+          args
+
+        _ ->
+          [
+            %Absinthe.Blueprint.Schema.InputValueDefinition{
+              name: "sort",
+              identifier: :sort,
+              type: %Absinthe.Blueprint.TypeReference.List{
+                of_type: resource_sort_type(resource)
+              },
+              description: "How to sort the records in the response"
+            }
+            | args
+          ]
+      end
+
+    args ++ pagination_args(action)
   end
 
   defp pagination_args(action) do
@@ -609,10 +700,10 @@ defmodule AshGraphql.Resource do
   @doc false
   def type_definitions(resource, api, schema) do
     [
-      type_definition(resource, api, schema),
-      sort_input(resource, schema),
-      filter_input(resource, schema)
+      type_definition(resource, api, schema)
     ] ++
+      List.wrap(sort_input(resource, schema)) ++
+      List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_of(resource, schema)) ++ enum_definitions(resource, schema)
   end
@@ -671,7 +762,7 @@ defmodule AshGraphql.Resource do
               identifier: operator.name(),
               module: schema,
               name: to_string(operator.name()),
-              type: field_type(type, attribute_or_aggregate, resource)
+              type: field_type(type, attribute_or_aggregate, resource, true)
             }
           ]
         else
@@ -710,7 +801,7 @@ defmodule AshGraphql.Resource do
                 identifier: operator.name(),
                 module: schema,
                 name: to_string(operator.name()),
-                type: field_type(type, attribute_or_aggregate, resource)
+                type: field_type(type, attribute_or_aggregate, resource, true)
               }
             ]
           else
@@ -751,35 +842,47 @@ defmodule AshGraphql.Resource do
   defp constraints_to_item_constraints(_, attribute_or_aggregate), do: attribute_or_aggregate
 
   defp sort_input(resource, schema) do
-    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-      fields: [
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          identifier: :order,
+    case sort_values(resource) do
+      [] ->
+        nil
+
+      _ ->
+        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          fields: [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: :order,
+              module: schema,
+              name: "order",
+              default_value: :asc,
+              type: :sort_order
+            },
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: :field,
+              module: schema,
+              name: "field",
+              type: resource_sort_field_type(resource)
+            }
+          ],
+          identifier: resource_sort_type(resource),
           module: schema,
-          name: "order",
-          default_value: :asc,
-          type: :sort_order
-        },
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          identifier: :field,
-          module: schema,
-          name: "field",
-          type: resource_sort_field_type(resource)
+          name: resource |> resource_sort_type() |> to_string() |> Macro.camelize()
         }
-      ],
-      identifier: resource_sort_type(resource),
-      module: schema,
-      name: resource |> resource_sort_type() |> to_string() |> Macro.camelize()
-    }
+    end
   end
 
   defp filter_input(resource, schema) do
-    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-      identifier: resource_filter_type(resource),
-      module: schema,
-      name: resource |> resource_filter_type() |> to_string() |> Macro.camelize(),
-      fields: resource_filter_fields(resource, schema)
-    }
+    case resource_filter_fields(resource, schema) do
+      [] ->
+        nil
+
+      fields ->
+        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          identifier: resource_filter_type(resource),
+          module: schema,
+          name: resource |> resource_filter_type() |> to_string() |> Macro.camelize(),
+          fields: fields
+        }
+    end
   end
 
   defp resource_filter_fields(resource, schema) do
@@ -791,6 +894,14 @@ defmodule AshGraphql.Resource do
   defp attribute_filter_fields(resource, schema) do
     resource
     |> Ash.Resource.public_attributes()
+    |> Enum.reject(fn
+      {:array, _} ->
+        true
+
+      _ ->
+        false
+    end)
+    |> Enum.reject(&Ash.Type.embedded_type?/1)
     |> Enum.flat_map(fn attribute ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -894,10 +1005,7 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    attribute_sort_values = Enum.map(Ash.Resource.attributes(resource), & &1.name)
-    aggregate_sort_values = Enum.map(Ash.Resource.aggregates(resource), & &1.name)
-
-    sort_values = attribute_sort_values ++ aggregate_sort_values
+    sort_values = sort_values(resource)
 
     sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
       module: schema,
@@ -915,6 +1023,40 @@ defmodule AshGraphql.Resource do
     }
 
     [sort_order | atom_enums]
+  end
+
+  defp sort_values(resource) do
+    attribute_sort_values =
+      resource
+      |> Ash.Resource.attributes()
+      |> Enum.reject(fn
+        %{type: {:array, _}} ->
+          false
+
+        _ ->
+          true
+      end)
+      |> Enum.reject(&Ash.Type.embedded_type?(&1.type))
+      |> Enum.map(& &1.name)
+
+    aggregate_sort_values =
+      resource
+      |> Ash.Resource.aggregates()
+      |> Enum.reject(fn aggregate ->
+        case Ash.Query.Aggregate.kind_to_type(aggregate.kind, nil) do
+          {:ok, {:array, _}} ->
+            true
+
+          {:ok, type} ->
+            Ash.Type.embedded_type?(type)
+
+          _ ->
+            true
+        end
+      end)
+      |> Enum.map(& &1.name)
+
+    attribute_sort_values ++ aggregate_sort_values
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -960,7 +1102,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp type_definition(resource, api, schema) do
+  def type_definition(resource, api, schema) do
     type = Resource.type(resource)
 
     %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
@@ -980,19 +1122,11 @@ defmodule AshGraphql.Resource do
   end
 
   defp attributes(resource, schema) do
-    resource
-    |> Ash.Resource.public_attributes()
-    |> Enum.map(fn
-      %{name: :id} = attribute ->
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: attribute.description,
-          identifier: :id,
-          module: schema,
-          name: "id",
-          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
-        }
-
-      attribute ->
+    non_id_attributes =
+      resource
+      |> Ash.Resource.public_attributes()
+      |> Enum.reject(& &1.primary_key?)
+      |> Enum.map(fn attribute ->
         field_type = field_type(attribute.type, attribute, resource)
 
         field_type =
@@ -1011,7 +1145,79 @@ defmodule AshGraphql.Resource do
           name: to_string(attribute.name),
           type: field_type
         }
-    end)
+      end)
+
+    pkey_fields =
+      case Ash.Resource.primary_key(resource) do
+        [field] ->
+          attribute = Ash.Resource.attribute(resource, field)
+
+          if attribute.private? do
+            non_id_attributes
+          else
+            field_type = field_type(attribute.type, attribute, resource)
+
+            field_type =
+              if attribute.allow_nil? do
+                field_type
+              else
+                %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: field_type
+                }
+              end
+
+            [
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                description: attribute.description,
+                identifier: attribute.name,
+                module: schema,
+                name: to_string(attribute.name),
+                type: field_type
+              }
+            ]
+          end
+
+        fields ->
+          added_pkey_fields =
+            if :id in fields do
+              []
+            else
+              for field <- fields do
+                attribute = Ash.Resource.attribute(resource, field)
+
+                field_type = field_type(attribute.type, attribute, resource)
+
+                field_type =
+                  if attribute.allow_nil? do
+                    field_type
+                  else
+                    %Absinthe.Blueprint.TypeReference.NonNull{
+                      of_type: field_type
+                    }
+                  end
+
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  description: attribute.description,
+                  identifier: attribute.name,
+                  module: schema,
+                  name: to_string(attribute.name),
+                  type: field_type
+                }
+              end
+            end
+
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The primary key of the resource",
+              identifier: :id,
+              module: schema,
+              name: "id",
+              type: :id
+            }
+          ] ++ added_pkey_fields
+      end
+
+    non_id_attributes ++ pkey_fields
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -1063,7 +1269,7 @@ defmodule AshGraphql.Resource do
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
-          arguments: args(:list, relationship.destination, read_action),
+          arguments: args(:list, relationship.destination, read_action, schema),
           type: query_type
         }
     end)
@@ -1102,34 +1308,51 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource) do
+  defp field_type(type, field, resource, input? \\ false)
+
+  defp field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?) do
     %Absinthe.Blueprint.TypeReference.List{
-      of_type: field_type(type, aggregate, resource)
+      of_type: field_type(type, aggregate, resource, input?)
     }
   end
 
-  defp field_type({:array, type}, attribute, resource) do
+  defp field_type({:array, type}, attribute, resource, input?) do
     new_constraints = attribute.constraints[:items] || []
     new_attribute = %{attribute | constraints: new_constraints, type: type}
 
     if attribute.constraints[:nil_items?] do
       %Absinthe.Blueprint.TypeReference.List{
-        of_type: field_type(type, new_attribute, resource)
+        of_type: field_type(type, new_attribute, resource, input?)
       }
     else
       %Absinthe.Blueprint.TypeReference.List{
         of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: field_type(type, new_attribute, resource)
+          of_type: field_type(type, new_attribute, resource, input?)
         }
       }
     end
   end
 
-  defp field_type(type, attribute, resource) do
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp field_type(type, attribute, resource, input?) do
     if Ash.Type.builtin?(type) do
       do_field_type(type, attribute, resource)
     else
-      type.graphql_type(attribute, resource)
+      if Ash.Type.embedded_type?(type) do
+        case type(type) do
+          nil ->
+            :json
+
+          type ->
+            if input? do
+              :"#{type}_input"
+            else
+              type
+            end
+        end
+      else
+        type.graphql_type(attribute, resource)
+      end
     end
   end
 

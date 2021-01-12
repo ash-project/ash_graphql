@@ -54,8 +54,11 @@ defmodule AshGraphql do
 
             type_definitions =
               if unquote(first?) do
+                embedded_types = AshGraphql.get_embedded_types(unquote(apis))
+
                 AshGraphql.Api.global_type_definitions(__MODULE__) ++
-                  AshGraphql.Api.type_definitions(api, __MODULE__)
+                  AshGraphql.Api.type_definitions(api, __MODULE__) ++
+                  embedded_types
               else
                 AshGraphql.Api.type_definitions(api, __MODULE__)
               end
@@ -64,8 +67,7 @@ defmodule AshGraphql do
               List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
                 %{
                   schema_def
-                  | imports: [{Absinthe.Type.Custom, []} | List.wrap(schema_def.imports)],
-                    type_definitions: schema_def.type_definitions ++ type_definitions
+                  | type_definitions: schema_def.type_definitions ++ type_definitions
                 }
               end)
 
@@ -73,9 +75,65 @@ defmodule AshGraphql do
           end
         end
 
+        if first? do
+          import_types(Absinthe.Type.Custom)
+          import_types(AshGraphql.Types.JSON)
+        end
+
         @pipeline_modifier Module.concat(api, AshTypes)
       end
     end
+  end
+
+  def get_embedded_types(apis) do
+    apis
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.flat_map(&Ash.Api.resources/1)
+    |> Enum.flat_map(&Ash.Resource.attributes/1)
+    |> Enum.map(& &1.type)
+    |> Enum.filter(&Ash.Type.embedded_type?/1)
+    |> Enum.map(fn
+      {:array, resource} ->
+        resource
+
+      resource ->
+        resource
+    end)
+    |> Enum.filter(&(AshGraphql.Resource in Ash.Resource.extensions(&1)))
+    |> Enum.flat_map(fn type ->
+      [type] ++ get_nested_embedded_types(type)
+    end)
+    |> Enum.flat_map(fn embedded_type ->
+      [
+        AshGraphql.Resource.type_definition(
+          embedded_type,
+          Module.concat(embedded_type, ShadowApi),
+          __MODULE__
+        ),
+        AshGraphql.Resource.embedded_type_input(
+          embedded_type,
+          __MODULE__
+        )
+      ]
+    end)
+  end
+
+  defp get_nested_embedded_types(embedded_type) do
+    embedded_type
+    |> Ash.Resource.attributes()
+    |> Enum.map(& &1.type)
+    |> Enum.filter(&Ash.Type.embedded_type?/1)
+    |> Enum.map(fn
+      {:array, resource} ->
+        resource
+
+      resource ->
+        resource
+    end)
+    |> Enum.filter(&(AshGraphql.Resource in Ash.Resource.extensions(&1)))
+    |> Enum.flat_map(fn type ->
+      [type] ++ get_nested_embedded_types(type)
+    end)
   end
 
   def add_context(ctx, apis) do

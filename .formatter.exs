@@ -11,6 +11,7 @@ locals_without_parens = [
   identity: 1,
   list: 2,
   list: 3,
+  primary_key_delimiter: 1,
   type: 1,
   update: 2,
   update: 3

@@ -4,17 +4,27 @@ defmodule AshGraphql.Resource.Transformers.RequireIdPkey do
 
   alias Ash.Dsl.Transformer
 
-  def transform(_resource, dsl) do
-    primary_key =
-      dsl
-      |> Transformer.get_entities([:attributes])
-      |> Enum.filter(& &1.primary_key?)
-      |> Enum.map(& &1.name)
+  def transform(resource, dsl) do
+    if Ash.Type.embedded_type?(resource) do
+      {:ok, dsl}
+    else
+      primary_key =
+        dsl
+        |> Transformer.get_entities([:attributes])
+        |> Enum.filter(& &1.primary_key?)
 
-    unless primary_key == [:id] do
-      raise "AshGraphql currently requires the primary key to be a field called `id`"
+      case primary_key do
+        [_single] ->
+          {:ok, dsl}
+
+        [_ | _] ->
+          if AshGraphql.Resource.primary_key_delimiter(resource) do
+            {:ok, dsl}
+          else
+            {:error,
+             "AshGraphql requires a `primary_key_delimiter` to be set for composite primary keys."}
+          end
+      end
     end
-
-    {:ok, dsl}
   end
 end
