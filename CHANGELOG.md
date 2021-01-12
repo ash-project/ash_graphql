@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.10.0](https://github.com/ash-project/ash_graphql/compare/v0.9.5...v0.10.0) (2021-01-12)
+
+
+
+
+### Features:
+
+* support embedded resources
+
 ## [v0.9.5](https://github.com/ash-project/ash_graphql/compare/v0.9.4...v0.9.5) (2021-01-08)
 
 
