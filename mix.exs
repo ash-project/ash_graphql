@@ -11,7 +11,7 @@ defmodule AshGraphql.MixProject do
     [
       app: :ash_graphql,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       package: package(),
       aliases: aliases(),
