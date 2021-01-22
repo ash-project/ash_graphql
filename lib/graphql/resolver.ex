@@ -37,6 +37,7 @@ defmodule AshGraphql.Graphql.Resolver do
           |> Ash.Query.new()
           |> Ash.Query.set_tenant(Map.get(context, :tenant))
           |> Ash.Query.filter(^filter)
+          |> set_query_arguments(action, arguments)
           |> api.read_one(opts)
 
         {:error, error} ->
@@ -101,6 +102,7 @@ defmodule AshGraphql.Graphql.Resolver do
     result =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> set_query_arguments(action, args)
       |> api.read(opts)
       |> case do
         {:ok, %{results: results, count: count}} ->
@@ -178,6 +180,7 @@ defmodule AshGraphql.Graphql.Resolver do
         resource
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
+        |> set_query_arguments(action, arguments)
         |> api.read_one!()
         |> case do
           nil ->
@@ -236,6 +239,7 @@ defmodule AshGraphql.Graphql.Resolver do
         resource
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
+        |> set_query_arguments(action, arguments)
         |> api.read_one!()
         |> case do
           nil ->
@@ -257,6 +261,16 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, error} ->
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
     end
+  end
+
+  defp set_query_arguments(query, action, arg_values) do
+    action = Ash.Resource.action(query.resource, action, :read)
+
+    action.arguments
+    |> Enum.reject(& &1.private?)
+    |> Enum.reduce(query, fn argument, query ->
+      Ash.Query.set_argument(query, argument.name, Map.get(arg_values, argument.name))
+    end)
   end
 
   defp destroy_opts(api, context, action) do

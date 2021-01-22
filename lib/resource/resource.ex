@@ -504,7 +504,9 @@ defmodule AshGraphql.Resource do
       end)
 
     argument_fields =
-      Enum.map(mutation.action.arguments, fn argument ->
+      mutation.action.arguments
+      |> Enum.reject(& &1.private?)
+      |> Enum.map(fn argument ->
         type =
           if argument.allow_nil? do
             %Absinthe.Blueprint.TypeReference.NonNull{
@@ -543,7 +545,7 @@ defmodule AshGraphql.Resource do
 
   defp args(action_type, resource, action, schema, identity \\ nil)
 
-  defp args(:get, _resource, _action, _schema, nil) do
+  defp args(:get, resource, action, schema, nil) do
     [
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: "id",
@@ -551,10 +553,10 @@ defmodule AshGraphql.Resource do
         type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
         description: "The id of the record"
       }
-    ]
+    ] ++ read_args(resource, action, schema)
   end
 
-  defp args(:get, resource, _action, _schema, identity) do
+  defp args(:get, resource, action, schema, identity) do
     resource
     |> Ash.Resource.identities()
     |> Enum.find(&(&1.name == identity))
@@ -571,6 +573,7 @@ defmodule AshGraphql.Resource do
         description: attribute.description || ""
       }
     end)
+    |> Enum.concat(read_args(resource, action, schema))
   end
 
   defp args(:list, resource, action, schema, _) do
@@ -609,7 +612,29 @@ defmodule AshGraphql.Resource do
           ]
       end
 
-    args ++ pagination_args(action)
+    args ++ pagination_args(action) ++ read_args(resource, action, schema)
+  end
+
+  defp read_args(resource, action, schema) do
+    action.arguments
+    |> Enum.reject(& &1.private?)
+    |> Enum.map(fn argument ->
+      type =
+        if argument.allow_nil? do
+          %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: field_type(argument.type, argument, resource, true)
+          }
+        else
+          field_type(argument.type, argument, resource, true)
+        end
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: argument.name,
+        module: schema,
+        name: to_string(argument.name),
+        type: type
+      }
+    end)
   end
 
   defp pagination_args(action) do
@@ -743,20 +768,23 @@ defmodule AshGraphql.Resource do
       Enum.flat_map(Ash.Filter.builtin_operators(), fn operator ->
         expressable_types =
           Enum.filter(operator.types(), fn
-            [_, {:ref, _}] ->
+            [:any, {:array, type}] when is_atom(type) ->
+              true
+
+            :same ->
+              true
+
+            :any ->
+              true
+
+            [:any, type] when is_atom(type) ->
+              true
+
+            _ ->
               false
-
-            [{:ref, :any}, _] ->
-              true
-
-            [{:ref, type}, _] ->
-              type in [type, Ash.Type.storage_type(type)]
-
-            :any_same_or_ref ->
-              true
           end)
 
-        if Enum.any?(expressable_types, &(&1 == :any_same_or_ref)) do
+        if Enum.any?(expressable_types, &(&1 == :same)) do
           [
             %Absinthe.Blueprint.Schema.FieldDefinition{
               identifier: operator.name(),
@@ -768,9 +796,6 @@ defmodule AshGraphql.Resource do
         else
           type =
             case Enum.at(expressable_types, 0) do
-              [_, {:array, :any}] ->
-                {:array, Ash.Type.String}
-
               [_, {:array, :same}] ->
                 {:array, type}
 

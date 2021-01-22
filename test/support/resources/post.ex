@@ -10,6 +10,7 @@ defmodule AshGraphql.Test.Post do
 
     queries do
       get :get_post, :read
+      list :post_library, :library
     end
 
     mutations do
@@ -24,10 +25,21 @@ defmodule AshGraphql.Test.Post do
 
     create :create_confirm do
       argument(:confirmation, :string)
-      change(confirm(:text, :confirmation))
+      validate(confirm(:text, :confirmation))
     end
 
-    read(:read)
+    read(:read, primary?: true)
+
+    read :library do
+      argument(:published, :boolean, default: true)
+
+      filter(
+        expr do
+          published == ^arg(:published)
+        end
+      )
+    end
+
     update(:update)
     destroy(:destroy)
   end
@@ -36,5 +48,6 @@ defmodule AshGraphql.Test.Post do
     uuid_primary_key(:id)
 
     attribute(:text, :string)
+    attribute(:published, :boolean, default: false)
   end
 end

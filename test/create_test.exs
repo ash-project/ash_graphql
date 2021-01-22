@@ -3,8 +3,12 @@ defmodule AshGraphql.CreateTest do
 
   setup do
     on_exit(fn ->
-      nil
-      # ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Post))
+      try do
+        ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Post))
+      rescue
+        _ ->
+          :ok
+      end
     end)
   end
 
