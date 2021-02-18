@@ -17,7 +17,7 @@ defmodule AshGraphql.Graphql.Resolver do
       if identity do
         {:ok,
          resource
-         |> Ash.Resource.identities()
+         |> Ash.Resource.Info.identities()
          |> Enum.find(&(&1.name == identity))
          |> Map.get(:keys)
          |> Enum.map(fn key ->
@@ -109,7 +109,7 @@ defmodule AshGraphql.Graphql.Resolver do
           {:ok, %{results: results, count: count}}
 
         {:ok, results} ->
-          if Ash.Resource.action(resource, action, :read).pagination do
+          if Ash.Resource.Info.action(resource, action, :read).pagination do
             {:ok, %{results: results, count: Enum.count(results)}}
           else
             {:ok, results}
@@ -162,7 +162,7 @@ defmodule AshGraphql.Graphql.Resolver do
       if identity do
         {:ok,
          resource
-         |> Ash.Resource.identities()
+         |> Ash.Resource.Info.identities()
          |> Enum.find(&(&1.name == identity))
          |> Map.get(:keys)
          |> Enum.map(fn key ->
@@ -221,7 +221,7 @@ defmodule AshGraphql.Graphql.Resolver do
       if identity do
         {:ok,
          resource
-         |> Ash.Resource.identities()
+         |> Ash.Resource.Info.identities()
          |> Enum.find(&(&1.name == identity))
          |> Map.get(:keys)
          |> Enum.map(fn key ->
@@ -264,7 +264,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp set_query_arguments(query, action, arg_values) do
-    action = Ash.Resource.action(query.resource, action, :read)
+    action = Ash.Resource.Info.action(query.resource, action, :read)
 
     action.arguments
     |> Enum.reject(& &1.private?)
@@ -315,7 +315,7 @@ defmodule AshGraphql.Graphql.Resolver do
     primary_keys
     |> Enum.reduce_while({:ok, []}, fn pkey, {:ok, list} ->
       case AshGraphql.Resource.decode_primary_key(
-             Ash.Resource.related(changeset.resource, relationship),
+             Ash.Resource.Info.related(changeset.resource, relationship),
              pkey
            ) do
         {:ok, value} -> {:cont, {:ok, [value | list]}}
@@ -330,7 +330,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp decode_related_pkeys(changeset, relationship, primary_key) do
     AshGraphql.Resource.decode_primary_key(
-      Ash.Resource.related(changeset.resource, relationship),
+      Ash.Resource.Info.related(changeset.resource, relationship),
       primary_key
     )
   end
@@ -338,10 +338,10 @@ defmodule AshGraphql.Graphql.Resolver do
   defp split_attrs_rels_and_args(input, resource) do
     Enum.reduce(input, {%{}, %{}, %{}}, fn {key, value}, {attrs, rels, args} ->
       cond do
-        Ash.Resource.public_attribute(resource, key) ->
+        Ash.Resource.Info.public_attribute(resource, key) ->
           {Map.put(attrs, key, value), rels, args}
 
-        Ash.Resource.public_relationship(resource, key) ->
+        Ash.Resource.Info.public_relationship(resource, key) ->
           {attrs, Map.put(rels, key, value), args}
 
         true ->

@@ -116,7 +116,7 @@ defmodule AshGraphql.Dataloader do
     end
 
     defp related(path, resource) do
-      Ash.Resource.related(resource, path) ||
+      Ash.Resource.Info.related(resource, path) ||
         raise """
         Valid relationship for path #{inspect(path)} not found on resource #{inspect(resource)}
         """
@@ -124,7 +124,7 @@ defmodule AshGraphql.Dataloader do
 
     defp get_keys({assoc_field, opts}, %resource{} = record) when is_atom(assoc_field) do
       validate_resource(resource)
-      pkey = Ash.Resource.primary_key(resource)
+      pkey = Ash.Resource.Info.primary_key(resource)
       id = Enum.map(pkey, &Map.get(record, &1))
 
       queryable = related([assoc_field], resource)
@@ -141,7 +141,7 @@ defmodule AshGraphql.Dataloader do
     end
 
     defp validate_resource(resource) do
-      unless Ash.Resource.resource?(resource) do
+      unless Ash.Resource.Info.resource?(resource) do
         raise "The given module - #{resource} - is not an Ash resouce."
       end
     end
@@ -198,7 +198,7 @@ defmodule AshGraphql.Dataloader do
       empty = source_resource |> struct |> Map.fetch!(field)
       records = records |> Enum.map(&Map.put(&1, field, empty))
 
-      cardinality = Ash.Resource.relationship(source_resource, field).cardinality
+      cardinality = Ash.Resource.Info.relationship(source_resource, field).cardinality
 
       query =
         query

@@ -89,7 +89,7 @@ defmodule AshGraphql do
     apis
     |> Enum.map(&elem(&1, 0))
     |> Enum.flat_map(&Ash.Api.resources/1)
-    |> Enum.flat_map(&Ash.Resource.attributes/1)
+    |> Enum.flat_map(&Ash.Resource.Info.attributes/1)
     |> Enum.map(& &1.type)
     |> Enum.filter(&Ash.Type.embedded_type?/1)
     |> Enum.map(fn
@@ -99,7 +99,7 @@ defmodule AshGraphql do
       resource ->
         resource
     end)
-    |> Enum.filter(&(AshGraphql.Resource in Ash.Resource.extensions(&1)))
+    |> Enum.filter(&(AshGraphql.Resource in Ash.Resource.Info.extensions(&1)))
     |> Enum.flat_map(fn type ->
       [type] ++ get_nested_embedded_types(type)
     end)
@@ -120,7 +120,7 @@ defmodule AshGraphql do
 
   defp get_nested_embedded_types(embedded_type) do
     embedded_type
-    |> Ash.Resource.attributes()
+    |> Ash.Resource.Info.attributes()
     |> Enum.map(& &1.type)
     |> Enum.filter(&Ash.Type.embedded_type?/1)
     |> Enum.map(fn
@@ -130,7 +130,7 @@ defmodule AshGraphql do
       resource ->
         resource
     end)
-    |> Enum.filter(&(AshGraphql.Resource in Ash.Resource.extensions(&1)))
+    |> Enum.filter(&(AshGraphql.Resource in Ash.Resource.Info.extensions(&1)))
     |> Enum.flat_map(fn type ->
       [type] ++ get_nested_embedded_types(type)
     end)

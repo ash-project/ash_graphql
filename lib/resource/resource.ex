@@ -189,7 +189,7 @@ defmodule AshGraphql.Resource do
   end
 
   def encode_primary_key(%resource{} = record) do
-    case Ash.Resource.primary_key(resource) do
+    case Ash.Resource.Info.primary_key(resource) do
       [field] ->
         Map.get(record, field)
 
@@ -206,7 +206,7 @@ defmodule AshGraphql.Resource do
   end
 
   def decode_primary_key(resource, value) do
-    case Ash.Resource.primary_key(resource) do
+    case Ash.Resource.Info.primary_key(resource) do
       [_field] ->
         {:ok, value}
 
@@ -230,7 +230,7 @@ defmodule AshGraphql.Resource do
       resource
       |> queries()
       |> Enum.map(fn query ->
-        query_action = Ash.Resource.action(resource, query.action, :read)
+        query_action = Ash.Resource.Info.action(resource, query.action, :read)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           arguments: args(query.type, resource, query_action, schema, query.identity),
@@ -312,11 +312,11 @@ defmodule AshGraphql.Resource do
 
   defp mutation_args(%{identity: identity}, resource, _schema) when not is_nil(identity) do
     resource
-    |> Ash.Resource.identities()
+    |> Ash.Resource.Info.identities()
     |> Enum.find(&(&1.name == identity))
     |> Map.get(:keys)
     |> Enum.map(fn key ->
-      attribute = Ash.Resource.attribute(resource, key)
+      attribute = Ash.Resource.Info.attribute(resource, key)
 
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: to_string(key),
@@ -349,7 +349,7 @@ defmodule AshGraphql.Resource do
     |> Enum.flat_map(fn mutation ->
       mutation = %{
         mutation
-        | action: Ash.Resource.action(resource, mutation.action, mutation.type)
+        | action: Ash.Resource.Info.action(resource, mutation.action, mutation.type)
       }
 
       description =
@@ -404,7 +404,7 @@ defmodule AshGraphql.Resource do
   def embedded_type_input(resource, schema) do
     attribute_fields =
       resource
-      |> Ash.Resource.public_attributes()
+      |> Ash.Resource.Info.public_attributes()
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
         type = field_type(attribute.type, attribute, resource)
@@ -431,7 +431,7 @@ defmodule AshGraphql.Resource do
   defp mutation_fields(resource, schema, mutation) do
     attribute_fields =
       resource
-      |> Ash.Resource.public_attributes()
+      |> Ash.Resource.Info.public_attributes()
       |> Enum.filter(fn attribute ->
         is_nil(mutation.action.accept) || attribute.name in mutation.action.accept
       end)
@@ -459,9 +459,9 @@ defmodule AshGraphql.Resource do
 
     relationship_fields =
       resource
-      |> Ash.Resource.public_relationships()
+      |> Ash.Resource.Info.public_relationships()
       |> Enum.filter(fn relationship ->
-        Resource in Ash.Resource.extensions(relationship.destination)
+        Resource in Ash.Resource.Info.extensions(relationship.destination)
       end)
       |> Enum.map(fn
         %{cardinality: :one} = relationship ->
@@ -558,11 +558,11 @@ defmodule AshGraphql.Resource do
 
   defp args(:get, resource, action, schema, identity) do
     resource
-    |> Ash.Resource.identities()
+    |> Ash.Resource.Info.identities()
     |> Enum.find(&(&1.name == identity))
     |> Map.get(:keys)
     |> Enum.map(fn key ->
-      attribute = Ash.Resource.attribute(resource, key)
+      attribute = Ash.Resource.Info.attribute(resource, key)
 
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         name: to_string(key),
@@ -739,22 +739,23 @@ defmodule AshGraphql.Resource do
 
   defp filter_attribute_types(resource, schema) do
     resource
-    |> Ash.Resource.public_attributes()
+    |> Ash.Resource.Info.public_attributes()
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
 
   defp filter_aggregate_types(resource, schema) do
     resource
-    |> Ash.Resource.public_aggregates()
+    |> Ash.Resource.Info.public_aggregates()
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
 
-  defp attribute_or_aggregate_type(%Ash.Resource.Attribute{type: type}, _resource), do: type
+  defp attribute_or_aggregate_type(%Ash.Resource.Attribute{type: type}, _resource),
+    do: type
 
   defp attribute_or_aggregate_type(%Ash.Resource.Aggregate{kind: kind, field: field}, resource) do
     field_type =
       if field do
-        Ash.Resource.attribute(resource, field).type
+        Ash.Resource.Info.attribute(resource, field).type
       end
 
     {:ok, aggregate_type} = Ash.Query.Aggregate.kind_to_type(kind, field_type)
@@ -918,7 +919,7 @@ defmodule AshGraphql.Resource do
 
   defp attribute_filter_fields(resource, schema) do
     resource
-    |> Ash.Resource.public_attributes()
+    |> Ash.Resource.Info.public_attributes()
     |> Enum.reject(fn
       {:array, _} ->
         true
@@ -941,7 +942,7 @@ defmodule AshGraphql.Resource do
 
   defp aggregate_filter_fields(resource, schema) do
     resource
-    |> Ash.Resource.public_aggregates()
+    |> Ash.Resource.Info.public_aggregates()
     |> Enum.flat_map(fn aggregate ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -956,7 +957,7 @@ defmodule AshGraphql.Resource do
 
   defp relationship_filter_fields(resource, schema) do
     resource
-    |> Ash.Resource.public_relationships()
+    |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
       AshGraphql.Resource.type(relationship.destination)
     end)
@@ -1008,7 +1009,7 @@ defmodule AshGraphql.Resource do
   defp enum_definitions(resource, schema) do
     atom_enums =
       resource
-      |> Ash.Resource.public_attributes()
+      |> Ash.Resource.Info.public_attributes()
       |> Enum.filter(&(&1.type == Ash.Type.Atom))
       |> Enum.filter(&is_list(&1.constraints[:one_of]))
       |> Enum.map(fn attribute ->
@@ -1053,7 +1054,7 @@ defmodule AshGraphql.Resource do
   defp sort_values(resource) do
     attribute_sort_values =
       resource
-      |> Ash.Resource.attributes()
+      |> Ash.Resource.Info.attributes()
       |> Enum.reject(fn
         %{type: {:array, _}} ->
           false
@@ -1066,7 +1067,7 @@ defmodule AshGraphql.Resource do
 
     aggregate_sort_values =
       resource
-      |> Ash.Resource.aggregates()
+      |> Ash.Resource.Info.aggregates()
       |> Enum.reject(fn aggregate ->
         case Ash.Query.Aggregate.kind_to_type(aggregate.kind, nil) do
           {:ok, {:array, _}} ->
@@ -1090,7 +1091,7 @@ defmodule AshGraphql.Resource do
 
     paginatable? =
       resource
-      |> Ash.Resource.actions()
+      |> Ash.Resource.Info.actions()
       |> Enum.any?(fn action ->
         action.type == :read && action.pagination
       end)
@@ -1131,7 +1132,7 @@ defmodule AshGraphql.Resource do
     type = Resource.type(resource)
 
     %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-      description: Ash.Resource.description(resource),
+      description: Ash.Resource.Info.description(resource),
       fields: fields(resource, api, schema),
       identifier: type,
       module: schema,
@@ -1149,7 +1150,7 @@ defmodule AshGraphql.Resource do
   defp attributes(resource, schema) do
     non_id_attributes =
       resource
-      |> Ash.Resource.public_attributes()
+      |> Ash.Resource.Info.public_attributes()
       |> Enum.reject(& &1.primary_key?)
       |> Enum.map(fn attribute ->
         field_type = field_type(attribute.type, attribute, resource)
@@ -1173,9 +1174,9 @@ defmodule AshGraphql.Resource do
       end)
 
     pkey_fields =
-      case Ash.Resource.primary_key(resource) do
+      case Ash.Resource.Info.primary_key(resource) do
         [field] ->
-          attribute = Ash.Resource.attribute(resource, field)
+          attribute = Ash.Resource.Info.attribute(resource, field)
 
           if attribute.private? do
             non_id_attributes
@@ -1208,7 +1209,7 @@ defmodule AshGraphql.Resource do
               []
             else
               for field <- fields do
-                attribute = Ash.Resource.attribute(resource, field)
+                attribute = Ash.Resource.Info.attribute(resource, field)
 
                 field_type = field_type(attribute.type, attribute, resource)
 
@@ -1248,9 +1249,9 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.StringToAtom"]
   defp relationships(resource, api, schema) do
     resource
-    |> Ash.Resource.public_relationships()
+    |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
-      Resource in Ash.Resource.extensions(relationship.destination)
+      Resource in Ash.Resource.Info.extensions(relationship.destination)
     end)
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->
@@ -1275,7 +1276,7 @@ defmodule AshGraphql.Resource do
         }
 
       %{cardinality: :many} = relationship ->
-        read_action = Ash.Resource.primary_action!(relationship.destination, :read)
+        read_action = Ash.Resource.Info.primary_action!(relationship.destination, :read)
 
         type = Resource.type(relationship.destination)
 
@@ -1302,11 +1303,11 @@ defmodule AshGraphql.Resource do
 
   defp aggregates(resource, schema) do
     resource
-    |> Ash.Resource.public_aggregates()
+    |> Ash.Resource.Info.public_aggregates()
     |> Enum.map(fn aggregate ->
       field_type =
         if aggregate.field do
-          Ash.Resource.attribute(resource, aggregate.field).type
+          Ash.Resource.Info.attribute(resource, aggregate.field).type
         end
 
       {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
@@ -1322,7 +1323,7 @@ defmodule AshGraphql.Resource do
 
   defp calculations(resource, schema) do
     resource
-    |> Ash.Resource.public_calculations()
+    |> Ash.Resource.Info.public_calculations()
     |> Enum.map(fn calculation ->
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: calculation.name,
