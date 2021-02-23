@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.12.3](https://github.com/ash-project/ash_graphql/compare/v0.12.2...v0.12.3) (2021-02-23)
+
+
+
+
+### Bug Fixes:
+
+* fix .formatter.exs
+
 ## [v0.12.2](https://github.com/ash-project/ash_graphql/compare/v0.12.1...v0.12.2) (2021-02-23)
 
 
