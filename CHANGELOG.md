@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.12.1](https://github.com/ash-project/ash_graphql/compare/v0.12.0...v0.12.1) (2021-02-23)
+
+
+
+
+### Bug Fixes:
+
+* proper supports for embeds
+
+### Improvements:
+
+* update to latest ash
+
 ## [v0.12.0](https://github.com/ash-project/ash_graphql/compare/v0.11.0-rc0...v0.12.0) (2021-01-22)
 
 
