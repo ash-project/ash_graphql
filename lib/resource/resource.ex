@@ -388,7 +388,7 @@ defmodule AshGraphql.Resource do
         [result]
       else
         input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          fields: mutation_fields(resource, schema, mutation),
+          fields: mutation_fields(resource, schema, mutation.action, mutation.type),
           identifier: String.to_atom("#{mutation.name}_input"),
           module: schema,
           name: Macro.camelize("#{mutation.name}_input")
@@ -401,46 +401,77 @@ defmodule AshGraphql.Resource do
 
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
-  def embedded_type_input(resource, schema) do
-    attribute_fields =
-      resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.filter(& &1.writable?)
-      |> Enum.map(fn attribute ->
-        type = field_type(attribute.type, attribute, resource)
+  def embedded_type_input(source_resource, attribute, resource, schema) do
+    create_action =
+      case attribute.constraints[:create_action] do
+        nil ->
+          Ash.Resource.Info.primary_action!(resource, :create)
 
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: attribute.description,
-          identifier: attribute.name,
-          module: schema,
-          name: to_string(attribute.name),
-          type: type
-        }
+        name ->
+          Ash.Resource.Info.action(resource, name, :create)
+      end
+
+    update_action =
+      case attribute.constraints[:update_action] do
+        nil ->
+          Ash.Resource.Info.primary_action!(resource, :update)
+
+        name ->
+          Ash.Resource.Info.action(resource, name, :update)
+      end
+
+    fields =
+      mutation_fields(resource, schema, create_action, :create) ++
+        mutation_fields(resource, schema, update_action, :update)
+
+    fields =
+      fields
+      |> Enum.group_by(& &1.identifier)
+      # We only want one field per id. Right now we just take the first one
+      # If there are overlaps, and the field isn't `NonNull` in *all* cases, then
+      # we pick one and mark it explicitly as nullable (we unwrap the `NonNull`)
+      |> Enum.map(fn {_id, fields} ->
+        if Enum.all?(
+             fields,
+             &match?(%Absinthe.Blueprint.TypeReference.NonNull{}, &1.type)
+           ) do
+          Enum.at(fields, 0)
+        else
+          fields
+          |> Enum.at(0)
+          |> case do
+            %{type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: type}} = field ->
+              %{field | type: type}
+
+            field ->
+              field
+          end
+        end
       end)
 
-    name = AshGraphql.Resource.type(resource)
+    name = "#{AshGraphql.Resource.type(source_resource)}_#{attribute.name}_input"
 
     %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-      fields: attribute_fields,
-      identifier: String.to_atom("#{name}_input"),
+      fields: fields,
+      identifier: String.to_atom(name),
       module: schema,
-      name: Macro.camelize("#{name}_input")
+      name: Macro.camelize(name)
     }
   end
 
-  defp mutation_fields(resource, schema, mutation) do
+  defp mutation_fields(resource, schema, action, type) do
     attribute_fields =
       resource
       |> Ash.Resource.Info.public_attributes()
       |> Enum.filter(fn attribute ->
-        is_nil(mutation.action.accept) || attribute.name in mutation.action.accept
+        is_nil(action.accept) || attribute.name in action.accept
       end)
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
         type = field_type(attribute.type, attribute, resource, true)
 
         field_type =
-          if attribute.allow_nil? || attribute.default || mutation.type == :update do
+          if attribute.allow_nil? || attribute.default || type == :update do
             type
           else
             %Absinthe.Blueprint.TypeReference.NonNull{
@@ -466,7 +497,7 @@ defmodule AshGraphql.Resource do
       |> Enum.map(fn
         %{cardinality: :one} = relationship ->
           type =
-            if relationship.type == :belongs_to and relationship.required? do
+            if relationship.type == :belongs_to and relationship.required? and type == :create do
               %Absinthe.Blueprint.TypeReference.NonNull{
                 of_type: :id
               }
@@ -482,7 +513,7 @@ defmodule AshGraphql.Resource do
           }
 
         %{cardinality: :many} = relationship ->
-          case mutation.type do
+          case type do
             :update ->
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 identifier: relationship.name,
@@ -504,7 +535,7 @@ defmodule AshGraphql.Resource do
       end)
 
     argument_fields =
-      mutation.action.arguments
+      action.arguments
       |> Enum.reject(& &1.private?)
       |> Enum.map(fn argument ->
         type =
@@ -1365,19 +1396,17 @@ defmodule AshGraphql.Resource do
       do_field_type(type, attribute, resource)
     else
       if Ash.Type.embedded_type?(type) do
-        case type(type) do
-          nil ->
-            :json
+        if input? do
+          :"#{AshGraphql.Resource.type(resource)}_#{attribute.name}_input"
+        else
+          case type(type) do
+            nil ->
+              :json
 
-          type ->
-            if input? do
-              :"#{type}_input"
-            else
+            type ->
               type
-            end
+          end
         end
-      else
-        type.graphql_type(attribute, resource)
       end
     end
   end

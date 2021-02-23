@@ -8,21 +8,21 @@ defmodule AshGraphql.Dataloader do
   ]
 
   @type t :: %__MODULE__{
-          api: Ash.api(),
+          api: Ash.Api.t(),
           batches: map,
           results: map,
           default_params: map
         }
 
   @type api_opts :: Keyword.t()
-  @type batch_fun :: (Ash.resource(), Ash.query(), any, [any], api_opts -> [any])
+  @type batch_fun :: (Ash.Resource.t(), Ash.Query.t(), any, [any], api_opts -> [any])
 
   @doc """
   Create an Ash Dataloader source.
   This module handles retrieving data from Ash for dataloader. It requires a
   valid Ash API.
   """
-  @spec new(Ash.api()) :: t
+  @spec new(Ash.Api.t()) :: t
   def new(api) do
     %__MODULE__{api: api}
   end
