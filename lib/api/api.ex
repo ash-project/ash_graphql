@@ -16,6 +16,11 @@ defmodule AshGraphql.Api do
         type: :boolean,
         doc: "Whether or not to perform authorization for this API",
         default: true
+      ],
+      debug?: [
+        type: :boolean,
+        doc: "Whether or not to log (extremely verbose) debug information",
+        default: false
       ]
     ]
   }
@@ -35,6 +40,10 @@ defmodule AshGraphql.Api do
 
   def authorize?(api) do
     Extension.get_opt(api, [:graphql], :authorize?, true)
+  end
+
+  def debug?(api) do
+    Extension.get_opt(api, [:graphql], :debug?, false)
   end
 
   @doc false

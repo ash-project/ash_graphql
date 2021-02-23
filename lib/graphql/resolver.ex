@@ -10,7 +10,8 @@ defmodule AshGraphql.Graphql.Resolver do
     opts = [
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
-      action: action
+      action: action,
+      verbose?: AshGraphql.Api.debug?(api)
     ]
 
     filter =
@@ -54,7 +55,8 @@ defmodule AshGraphql.Graphql.Resolver do
     opts = [
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
-      action: action
+      action: action,
+      verbose?: AshGraphql.Api.debug?(api)
     ]
 
     page_opts =
@@ -135,7 +137,8 @@ defmodule AshGraphql.Graphql.Resolver do
     opts = [
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
-      action: action
+      action: action,
+      verbose?: AshGraphql.Api.debug?(api)
     ]
 
     result =
@@ -181,7 +184,7 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> set_query_arguments(action, arguments)
-        |> api.read_one!()
+        |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
             {:ok, %{result: nil, errors: [to_errors("not found")]}}
@@ -195,7 +198,8 @@ defmodule AshGraphql.Graphql.Resolver do
             opts = [
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Api.authorize?(api),
-              action: action
+              action: action,
+              verbose?: AshGraphql.Api.debug?(api)
             ]
 
             result =
@@ -240,7 +244,7 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> set_query_arguments(action, arguments)
-        |> api.read_one!()
+        |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
             {:ok, %{result: nil, errors: [to_errors("not found")]}}
@@ -275,9 +279,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp destroy_opts(api, context, action) do
     if AshGraphql.Api.authorize?(api) do
-      [actor: Map.get(context, :actor), action: action]
+      [actor: Map.get(context, :actor), action: action, verbose?: AshGraphql.Api.debug?(api)]
     else
-      [action: action]
+      [action: action, verbose?: AshGraphql.Api.debug?(api)]
     end
   end
 
@@ -373,7 +377,11 @@ defmodule AshGraphql.Graphql.Resolver do
         %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
         {api, relationship}
       ) do
-    api_opts = [actor: Map.get(context, :actor), authorize?: AshGraphql.Api.authorize?(api)]
+    api_opts = [
+      actor: Map.get(context, :actor),
+      authorize?: AshGraphql.Api.authorize?(api),
+      verbose?: AshGraphql.Api.debug?(api)
+    ]
 
     opts = [
       query: apply_load_arguments(args, Ash.Query.new(relationship.destination)),
