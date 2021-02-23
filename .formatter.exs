@@ -4,6 +4,7 @@ locals_without_parens = [
   authorize?: 1,
   create: 2,
   create: 3,
+  debug?: 1,
   destroy: 2,
   destroy: 3,
   get: 2,
