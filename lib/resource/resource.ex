@@ -156,7 +156,8 @@ defmodule AshGraphql.Resource do
   }
 
   @transformers [
-    AshGraphql.Resource.Transformers.RequireIdPkey
+    AshGraphql.Resource.Transformers.RequireIdPkey,
+    AshGraphql.Resource.Transformers.ValidateActions
   ]
 
   @sections [@graphql]
