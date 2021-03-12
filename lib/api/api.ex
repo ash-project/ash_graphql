@@ -60,7 +60,7 @@ defmodule AshGraphql.Api do
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Ash.Resource.Info.extensions(resource)
     end)
-    |> Enum.flat_map(&AshGraphql.Resource.mutations(api, &1, schema) || [])
+    |> Enum.flat_map(&AshGraphql.Resource.mutations(api, &1, schema))
   end
 
   @doc false

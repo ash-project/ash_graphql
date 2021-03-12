@@ -178,7 +178,7 @@ defmodule AshGraphql.Resource do
   end
 
   def mutations(resource) do
-    Extension.get_entities(resource, [:graphql, :mutations])
+    Extension.get_entities(resource, [:graphql, :mutations]) || []
   end
 
   def type(resource) do
