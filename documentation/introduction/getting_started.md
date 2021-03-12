@@ -63,13 +63,12 @@ end
 
 If you don't have an absinthe schema, you can create one just for ash
 
-If you don't have any queries or mutations in your schema, you may
-need to add empty query and mutation blocks. If you have no mutations,
-don't add an empty mutations block, same for queries. Additionally,
-define a `context/1` function, and call `AshGraphql.add_context/2` with
-the current context and your apis. Additionally, add the `Absinthe.Middleware.Dataloader`
-to your plugins, as shown below. If you're starting fresh, just copy the schema below and
-adjust the module name and api name.
+
+Define a `context/1` function, and call `AshGraphql.add_context/2` with the current context and your apis. Additionally, add the `Absinthe.Middleware.Dataloader` to your plugins, as shown below. If you're starting fresh, just copy the schema below and adjust the module name and api name.
+
+### Temporary workaround
+
+You will need an empty `query` block and `mutations` block in your schema, as shown below. If none of your resources define mutations, then leave the empty `mutations` block out.
 
 ```elixir
 defmodule MyApp.Schema do
