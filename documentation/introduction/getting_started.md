@@ -45,15 +45,15 @@ defmodule Post do
     type :post
 
     queries do
-      get :get_post, :default # <- create a field called `get_post` that uses the `default` read action to fetch a single post
-      list :list_posts, :default # <- create a field called `list_posts` that uses the `default` read action to fetch a list of posts
+      get :get_post, :read # <- create a field called `get_post` that uses the `default` read action to fetch a single post
+      list :list_posts, :read # <- create a field called `list_posts` that uses the `default` read action to fetch a list of posts
     end
 
     mutations do
       # And so on
-      create :create_post, :default
-      update :update_post, :default
-      destroy :destroy_post, :default
+      create :create_post, :create
+      update :update_post, :update
+      destroy :destroy_post, :destroy
     end
   end
 end

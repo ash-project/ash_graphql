@@ -9,7 +9,7 @@ defmodule AshGraphql.Resource do
     args: [:name, :action],
     describe: "A query to fetch a record by primary key",
     examples: [
-      "get :get_post, :default"
+      "get :get_post, :read"
     ],
     schema: Query.get_schema(),
     target: Query,
@@ -24,7 +24,7 @@ defmodule AshGraphql.Resource do
     args: [:name, :action],
     describe: "A query to fetch a list of records",
     examples: [
-      "list :list_posts, :default"
+      "list :list_posts, :read"
     ],
     target: Query,
     auto_set_fields: [
@@ -38,7 +38,7 @@ defmodule AshGraphql.Resource do
     args: [:name, :action],
     describe: "A mutation to create a record",
     examples: [
-      "create :create_post, :default"
+      "create :create_post, :create"
     ],
     target: Mutation,
     auto_set_fields: [
@@ -52,7 +52,7 @@ defmodule AshGraphql.Resource do
     args: [:name, :action],
     describe: "A mutation to update a record",
     examples: [
-      "update :update_post, :default"
+      "update :update_post, :update"
     ],
     target: Mutation,
     auto_set_fields: [
@@ -66,7 +66,7 @@ defmodule AshGraphql.Resource do
     args: [:name, :action],
     describe: "A mutation to destroy a record",
     examples: [
-      "destroy :destroy_post, :default"
+      "destroy :destroy_post, :destroy"
     ],
     target: Mutation,
     auto_set_fields: [
@@ -82,8 +82,8 @@ defmodule AshGraphql.Resource do
     examples: [
       """
       queries do
-        get :get_post, :default
-        list :list_posts, :default
+        get :get_post, :read
+        list :list_posts, :read
       end
       """
     ],
@@ -101,9 +101,9 @@ defmodule AshGraphql.Resource do
     examples: [
       """
       mutations do
-        create :create_post, :default
-        update :update_post, :default
-        destroy :destroy_post, :default
+        create :create_post, :create
+        update :update_post, :update
+        destroy :destroy_post, :destroy
       end
       """
     ],
@@ -125,14 +125,14 @@ defmodule AshGraphql.Resource do
         type :post
 
         queries do
-          get :get_post, :default
-          list :list_posts, :default
+          get :get_post, :read
+          list :list_posts, :read
         end
 
         mutations do
-          create :create_post, :default
-          update :update_post, :default
-          destroy :destroy_post, :default
+          create :create_post, :create
+          update :update_post, :update
+          destroy :destroy_post, :destroy
         end
       end
       """
@@ -1428,6 +1428,8 @@ defmodule AshGraphql.Resource do
   defp do_field_type(Ash.Type.UUID, _, _), do: :string
   defp do_field_type(Ash.Type.Date, _, _), do: :date
   defp do_field_type(Ash.Type.UtcDatetime, _, _), do: :naive_datetime
+  defp do_field_type(Ash.Type.UtcDatetimeUsec, _, _), do: :naive_datetime
+  defp do_field_type(Ash.Type.CiString, _, _), do: :string
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp atom_enum_type(resource, attribute_name) do
