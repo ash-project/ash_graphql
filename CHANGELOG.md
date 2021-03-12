@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.12.5](https://github.com/ash-project/ash_graphql/compare/v0.12.4...v0.12.5) (2021-03-12)
+
+
+
+
+### Bug Fixes:
+
+* allow referencing ash generated types
+
+* don't fail on empty mutations list
+
+### Improvements:
+
+* support more builtin types
+
 ## [v0.12.4](https://github.com/ash-project/ash_graphql/compare/v0.12.3...v0.12.4) (2021-03-08)
 
 
