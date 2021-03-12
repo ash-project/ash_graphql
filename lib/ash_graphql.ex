@@ -28,7 +28,7 @@ defmodule AshGraphql do
           def pipeline(pipeline) do
             Pipeline.insert_before(
               pipeline,
-              Phase.Schema.Validation.QueryTypeMustBeObject,
+              Absinthe.Phase.Schema.ApplyDeclaration,
               __MODULE__
             )
           end
