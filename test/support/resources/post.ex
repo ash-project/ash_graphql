@@ -9,12 +9,13 @@ defmodule AshGraphql.Test.Post do
     type :post
 
     queries do
-      get :get_post, :read
-      list :post_library, :library
+      get(:get_post, :read)
+      list(:post_library, :library)
     end
 
     mutations do
       create :create_post, :create_confirm
+      update :update_post, :update
     end
   end
 
@@ -49,5 +50,9 @@ defmodule AshGraphql.Test.Post do
 
     attribute(:text, :string)
     attribute(:published, :boolean, default: false)
+  end
+
+  relationships do
+    has_many(:comments, AshGraphql.Test.Comment)
   end
 end

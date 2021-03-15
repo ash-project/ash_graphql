@@ -5,5 +5,6 @@ defmodule AshGraphql.Test.Api do
 
   resources do
     resource(AshGraphql.Test.Post)
+    resource(AshGraphql.Test.Comment)
   end
 end

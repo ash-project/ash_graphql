@@ -43,4 +43,7 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
 
     {:ok, dsl}
   end
+
+  def after?(Ash.Resource.Transformers.SetPrimaryActions), do: true
+  def after?(_), do: false
 end

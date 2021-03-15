@@ -150,8 +150,8 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, value} ->
           {:ok, %{result: value, errors: []}}
 
-        {:error, error} ->
-          {:ok, %{result: nil, errors: to_errors(error)}}
+        {:error, %{changeset: changeset}} ->
+          {:ok, %{result: nil, errors: to_errors(changeset.errors)}}
       end
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
@@ -187,7 +187,7 @@ defmodule AshGraphql.Graphql.Resolver do
         |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
-            {:ok, %{result: nil, errors: [to_errors("not found")]}}
+            not_found(filter, resource)
 
           initial ->
             {attributes, relationships, arguments} = split_attrs_rels_and_args(input, resource)
@@ -247,7 +247,7 @@ defmodule AshGraphql.Graphql.Resolver do
         |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
-            {:ok, %{result: nil, errors: [to_errors("not found")]}}
+            not_found(filter, resource)
 
           initial ->
             opts = destroy_opts(api, context, action)
@@ -265,6 +265,21 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, error} ->
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
     end
+  end
+
+  defp not_found(filter, resource) do
+    {:ok,
+     %{
+       result: nil,
+       errors: [
+         to_errors(
+           Ash.Error.Query.NotFound.exception(
+             primary_key: Map.new(filter),
+             resource: resource
+           )
+         )
+       ]
+     }}
   end
 
   defp set_query_arguments(query, action, arg_values) do
@@ -297,21 +312,49 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp destroy_result(result, initial) do
     case result do
-      :ok -> {:ok, %{result: initial, errors: []}}
-      {:error, error} -> {:ok, %{result: nil, errors: to_errors(error)}}
+      :ok ->
+        {:ok, %{result: initial, errors: []}}
+
+      {:error, %{changeset: changeset}} ->
+        {:ok, %{result: nil, errors: to_errors(changeset.error)}}
     end
   end
 
   defp changeset_with_relationships(relationships, changeset) do
-    Enum.reduce(relationships, changeset, fn {relationship, replacement}, changeset ->
-      case decode_related_pkeys(changeset, relationship, replacement) do
-        {:ok, replacement} ->
-          Ash.Changeset.replace_relationship(changeset, relationship, replacement)
+    if changeset.action_type == :create do
+      Enum.reduce(relationships, changeset, fn {relationship, replacement}, changeset ->
+        case decode_related_pkeys(changeset, relationship, replacement) do
+          {:ok, replacement} ->
+            Ash.Changeset.replace_relationship(changeset, relationship, replacement)
 
-        {:error, _error} ->
-          Ash.Changeset.add_error(changeset, "Invalid relationship primary keys")
-      end
-    end)
+          {:error, _error} ->
+            Ash.Changeset.add_error(changeset, "Invalid relationship primary keys")
+        end
+      end)
+    else
+      Enum.reduce(relationships, changeset, fn {relationship, changes}, changeset ->
+        [:add, :remove, :replace]
+        |> Enum.flat_map(fn op ->
+          case Map.fetch(changes, op) do
+            {:ok, value} ->
+              [{op, value}]
+
+            _ ->
+              []
+          end
+        end)
+        |> Enum.reduce(changeset, fn
+          {:add, add}, changeset ->
+            Ash.Changeset.append_to_relationship(changeset, relationship, add)
+
+          {:remove, remove}, changeset ->
+            Ash.Changeset.remove_from_relationship(changeset, relationship, remove)
+
+          {:replace, replace}, changeset ->
+            Ash.Changeset.replace_relationship(changeset, relationship, replace)
+        end)
+      end)
+    end
   end
 
   defp decode_related_pkeys(changeset, relationship, primary_keys)
@@ -358,17 +401,12 @@ defmodule AshGraphql.Graphql.Resolver do
     errors
     |> List.wrap()
     |> Enum.map(fn error ->
-      cond do
-        is_binary(error) ->
-          %{message: error}
-
-        Exception.exception?(error) ->
-          %{
-            message: Exception.message(error)
-          }
-
-        true ->
-          %{message: "something went wrong"}
+      if AshGraphql.Error.impl_for(error) do
+        AshGraphql.Error.to_error(error)
+      else
+        %{
+          message: "something went wrong."
+        }
       end
     end)
   end
