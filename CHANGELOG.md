@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.12.6](https://github.com/ash-project/ash_graphql/compare/v0.12.5...v0.12.6) (2021-03-15)
+
+
+
+
+### Bug Fixes:
+
+* properly handle relationship changes on updates
+
+### Improvements:
+
+* start on error messaging groundwork
+
 ## [v0.12.5](https://github.com/ash-project/ash_graphql/compare/v0.12.4...v0.12.5) (2021-03-12)
 
 
