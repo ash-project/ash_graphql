@@ -39,7 +39,15 @@ defmodule AshGraphql.Graphql.Resolver do
           |> Ash.Query.set_tenant(Map.get(context, :tenant))
           |> Ash.Query.filter(^filter)
           |> set_query_arguments(action, arguments)
-          |> api.read_one(opts)
+          |> select_fields(resource, resolution)
+          |> load_fields(resource, api, resolution)
+          |> case do
+            {:ok, query} ->
+              api.read_one(query, opts)
+
+            {:error, error} ->
+              {:error, error}
+          end
 
         {:error, error} ->
           {:error, error}
@@ -105,20 +113,29 @@ defmodule AshGraphql.Graphql.Resolver do
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
       |> set_query_arguments(action, args)
-      |> api.read(opts)
+      |> select_fields(resource, resolution)
+      |> load_fields(resource, api, resolution)
       |> case do
-        {:ok, %{results: results, count: count}} ->
-          {:ok, %{results: results, count: count}}
+        {:ok, query} ->
+          query
+          |> api.read(opts)
+          |> case do
+            {:ok, %{results: results, count: count}} ->
+              {:ok, %{results: results, count: count}}
 
-        {:ok, results} ->
-          if Ash.Resource.Info.action(resource, action, :read).pagination do
-            {:ok, %{results: results, count: Enum.count(results)}}
-          else
-            {:ok, results}
+            {:ok, results} ->
+              if Ash.Resource.Info.action(resource, action, :read).pagination do
+                {:ok, %{results: results, count: Enum.count(results)}}
+              else
+                {:ok, results}
+              end
+
+            error ->
+              error
           end
 
-        error ->
-          error
+        {:error, error} ->
+          {:error, error}
       end
 
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
@@ -145,10 +162,17 @@ defmodule AshGraphql.Graphql.Resolver do
       changeset_with_relationships
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
       |> Ash.Changeset.set_arguments(arguments)
+      |> select_fields(resource, resolution, true)
       |> api.create(opts)
       |> case do
         {:ok, value} ->
-          {:ok, %{result: value, errors: []}}
+          case load_fields(value, resource, api, resolution, true) do
+            {:ok, result} ->
+              {:ok, %{result: result, errors: []}}
+
+            {:error, error} ->
+              {:ok, %{result: nil, errors: to_errors(List.wrap(error))}}
+          end
 
         {:error, %{changeset: changeset}} ->
           {:ok, %{result: nil, errors: to_errors(changeset.errors)}}
@@ -206,8 +230,9 @@ defmodule AshGraphql.Graphql.Resolver do
               changeset_with_relationships
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
               |> Ash.Changeset.set_arguments(arguments)
+              |> select_fields(resource, resolution, true)
               |> api.update(opts)
-              |> update_result()
+              |> update_result(resource, api, resolution)
 
             Absinthe.Resolution.put_result(resolution, to_resolution(result))
         end
@@ -256,8 +281,9 @@ defmodule AshGraphql.Graphql.Resolver do
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+              |> select_fields(resource, resolution, true)
               |> api.destroy(opts)
-              |> destroy_result(initial)
+              |> destroy_result(initial, resource, resolution)
 
             Absinthe.Resolution.put_result(resolution, to_resolution(result))
         end
@@ -282,6 +308,69 @@ defmodule AshGraphql.Graphql.Resolver do
      }}
   end
 
+  defp clear_fields(result, resource, resolution) do
+    resolution
+    |> fields(true)
+    |> Enum.map(fn field ->
+      Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
+        Ash.Resource.Info.calculation(resource, field.schema_node.identifier) ||
+        Ash.Resource.Info.attribute(resource, field.schema_node.identifier)
+    end)
+    |> Enum.filter(& &1)
+    |> Enum.map(& &1.name)
+    |> Enum.reduce(result, fn field, result ->
+      Map.put(result, field, nil)
+    end)
+  end
+
+  defp load_fields(query_or_record, resource, api, resolution, result? \\ false) do
+    loading =
+      resolution
+      |> fields(result?)
+      |> Enum.map(fn field ->
+        Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
+          Ash.Resource.Info.calculation(resource, field.schema_node.identifier)
+      end)
+      |> Enum.filter(& &1)
+      |> Enum.map(& &1.name)
+
+    case query_or_record do
+      %Ash.Query{} = query ->
+        {:ok, Ash.Query.load(query, loading)}
+
+      record ->
+        api.load(record, loading)
+    end
+  end
+
+  defp select_fields(query_or_changeset, resource, resolution, result? \\ false) do
+    subfields =
+      resolution
+      |> fields(result?)
+      |> Enum.map(&Ash.Resource.Info.attribute(resource, &1.schema_node.identifier))
+      |> Enum.filter(& &1)
+      |> Enum.map(& &1.name)
+
+    case query_or_changeset do
+      %Ash.Query{} = query ->
+        Ash.Query.select(query, subfields)
+
+      %Ash.Changeset{} = changeset ->
+        Ash.Changeset.select(changeset, subfields)
+    end
+  end
+
+  defp fields(resolution, result?) do
+    if result? do
+      resolution
+      |> Absinthe.Resolution.project()
+      |> Enum.find(&(&1.name == "result"))
+      |> Map.get(:selections)
+    else
+      Absinthe.Resolution.project(resolution)
+    end
+  end
+
   defp set_query_arguments(query, action, arg_values) do
     action = Ash.Resource.Info.action(query.resource, action, :read)
 
@@ -300,20 +389,26 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp update_result(result) do
+  defp update_result(result, resource, api, resolution) do
     case result do
       {:ok, value} ->
-        {:ok, %{result: value, errors: []}}
+        case load_fields(value, resource, api, resolution, true) do
+          {:ok, result} ->
+            {:ok, %{result: result, errors: []}}
+
+          {:error, error} ->
+            {:ok, %{result: nil, errors: to_errors(List.wrap(error))}}
+        end
 
       {:error, error} ->
-        {:ok, %{result: nil, errors: List.wrap(error)}}
+        {:ok, %{result: nil, errors: to_errors(List.wrap(error))}}
     end
   end
 
-  defp destroy_result(result, initial) do
+  defp destroy_result(result, initial, resource, resolution) do
     case result do
       :ok ->
-        {:ok, %{result: initial, errors: []}}
+        {:ok, %{result: clear_fields(initial, resource, resolution), errors: []}}
 
       {:error, %{changeset: changeset}} ->
         {:ok, %{result: nil, errors: to_errors(changeset.error)}}

@@ -52,6 +52,10 @@ defmodule AshGraphql.Test.Post do
     attribute(:published, :boolean, default: false)
   end
 
+  calculations do
+    calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation)
+  end
+
   relationships do
     has_many(:comments, AshGraphql.Test.Comment)
   end

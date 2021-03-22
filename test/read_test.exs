@@ -42,4 +42,32 @@ defmodule AshGraphql.ReadTest do
     refute Map.has_key?(result, :errors)
     assert %{data: %{"postLibrary" => [%{"text" => "foo"}]}} = result
   end
+
+  test "a read with a loaded field works" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", published: true)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          text
+          staticCalculation
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postLibrary" => [%{"text" => "bar", "staticCalculation" => "static"}]}} =
+             result
+  end
 end
