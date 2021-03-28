@@ -51,6 +51,7 @@ defmodule AshGraphql.Test.Post do
     attribute(:text, :string)
     attribute(:published, :boolean, default: false)
     attribute(:foo, AshGraphql.Test.Foo)
+    attribute(:status, AshGraphql.Test.Status)
   end
 
   calculations do

@@ -158,4 +158,42 @@ defmodule AshGraphql.CreateTest do
              }
            } = result
   end
+
+  test "custom enums are used" do
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            text
+            status
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "confirmation" => "foobar",
+            "status" => "OPEN"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPost" => %{
+                 "result" => %{"text" => "foobar", "status" => "OPEN"}
+               }
+             }
+           } = result
+  end
 end

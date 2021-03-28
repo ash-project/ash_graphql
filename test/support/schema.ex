@@ -17,6 +17,11 @@ defmodule AshGraphql.Test.Schema do
     field(:bar, non_null(:string))
   end
 
+  enum :status do
+    value(:open, description: "The post is open")
+    value(:closed, description: "The post is closed")
+  end
+
   query do
   end
 

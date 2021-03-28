@@ -1,4 +1,6 @@
 defmodule AshGraphql.Test.Foo do
+  @moduledoc false
+
   use Ash.Type
 
   def graphql_type(_), do: :foo
