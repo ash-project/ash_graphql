@@ -114,4 +114,48 @@ defmodule AshGraphql.CreateTest do
              }
            } = result
   end
+
+  test "custom input types are used" do
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            text
+            foo{
+              foo
+              bar
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "confirmation" => "foobar",
+            "foo" => %{
+              "foo" => "foo",
+              "bar" => "bar"
+            }
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPost" => %{
+                 "result" => %{"text" => "foobar", "foo" => %{"foo" => "foo", "bar" => "bar"}}
+               }
+             }
+           } = result
+  end
 end

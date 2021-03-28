@@ -70,4 +70,49 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"postLibrary" => [%{"text" => "bar", "staticCalculation" => "static"}]}} =
              result
   end
+
+  test "a read with custom types works" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "bar",
+      published: true,
+      foo: %{foo: "foo", bar: "bar"}
+    )
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          text
+          staticCalculation
+          foo{
+            foo
+            bar
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "postLibrary" => [
+                 %{
+                   "text" => "bar",
+                   "staticCalculation" => "static",
+                   "foo" => %{"foo" => "foo", "bar" => "bar"}
+                 }
+               ]
+             }
+           } = result
+  end
 end

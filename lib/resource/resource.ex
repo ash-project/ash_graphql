@@ -1408,6 +1408,21 @@ defmodule AshGraphql.Resource do
               type
           end
         end
+      else
+        function =
+          if input? do
+            :graphql_input_type
+          else
+            :graphql_type
+          end
+
+        if is_atom(type) && :erlang.function_exported(type, function, 1) do
+          apply(type, function, [attribute.constraints])
+        else
+          raise """
+          Could not determine graphql type for #{type}!
+          """
+        end
       end
     end
   end
