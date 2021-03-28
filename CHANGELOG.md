@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.13.0](https://github.com/ash-project/ash_graphql/compare/v0.12.7...v0.13.0) (2021-03-28)
+
+
+
+
+### Features:
+
+* support custom types, add custom type test
+
+### Bug Fixes:
+
+* select fields/aggregates/calculations
+
 ## [v0.12.7](https://github.com/ash-project/ash_graphql/compare/v0.12.6...v0.12.7) (2021-03-15)
 
 
