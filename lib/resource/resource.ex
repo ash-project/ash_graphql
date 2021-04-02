@@ -1435,16 +1435,17 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp do_field_type(Ash.Type.Map, _, _), do: :json
-  defp do_field_type(Ash.Type.Term, _, _), do: :string
-  defp do_field_type(Ash.Type.String, _, _), do: :string
-  defp do_field_type(Ash.Type.Integer, _, _), do: :integer
   defp do_field_type(Ash.Type.Boolean, _, _), do: :boolean
-  defp do_field_type(Ash.Type.UUID, _, _), do: :string
+  defp do_field_type(Ash.Type.CiString, _, _), do: :string
   defp do_field_type(Ash.Type.Date, _, _), do: :date
+  defp do_field_type(Ash.Type.Decimal, _, _), do: :decimal
+  defp do_field_type(Ash.Type.Integer, _, _), do: :integer
+  defp do_field_type(Ash.Type.Map, _, _), do: :json
+  defp do_field_type(Ash.Type.String, _, _), do: :string
+  defp do_field_type(Ash.Type.Term, _, _), do: :string
   defp do_field_type(Ash.Type.UtcDatetime, _, _), do: :naive_datetime
   defp do_field_type(Ash.Type.UtcDatetimeUsec, _, _), do: :naive_datetime
-  defp do_field_type(Ash.Type.CiString, _, _), do: :string
+  defp do_field_type(Ash.Type.UUID, _, _), do: :string
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp atom_enum_type(resource, attribute_name) do
