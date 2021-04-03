@@ -47,7 +47,8 @@ defmodule AshGraphql.MixProject do
       extras: [
         "documentation/introduction/getting_started.md",
         "documentation/multitenancy.md",
-        "documentation/enums.md"
+        "documentation/enums.md",
+        "documentation/authorization.md"
       ],
       groups_for_extras: [
         Introduction: Path.wildcard("documentation/introduction/*.md")
@@ -79,7 +80,7 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 1.36 and >= 1.36.6")},
+      {:ash, ash_version("~> 1.39 and >= 1.39.1")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.5.3"},
       {:dataloader, "~> 1.0"},
