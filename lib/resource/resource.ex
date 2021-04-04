@@ -1357,11 +1357,22 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_calculations()
     |> Enum.map(fn calculation ->
+      field_type = field_type(calculation.type, nil, resource)
+
+      field_type =
+        if calculation.allow_nil? do
+          field_type
+        else
+          %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: field_type
+          }
+        end
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: calculation.name,
         module: schema,
         name: to_string(calculation.name),
-        type: field_type(calculation.type, nil, resource)
+        type: field_type
       }
     end)
   end
