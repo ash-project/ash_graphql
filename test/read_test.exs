@@ -115,4 +115,30 @@ defmodule AshGraphql.ReadTest do
              }
            } = result
   end
+
+  test "a read without an argument works" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    doc = """
+    query CurrentUser {
+      currentUser {
+        name
+      }
+    }
+    """
+
+    assert {:ok,
+            %{
+              data: %{
+                "currentUser" => %{
+                  "name" => "My Name"
+                }
+              }
+            }} == Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
+  end
 end
