@@ -57,6 +57,43 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
+        %{arguments: args, context: context} = resolution,
+        {api, resource, %{type: :read_one, action: action}}
+      ) do
+    opts = [
+      actor: Map.get(context, :actor),
+      authorize?: AshGraphql.Api.authorize?(api),
+      action: action,
+      verbose?: AshGraphql.Api.debug?(api)
+    ]
+
+    query =
+      case Map.fetch(args, :filter) do
+        {:ok, filter} ->
+          Ash.Query.filter(resource, ^filter)
+
+        _ ->
+          Ash.Query.new(resource)
+      end
+
+    result =
+      query
+      |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> set_query_arguments(action, args)
+      |> select_fields(resource, resolution)
+      |> load_fields(resource, api, resolution)
+      |> case do
+        {:ok, query} ->
+          api.read_one(query, opts)
+
+        {:error, error} ->
+          {:error, error}
+      end
+
+    Absinthe.Resolution.put_result(resolution, to_resolution(result))
+  end
+
+  def resolve(
         %{arguments: args, context: context, definition: %{selections: selections}} = resolution,
         {api, resource, %{type: :list, action: action}}
       ) do

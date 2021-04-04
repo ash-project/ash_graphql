@@ -9,8 +9,8 @@ defmodule AshGraphql.Test.Post do
     type :post
 
     queries do
-      get(:get_post, :read)
-      list(:post_library, :library)
+      get :get_post, :read
+      list :post_library, :library
     end
 
     mutations do

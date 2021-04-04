@@ -46,6 +46,7 @@ defmodule Post do
 
     queries do
       get :get_post, :read # <- create a field called `get_post` that uses the `default` read action to fetch a single post
+      read_one :current_user, :current_user # <- create a field called `current_user` that uses the `current_user` read action to fetch a single record
       list :list_posts, :read # <- create a field called `list_posts` that uses the `default` read action to fetch a list of posts
     end
 
