@@ -18,6 +18,20 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  @read_one %Ash.Dsl.Entity{
+    name: :read_one,
+    args: [:name, :action],
+    describe: "A query to fetch a record",
+    examples: [
+      "read_one :current_user, :current_user"
+    ],
+    schema: Query.read_one_schema(),
+    target: Query,
+    auto_set_fields: [
+      type: :read_one
+    ]
+  }
+
   @list %Ash.Dsl.Entity{
     name: :list,
     schema: Query.list_schema(),
@@ -83,12 +97,14 @@ defmodule AshGraphql.Resource do
       """
       queries do
         get :get_post, :read
+        read_one :current_user, :current_user
         list :list_posts, :read
       end
       """
     ],
     entities: [
       @get,
+      @read_one,
       @list
     ]
   }
@@ -560,6 +576,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp query_type(:get, _, type), do: type
+  defp query_type(:read_one, _, type), do: type
   # sobelow_skip ["DOS.StringToAtom"]
   defp query_type(:list, action, type) do
     if action.pagination do
@@ -606,6 +623,26 @@ defmodule AshGraphql.Resource do
       }
     end)
     |> Enum.concat(read_args(resource, action, schema))
+  end
+
+  defp args(:read_one, resource, action, schema, _) do
+    args =
+      case resource_filter_fields(resource, schema) do
+        [] ->
+          []
+
+        _ ->
+          [
+            %Absinthe.Blueprint.Schema.InputValueDefinition{
+              name: "filter",
+              identifier: :filter,
+              type: resource_filter_type(resource),
+              description: "A filter to limit the results"
+            }
+          ]
+      end
+
+    args ++ read_args(resource, action, schema)
   end
 
   defp args(:list, resource, action, schema, _) do
