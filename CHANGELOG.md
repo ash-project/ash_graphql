@@ -5,6 +5,13 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.0](https://github.com/ash-project/ash_graphql/compare/v0.14.1...v0.15.0) (2021-04-05)
+### Breaking Changes:
+
+* fully remove relationship changes
+
+
+
 ## [v0.14.1](https://github.com/ash-project/ash_graphql/compare/v0.14.0...v0.14.1) (2021-04-05)
 
 
