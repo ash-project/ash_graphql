@@ -80,7 +80,7 @@ defmodule AshGraphql.Api do
   end
 
   def global_type_definitions(schema) do
-    [mutation_error(schema), relationship_change(schema), sort_order(schema)]
+    [mutation_error(schema), sort_order(schema)]
   end
 
   defp sort_order(schema) do
@@ -103,49 +103,6 @@ defmodule AshGraphql.Api do
       ],
       identifier: :sort_order
     }
-  end
-
-  defp relationship_change(schema) do
-    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-      description: "A set of changes to apply to a relationship",
-      fields: relationship_change_fields(schema),
-      identifier: :relationship_change,
-      module: schema,
-      name: "RelationshipChange"
-    }
-  end
-
-  defp relationship_change_fields(schema) do
-    [
-      %Absinthe.Blueprint.Schema.FieldDefinition{
-        description: "Ids to add to the relationship",
-        identifier: :add,
-        module: schema,
-        name: "add",
-        type: %Absinthe.Blueprint.TypeReference.List{
-          of_type: :id
-        }
-      },
-      %Absinthe.Blueprint.Schema.FieldDefinition{
-        description: "Ids to remove from the relationship",
-        identifier: :remove,
-        module: schema,
-        name: "remove",
-        type: %Absinthe.Blueprint.TypeReference.List{
-          of_type: :id
-        }
-      },
-      %Absinthe.Blueprint.Schema.FieldDefinition{
-        description:
-          "Ids to replace the relationship with. Takes precendence over removal and addition",
-        identifier: :replace,
-        module: schema,
-        name: "replace",
-        type: %Absinthe.Blueprint.TypeReference.List{
-          of_type: :id
-        }
-      }
-    ]
   end
 
   defp mutation_error(schema) do

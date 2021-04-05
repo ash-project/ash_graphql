@@ -73,48 +73,6 @@ defmodule AshGraphql.CreateTest do
     assert message =~ "Confirmation did not match value"
   end
 
-  test "relationships are applied properly" do
-    comment = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Comment))
-
-    resp =
-      """
-      mutation CreatePost($input: CreatePostInput) {
-        createPost(input: $input) {
-          result{
-            text
-            comments{
-              id
-            }
-          }
-          errors{
-            message
-          }
-        }
-      }
-      """
-      |> Absinthe.run(AshGraphql.Test.Schema,
-        variables: %{
-          "input" => %{
-            "text" => "foobar",
-            "confirmation" => "foobar",
-            "comments" => [comment.id]
-          }
-        }
-      )
-
-    assert {:ok, result} = resp
-    comment_id = comment.id
-
-    assert %{
-             data: %{
-               "createPost" => %{
-                 "result" => %{"comments" => [%{"id" => ^comment_id}]},
-                 "errors" => []
-               }
-             }
-           } = result
-  end
-
   test "custom input types are used" do
     resp =
       """

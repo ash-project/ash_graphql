@@ -501,49 +501,6 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    relationship_fields =
-      resource
-      |> Ash.Resource.Info.public_relationships()
-      |> Enum.filter(fn relationship ->
-        Resource in Ash.Resource.Info.extensions(relationship.destination)
-      end)
-      |> Enum.map(fn
-        %{cardinality: :one} = relationship ->
-          type =
-            maybe_wrap_non_null(
-              :id,
-              relationship.type == :belongs_to and relationship.required? and type == :create
-            )
-
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            identifier: relationship.name,
-            module: schema,
-            name: to_string(relationship.name),
-            type: type
-          }
-
-        %{cardinality: :many} = relationship ->
-          case type do
-            :update ->
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: relationship.name,
-                module: schema,
-                name: to_string(relationship.name),
-                type: :relationship_change
-              }
-
-            :create ->
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: relationship.name,
-                module: schema,
-                name: to_string(relationship.name),
-                type: %Absinthe.Blueprint.TypeReference.List{
-                  of_type: :id
-                }
-              }
-          end
-      end)
-
     argument_fields =
       action.arguments
       |> Enum.reject(& &1.private?)
@@ -561,7 +518,7 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    attribute_fields ++ relationship_fields ++ argument_fields
+    attribute_fields ++ argument_fields
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
