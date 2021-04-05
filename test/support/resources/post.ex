@@ -15,6 +15,7 @@ defmodule AshGraphql.Test.Post do
 
     mutations do
       create :create_post, :create_confirm
+      create :upsert_post, :upsert, upsert?: true
       update :update_post, :update
     end
   end
@@ -22,6 +23,12 @@ defmodule AshGraphql.Test.Post do
   actions do
     create :create do
       primary?(true)
+    end
+
+    create :upsert do
+      argument(:id, :uuid)
+
+      change(AshGraphql.Test.ForceChangeId)
     end
 
     create :create_confirm do

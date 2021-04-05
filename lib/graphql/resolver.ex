@@ -180,25 +180,21 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def mutate(
         %{arguments: %{input: input}, context: context} = resolution,
-        {api, resource, %{type: :create, action: action}}
+        {api, resource, %{type: :create, action: action, upsert?: upsert?}}
       ) do
-    {attributes, relationships, arguments} = split_attrs_rels_and_args(input, resource)
-
-    changeset = Ash.Changeset.new(resource, attributes)
-
-    changeset_with_relationships = changeset_with_relationships(relationships, changeset)
-
     opts = [
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api)
+      verbose?: AshGraphql.Api.debug?(api),
+      upsert?: upsert?
     ]
 
     result =
-      changeset_with_relationships
+      resource
+      |> Ash.Changeset.new()
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-      |> Ash.Changeset.set_arguments(arguments)
+      |> Ash.Changeset.for_create(action, input)
       |> select_fields(resource, resolution, true)
       |> api.create(opts)
       |> case do
@@ -251,11 +247,6 @@ defmodule AshGraphql.Graphql.Resolver do
             not_found(filter, resource)
 
           initial ->
-            {attributes, relationships, arguments} = split_attrs_rels_and_args(input, resource)
-            changeset = Ash.Changeset.new(initial, attributes)
-
-            changeset_with_relationships = changeset_with_relationships(relationships, changeset)
-
             opts = [
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Api.authorize?(api),
@@ -264,8 +255,10 @@ defmodule AshGraphql.Graphql.Resolver do
             ]
 
             result =
-              changeset_with_relationships
+              initial
+              |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+              |> Ash.Changeset.for_update(action, input)
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, true)
               |> api.update(opts)
@@ -450,83 +443,6 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, %{changeset: changeset}} ->
         {:ok, %{result: nil, errors: to_errors(changeset.error)}}
     end
-  end
-
-  defp changeset_with_relationships(relationships, changeset) do
-    if changeset.action_type == :create do
-      Enum.reduce(relationships, changeset, fn {relationship, replacement}, changeset ->
-        case decode_related_pkeys(changeset, relationship, replacement) do
-          {:ok, replacement} ->
-            Ash.Changeset.replace_relationship(changeset, relationship, replacement)
-
-          {:error, _error} ->
-            Ash.Changeset.add_error(changeset, "Invalid relationship primary keys")
-        end
-      end)
-    else
-      Enum.reduce(relationships, changeset, fn {relationship, changes}, changeset ->
-        [:add, :remove, :replace]
-        |> Enum.flat_map(fn op ->
-          case Map.fetch(changes, op) do
-            {:ok, value} ->
-              [{op, value}]
-
-            _ ->
-              []
-          end
-        end)
-        |> Enum.reduce(changeset, fn
-          {:add, add}, changeset ->
-            Ash.Changeset.append_to_relationship(changeset, relationship, add)
-
-          {:remove, remove}, changeset ->
-            Ash.Changeset.remove_from_relationship(changeset, relationship, remove)
-
-          {:replace, replace}, changeset ->
-            Ash.Changeset.replace_relationship(changeset, relationship, replace)
-        end)
-      end)
-    end
-  end
-
-  defp decode_related_pkeys(changeset, relationship, primary_keys)
-       when is_list(primary_keys) do
-    primary_keys
-    |> Enum.reduce_while({:ok, []}, fn pkey, {:ok, list} ->
-      case AshGraphql.Resource.decode_primary_key(
-             Ash.Resource.Info.related(changeset.resource, relationship),
-             pkey
-           ) do
-        {:ok, value} -> {:cont, {:ok, [value | list]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
-      {:ok, values} -> {:ok, Enum.reverse(values)}
-      {:error, error} -> {:error, error}
-    end
-  end
-
-  defp decode_related_pkeys(changeset, relationship, primary_key) do
-    AshGraphql.Resource.decode_primary_key(
-      Ash.Resource.Info.related(changeset.resource, relationship),
-      primary_key
-    )
-  end
-
-  defp split_attrs_rels_and_args(input, resource) do
-    Enum.reduce(input, {%{}, %{}, %{}}, fn {key, value}, {attrs, rels, args} ->
-      cond do
-        Ash.Resource.Info.public_attribute(resource, key) ->
-          {Map.put(attrs, key, value), rels, args}
-
-        Ash.Resource.Info.public_relationship(resource, key) ->
-          {attrs, Map.put(rels, key, value), args}
-
-        true ->
-          {attrs, rels, Map.put(args, key, value)}
-      end
-    end)
   end
 
   defp to_errors(errors) do

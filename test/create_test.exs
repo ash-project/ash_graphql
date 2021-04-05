@@ -42,6 +42,44 @@ defmodule AshGraphql.CreateTest do
     assert %{data: %{"createPost" => %{"result" => %{"text" => "foobar"}}}} = result
   end
 
+  test "an upsert works" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(text: "foobar")
+      |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      mutation CreatePost($input: UpsertPostInput) {
+        upsertPost(input: $input) {
+          result{
+            text
+            id
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "id" => post.id,
+            "text" => "foobar"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    post_id = post.id
+
+    assert %{data: %{"upsertPost" => %{"result" => %{"text" => "foobar", "id" => post_id}}}} =
+             result
+  end
+
   test "arguments are threaded properly" do
     resp =
       """

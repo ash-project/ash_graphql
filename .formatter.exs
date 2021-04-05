@@ -18,7 +18,8 @@ locals_without_parens = [
   read_one: 3,
   type: 1,
   update: 2,
-  update: 3
+  update: 3,
+  upsert?: 1
 ]
 
 [

@@ -1,6 +1,6 @@
 defmodule AshGraphql.Resource.Mutation do
   @moduledoc "Represents a configured mutation on a resource"
-  defstruct [:name, :action, :type, :identity]
+  defstruct [:name, :action, :type, :identity, :upsert?]
 
   @create_schema [
     name: [
@@ -12,6 +12,11 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc: "The action to use for the mutation.",
       required: true
+    ],
+    upsert?: [
+      type: :boolean,
+      default: false,
+      doc: "Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`."
     ]
   ]
 
