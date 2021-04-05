@@ -257,7 +257,7 @@ defmodule AshGraphql.Resource do
           ],
           module: schema,
           name: to_string(query.name),
-          type: query_type(query.type, query_action, type)
+          type: query_type(query, query_action, type)
         }
       end)
     else
@@ -485,16 +485,12 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
-        type = field_type(attribute.type, attribute, resource, true)
+        allow_nil? = attribute.allow_nil? || attribute.default || type == :update
 
         field_type =
-          if attribute.allow_nil? || attribute.default || type == :update do
-            type
-          else
-            %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: type
-            }
-          end
+          attribute.type
+          |> field_type(attribute, resource, true)
+          |> maybe_wrap_non_null(not allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
@@ -514,13 +510,10 @@ defmodule AshGraphql.Resource do
       |> Enum.map(fn
         %{cardinality: :one} = relationship ->
           type =
-            if relationship.type == :belongs_to and relationship.required? and type == :create do
-              %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: :id
-              }
-            else
-              :id
-            end
+            maybe_wrap_non_null(
+              :id,
+              relationship.type == :belongs_to and relationship.required? and type == :create
+            )
 
           %Absinthe.Blueprint.Schema.FieldDefinition{
             identifier: relationship.name,
@@ -556,13 +549,9 @@ defmodule AshGraphql.Resource do
       |> Enum.reject(& &1.private?)
       |> Enum.map(fn argument ->
         type =
-          if argument.allow_nil? do
-            %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: field_type(argument.type, argument, resource, true)
-            }
-          else
-            field_type(argument.type, argument, resource, true)
-          end
+          argument.type
+          |> field_type(argument, resource, true)
+          |> maybe_wrap_non_null(not argument.allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: argument.name,
@@ -575,10 +564,8 @@ defmodule AshGraphql.Resource do
     attribute_fields ++ relationship_fields ++ argument_fields
   end
 
-  defp query_type(:get, _, type), do: type
-  defp query_type(:read_one, _, type), do: type
   # sobelow_skip ["DOS.StringToAtom"]
-  defp query_type(:list, action, type) do
+  defp query_type(%{type: :list}, action, type) do
     if action.pagination do
       String.to_atom("page_of_#{type}")
     else
@@ -591,6 +578,18 @@ defmodule AshGraphql.Resource do
       }
     end
   end
+
+  defp query_type(query, _action, type) do
+    maybe_wrap_non_null(type, not query.allow_nil?)
+  end
+
+  defp maybe_wrap_non_null(type, true) do
+    %Absinthe.Blueprint.TypeReference.NonNull{
+      of_type: type
+    }
+  end
+
+  defp maybe_wrap_non_null(type, _), do: type
 
   defp args(action_type, resource, action, schema, identity \\ nil)
 
@@ -689,13 +688,9 @@ defmodule AshGraphql.Resource do
     |> Enum.reject(& &1.private?)
     |> Enum.map(fn argument ->
       type =
-        if argument.allow_nil? do
-          %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(argument.type, argument, resource, true)
-          }
-        else
-          field_type(argument.type, argument, resource, true)
-        end
+        argument.type
+        |> field_type(argument, resource, true)
+        |> maybe_wrap_non_null(not argument.allow_nil?)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: argument.name,
@@ -716,13 +711,10 @@ defmodule AshGraphql.Resource do
         end
 
       limit_type =
-        if action.pagination.required? && is_nil(action.pagination.default_limit) do
-          %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: :integer
-          }
-        else
-          :integer
-        end
+        maybe_wrap_non_null(
+          :integer,
+          action.pagination.required? && is_nil(action.pagination.default_limit)
+        )
 
       [
         %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -1222,16 +1214,10 @@ defmodule AshGraphql.Resource do
       |> Ash.Resource.Info.public_attributes()
       |> Enum.reject(& &1.primary_key?)
       |> Enum.map(fn attribute ->
-        field_type = field_type(attribute.type, attribute, resource)
-
         field_type =
-          if attribute.allow_nil? do
-            field_type
-          else
-            %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: field_type
-            }
-          end
+          attribute.type
+          |> field_type(attribute, resource)
+          |> maybe_wrap_non_null(not attribute.allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
@@ -1250,16 +1236,10 @@ defmodule AshGraphql.Resource do
           if attribute.private? do
             non_id_attributes
           else
-            field_type = field_type(attribute.type, attribute, resource)
-
             field_type =
-              if attribute.allow_nil? do
-                field_type
-              else
-                %Absinthe.Blueprint.TypeReference.NonNull{
-                  of_type: field_type
-                }
-              end
+              attribute.type
+              |> field_type(attribute, resource)
+              |> maybe_wrap_non_null(not attribute.allow_nil?)
 
             [
               %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -1280,16 +1260,10 @@ defmodule AshGraphql.Resource do
               for field <- fields do
                 attribute = Ash.Resource.Info.attribute(resource, field)
 
-                field_type = field_type(attribute.type, attribute, resource)
-
                 field_type =
-                  if attribute.allow_nil? do
-                    field_type
-                  else
-                    %Absinthe.Blueprint.TypeReference.NonNull{
-                      of_type: field_type
-                    }
-                  end
+                  attribute.type
+                  |> field_type(attribute, resource)
+                  |> maybe_wrap_non_null(not attribute.allow_nil?)
 
                 %Absinthe.Blueprint.Schema.FieldDefinition{
                   description: attribute.description,
@@ -1325,13 +1299,9 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->
         type =
-          if relationship.type == :belongs_to && relationship.required? do
-            %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: Resource.type(relationship.destination)
-            }
-          else
-            Resource.type(relationship.destination)
-          end
+          relationship.destination
+          |> Resource.type()
+          |> maybe_wrap_non_null(relationship.type == :belongs_to && relationship.required?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
@@ -1394,16 +1364,10 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_calculations()
     |> Enum.map(fn calculation ->
-      field_type = field_type(calculation.type, nil, resource)
-
       field_type =
-        if calculation.allow_nil? do
-          field_type
-        else
-          %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type
-          }
-        end
+        calculation.type
+        |> field_type(nil, resource)
+        |> maybe_wrap_non_null(not calculation.allow_nil?)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: calculation.name,
@@ -1426,17 +1390,14 @@ defmodule AshGraphql.Resource do
     new_constraints = attribute.constraints[:items] || []
     new_attribute = %{attribute | constraints: new_constraints, type: type}
 
-    if attribute.constraints[:nil_items?] do
-      %Absinthe.Blueprint.TypeReference.List{
-        of_type: field_type(type, new_attribute, resource, input?)
-      }
-    else
-      %Absinthe.Blueprint.TypeReference.List{
-        of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: field_type(type, new_attribute, resource, input?)
-        }
-      }
-    end
+    field_type =
+      type
+      |> field_type(new_attribute, resource, input?)
+      |> maybe_wrap_non_null(not attribute.constraints[:nil_items?])
+
+    %Absinthe.Blueprint.TypeReference.List{
+      of_type: field_type
+    }
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
