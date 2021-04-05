@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.14.1](https://github.com/ash-project/ash_graphql/compare/v0.14.0...v0.14.1) (2021-04-05)
+
+
+
+
+### Improvements:
+
+* add allow_nil? to queries (#16)
+
 ## [v0.14.0](https://github.com/ash-project/ash_graphql/compare/v0.13.1...v0.14.0) (2021-04-04)
 
 
