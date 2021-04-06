@@ -784,7 +784,9 @@ defmodule AshGraphql.Resource do
     type = attribute_or_aggregate_type(attribute_or_aggregate, resource)
 
     fields =
-      Enum.flat_map(Ash.Filter.builtin_operators(), fn operator ->
+      Ash.Filter.builtin_operators()
+      |> Enum.filter(& &1.predicate?)
+      |> Enum.flat_map(fn operator ->
         expressable_types =
           Enum.filter(operator.types(), fn
             [:any, {:array, type}] when is_atom(type) ->
