@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.2](https://github.com/ash-project/ash_graphql/compare/v0.15.1...v0.15.2) (2021-04-06)
+
+
+
+
+### Bug Fixes:
+
+* don't show non-predicate operators in filters
+
 ## [v0.15.1](https://github.com/ash-project/ash_graphql/compare/v0.15.0...v0.15.1) (2021-04-05)
 
 
