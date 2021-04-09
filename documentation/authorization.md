@@ -32,7 +32,7 @@ defmodule MyAppWeb.UserPlug do
   defp build_context(conn) do
     with ["" <> token] <- get_req_header(conn, "authorization"),
          {:ok, user, _claims} <- MyApp.Guardian.resource_from_token(token) do
-      {:ok, %{current_user: user}}
+      {:ok, %{actor: user}}
     end
   end
 end
