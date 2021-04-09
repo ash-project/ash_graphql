@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.3](https://github.com/ash-project/ash_graphql/compare/v0.15.2...v0.15.3) (2021-04-09)
+
+
+
+
+### Bug Fixes:
+
+* fix graphql subselections for pagination
+
+* fix authorization docs
+
 ## [v0.15.2](https://github.com/ash-project/ash_graphql/compare/v0.15.1...v0.15.2) (2021-04-06)
 
 
