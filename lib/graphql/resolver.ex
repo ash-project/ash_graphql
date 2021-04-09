@@ -146,12 +146,19 @@ defmodule AshGraphql.Graphql.Resolver do
           query
       end
 
+    nested =
+      if Ash.Resource.Info.action(resource, action, :read).pagination do
+        "results"
+      else
+        nil
+      end
+
     result =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
       |> set_query_arguments(action, args)
-      |> select_fields(resource, resolution)
-      |> load_fields(resource, api, resolution)
+      |> select_fields(resource, resolution, nested)
+      |> load_fields(resource, api, resolution, nested)
       |> case do
         {:ok, query} ->
           query
@@ -195,11 +202,11 @@ defmodule AshGraphql.Graphql.Resolver do
       |> Ash.Changeset.new()
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
       |> Ash.Changeset.for_create(action, input)
-      |> select_fields(resource, resolution, true)
+      |> select_fields(resource, resolution, "result")
       |> api.create(opts)
       |> case do
         {:ok, value} ->
-          case load_fields(value, resource, api, resolution, true) do
+          case load_fields(value, resource, api, resolution, "result") do
             {:ok, result} ->
               {:ok, %{result: result, errors: []}}
 
@@ -260,7 +267,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
               |> Ash.Changeset.for_update(action, input)
               |> Ash.Changeset.set_arguments(arguments)
-              |> select_fields(resource, resolution, true)
+              |> select_fields(resource, resolution, "result")
               |> api.update(opts)
               |> update_result(resource, api, resolution)
 
@@ -311,7 +318,7 @@ defmodule AshGraphql.Graphql.Resolver do
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-              |> select_fields(resource, resolution, true)
+              |> select_fields(resource, resolution, "result")
               |> api.destroy(opts)
               |> destroy_result(initial, resource, resolution)
 
@@ -353,10 +360,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp load_fields(query_or_record, resource, api, resolution, result? \\ false) do
+  defp load_fields(query_or_record, resource, api, resolution, nested \\ nil) do
     loading =
       resolution
-      |> fields(result?)
+      |> fields(nested)
       |> Enum.map(fn field ->
         Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
           Ash.Resource.Info.calculation(resource, field.schema_node.identifier)
@@ -373,10 +380,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp select_fields(query_or_changeset, resource, resolution, result? \\ false) do
+  defp select_fields(query_or_changeset, resource, resolution, nested \\ nil) do
     subfields =
       resolution
-      |> fields(result?)
+      |> fields(nested)
       |> Enum.map(&Ash.Resource.Info.attribute(resource, &1.schema_node.identifier))
       |> Enum.filter(& &1)
       |> Enum.map(& &1.name)
@@ -390,11 +397,11 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp fields(resolution, result?) do
-    if result? do
+  defp fields(resolution, nested) do
+    if nested do
       resolution
       |> Absinthe.Resolution.project()
-      |> Enum.find(&(&1.name == "result"))
+      |> Enum.find(&(&1.name == nested))
       |> Map.get(:selections)
     else
       Absinthe.Resolution.project(resolution)
@@ -422,7 +429,7 @@ defmodule AshGraphql.Graphql.Resolver do
   defp update_result(result, resource, api, resolution) do
     case result do
       {:ok, value} ->
-        case load_fields(value, resource, api, resolution, true) do
+        case load_fields(value, resource, api, resolution, "result") do
           {:ok, result} ->
             {:ok, %{result: result, errors: []}}
 
