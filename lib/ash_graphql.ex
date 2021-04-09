@@ -54,7 +54,8 @@ defmodule AshGraphql do
 
             type_definitions =
               if unquote(first?) do
-                embedded_types = AshGraphql.get_embedded_types(unquote(apis))
+                embedded_types =
+                  AshGraphql.get_embedded_types(unquote(Enum.map(apis, &elem(&1, 0))))
 
                 AshGraphql.Api.global_type_definitions(__MODULE__) ++
                   AshGraphql.Api.type_definitions(api, __MODULE__) ++
@@ -87,7 +88,6 @@ defmodule AshGraphql do
 
   def get_embedded_types(apis) do
     apis
-    |> Enum.map(&elem(&1, 0))
     |> Enum.flat_map(&Ash.Api.resources/1)
     |> Enum.flat_map(fn resource ->
       resource
