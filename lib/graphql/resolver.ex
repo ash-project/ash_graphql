@@ -2,6 +2,7 @@ defmodule AshGraphql.Graphql.Resolver do
   @moduledoc false
 
   require Ash.Query
+  require Logger
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
@@ -459,8 +460,11 @@ defmodule AshGraphql.Graphql.Resolver do
       if AshGraphql.Error.impl_for(error) do
         AshGraphql.Error.to_error(error)
       else
+        uuid = Ash.UUID.generate()
+        Logger.warn("`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{inspect(error)}")
+
         %{
-          message: "something went wrong."
+          message: "something went wrong. Unique error id: `#{uuid}`"
         }
       end
     end)

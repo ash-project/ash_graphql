@@ -205,6 +205,10 @@ defmodule AshGraphql.Resource do
     Extension.get_opt(resource, [:graphql], :primary_key_delimiter, [], false)
   end
 
+  defp ref(env) do
+    %{module: __MODULE__, location: %{file: env.file, line: env.line}}
+  end
+
   def encode_primary_key(%resource{} = record) do
     case Ash.Resource.Info.primary_key(resource) do
       [field] ->
@@ -257,7 +261,8 @@ defmodule AshGraphql.Resource do
           ],
           module: schema,
           name: to_string(query.name),
-          type: query_type(query, query_action, type)
+          type: query_type(query, query_action, type),
+          __reference__: ref(__ENV__)
         }
       end)
     else
@@ -280,7 +285,8 @@ defmodule AshGraphql.Resource do
           ],
           module: schema,
           name: to_string(mutation.name),
-          type: String.to_atom("#{mutation.name}_result")
+          type: String.to_atom("#{mutation.name}_result"),
+          __reference__: ref(__ENV__)
         }
 
       %{type: :create} = mutation ->
@@ -300,7 +306,8 @@ defmodule AshGraphql.Resource do
           ],
           module: schema,
           name: to_string(mutation.name),
-          type: String.to_atom("#{mutation.name}_result")
+          type: String.to_atom("#{mutation.name}_result"),
+          __reference__: ref(__ENV__)
         }
 
       mutation ->
@@ -313,7 +320,8 @@ defmodule AshGraphql.Resource do
                   module: schema,
                   name: "input",
                   placement: :argument_definition,
-                  type: String.to_atom("#{mutation.name}_input")
+                  type: String.to_atom("#{mutation.name}_input"),
+                  __reference__: ref(__ENV__)
                 }
               ],
           identifier: mutation.name,
@@ -322,7 +330,8 @@ defmodule AshGraphql.Resource do
           ],
           module: schema,
           name: to_string(mutation.name),
-          type: String.to_atom("#{mutation.name}_result")
+          type: String.to_atom("#{mutation.name}_result"),
+          __reference__: ref(__ENV__)
         }
     end)
   end
@@ -341,7 +350,8 @@ defmodule AshGraphql.Resource do
         type: %Absinthe.Blueprint.TypeReference.NonNull{
           of_type: field_type(attribute.type, attribute, resource)
         },
-        description: attribute.description || ""
+        description: attribute.description || "",
+        __reference__: ref(__ENV__)
       }
     end)
   end
@@ -353,7 +363,8 @@ defmodule AshGraphql.Resource do
         module: schema,
         name: "id",
         placement: :argument_definition,
-        type: :id
+        type: :id,
+        __reference__: ref(__ENV__)
       }
     ]
   end
@@ -384,7 +395,8 @@ defmodule AshGraphql.Resource do
             identifier: :result,
             module: schema,
             name: "result",
-            type: Resource.type(resource)
+            type: Resource.type(resource),
+            __reference__: ref(__ENV__)
           },
           %Absinthe.Blueprint.Schema.FieldDefinition{
             description: "Any errors generated, if the mutation failed",
@@ -393,12 +405,14 @@ defmodule AshGraphql.Resource do
             name: "errors",
             type: %Absinthe.Blueprint.TypeReference.List{
               of_type: :mutation_error
-            }
+            },
+            __reference__: ref(__ENV__)
           }
         ],
         identifier: String.to_atom("#{mutation.name}_result"),
         module: schema,
-        name: Macro.camelize("#{mutation.name}_result")
+        name: Macro.camelize("#{mutation.name}_result"),
+        __reference__: ref(__ENV__)
       }
 
       if mutation.type == :destroy do
@@ -408,7 +422,8 @@ defmodule AshGraphql.Resource do
           fields: mutation_fields(resource, schema, mutation.action, mutation.type),
           identifier: String.to_atom("#{mutation.name}_input"),
           module: schema,
-          name: Macro.camelize("#{mutation.name}_input")
+          name: Macro.camelize("#{mutation.name}_input"),
+          __reference__: ref(__ENV__)
         }
 
         [input, result]
@@ -472,7 +487,8 @@ defmodule AshGraphql.Resource do
       fields: fields,
       identifier: String.to_atom(name),
       module: schema,
-      name: Macro.camelize(name)
+      name: Macro.camelize(name),
+      __reference__: ref(__ENV__)
     }
   end
 
@@ -485,19 +501,22 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
-        allow_nil? = attribute.allow_nil? || attribute.default || type == :update
+        allow_nil? =
+          attribute.allow_nil? || attribute.default || type == :update ||
+            (type == :create && attribute.name in action.allow_nil_input)
 
         field_type =
           attribute.type
           |> field_type(attribute, resource, true)
-          |> maybe_wrap_non_null(not allow_nil?)
+          |> maybe_wrap_non_null(!allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
           identifier: attribute.name,
           module: schema,
           name: to_string(attribute.name),
-          type: field_type
+          type: field_type,
+          __reference__: ref(__ENV__)
         }
       end)
 
@@ -514,7 +533,8 @@ defmodule AshGraphql.Resource do
           identifier: argument.name,
           module: schema,
           name: to_string(argument.name),
-          type: type
+          type: type,
+          __reference__: ref(__ENV__)
         }
       end)
 
@@ -556,7 +576,8 @@ defmodule AshGraphql.Resource do
         name: "id",
         identifier: :id,
         type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-        description: "The id of the record"
+        description: "The id of the record",
+        __reference__: ref(__ENV__)
       }
     ] ++ read_args(resource, action, schema)
   end
@@ -575,7 +596,8 @@ defmodule AshGraphql.Resource do
         type: %Absinthe.Blueprint.TypeReference.NonNull{
           of_type: field_type(attribute.type, attribute, resource, true)
         },
-        description: attribute.description || ""
+        description: attribute.description || "",
+        __reference__: ref(__ENV__)
       }
     end)
     |> Enum.concat(read_args(resource, action, schema))
@@ -593,7 +615,8 @@ defmodule AshGraphql.Resource do
               name: "filter",
               identifier: :filter,
               type: resource_filter_type(resource),
-              description: "A filter to limit the results"
+              description: "A filter to limit the results",
+              __reference__: ref(__ENV__)
             }
           ]
       end
@@ -613,7 +636,8 @@ defmodule AshGraphql.Resource do
               name: "filter",
               identifier: :filter,
               type: resource_filter_type(resource),
-              description: "A filter to limit the results"
+              description: "A filter to limit the results",
+              __reference__: ref(__ENV__)
             }
           ]
       end
@@ -631,7 +655,8 @@ defmodule AshGraphql.Resource do
               type: %Absinthe.Blueprint.TypeReference.List{
                 of_type: resource_sort_type(resource)
               },
-              description: "How to sort the records in the response"
+              description: "How to sort the records in the response",
+              __reference__: ref(__ENV__)
             }
             | args
           ]
@@ -653,7 +678,8 @@ defmodule AshGraphql.Resource do
         identifier: argument.name,
         module: schema,
         name: to_string(argument.name),
-        type: type
+        type: type,
+        __reference__: ref(__ENV__)
       }
     end)
   end
@@ -679,7 +705,8 @@ defmodule AshGraphql.Resource do
           identifier: :limit,
           type: limit_type,
           default_value: action.pagination.default_limit,
-          description: "The number of records to return." <> max_message
+          description: "The number of records to return." <> max_message,
+          __reference__: ref(__ENV__)
         }
       ] ++ keyset_pagination_args(action) ++ offset_pagination_args(action)
     else
@@ -711,13 +738,15 @@ defmodule AshGraphql.Resource do
           name: "before",
           identifier: :before,
           type: :string,
-          description: "Show records before the specified keyset."
+          description: "Show records before the specified keyset.",
+          __reference__: ref(__ENV__)
         },
         %Absinthe.Blueprint.Schema.InputValueDefinition{
           name: "after",
           identifier: :after,
           type: :string,
-          description: "Show records after the specified keyset."
+          description: "Show records after the specified keyset.",
+          __reference__: ref(__ENV__)
         }
       ]
     else
@@ -732,7 +761,8 @@ defmodule AshGraphql.Resource do
           name: "offset",
           identifier: :offset,
           type: :integer,
-          description: "The number of records to skip."
+          description: "The number of records to skip.",
+          __reference__: ref(__ENV__)
         }
       ]
     else
@@ -742,13 +772,12 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def type_definitions(resource, api, schema) do
-    [
-      type_definition(resource, api, schema)
-    ] ++
+    List.wrap(type_definition(resource, api, schema)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
-      List.wrap(page_of(resource, schema)) ++ enum_definitions(resource, schema)
+      List.wrap(page_of(resource, schema)) ++
+      enum_definitions(resource, schema)
   end
 
   defp filter_field_types(resource, schema) do
@@ -811,7 +840,8 @@ defmodule AshGraphql.Resource do
               identifier: operator.name(),
               module: schema,
               name: to_string(operator.name()),
-              type: field_type(type, attribute_or_aggregate, resource, true)
+              type: field_type(type, attribute_or_aggregate, resource, true),
+              __reference__: ref(__ENV__)
             }
           ]
         else
@@ -847,7 +877,8 @@ defmodule AshGraphql.Resource do
                 identifier: operator.name(),
                 module: schema,
                 name: to_string(operator.name()),
-                type: field_type(type, attribute_or_aggregate, resource, true)
+                type: field_type(type, attribute_or_aggregate, resource, true),
+                __reference__: ref(__ENV__)
               }
             ]
           else
@@ -866,7 +897,8 @@ defmodule AshGraphql.Resource do
           identifier: identifier,
           fields: fields,
           module: schema,
-          name: identifier |> to_string() |> Macro.camelize()
+          name: identifier |> to_string() |> Macro.camelize(),
+          __reference__: ref(__ENV__)
         }
       ]
     end
@@ -900,18 +932,21 @@ defmodule AshGraphql.Resource do
               module: schema,
               name: "order",
               default_value: :asc,
-              type: :sort_order
+              type: :sort_order,
+              __reference__: ref(__ENV__)
             },
             %Absinthe.Blueprint.Schema.FieldDefinition{
               identifier: :field,
               module: schema,
               name: "field",
-              type: resource_sort_field_type(resource)
+              type: resource_sort_field_type(resource),
+              __reference__: ref(__ENV__)
             }
           ],
           identifier: resource_sort_type(resource),
           module: schema,
-          name: resource |> resource_sort_type() |> to_string() |> Macro.camelize()
+          name: resource |> resource_sort_type() |> to_string() |> Macro.camelize(),
+          __reference__: ref(__ENV__)
         }
     end
   end
@@ -926,7 +961,8 @@ defmodule AshGraphql.Resource do
           identifier: resource_filter_type(resource),
           module: schema,
           name: resource |> resource_filter_type() |> to_string() |> Macro.camelize(),
-          fields: fields
+          fields: fields,
+          __reference__: ref(__ENV__)
         }
     end
   end
@@ -954,7 +990,8 @@ defmodule AshGraphql.Resource do
           identifier: attribute.name,
           module: schema,
           name: to_string(attribute.name),
-          type: attribute_filter_field_type(resource, attribute)
+          type: attribute_filter_field_type(resource, attribute),
+          __reference__: ref(__ENV__)
         }
       ]
     end)
@@ -969,7 +1006,8 @@ defmodule AshGraphql.Resource do
           identifier: aggregate.name,
           module: schema,
           name: to_string(aggregate.name),
-          type: attribute_filter_field_type(resource, aggregate)
+          type: attribute_filter_field_type(resource, aggregate),
+          __reference__: ref(__ENV__)
         }
       ]
     end)
@@ -986,7 +1024,8 @@ defmodule AshGraphql.Resource do
         identifier: relationship.name,
         module: schema,
         name: to_string(relationship.name),
-        type: resource_filter_type(relationship.destination)
+        type: resource_filter_type(relationship.destination),
+        __reference__: ref(__ENV__)
       }
     end)
   end
@@ -1002,12 +1041,14 @@ defmodule AshGraphql.Resource do
             of_type: %Absinthe.Blueprint.TypeReference.NonNull{
               of_type: resource_filter_type(resource)
             }
-          }
+          },
+          __reference__: ref(__ENV__)
         },
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: :or,
           module: schema,
           name: "or",
+          __reference__: ref(__ENV__),
           type: %Absinthe.Blueprint.TypeReference.List{
             of_type: %Absinthe.Blueprint.TypeReference.NonNull{
               of_type: resource_filter_type(resource)
@@ -1026,11 +1067,10 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(type) <> "_sort_field")
   end
 
-  defp enum_definitions(resource, schema) do
+  def enum_definitions(resource, schema) do
     atom_enums =
       resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.filter(&(&1.type == Ash.Type.Atom))
+      |> get_enums()
       |> Enum.filter(&is_list(&1.constraints[:one_of]))
       |> Enum.map(fn attribute ->
         type_name = atom_enum_type(resource, attribute.name)
@@ -1047,7 +1087,8 @@ defmodule AshGraphql.Resource do
                 value: value
               }
             end),
-          identifier: type_name
+          identifier: type_name,
+          __reference__: ref(__ENV__)
         }
       end)
 
@@ -1057,6 +1098,7 @@ defmodule AshGraphql.Resource do
       module: schema,
       name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
       identifier: resource_sort_field_type(resource),
+      __reference__: ref(__ENV__),
       values:
         Enum.map(sort_values, fn sort_value ->
           %Absinthe.Blueprint.Schema.EnumValueDefinition{
@@ -1069,6 +1111,28 @@ defmodule AshGraphql.Resource do
     }
 
     [sort_order | atom_enums]
+  end
+
+  defp get_enums(resource) do
+    resource
+    |> Ash.Resource.Info.public_attributes()
+    |> Enum.concat(all_arguments(resource))
+    |> Enum.map(fn attribute ->
+      unnest(attribute)
+    end)
+    |> Enum.filter(&(&1.type == Ash.Type.Atom))
+  end
+
+  defp unnest(%{type: {:array, type}, constraints: constraints} = attribute) do
+    %{attribute | type: type, constraints: constraints[:items] || []}
+  end
+
+  defp unnest(other), do: other
+
+  defp all_arguments(resource) do
+    resource
+    |> Ash.Resource.Info.actions()
+    |> Enum.flat_map(& &1.arguments)
   end
 
   defp sort_values(resource) do
@@ -1125,6 +1189,7 @@ defmodule AshGraphql.Resource do
             identifier: :results,
             module: schema,
             name: "results",
+            __reference__: ref(__ENV__),
             type: %Absinthe.Blueprint.TypeReference.List{
               of_type: %Absinthe.Blueprint.TypeReference.NonNull{
                 of_type: type
@@ -1136,12 +1201,14 @@ defmodule AshGraphql.Resource do
             identifier: :count,
             module: schema,
             name: "count",
-            type: :integer
+            type: :integer,
+            __reference__: ref(__ENV__)
           }
         ],
         identifier: String.to_atom("page_of_#{type}"),
         module: schema,
-        name: Macro.camelize("page_of_#{type}")
+        name: Macro.camelize("page_of_#{type}"),
+        __reference__: ref(__ENV__)
       }
     else
       nil
@@ -1156,7 +1223,8 @@ defmodule AshGraphql.Resource do
       fields: fields(resource, api, schema),
       identifier: type,
       module: schema,
-      name: Macro.camelize(to_string(type))
+      name: Macro.camelize(to_string(type)),
+      __reference__: ref(__ENV__)
     }
   end
 
@@ -1183,7 +1251,8 @@ defmodule AshGraphql.Resource do
           identifier: attribute.name,
           module: schema,
           name: to_string(attribute.name),
-          type: field_type
+          type: field_type,
+          __reference__: ref(__ENV__)
         }
       end)
 
@@ -1206,7 +1275,8 @@ defmodule AshGraphql.Resource do
                 identifier: attribute.name,
                 module: schema,
                 name: to_string(attribute.name),
-                type: field_type
+                type: field_type,
+                __reference__: ref(__ENV__)
               }
             ]
           end
@@ -1229,7 +1299,8 @@ defmodule AshGraphql.Resource do
                   identifier: attribute.name,
                   module: schema,
                   name: to_string(attribute.name),
-                  type: field_type
+                  type: field_type,
+                  __reference__: ref(__ENV__)
                 }
               end
             end
@@ -1240,7 +1311,8 @@ defmodule AshGraphql.Resource do
               identifier: :id,
               module: schema,
               name: "id",
-              type: :id
+              type: :id,
+              __reference__: ref(__ENV__)
             }
           ] ++ added_pkey_fields
       end
@@ -1270,7 +1342,8 @@ defmodule AshGraphql.Resource do
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
           arguments: [],
-          type: type
+          type: type,
+          __reference__: ref(__ENV__)
         }
 
       %{cardinality: :many} = relationship ->
@@ -1294,7 +1367,8 @@ defmodule AshGraphql.Resource do
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
           arguments: args(:list, relationship.destination, read_action, schema),
-          type: query_type
+          type: query_type,
+          __reference__: ref(__ENV__)
         }
     end)
   end
@@ -1314,7 +1388,8 @@ defmodule AshGraphql.Resource do
         identifier: aggregate.name,
         module: schema,
         name: to_string(aggregate.name),
-        type: field_type(type, nil, resource)
+        type: field_type(type, nil, resource),
+        __reference__: ref(__ENV__)
       }
     end)
   end
@@ -1332,7 +1407,8 @@ defmodule AshGraphql.Resource do
         identifier: calculation.name,
         module: schema,
         name: to_string(calculation.name),
-        type: field_type
+        type: field_type,
+        __reference__: ref(__ENV__)
       }
     end)
   end
@@ -1352,7 +1428,7 @@ defmodule AshGraphql.Resource do
     field_type =
       type
       |> field_type(new_attribute, resource, input?)
-      |> maybe_wrap_non_null(not attribute.constraints[:nil_items?])
+      |> maybe_wrap_non_null(!attribute.constraints[:nil_items?])
 
     %Absinthe.Blueprint.TypeReference.List{
       of_type: field_type

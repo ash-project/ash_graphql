@@ -5,7 +5,7 @@ defmodule AshGraphql.Resource.Transformers.RequireIdPkey do
   alias Ash.Dsl.Transformer
 
   def transform(resource, dsl) do
-    if Ash.Type.embedded_type?(resource) do
+    if Ash.Resource.Info.embedded?(resource) do
       {:ok, dsl}
     else
       primary_key =
