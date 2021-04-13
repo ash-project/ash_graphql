@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.4](https://github.com/ash-project/ash_graphql/compare/v0.15.3...v0.15.4) (2021-04-13)
+
+
+
+
+### Bug Fixes:
+
+* detect all embeddable types in arguments and nested
+
+* detect enums in embeddable types and arguments
+
+* error messages for `InvalidArgument`
+
+* store refs in graphql blueprint to fix error messages
+
+### Improvements:
+
+* log on unrenderable error messages
+
+* update to latest ash
+
 ## [v0.15.3](https://github.com/ash-project/ash_graphql/compare/v0.15.2...v0.15.3) (2021-04-09)
 
 
