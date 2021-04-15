@@ -19,6 +19,7 @@ defmodule AshGraphql.Test.Comment do
 
   attributes do
     uuid_primary_key(:id)
+    attribute(:text, :string)
   end
 
   relationships do

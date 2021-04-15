@@ -43,6 +43,42 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"postLibrary" => [%{"text" => "foo"}]}} = result
   end
 
+  test "reading relationships works, without selecting the id field" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          text
+          comments{
+            text
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postLibrary" => [%{"text" => "foo", "comments" => [%{"text" => "stuff"}]}]}} =
+             result
+  end
+
   test "a read with a loaded field works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true)

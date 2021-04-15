@@ -385,7 +385,7 @@ defmodule AshGraphql.Graphql.Resolver do
     subfields =
       resolution
       |> fields(nested)
-      |> Enum.map(&Ash.Resource.Info.attribute(resource, &1.schema_node.identifier))
+      |> Enum.map(&field_or_relationship(resource, &1))
       |> Enum.filter(& &1)
       |> Enum.map(& &1.name)
 
@@ -395,6 +395,22 @@ defmodule AshGraphql.Graphql.Resolver do
 
       %Ash.Changeset{} = changeset ->
         Ash.Changeset.select(changeset, subfields)
+    end
+  end
+
+  defp field_or_relationship(resource, field) do
+    case Ash.Resource.Info.attribute(resource, field.schema_node.identifier) do
+      nil ->
+        case Ash.Resource.Info.relationship(resource, field.schema_node.identifier) do
+          nil ->
+            nil
+
+          rel ->
+            Ash.Resource.Info.attribute(resource, rel.source_field)
+        end
+
+      attr ->
+        attr
     end
   end
 
@@ -480,8 +496,13 @@ defmodule AshGraphql.Graphql.Resolver do
       verbose?: AshGraphql.Api.debug?(api)
     ]
 
+    related_query =
+      args
+      |> apply_load_arguments(Ash.Query.new(relationship.destination))
+      |> select_fields(relationship.destination, resolution)
+
     opts = [
-      query: apply_load_arguments(args, Ash.Query.new(relationship.destination)),
+      query: related_query,
       api_opts: api_opts,
       args: args,
       tenant: Map.get(context, :tenant)
