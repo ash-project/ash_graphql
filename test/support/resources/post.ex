@@ -24,6 +24,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_comments, :with_comments
 
       update :update_post, :update
+      destroy :delete_post, :destroy
     end
   end
 
