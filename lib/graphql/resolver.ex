@@ -346,13 +346,14 @@ defmodule AshGraphql.Graphql.Resolver do
      }}
   end
 
+  defp clear_fields(nil, _, _), do: nil
+
   defp clear_fields(result, resource, resolution) do
     resolution
     |> fields(true)
     |> Enum.map(fn field ->
       Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
-        Ash.Resource.Info.calculation(resource, field.schema_node.identifier) ||
-        Ash.Resource.Info.attribute(resource, field.schema_node.identifier)
+        Ash.Resource.Info.calculation(resource, field.schema_node.identifier)
     end)
     |> Enum.filter(& &1)
     |> Enum.map(& &1.name)

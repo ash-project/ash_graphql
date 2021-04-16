@@ -17,6 +17,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
       update :update_post, :update
+      destroy :delete_post, :destroy
     end
   end
 
