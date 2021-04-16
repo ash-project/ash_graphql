@@ -76,7 +76,7 @@ defmodule AshGraphql.CreateTest do
     refute Map.has_key?(result, :errors)
     post_id = post.id
 
-    assert %{data: %{"upsertPost" => %{"result" => %{"text" => "foobar", "id" => post_id}}}} =
+    assert %{data: %{"upsertPost" => %{"result" => %{"text" => "foobar", "id" => ^post_id}}}} =
              result
   end
 
