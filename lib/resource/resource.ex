@@ -2,7 +2,7 @@ defmodule AshGraphql.Resource do
   alias Ash.Dsl.Extension
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
-  alias AshGraphql.Resource.{Mutation, Query}
+  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query}
 
   @get %Ash.Dsl.Entity{
     name: :get,
@@ -109,6 +109,69 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  @managed_relationship %Ash.Dsl.Entity{
+    name: :managed_relationship,
+    schema: ManagedRelationship.schema(),
+    args: [:action, :argument],
+    target: ManagedRelationship,
+    describe: """
+    Instructs ash_graphql that a given argument with a `manage_relationship` change should have its input objects derived automatically from the potential actions to be called.
+
+    For example, given an action like:
+
+    ```elixir
+    actions do
+      create :create do
+        argument :comments, {:array, :map}
+
+        change manage_relationship(:comments, type: :direct_control) # <- we look for this change with a matching argument name
+      end
+    end
+    ```
+
+    You could add the following mutation
+
+    ```elixir
+    graphql do
+      ...
+
+      mutations do
+        create :create_post, :create do
+          managed_relationship :comments
+        end
+      end
+    end
+    ```
+
+    By default, the `{:array, :map}` would simply be a `json[]` type. If the argument name
+    is placed in this list, all of the potential actions that could be called will be combined
+    into a single input object. If there are type conflicts (for example, if the input could create
+    or update a record, and the create and update actions have an argument of the same name but with a different type),
+    a warning is emitted at compile time and the first one is used. If that is insufficient, you will need to do one of the following:
+
+    1.) provide the `:types` option to the `managed_relationship` constructor (see that option for more)
+    2.) define a custom type, with a custom input object (see the custom types guide), and use that custom type instead of `:map`
+    3.) change your actions to not have overlapping inputs with different types
+    """
+  }
+
+  @managed_relationships %Ash.Dsl.Section{
+    name: :managed_relationships,
+    describe: """
+    Generates input objects for `manage_relationship` arguments on reosurce actions.
+    """,
+    examples: [
+      """
+      managed_relationships do
+        manage_relationship :create_post, :comments
+      end
+      """
+    ],
+    entities: [
+      @managed_relationship
+    ]
+  }
+
   @mutations %Ash.Dsl.Section{
     name: :mutations,
     describe: """
@@ -167,7 +230,8 @@ defmodule AshGraphql.Resource do
     ],
     sections: [
       @queries,
-      @mutations
+      @mutations,
+      @managed_relationships
     ]
   }
 
@@ -195,6 +259,10 @@ defmodule AshGraphql.Resource do
 
   def mutations(resource) do
     Extension.get_entities(resource, [:graphql, :mutations]) || []
+  end
+
+  def managed_relationships(resource) do
+    Extension.get_entities(resource, [:graphql, :managed_relationships]) || []
   end
 
   def type(resource) do
@@ -419,7 +487,14 @@ defmodule AshGraphql.Resource do
         [result]
       else
         input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          fields: mutation_fields(resource, schema, mutation.action, mutation.type),
+          fields:
+            mutation_fields(
+              resource,
+              schema,
+              mutation.action,
+              mutation.type,
+              AshGraphql.Resource.managed_relationships(resource)
+            ),
           identifier: String.to_atom("#{mutation.name}_input"),
           module: schema,
           name: Macro.camelize("#{mutation.name}_input"),
@@ -492,7 +567,7 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp mutation_fields(resource, schema, action, type) do
+  defp mutation_fields(resource, schema, action, type, managed_relationships \\ []) do
     attribute_fields =
       resource
       |> Ash.Resource.Info.public_attributes()
@@ -524,21 +599,51 @@ defmodule AshGraphql.Resource do
       action.arguments
       |> Enum.reject(& &1.private?)
       |> Enum.map(fn argument ->
-        type =
-          argument.type
-          |> field_type(argument, resource, true)
-          |> maybe_wrap_non_null(not argument.allow_nil?)
+        case find_manage_change(argument, action, managed_relationships) do
+          nil ->
+            type =
+              argument.type
+              |> field_type(argument, resource, true)
+              |> maybe_wrap_non_null(not argument.allow_nil?)
 
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          identifier: argument.name,
-          module: schema,
-          name: to_string(argument.name),
-          type: type,
-          __reference__: ref(__ENV__)
-        }
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: argument.name,
+              module: schema,
+              name: to_string(argument.name),
+              type: type,
+              __reference__: ref(__ENV__)
+            }
+
+          manage_opts ->
+            config =
+              relationship = Ash.Resource.Info.relationship(resource, manage_opts[:relationship])
+
+            IO.inspect(relationship)
+            # %Absinthe.Blueprint.Schema.FieldDefinition{
+            #   identifier: argument.name
+            # }
+
+            # {pkey, required?} = IO.inspect(relationship)
+            raise "Manage change"
+        end
       end)
 
     attribute_fields ++ argument_fields
+  end
+
+  defp find_manage_change(argument, action, managed_relationships) do
+    if Enum.find(
+         managed_relationships,
+         &(&1.argument == argument.name && &1.action == action.name)
+       ) do
+      Enum.find_value(action.changes, fn
+        %{change: {Ash.Resource.Change.ManageRelationship, opts}} ->
+          opts[:argument] == argument.name && opts
+
+        _ ->
+          nil
+      end)
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]

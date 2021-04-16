@@ -7,7 +7,7 @@ defmodule AshGraphql do
   """
 
   defmacro __using__(opts) do
-    quote bind_quoted: [apis: opts[:apis], api: opts[:api]] do
+    quote bind_quoted: [apis: opts[:apis], api: opts[:api]], location: :keep, generated: true do
       apis =
         api
         |> List.wrap()
@@ -76,10 +76,8 @@ defmodule AshGraphql do
           end
         end
 
-        if first? do
-          import_types(Absinthe.Type.Custom)
-          import_types(AshGraphql.Types.JSON)
-        end
+        import_types(Absinthe.Type.Custom)
+        import_types(AshGraphql.Types.JSON)
 
         @pipeline_modifier Module.concat(api, AshTypes)
       end

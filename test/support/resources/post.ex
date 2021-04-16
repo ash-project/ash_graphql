@@ -13,9 +13,16 @@ defmodule AshGraphql.Test.Post do
       list :post_library, :library
     end
 
+    managed_relationships do
+      managed_relationship(:with_comments, :comments)
+    end
+
     mutations do
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
+
+      create :create_post_with_comments, :with_comments
+
       update :update_post, :update
     end
   end
@@ -34,6 +41,12 @@ defmodule AshGraphql.Test.Post do
     create :create_confirm do
       argument(:confirmation, :string)
       validate(confirm(:text, :confirmation))
+    end
+
+    create :with_comments do
+      argument(:comments, {:array, :map})
+
+      change(manage_relationship(:comments, type: :direct_control))
     end
 
     read(:read, primary?: true)
