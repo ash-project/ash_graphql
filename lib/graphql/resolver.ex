@@ -350,7 +350,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp clear_fields(result, resource, resolution) do
     resolution
-    |> fields(true)
+    |> fields("result")
     |> Enum.map(fn field ->
       Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
         Ash.Resource.Info.calculation(resource, field.schema_node.identifier)
