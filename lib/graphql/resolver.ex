@@ -252,7 +252,9 @@ defmodule AshGraphql.Graphql.Resolver do
         |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
-            not_found(filter, resource)
+            result = not_found(filter, resource)
+
+            Absinthe.Resolution.put_result(resolution, result)
 
           initial ->
             opts = [
@@ -310,7 +312,9 @@ defmodule AshGraphql.Graphql.Resolver do
         |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
-            not_found(filter, resource)
+            result = not_found(filter, resource)
+
+            Absinthe.Resolution.put_result(resolution, result)
 
           initial ->
             opts = destroy_opts(api, context, action)
@@ -335,14 +339,13 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok,
      %{
        result: nil,
-       errors: [
+       errors:
          to_errors(
            Ash.Error.Query.NotFound.exception(
              primary_key: Map.new(filter),
              resource: resource
            )
          )
-       ]
      }}
   end
 

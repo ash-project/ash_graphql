@@ -40,4 +40,30 @@ defmodule AshGraphql.DestroyTest do
     refute Map.has_key?(result, :errors)
     assert %{data: %{"deletePost" => %{"result" => %{"text" => "foobar"}}}} = result
   end
+
+  test "destroying a non-existent record returns a not found error" do
+    resp =
+      """
+      mutation DeletePost($id: ID) {
+        deletePost(id: $id) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => Ash.UUID.generate()
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"deletePost" => %{"errors" => [%{"message" => "not found"}]}}} = result
+  end
 end

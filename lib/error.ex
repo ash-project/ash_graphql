@@ -55,7 +55,7 @@ end
 defimpl AshGraphql.Error, for: Ash.Error.Query.NotFound do
   def to_error(error) do
     %{
-      message: "could not be found",
+      message: "not found",
       fields: Map.keys(error.primary_key || %{}),
       code: Ash.ErrorKind.code(error)
     }
