@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.6](https://github.com/ash-project/ash_graphql/compare/v0.15.5...v0.15.6) (2021-04-16)
+
+
+
+
+### Bug Fixes:
+
+* correctly select fields to clear
+
+* don't clear fields on `nil` result
+
 ## [v0.15.5](https://github.com/ash-project/ash_graphql/compare/v0.15.4...v0.15.5) (2021-04-15)
 
 
