@@ -202,7 +202,7 @@ defmodule AshGraphql.Graphql.Resolver do
       resource
       |> Ash.Changeset.new()
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-      |> Ash.Changeset.for_create(action, input)
+      |> Ash.Changeset.for_create(action, input, actor: Map.get(context, :actor))
       |> select_fields(resource, resolution, "result")
       |> api.create(opts)
       |> case do
@@ -268,7 +268,7 @@ defmodule AshGraphql.Graphql.Resolver do
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-              |> Ash.Changeset.for_update(action, input)
+              |> Ash.Changeset.for_update(action, input, actor: Map.get(context, :actor))
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
               |> api.update(opts)
