@@ -38,6 +38,7 @@ defmodule AshGraphql.Graphql.Resolver do
           resource
           |> Ash.Query.new()
           |> Ash.Query.set_tenant(Map.get(context, :tenant))
+          |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
           |> Ash.Query.filter(^filter)
           |> set_query_arguments(action, arguments)
           |> select_fields(resource, resolution)
@@ -80,6 +81,7 @@ defmodule AshGraphql.Graphql.Resolver do
     result =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
       |> set_query_arguments(action, args)
       |> select_fields(resource, resolution)
       |> load_fields(resource, api, resolution)
@@ -157,6 +159,7 @@ defmodule AshGraphql.Graphql.Resolver do
     result =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
       |> set_query_arguments(action, args)
       |> select_fields(resource, resolution, nested)
       |> load_fields(resource, api, resolution, nested)
@@ -202,6 +205,7 @@ defmodule AshGraphql.Graphql.Resolver do
       resource
       |> Ash.Changeset.new()
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+      |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
       |> Ash.Changeset.for_create(action, input, actor: Map.get(context, :actor))
       |> select_fields(resource, resolution, "result")
       |> api.create(opts)
@@ -234,6 +238,7 @@ defmodule AshGraphql.Graphql.Resolver do
         resource
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
+        |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
         |> set_query_arguments(action, arguments)
         |> api.read_one!(action: read_action, verbose?: AshGraphql.Api.debug?(api))
         |> case do
@@ -254,6 +259,7 @@ defmodule AshGraphql.Graphql.Resolver do
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+              |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
               |> Ash.Changeset.for_update(action, input, actor: Map.get(context, :actor))
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
@@ -280,6 +286,7 @@ defmodule AshGraphql.Graphql.Resolver do
         resource
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
+        |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
         |> set_query_arguments(action, arguments)
         |> api.read_one!(action: read_action, verbose?: AshGraphql.Api.debug?(api))
         |> case do
@@ -295,6 +302,7 @@ defmodule AshGraphql.Graphql.Resolver do
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+              |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
               |> select_fields(resource, resolution, "result")
               |> api.destroy(opts)
               |> destroy_result(initial, resource, resolution)
