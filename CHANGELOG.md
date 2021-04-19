@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.9](https://github.com/ash-project/ash_graphql/compare/v0.15.8...v0.15.9) (2021-04-19)
+
+
+
+
+### Bug Fixes:
+
+* project down to multiple levels for `result` types
+
 ## [v0.15.8](https://github.com/ash-project/ash_graphql/compare/v0.15.7...v0.15.8) (2021-04-18)
 
 
