@@ -1,4 +1,9 @@
-# Authorization
+# Authorization and Context
+
+AshGraphql uses two special keys in the `absinthe` context:
+
+* `:actor` - the current actor, to be used for authorization/preparations/changes
+* `:ash_context` - a map of arbitrary context to be passed into the changeset/query. Accessible via `changeset.context` and `query.context`
 
 By default, `authorize?` in the api is set to true. To disable authorization for a given API in graphql, use:
 
@@ -32,7 +37,9 @@ defmodule MyAppWeb.UserPlug do
   defp build_context(conn) do
     with ["" <> token] <- get_req_header(conn, "authorization"),
          {:ok, user, _claims} <- MyApp.Guardian.resource_from_token(token) do
-      {:ok, %{actor: user}}
+         # ash_context allows you to pass arbitrary data down into the changeset/query context
+         # This can be accessed at `changeset.context` or `query.context`.
+      {:ok, %{actor: user, ash_context: %{some: :data}}}
     end
   end
 end
