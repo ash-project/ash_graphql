@@ -42,6 +42,38 @@ defmodule AshGraphql.CreateTest do
     assert %{data: %{"createPost" => %{"result" => %{"text" => "foobar"}}}} = result
   end
 
+  test "a create with a fragment works" do
+    resp =
+      """
+      fragment comparisonFields on Post {
+        text
+      }
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            ...comparisonFields
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "confirmation" => "foobar"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"createPost" => %{"result" => %{"text" => "foobar"}}}} = result
+  end
+
   test "an upsert works" do
     post =
       AshGraphql.Test.Post
