@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.10](https://github.com/ash-project/ash_graphql/compare/v0.15.9...v0.15.10) (2021-04-19)
+
+
+
+
+### Improvements:
+
+* support `read_action` config for updates and destroys
+
+* support `identity: false` for udpates and destroys
+
 ## [v0.15.9](https://github.com/ash-project/ash_graphql/compare/v0.15.8...v0.15.9) (2021-04-19)
 
 
