@@ -224,24 +224,10 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def mutate(
         %{arguments: %{input: input} = arguments, context: context} = resolution,
-        {api, resource, %{type: :update, action: action, identity: identity}}
+        {api, resource,
+         %{type: :update, action: action, identity: identity, read_action: read_action}}
       ) do
-    filter =
-      if identity do
-        {:ok,
-         resource
-         |> Ash.Resource.Info.identities()
-         |> Enum.find(&(&1.name == identity))
-         |> Map.get(:keys)
-         |> Enum.map(fn key ->
-           {key, Map.get(arguments, key)}
-         end)}
-      else
-        case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
-          {:ok, value} -> {:ok, [id: value]}
-          {:error, error} -> {:error, error}
-        end
-      end
+    filter = identity_filter(identity, resource, arguments)
 
     case filter do
       {:ok, filter} ->
@@ -249,7 +235,7 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> set_query_arguments(action, arguments)
-        |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
+        |> api.read_one!(action: read_action, verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
             result = not_found(filter, resource)
@@ -284,24 +270,10 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def mutate(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource, %{type: :destroy, action: action, identity: identity}}
+        {api, resource,
+         %{type: :destroy, action: action, identity: identity, read_action: read_action}}
       ) do
-    filter =
-      if identity do
-        {:ok,
-         resource
-         |> Ash.Resource.Info.identities()
-         |> Enum.find(&(&1.name == identity))
-         |> Map.get(:keys)
-         |> Enum.map(fn key ->
-           {key, Map.get(arguments, key)}
-         end)}
-      else
-        case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
-          {:ok, value} -> {:ok, [id: value]}
-          {:error, error} -> {:error, error}
-        end
-      end
+    filter = identity_filter(identity, resource, arguments)
 
     case filter do
       {:ok, filter} ->
@@ -309,7 +281,7 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Ash.Query.filter(^filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> set_query_arguments(action, arguments)
-        |> api.read_one!(verbose?: AshGraphql.Api.debug?(api))
+        |> api.read_one!(action: read_action, verbose?: AshGraphql.Api.debug?(api))
         |> case do
           nil ->
             result = not_found(filter, resource)
@@ -333,6 +305,28 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, error} ->
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
     end
+  end
+
+  def identity_filter(false, _resource, _arguments) do
+    {:ok, nil}
+  end
+
+  def identity_filter(nil, resource, arguments) do
+    case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
+      {:ok, value} -> {:ok, [id: value]}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  def identity_filter(identity, resource, arguments) do
+    {:ok,
+     resource
+     |> Ash.Resource.Info.identities()
+     |> Enum.find(&(&1.name == identity))
+     |> Map.get(:keys)
+     |> Enum.map(fn key ->
+       {key, Map.get(arguments, key)}
+     end)}
   end
 
   defp not_found(filter, resource) do

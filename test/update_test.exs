@@ -41,4 +41,37 @@ defmodule AshGraphql.UpdateTest do
     assert {:ok, %{data: %{"updatePost" => %{"errors" => [], "result" => %{"text" => "barbuz"}}}}} =
              resp
   end
+
+  test "an update with a configured read action and no identity works" do
+    post =
+      AshGraphql.Test.Api.create!(
+        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
+      )
+
+    resp =
+      """
+      mutation UpdateBestPost($input: UpdateBestPostInput) {
+        updateBestPost(input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id,
+          "input" => %{
+            "text" => "barbuz"
+          }
+        }
+      )
+
+    assert {:ok,
+            %{data: %{"updateBestPost" => %{"errors" => [], "result" => %{"text" => "barbuz"}}}}} =
+             resp
+  end
 end

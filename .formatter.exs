@@ -14,6 +14,7 @@ locals_without_parens = [
   list: 2,
   list: 3,
   primary_key_delimiter: 1,
+  read_action: 1,
   read_one: 2,
   read_one: 3,
   type: 1,
