@@ -336,6 +336,10 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  defp mutation_args(%{identity: false}, _resource, _schema) do
+    []
+  end
+
   defp mutation_args(%{identity: identity}, resource, _schema) when not is_nil(identity) do
     resource
     |> Ash.Resource.Info.identities()

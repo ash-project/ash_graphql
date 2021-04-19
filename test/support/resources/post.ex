@@ -17,7 +17,10 @@ defmodule AshGraphql.Test.Post do
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
       update :update_post, :update
+      update :update_best_post, :update, read_action: :best_post, identity: false
+
       destroy :delete_post, :destroy
+      destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
     end
   end
 
@@ -49,6 +52,10 @@ defmodule AshGraphql.Test.Post do
       )
     end
 
+    read :best_post do
+      filter(expr(best == true))
+    end
+
     update(:update)
     destroy(:destroy)
   end
@@ -60,6 +67,7 @@ defmodule AshGraphql.Test.Post do
     attribute(:published, :boolean, default: false)
     attribute(:foo, AshGraphql.Test.Foo)
     attribute(:status, AshGraphql.Test.Status)
+    attribute(:best, :boolean)
   end
 
   calculations do

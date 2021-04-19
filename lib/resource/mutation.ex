@@ -1,6 +1,6 @@
 defmodule AshGraphql.Resource.Mutation do
   @moduledoc "Represents a configured mutation on a resource"
-  defstruct [:name, :action, :type, :identity, :upsert?]
+  defstruct [:name, :action, :type, :identity, :read_action, :upsert?]
 
   @create_schema [
     name: [
@@ -33,7 +33,16 @@ defmodule AshGraphql.Resource.Mutation do
     ],
     identity: [
       type: :atom,
-      doc: "The identity to use to fetch the record to be updated."
+      doc: """
+      The identity to use to fetch the record to be updated.
+
+      If no identity is required (e.g for a read action that already knows how to fetch the item to be updated), use `false`.
+      """
+    ],
+    read_action: [
+      type: :atom,
+      doc:
+        "The read action to use to fetch the record to be updated. Defaults to the primary read action."
     ]
   ]
 
@@ -48,9 +57,17 @@ defmodule AshGraphql.Resource.Mutation do
       doc: "The action to use for the mutation.",
       required: true
     ],
+    read_action: [
+      type: :atom,
+      doc:
+        "The read action to use to fetch the record to be destroyed. Defaults to the primary read action."
+    ],
     identity: [
       type: :atom,
-      doc: "The identity to use to fetch the record to be destroyed."
+      doc: """
+      The identity to use to fetch the record to be destroyed.
+      If no identity is required (e.g for a read action that already knows how to fetch the item to be updated), use `false`.
+      """
     ]
   ]
 
