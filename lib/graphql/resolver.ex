@@ -354,9 +354,9 @@ defmodule AshGraphql.Graphql.Resolver do
   defp clear_fields(result, resource, resolution) do
     resolution
     |> fields("result")
-    |> Enum.map(fn field ->
-      Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
-        Ash.Resource.Info.calculation(resource, field.schema_node.identifier)
+    |> Enum.map(fn identifier ->
+      Ash.Resource.Info.aggregate(resource, identifier) ||
+        Ash.Resource.Info.calculation(resource, identifier)
     end)
     |> Enum.filter(& &1)
     |> Enum.map(& &1.name)
@@ -369,9 +369,9 @@ defmodule AshGraphql.Graphql.Resolver do
     loading =
       resolution
       |> fields(nested)
-      |> Enum.map(fn field ->
-        Ash.Resource.Info.aggregate(resource, field.schema_node.identifier) ||
-          Ash.Resource.Info.calculation(resource, field.schema_node.identifier)
+      |> Enum.map(fn identifier ->
+        Ash.Resource.Info.aggregate(resource, identifier) ||
+          Ash.Resource.Info.calculation(resource, identifier)
       end)
       |> Enum.filter(& &1)
       |> Enum.map(& &1.name)
@@ -402,10 +402,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp field_or_relationship(resource, field) do
-    case Ash.Resource.Info.attribute(resource, field.schema_node.identifier) do
+  defp field_or_relationship(resource, identifier) do
+    case Ash.Resource.Info.attribute(resource, identifier) do
       nil ->
-        case Ash.Resource.Info.relationship(resource, field.schema_node.identifier) do
+        case Ash.Resource.Info.relationship(resource, identifier) do
           nil ->
             nil
 
@@ -420,12 +420,31 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp fields(resolution, nested) do
     if nested do
+      projected_once =
+        resolution
+        |> Absinthe.Resolution.project()
+        |> Enum.find(&(&1.name == nested))
+
+      type = Absinthe.Schema.lookup_type(resolution.schema, projected_once.schema_node.type)
+
+      projected_once
+      |> Map.get(:selections)
+      |> Absinthe.Resolution.Projector.project(
+        type,
+        resolution.path ++ [projected_once],
+        resolution.fields_cache,
+        resolution
+      )
+      |> elem(0)
+      |> Enum.map(fn %{schema_node: %{identifier: identifier}} ->
+        identifier
+      end)
+    else
       resolution
       |> Absinthe.Resolution.project()
-      |> Enum.find(&(&1.name == nested))
-      |> Map.get(:selections)
-    else
-      Absinthe.Resolution.project(resolution)
+      |> Enum.map(fn %{schema_node: %{identifier: identifier}} ->
+        identifier
+      end)
     end
   end
 
