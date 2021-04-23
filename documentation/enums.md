@@ -2,7 +2,7 @@
 
 ## Automatically created enums
 
-Enums are implemented automatically for any `atom` attribute with a `one_of` constraint. For example:
+Enums are implemented automatically for any `atom` *attribute* (not arguments) with a `one_of` constraint. For example:
 
 ```elixir
 # On the resource of type `:ticket`
@@ -12,6 +12,26 @@ attribute :type, :atom, one_of: [:foo, :bar, :baz]
 This would produce an enum called `:ticket_type`/`TicketType`.
 
 ## Custom enums
+
+### Using Ash Enum types
+
+If you define an `Ash.Type.Enum`, that enum type can be used both in attributes *and* arguments. You will need to add `graphql_type/0` to your implementation. AshGraphql will ensure that a single type is defined for it, which will be reused across all occurrences. If an enum
+type is referenced, but does not have `graphql_type/0` defined, it will
+be treated as a string input.
+
+For example:
+
+```elixir
+defmodule AshPostgres.Test.Types.Status do
+  @moduledoc false
+  use Ash.Type.Enum, values: [:open, :closed]
+
+  def graphql_type, do: :ticket_status
+end
+
+```
+
+### Using custom absinthe types
 
 You can implement a custom enum by first adding the enum type to your absinthe schema (more [here](https://hexdocs.pm/absinthe/Absinthe.Type.Enum.html)). Then you can define a custom Ash type that refers to that absinthe enum type.
 

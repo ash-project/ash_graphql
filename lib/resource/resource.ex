@@ -3,6 +3,7 @@ defmodule AshGraphql.Resource do
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
   alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query}
+  alias Ash.Changeset.ManagedRelationshipHelpers
 
   @get %Ash.Dsl.Entity{
     name: :get,
@@ -129,16 +130,14 @@ defmodule AshGraphql.Resource do
     end
     ```
 
-    You could add the following mutation
+    You could add the following managed_relationship
 
     ```elixir
     graphql do
       ...
 
-      mutations do
-        create :create_post, :create do
-          managed_relationship :comments
-        end
+      managed_relationships do
+        managed_relationship :create_post, :comments
       end
     end
     ```
@@ -273,7 +272,7 @@ defmodule AshGraphql.Resource do
     Extension.get_opt(resource, [:graphql], :primary_key_delimiter, [], false)
   end
 
-  defp ref(env) do
+  def ref(env) do
     %{module: __MODULE__, location: %{file: env.file, line: env.line}}
   end
 
@@ -496,8 +495,7 @@ defmodule AshGraphql.Resource do
               resource,
               schema,
               mutation.action,
-              mutation.type,
-              AshGraphql.Resource.managed_relationships(resource)
+              mutation.type
             ),
           identifier: String.to_atom("#{mutation.name}_input"),
           module: schema,
@@ -571,7 +569,13 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp mutation_fields(resource, schema, action, type, managed_relationships \\ []) do
+  defp mutation_fields(resource, schema, action, type) do
+    managed_relationships =
+      Enum.filter(
+        AshGraphql.Resource.managed_relationships(resource),
+        &(&1.action == action.name)
+      )
+
     attribute_fields =
       resource
       |> Ash.Resource.Info.public_attributes()
@@ -584,10 +588,12 @@ defmodule AshGraphql.Resource do
           attribute.allow_nil? || attribute.default || type == :update ||
             (type == :create && attribute.name in action.allow_nil_input)
 
+        explicitly_required = attribute.name in action.require_attributes
+
         field_type =
           attribute.type
           |> field_type(attribute, resource, true)
-          |> maybe_wrap_non_null(!allow_nil?)
+          |> maybe_wrap_non_null(explicitly_required || !allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
@@ -618,28 +624,40 @@ defmodule AshGraphql.Resource do
               __reference__: ref(__ENV__)
             }
 
-          manage_opts ->
-            config =
-              relationship = Ash.Resource.Info.relationship(resource, manage_opts[:relationship])
+          _manage_opts ->
+            managed = Enum.find(managed_relationships, &(&1.argument == argument.name))
 
-            IO.inspect(relationship)
-            # %Absinthe.Blueprint.Schema.FieldDefinition{
-            #   identifier: argument.name
-            # }
+            type =
+              if managed.type_name do
+                managed.type_name
+              else
+                default_managed_type_name(resource, action, argument)
+              end
 
-            # {pkey, required?} = IO.inspect(relationship)
-            raise "Manage change"
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: argument.name,
+              module: schema,
+              name: to_string(argument.name),
+              type: type,
+              __reference__: ref(__ENV__)
+            }
         end
       end)
 
     attribute_fields ++ argument_fields
   end
 
+  defp default_managed_type_name(resource, action, argument) do
+    String.to_atom(
+      to_string(action.type) <>
+        "_" <>
+        to_string(AshGraphql.Resource.type(resource)) <>
+        "_" <> to_string(argument.name) <> "_input"
+    )
+  end
+
   defp find_manage_change(argument, action, managed_relationships) do
-    if Enum.find(
-         managed_relationships,
-         &(&1.argument == argument.name && &1.action == action.name)
-       ) do
+    if argument.name in Enum.map(managed_relationships, & &1.argument) do
       Enum.find_value(action.changes, fn
         %{change: {Ash.Resource.Change.ManageRelationship, opts}} ->
           opts[:argument] == argument.name && opts
@@ -886,7 +904,336 @@ defmodule AshGraphql.Resource do
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_of(resource, schema)) ++
-      enum_definitions(resource, schema)
+      enum_definitions(resource, schema) ++
+      managed_relationship_definitions(resource, schema)
+  end
+
+  def no_graphql_types(resource, schema) do
+    enum_definitions(resource, schema, true) ++
+      managed_relationship_definitions(resource, schema)
+  end
+
+  defp managed_relationship_definitions(resource, schema) do
+    resource
+    |> Ash.Resource.Info.actions()
+    |> Enum.flat_map(fn action ->
+      resource
+      |> AshGraphql.Resource.managed_relationships()
+      |> Enum.filter(&(&1.action == action.name))
+      |> Enum.map(fn managed_relationship ->
+        argument =
+          Enum.find(action.arguments, &(&1.name == managed_relationship.argument)) ||
+            raise """
+            No such argument #{managed_relationship.argument}, in `managed_relationship`
+            """
+
+        opts =
+          find_manage_change(argument, action, [managed_relationship]) ||
+            raise """
+            There is no corresponding `change manage_change(...)` for the given argument and action
+            combination.
+            """
+
+        managed_relationship_input(
+          resource,
+          action,
+          opts,
+          argument,
+          managed_relationship,
+          schema
+        )
+      end)
+    end)
+  end
+
+  defp managed_relationship_input(resource, action, opts, argument, managed_relationship, schema) do
+    relationship = Ash.Resource.Info.relationship(resource, opts[:relationship])
+
+    manage_opts_schema =
+      if opts[:opts][:type] do
+        defaults = Ash.Changeset.manage_relationship_opts(opts[:opts][:type])
+
+        Enum.reduce(defaults, Ash.Changeset.manage_relationship_schema(), fn {key, value},
+                                                                             manage_opts ->
+          Ash.OptionsHelpers.set_default!(manage_opts, key, value)
+        end)
+      else
+        Ash.Changeset.manage_relationship_schema()
+      end
+
+    manage_opts = Ash.OptionsHelpers.validate!(opts[:opts], manage_opts_schema)
+
+    fields =
+      on_match_fields(manage_opts, relationship, schema) ++
+        on_no_match_fields(manage_opts, relationship, schema) ++
+        on_lookup_fields(manage_opts, relationship, schema) ++
+        pkey_fields(manage_opts, relationship.destination, schema)
+
+    type = managed_relationship.type_name || default_managed_type_name(resource, action, argument)
+
+    fields = check_for_conflicts!(fields, managed_relationship, resource)
+
+    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+      identifier: type,
+      fields: fields,
+      module: schema,
+      name: type |> to_string() |> Macro.camelize(),
+      __reference__: ref(__ENV__)
+    }
+  end
+
+  defp check_for_conflicts!(fields, managed_relationship, resource) do
+    {ok, errors} =
+      fields
+      |> Enum.map(fn {resource, action, field} ->
+        %{field: field, source: %{resource: resource, action: action}}
+      end)
+      |> Enum.group_by(& &1.field.identifier)
+      |> Enum.map(fn {identifier, _} = data ->
+        case Keyword.fetch(managed_relationship.types || [], identifier) do
+          {:ok, type} ->
+            unwrap_managed_relationship_type(type)
+
+          :error ->
+            get_conflicts(data)
+        end
+      end)
+      |> Enum.split_with(&match?({:ok, _}, &1))
+
+    unless Enum.empty?(errors) do
+      raise_conflicts!(Enum.map(errors, &elem(&1, 0)), managed_relationship, resource)
+    end
+
+    Enum.map(ok, &elem(&1, 1))
+  end
+
+  defp raise_conflicts!(conflicts, managed_relationship, resource) do
+    raise """
+    #{inspect(resource)}: #{managed_relationship.action}.#{managed_relationship.argument}
+
+    Error while deriving managed relationship input object type: type conflict.
+
+    Because multiple actions could be called, and those actions may have different
+    derived types, you will need to override the graphql schema to specify the type
+    for the following fields. This can be done by specifying the `types` option on your
+    `managed_relationship` inside of the `managed_relationships` in your resource's
+    `graphql` configuration.
+
+    #{Enum.map_join(conflicts, "\n\n", &conflict_message(&1, managed_relationship))}
+    """
+  end
+
+  defp conflict_message(
+         {_reducing_type, _type, [%{field: %{name: name}} | _] = fields},
+         managed_relationship
+       ) do
+    formatted_types =
+      fields
+      |> Enum.map(fn field ->
+        "#{format_type(field.field.type)} - from #{inspect(field.source.resource)}.#{
+          field.source.action
+        }"
+      end)
+      |> Enum.uniq()
+
+    """
+    Possible types for #{managed_relationship.action}.#{managed_relationship.argument}.#{name}:
+    #{Enum.map(formatted_types, &"* #{inspect(&1)}\n")}
+    """
+  end
+
+  defp unwrap_managed_relationship_type({:non_null, type}) do
+    %Absinthe.Blueprint.TypeReference.NonNull{of_type: unwrap_managed_relationship_type(type)}
+  end
+
+  defp unwrap_managed_relationship_type({:array, type}) do
+    %Absinthe.Blueprint.TypeReference.List{of_type: unwrap_managed_relationship_type(type)}
+  end
+
+  defp unwrap_managed_relationship_type(type) do
+    type
+  end
+
+  defp format_type(%Absinthe.Blueprint.TypeReference.NonNull{of_type: type}) do
+    {:non_null, format_type(type)}
+  end
+
+  defp format_type(%Absinthe.Blueprint.TypeReference.List{of_type: type}) do
+    {:array, format_type(type)}
+  end
+
+  defp format_type(type) do
+    type
+  end
+
+  defp get_conflicts([_field]) do
+    []
+  end
+
+  defp get_conflicts([field | _] = fields) do
+    case reduce_types(fields) do
+      {:ok, res} ->
+        {:ok, %{field | type: res}}
+
+      {:error, {reducing_type, type}} ->
+        {:error, {reducing_type, type, fields}}
+    end
+  end
+
+  defp reduce_types(fields) do
+    Enum.reduce_while(fields, {:ok, nil}, fn field, {:ok, type} ->
+      if type do
+        case match_types(type, field.field.type) do
+          {:ok, value} ->
+            {:cont, {:ok, value}}
+
+          :error ->
+            {:halt, {:error, {type, field.field.type}}}
+        end
+      else
+        {:cont, field.field.type}
+      end
+    end)
+  end
+
+  defp match_types(
+         %Absinthe.Blueprint.TypeReference.NonNull{
+           of_type: type
+         },
+         type
+       ) do
+    {:ok, type}
+  end
+
+  defp match_types(
+         type,
+         %Absinthe.Blueprint.TypeReference.NonNull{
+           of_type: type
+         }
+       ) do
+    {:ok, type}
+  end
+
+  defp match_types(
+         type,
+         type
+       ) do
+    {:ok, type}
+  end
+
+  defp match_types(_, _) do
+    :error
+  end
+
+  defp on_lookup_fields(opts, relationship, schema) do
+    case ManagedRelationshipHelpers.on_lookup_update_action(opts, relationship) do
+      {:destination, action} ->
+        action = Ash.Resource.Info.action(relationship.through, action)
+
+        relationship.destination
+        |> mutation_fields(schema, action, action.type)
+        |> Enum.map(fn field ->
+          {relationship.destination, action.name, field}
+        end)
+
+      {:source, action} ->
+        action = Ash.Resource.Info.action(relationship.source, action)
+
+        relationship.source
+        |> mutation_fields(schema, action, action.type)
+        |> Enum.map(fn field ->
+          {relationship.source, action.name, field}
+        end)
+
+      {:join, action, fields} ->
+        action = Ash.Resource.Info.action(relationship.through, action)
+
+        if fields == :all do
+          mutation_fields(relationship.through, schema, action, action.type)
+        else
+          relationship.through
+          |> mutation_fields(schema, action, action.type)
+          |> Enum.filter(&(&1.identifier in fields))
+        end
+        |> Enum.map(fn field ->
+          {relationship.through, action.name, field}
+        end)
+
+      nil ->
+        []
+    end
+  end
+
+  defp on_match_fields(opts, relationship, schema) do
+    opts
+    |> ManagedRelationshipHelpers.on_match_destination_actions(relationship)
+    |> List.wrap()
+    |> Enum.flat_map(fn
+      {:destination, action_name} ->
+        action = Ash.Resource.Info.action(relationship.destination, action_name)
+
+        relationship.destination
+        |> mutation_fields(schema, action, action.type)
+        |> Enum.map(fn field ->
+          {relationship.destination, action.name, field}
+        end)
+
+      {:join, action_name, fields} ->
+        action = Ash.Resource.Info.action(relationship.through, action_name)
+
+        if fields == :all do
+          mutation_fields(relationship.through, schema, action, action.type)
+        else
+          relationship.through
+          |> mutation_fields(schema, action, action.type)
+          |> Enum.filter(&(&1.identifier in fields))
+        end
+        |> Enum.map(fn field ->
+          {relationship.through, action.name, field}
+        end)
+    end)
+  end
+
+  defp on_no_match_fields(opts, relationship, schema) do
+    opts
+    |> ManagedRelationshipHelpers.on_no_match_destination_actions(relationship)
+    |> List.wrap()
+    |> Enum.flat_map(fn
+      {:destination, action_name} ->
+        action = Ash.Resource.Info.action(relationship.destination, action_name)
+
+        relationship.destination
+        |> mutation_fields(schema, action, action.type)
+        |> Enum.map(fn field ->
+          {relationship.destination, action.name, field}
+        end)
+
+      {:join, action_name, fields} ->
+        action = Ash.Resource.Info.action(relationship.through, action_name)
+
+        if fields == :all do
+          mutation_fields(relationship.through, schema, action, action.type)
+        else
+          relationship.through
+          |> mutation_fields(schema, action, action.type)
+          |> Enum.filter(&(&1.identifier in fields))
+        end
+        |> Enum.map(fn field ->
+          {relationship.through, action.name, field}
+        end)
+    end)
+  end
+
+  defp pkey_fields(opts, resource, schema) do
+    if ManagedRelationshipHelpers.could_lookup?(opts) do
+      resource
+      |> pkey_fields(schema)
+      |> Enum.map(fn field ->
+        {resource, :__primary_key, field}
+      end)
+    else
+      []
+    end
   end
 
   defp filter_field_types(resource, schema) do
@@ -1176,10 +1523,10 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(type) <> "_sort_field")
   end
 
-  def enum_definitions(resource, schema) do
+  def enum_definitions(resource, schema, only_auto? \\ false) do
     atom_enums =
       resource
-      |> get_enums()
+      |> get_auto_enums()
       |> Enum.filter(&is_list(&1.constraints[:one_of]))
       |> Enum.map(fn attribute ->
         type_name = atom_enum_type(resource, attribute.name)
@@ -1201,31 +1548,34 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    sort_values = sort_values(resource)
+    if only_auto? do
+      atom_enums
+    else
+      sort_values = sort_values(resource)
 
-    sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
-      module: schema,
-      name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
-      identifier: resource_sort_field_type(resource),
-      __reference__: ref(__ENV__),
-      values:
-        Enum.map(sort_values, fn sort_value ->
-          %Absinthe.Blueprint.Schema.EnumValueDefinition{
-            module: schema,
-            identifier: sort_value,
-            name: String.upcase(to_string(sort_value)),
-            value: sort_value
-          }
-        end)
-    }
+      sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+        module: schema,
+        name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
+        identifier: resource_sort_field_type(resource),
+        __reference__: ref(__ENV__),
+        values:
+          Enum.map(sort_values, fn sort_value ->
+            %Absinthe.Blueprint.Schema.EnumValueDefinition{
+              module: schema,
+              identifier: sort_value,
+              name: String.upcase(to_string(sort_value)),
+              value: sort_value
+            }
+          end)
+      }
 
-    [sort_order | atom_enums]
+      [sort_order | atom_enums]
+    end
   end
 
-  defp get_enums(resource) do
+  defp get_auto_enums(resource) do
     resource
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.concat(all_arguments(resource))
     |> Enum.map(fn attribute ->
       unnest(attribute)
     end)
@@ -1237,12 +1587,6 @@ defmodule AshGraphql.Resource do
   end
 
   defp unnest(other), do: other
-
-  defp all_arguments(resource) do
-    resource
-    |> Ash.Resource.Info.actions()
-    |> Enum.flat_map(& &1.arguments)
-  end
 
   defp sort_values(resource) do
     attribute_sort_values =
@@ -1365,20 +1709,48 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    pkey_fields =
-      case Ash.Resource.Info.primary_key(resource) do
-        [field] ->
-          attribute = Ash.Resource.Info.attribute(resource, field)
+    pkey_fields = pkey_fields(resource, schema)
+    non_id_attributes ++ pkey_fields
+  end
 
-          if attribute.private? do
-            non_id_attributes
+  defp pkey_fields(resource, schema) do
+    case Ash.Resource.Info.primary_key(resource) do
+      [field] ->
+        attribute = Ash.Resource.Info.attribute(resource, field)
+
+        if attribute.private? do
+          []
+        else
+          field_type =
+            attribute.type
+            |> field_type(attribute, resource)
+            |> maybe_wrap_non_null(not attribute.allow_nil?)
+
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: attribute.description,
+              identifier: attribute.name,
+              module: schema,
+              name: to_string(attribute.name),
+              type: field_type,
+              __reference__: ref(__ENV__)
+            }
+          ]
+        end
+
+      fields ->
+        added_pkey_fields =
+          if :id in fields do
+            []
           else
-            field_type =
-              attribute.type
-              |> field_type(attribute, resource)
-              |> maybe_wrap_non_null(not attribute.allow_nil?)
+            for field <- fields do
+              attribute = Ash.Resource.Info.attribute(resource, field)
 
-            [
+              field_type =
+                attribute.type
+                |> field_type(attribute, resource)
+                |> maybe_wrap_non_null(not attribute.allow_nil?)
+
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 description: attribute.description,
                 identifier: attribute.name,
@@ -1387,46 +1759,20 @@ defmodule AshGraphql.Resource do
                 type: field_type,
                 __reference__: ref(__ENV__)
               }
-            ]
+            end
           end
 
-        fields ->
-          added_pkey_fields =
-            if :id in fields do
-              []
-            else
-              for field <- fields do
-                attribute = Ash.Resource.Info.attribute(resource, field)
-
-                field_type =
-                  attribute.type
-                  |> field_type(attribute, resource)
-                  |> maybe_wrap_non_null(not attribute.allow_nil?)
-
-                %Absinthe.Blueprint.Schema.FieldDefinition{
-                  description: attribute.description,
-                  identifier: attribute.name,
-                  module: schema,
-                  name: to_string(attribute.name),
-                  type: field_type,
-                  __reference__: ref(__ENV__)
-                }
-              end
-            end
-
-          [
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "The primary key of the resource",
-              identifier: :id,
-              module: schema,
-              name: "id",
-              type: :id,
-              __reference__: ref(__ENV__)
-            }
-          ] ++ added_pkey_fields
-      end
-
-    non_id_attributes ++ pkey_fields
+        [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "The primary key of the resource",
+            identifier: :id,
+            module: schema,
+            name: "id",
+            type: :id,
+            __reference__: ref(__ENV__)
+          }
+        ] ++ added_pkey_fields
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -1562,25 +1908,37 @@ defmodule AshGraphql.Resource do
           end
         end
       else
-        function =
-          if input? do
-            :graphql_input_type
+        if :erlang.function_exported(type, :values, 0) do
+          if :erlang.function_exported(type, :graphql_type, 0) do
+            type.graphql_type()
           else
-            :graphql_type
+            :string
           end
-
-        if is_atom(type) && :erlang.function_exported(type, function, 1) do
-          apply(type, function, [attribute.constraints])
         else
-          raise """
-          Could not determine graphql type for #{type}!
-          """
+          function =
+            if input? do
+              :graphql_input_type
+            else
+              :graphql_type
+            end
+
+          if :erlang.function_exported(type, function, 1) do
+            apply(type, function, [attribute.constraints])
+          else
+            raise """
+            Could not determine graphql type for #{type}, please define: #{function}/1!
+            """
+          end
         end
       end
     end
   end
 
-  defp do_field_type(Ash.Type.Atom, %{constraints: constraints, name: name}, resource) do
+  defp do_field_type(
+         Ash.Type.Atom,
+         %Ash.Resource.Attribute{constraints: constraints, name: name},
+         resource
+       ) do
     if is_list(constraints[:one_of]) do
       atom_enum_type(resource, name)
     else
@@ -1588,7 +1946,8 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp do_field_type(Ash.Type.Boolean, _, _), do: :boolean
+  defp do_field_type(Ash.Type.Boolean, _, _), do: :string
+  defp do_field_type(Ash.Type.Atom, _, _), do: :string
   defp do_field_type(Ash.Type.CiString, _, _), do: :string
   defp do_field_type(Ash.Type.Date, _, _), do: :date
   defp do_field_type(Ash.Type.Decimal, _, _), do: :decimal

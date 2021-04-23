@@ -54,11 +54,14 @@ defmodule AshGraphql do
 
             type_definitions =
               if unquote(first?) do
-                embedded_types =
-                  AshGraphql.get_embedded_types(unquote(Enum.map(apis, &elem(&1, 0))))
+                apis = unquote(Enum.map(apis, &elem(&1, 0)))
+                embedded_types = AshGraphql.get_embedded_types(apis)
+
+                global_enums = AshGraphql.global_enums(apis, __MODULE__, __ENV__)
 
                 AshGraphql.Api.global_type_definitions(__MODULE__) ++
                   AshGraphql.Api.type_definitions(api, __MODULE__) ++
+                  global_enums ++
                   embedded_types
               else
                 AshGraphql.Api.type_definitions(api, __MODULE__)
@@ -82,6 +85,47 @@ defmodule AshGraphql do
         @pipeline_modifier Module.concat(api, AshTypes)
       end
     end
+  end
+
+  def global_enums(apis, schema, env) do
+    apis
+    |> Enum.flat_map(&Ash.Api.resources/1)
+    |> Enum.flat_map(fn resource ->
+      resource
+      |> Ash.Resource.Info.public_attributes()
+      |> Enum.concat(all_arguments(resource))
+    end)
+    |> only_enum_types()
+    |> Enum.uniq()
+    |> Enum.map(fn type ->
+      %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+        module: schema,
+        name: type.graphql_type() |> to_string() |> Macro.camelize(),
+        values:
+          Enum.map(type.values(), fn value ->
+            %Absinthe.Blueprint.Schema.EnumValueDefinition{
+              module: schema,
+              identifier: value,
+              name: String.upcase(to_string(value)),
+              value: value
+            }
+          end),
+        identifier: type.graphql_type(),
+        __reference__: AshGraphql.Resource.ref(env)
+      }
+    end)
+  end
+
+  defp only_enum_types(attributes) do
+    Enum.flat_map(attributes, fn attribute ->
+      case enum_type(attribute.type) do
+        nil ->
+          []
+
+        type ->
+          [type]
+      end
+    end)
   end
 
   def get_embedded_types(apis) do
@@ -138,6 +182,15 @@ defmodule AshGraphql do
     resource
     |> Ash.Resource.Info.actions()
     |> Enum.flat_map(& &1.arguments)
+  end
+
+  defp enum_type({:array, type}), do: enum_type(type)
+
+  defp enum_type(type) do
+    if is_atom(type) && :erlang.function_exported(type, :values, 0) &&
+         :erlang.function_exported(type, :graphql_type, 0) do
+      type
+    end
   end
 
   defp embedded_resource({:array, type}), do: embedded_resource(type)
