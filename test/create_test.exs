@@ -13,6 +13,51 @@ defmodule AshGraphql.CreateTest do
     end)
   end
 
+  test "a create with a managed relationship works" do
+    resp =
+      """
+      mutation CreatePostWithComments($input: CreatePostWithCommentsInput) {
+        createPostWithComments(input: $input) {
+          result{
+            text
+            comments(sort:{field:TEXT}){
+              text
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "comments" => [
+              %{"text" => "foobar"},
+              %{"text" => "barfoo"}
+            ]
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithComments" => %{
+                 "result" => %{
+                   "text" => "foobar",
+                   "comments" => [%{"text" => "barfoo"}, %{"text" => "foobar"}]
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create with arguments works" do
     resp =
       """
@@ -182,6 +227,44 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "createPost" => %{
                  "result" => %{"text" => "foobar", "foo" => %{"foo" => "foo", "bar" => "bar"}}
+               }
+             }
+           } = result
+  end
+
+  test "standard enums are used" do
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            text
+            statusEnum
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "confirmation" => "foobar",
+            "statusEnum" => "OPEN"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPost" => %{
+                 "result" => %{"text" => "foobar", "statusEnum" => "OPEN"}
                }
              }
            } = result

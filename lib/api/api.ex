@@ -68,12 +68,13 @@ defmodule AshGraphql.Api do
     resource_types =
       api
       |> Ash.Api.resources()
-      |> Enum.filter(fn resource ->
-        AshGraphql.Resource in Ash.Resource.Info.extensions(resource)
-      end)
       |> Enum.flat_map(fn resource ->
-        AshGraphql.Resource.type_definitions(resource, api, schema) ++
-          AshGraphql.Resource.mutation_types(resource, schema)
+        if AshGraphql.Resource in Ash.Resource.Info.extensions(resource) do
+          AshGraphql.Resource.type_definitions(resource, api, schema) ++
+            AshGraphql.Resource.mutation_types(resource, schema)
+        else
+          AshGraphql.Resource.no_graphql_types(resource, schema)
+        end
       end)
 
     resource_types
