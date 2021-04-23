@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.0](https://github.com/ash-project/ash_graphql/compare/v0.15.10...v0.16.0) (2021-04-23)
+
+
+
+
+### Features:
+
+* derived input objects for managed_relationships
+
+### Bug Fixes:
+
+* various input fixes (sorts)
+
+### Improvements:
+
+* support new style enums
+
+* support `ash_context` key
+
 ## [v0.15.10](https://github.com/ash-project/ash_graphql/compare/v0.15.9...v0.15.10) (2021-04-19)
 
 
