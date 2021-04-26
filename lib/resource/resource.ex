@@ -1852,8 +1852,11 @@ defmodule AshGraphql.Resource do
     |> Ash.Resource.Info.public_aggregates()
     |> Enum.map(fn aggregate ->
       field_type =
-        if aggregate.field do
-          Ash.Resource.Info.attribute(resource, aggregate.field).type
+        with field when not is_nil(field) <- aggregate.field,
+             related when not is_nil(related) <-
+               Ash.Resource.Info.related(resource, aggregate.relationship_path),
+             attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, aggregate.field) do
+          attr.type
         end
 
       {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
