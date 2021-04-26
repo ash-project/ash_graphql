@@ -162,11 +162,14 @@ defmodule AshGraphql.Graphql.Resolver do
               {field, order}
             end)
 
-          fields = Keyword.keys(keyword_sort)
+          fields =
+            keyword_sort
+            |> Keyword.keys()
+            |> Enum.filter(&Ash.Resource.Info.public_aggregate(resource, &1))
 
           query
-          |> Ash.Query.sort(keyword_sort)
           |> Ash.Query.load(fields)
+          |> Ash.Query.sort(keyword_sort)
 
         _ ->
           query
