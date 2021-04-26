@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.1](https://github.com/ash-project/ash_graphql/compare/v0.16.0...v0.16.1) (2021-04-26)
+
+
+
+
+### Bug Fixes:
+
+* load fields before sorting
+
+* load aggregates used in sort
+
+* load aggregates from sorts
+
+* load any aggregates referenced in the filter
+
+* more aggregate type fixes
+
+* properly determine aggregate type
+
+* properly unwrap invalid errors
+
+* unwrap invalid errors
+
 ## [v0.16.0](https://github.com/ash-project/ash_graphql/compare/v0.15.10...v0.16.0) (2021-04-23)
 
 
