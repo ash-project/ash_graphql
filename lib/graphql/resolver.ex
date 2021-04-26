@@ -129,7 +129,26 @@ defmodule AshGraphql.Graphql.Resolver do
     query =
       case Map.fetch(args, :filter) do
         {:ok, filter} ->
-          Ash.Query.filter(resource, ^filter)
+          aggregates =
+            resource
+            |> Ash.Resource.Info.public_aggregates()
+            |> Enum.map(& &1.name)
+
+          query =
+            resource
+            |> Ash.Query.load(aggregates)
+            |> Ash.Query.filter(^filter)
+
+          used =
+            if query.filter do
+              query.filter
+              |> Ash.Filter.used_aggregates()
+              |> Enum.map(& &1.name)
+            else
+              []
+            end
+
+          Ash.Query.unload(query, aggregates -- used)
 
         _ ->
           Ash.Query.new(resource)
@@ -143,7 +162,11 @@ defmodule AshGraphql.Graphql.Resolver do
               {field, order}
             end)
 
-          Ash.Query.sort(query, keyword_sort)
+          fields = Keyword.keys(keyword_sort)
+
+          query
+          |> Ash.Query.sort(keyword_sort)
+          |> Ash.Query.load(fields)
 
         _ ->
           query
@@ -165,34 +188,6 @@ defmodule AshGraphql.Graphql.Resolver do
       |> load_fields(resource, api, resolution, nested)
       |> case do
         {:ok, query} ->
-          query =
-            if query.filter do
-              aggregates = Ash.Filter.used_aggregates(query.filter)
-
-              Ash.Query.load(query, aggregates)
-            else
-              query
-            end
-
-          query =
-            if query.sort do
-              fields =
-                Enum.map(query.sort, fn
-                  {field, _} ->
-                    field
-
-                  field ->
-                    field
-                end)
-                |> Enum.filter(fn field ->
-                  Ash.Resource.Info.public_aggregate(query.resource, field)
-                end)
-
-              Ash.Query.load(query, fields)
-            else
-              query
-            end
-
           query
           |> api.read(opts)
           |> case do
