@@ -165,6 +165,15 @@ defmodule AshGraphql.Graphql.Resolver do
       |> load_fields(resource, api, resolution, nested)
       |> case do
         {:ok, query} ->
+          query =
+            if query.filter do
+              aggregates = Ash.Filter.used_aggregates(query.filter)
+
+              Ash.Query.load(query, aggregates)
+            else
+              query
+            end
+
           query
           |> api.read(opts)
           |> case do
