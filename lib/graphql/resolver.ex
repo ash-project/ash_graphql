@@ -494,13 +494,16 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp to_errors(%Ash.Error.Invalid{errors: errors}) do
-    to_errors(errors)
-  end
-
   defp to_errors(errors) do
     errors
     |> List.wrap()
+    |> Enum.flat_map(fn
+      %Ash.Error.Invalid{errors: errors} ->
+        List.wrap(errors)
+
+      errors ->
+        List.wrap(errors)
+    end)
     |> Enum.map(fn error ->
       if AshGraphql.Error.impl_for(error) do
         AshGraphql.Error.to_error(error)
