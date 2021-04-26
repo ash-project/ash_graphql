@@ -494,6 +494,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp to_errors(%Ash.Error.Invalid{errors: errors}) do
+    to_errors(errors)
+  end
+
   defp to_errors(errors) do
     errors
     |> List.wrap()
