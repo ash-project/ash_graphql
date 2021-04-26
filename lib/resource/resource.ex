@@ -1272,10 +1272,16 @@ defmodule AshGraphql.Resource do
   defp attribute_or_aggregate_type(%Ash.Resource.Attribute{type: type}, _resource),
     do: type
 
-  defp attribute_or_aggregate_type(%Ash.Resource.Aggregate{kind: kind, field: field}, resource) do
+  defp attribute_or_aggregate_type(
+         %Ash.Resource.Aggregate{kind: kind, field: field, relationship_path: relationship_path},
+         resource
+       ) do
     field_type =
-      if field do
-        Ash.Resource.Info.attribute(resource, field).type
+      with field when not is_nil(field) <- field,
+           related when not is_nil(related) <-
+             Ash.Resource.Info.related(resource, relationship_path),
+           attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, field) do
+        attr.type
       end
 
     {:ok, aggregate_type} = Ash.Query.Aggregate.kind_to_type(kind, field_type)
