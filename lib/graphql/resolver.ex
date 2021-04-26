@@ -174,6 +174,25 @@ defmodule AshGraphql.Graphql.Resolver do
               query
             end
 
+          query =
+            if query.sort do
+              fields =
+                Enum.map(query.sort, fn
+                  {field, _} ->
+                    field
+
+                  field ->
+                    field
+                end)
+                |> Enum.filter(fn field ->
+                  Ash.Resource.Info.public_aggregate(query.resource, field)
+                end)
+
+              Ash.Query.load(query, fields)
+            else
+              query
+            end
+
           query
           |> api.read(opts)
           |> case do
