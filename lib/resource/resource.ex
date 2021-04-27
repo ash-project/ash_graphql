@@ -1290,6 +1290,7 @@ defmodule AshGraphql.Resource do
 
   defp filter_type(attribute_or_aggregate, resource, schema) do
     type = attribute_or_aggregate_type(attribute_or_aggregate, resource)
+    array_type? = match?({:array, _}, type)
 
     fields =
       Ash.Filter.builtin_operators()
@@ -1299,6 +1300,9 @@ defmodule AshGraphql.Resource do
         expressable_types =
           Enum.filter(operator.types(), fn
             [:any, {:array, type}] when is_atom(type) ->
+              true
+
+            [{:array, inner_type}, :same] when is_atom(inner_type) and array_type? ->
               true
 
             :same ->
@@ -1327,6 +1331,9 @@ defmodule AshGraphql.Resource do
         else
           type =
             case Enum.at(expressable_types, 0) do
+              [{:array, :any}, :same] ->
+                {:unwrap, type}
+
               [_, {:array, :same}] ->
                 {:array, type}
 
@@ -1337,30 +1344,42 @@ defmodule AshGraphql.Resource do
                 Ash.Type.String
 
               [_, type] when is_atom(type) ->
-                case Ash.Type.get_type(type) do
-                  nil ->
-                    nil
-
-                  type ->
-                    type
-                end
+                Ash.Type.get_type(type)
 
               _ ->
                 nil
             end
 
           if type do
-            attribute_or_aggregate = constraints_to_item_constraints(type, attribute_or_aggregate)
+            {type, attribute_or_aggregate} =
+              case type do
+                {:unwrap, type} ->
+                  {:array, type} = type
+                  constraints = Map.get(attribute_or_aggregate, :constraints) || []
 
-            [
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: operator.name(),
-                module: schema,
-                name: to_string(operator.name()),
-                type: field_type(type, attribute_or_aggregate, resource, true),
-                __reference__: ref(__ENV__)
-              }
-            ]
+                  {type,
+                   %{attribute_or_aggregate | type: type, constraints: constraints[:items] || []}}
+
+                type ->
+                  {type, attribute_or_aggregate}
+              end
+
+            if Ash.Type.embedded_type?(type) do
+              []
+            else
+              attribute_or_aggregate =
+                constraints_to_item_constraints(type, attribute_or_aggregate)
+
+              [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  identifier: operator.name(),
+                  module: schema,
+                  name: to_string(operator.name()),
+                  type: field_type(type, attribute_or_aggregate, resource, true),
+                  __reference__: ref(__ENV__)
+                }
+              ]
+            end
           else
             []
           end
@@ -1385,7 +1404,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp restrict_for_lists(operators, {:array, _}) do
-    list_predicates = [Ash.Query.Operator.IsNil]
+    list_predicates = [Ash.Query.Operator.IsNil, Ash.Query.Operator.Has]
     Enum.filter(operators, &(&1 in list_predicates))
   end
 
