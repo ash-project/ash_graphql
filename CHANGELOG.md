@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.3](https://github.com/ash-project/ash_graphql/compare/v0.16.2...v0.16.3) (2021-04-27)
+
+
+
+
+### Bug Fixes:
+
+* support `Has` operator
+
+* properly calculate array aggregate types
+
 ## [v0.16.2](https://github.com/ash-project/ash_graphql/compare/v0.16.1...v0.16.2) (2021-04-27)
 
 
