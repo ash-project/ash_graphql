@@ -1294,6 +1294,7 @@ defmodule AshGraphql.Resource do
     fields =
       Ash.Filter.builtin_operators()
       |> Enum.filter(& &1.predicate?)
+      |> restrict_for_lists(type)
       |> Enum.flat_map(fn operator ->
         expressable_types =
           Enum.filter(operator.types(), fn
@@ -1382,6 +1383,13 @@ defmodule AshGraphql.Resource do
       ]
     end
   end
+
+  defp restrict_for_lists(operators, {:array, _}) do
+    list_predicates = [Ash.Query.Operator.IsNil]
+    Enum.filter(operators, &(&1 in list_predicates))
+  end
+
+  defp restrict_for_lists(operators, _), do: operators
 
   defp constraints_to_item_constraints(
          {:array, _},
