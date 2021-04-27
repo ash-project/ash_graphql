@@ -1887,7 +1887,7 @@ defmodule AshGraphql.Resource do
         identifier: aggregate.name,
         module: schema,
         name: to_string(aggregate.name),
-        type: field_type(type, nil, resource),
+        type: field_type(type, aggregate, resource),
         __reference__: ref(__ENV__)
       }
     end)
@@ -1914,9 +1914,40 @@ defmodule AshGraphql.Resource do
 
   defp field_type(type, field, resource, input? \\ false)
 
+  defp field_type(
+         {:array, type},
+         %Ash.Resource.Aggregate{kind: :list} = aggregate,
+         resource,
+         input?
+       ) do
+    with related when not is_nil(related) <-
+           Ash.Resource.Info.related(resource, aggregate.relationship_path),
+         attr when not is_nil(related) <- Ash.Resource.Info.attribute(related, aggregate.field) do
+      if attr.allow_nil? do
+        %Absinthe.Blueprint.TypeReference.List{
+          of_type: field_type(type, aggregate, resource, input?)
+        }
+      else
+        %Absinthe.Blueprint.TypeReference.List{
+          of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: field_type(type, aggregate, resource, input?)
+          }
+        }
+      end
+    end
+  end
+
   defp field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?) do
     %Absinthe.Blueprint.TypeReference.List{
       of_type: field_type(type, aggregate, resource, input?)
+    }
+  end
+
+  defp field_type({:array, type}, nil, resource, input?) do
+    field_type = field_type(type, nil, resource, input?)
+
+    %Absinthe.Blueprint.TypeReference.List{
+      of_type: field_type
     }
   end
 
