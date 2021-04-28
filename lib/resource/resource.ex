@@ -962,7 +962,11 @@ defmodule AshGraphql.Resource do
   end
 
   defp managed_relationship_input(resource, action, opts, argument, managed_relationship, schema) do
-    relationship = Ash.Resource.Info.relationship(resource, opts[:relationship])
+    relationship =
+      Ash.Resource.Info.relationship(resource, opts[:relationship]) ||
+        raise """
+        No relationship found when building managed relationship input: #{opts[:relationship]}
+        """
 
     manage_opts_schema =
       if opts[:opts][:type] do
@@ -1144,6 +1148,9 @@ defmodule AshGraphql.Resource do
 
   defp on_lookup_fields(opts, relationship, schema) do
     case ManagedRelationshipHelpers.on_lookup_update_action(opts, relationship) do
+      {:destination, nil} ->
+        []
+
       {:destination, action} ->
         action = Ash.Resource.Info.action(relationship.through, action)
 
@@ -1153,6 +1160,9 @@ defmodule AshGraphql.Resource do
           {relationship.destination, action.name, field}
         end)
 
+      {:source, nil} ->
+        []
+
       {:source, action} ->
         action = Ash.Resource.Info.action(relationship.source, action)
 
@@ -1161,6 +1171,9 @@ defmodule AshGraphql.Resource do
         |> Enum.map(fn field ->
           {relationship.source, action.name, field}
         end)
+
+      {:join, nil, _} ->
+        []
 
       {:join, action, fields} ->
         action = Ash.Resource.Info.action(relationship.through, action)
@@ -1186,6 +1199,9 @@ defmodule AshGraphql.Resource do
     |> ManagedRelationshipHelpers.on_match_destination_actions(relationship)
     |> List.wrap()
     |> Enum.flat_map(fn
+      {:destination, nil} ->
+        []
+
       {:destination, action_name} ->
         action = Ash.Resource.Info.action(relationship.destination, action_name)
 
@@ -1194,6 +1210,9 @@ defmodule AshGraphql.Resource do
         |> Enum.map(fn field ->
           {relationship.destination, action.name, field}
         end)
+
+      {:join, nil, _} ->
+        []
 
       {:join, action_name, fields} ->
         action = Ash.Resource.Info.action(relationship.through, action_name)
@@ -1216,6 +1235,9 @@ defmodule AshGraphql.Resource do
     |> ManagedRelationshipHelpers.on_no_match_destination_actions(relationship)
     |> List.wrap()
     |> Enum.flat_map(fn
+      {:destination, nil} ->
+        []
+
       {:destination, action_name} ->
         action = Ash.Resource.Info.action(relationship.destination, action_name)
 
@@ -1224,6 +1246,9 @@ defmodule AshGraphql.Resource do
         |> Enum.map(fn field ->
           {relationship.destination, action.name, field}
         end)
+
+      {:join, nil, _} ->
+        []
 
       {:join, action_name, fields} ->
         action = Ash.Resource.Info.action(relationship.through, action_name)

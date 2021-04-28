@@ -97,7 +97,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
-        %{arguments: args, context: context, definition: %{selections: selections}} = resolution,
+        %{arguments: args, context: context} = resolution,
         {api, resource, %{type: :list, action: action}}
       ) do
     opts = [
@@ -118,7 +118,7 @@ defmodule AshGraphql.Graphql.Resolver do
           opts
 
         page_opts ->
-          if Enum.any?(selections, &(&1.name == :count)) do
+          if Enum.any?(fields(resolution), &(&1 == :count)) do
             page_opts = Keyword.put(page_opts, :count, true)
             Keyword.put(opts, :page, page_opts)
           else
@@ -446,7 +446,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp fields(resolution, nested) do
+  defp fields(resolution, nested \\ nil) do
     if nested do
       projected_once =
         resolution
