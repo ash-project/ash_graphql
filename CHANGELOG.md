@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.4](https://github.com/ash-project/ash_graphql/compare/v0.16.3...v0.16.4) (2021-04-28)
+
+
+
+
+### Bug Fixes:
+
+* don't raise on missing relationship actions
+
+* properly detect selection of count
+
 ## [v0.16.3](https://github.com/ash-project/ash_graphql/compare/v0.16.2...v0.16.3) (2021-04-27)
 
 
