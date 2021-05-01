@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.5](https://github.com/ash-project/ash_graphql/compare/v0.16.4...v0.16.5) (2021-05-01)
+
+
+
+
+### Bug Fixes:
+
+* error rendering some paginated results
+
+* ensure id is required after belongs_to attribute
+
+* don't require input types for filters
+
 ## [v0.16.4](https://github.com/ash-project/ash_graphql/compare/v0.16.3...v0.16.4) (2021-04-28)
 
 
