@@ -29,5 +29,5 @@ defmodule AshGraphql.Resource.Transformers.RequireIdPkey do
   end
 
   def after?(Ash.Resource.Transformers.BelongsToAttribute), do: true
-  def after?(false), do: false
+  def after?(_), do: false
 end
