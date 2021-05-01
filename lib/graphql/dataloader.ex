@@ -207,6 +207,15 @@ defmodule AshGraphql.Dataloader do
 
       loaded = source.api.load!(records, [{field, query}], api_opts || [])
 
+      loaded =
+        case loaded do
+          %struct{results: results} when struct in [Ash.Page.Offset, Ash.Page.Keyset] ->
+            results
+
+          loaded ->
+            loaded
+        end
+
       results =
         case cardinality do
           :many ->
