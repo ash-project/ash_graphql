@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.7](https://github.com/ash-project/ash_graphql/compare/v0.16.6...v0.16.7) (2021-05-04)
+
+
+
+
+### Bug Fixes:
+
+* don't have leaky errors
+
+* support filtering on aggregates in nested resolvers
+
 ## [v0.16.6](https://github.com/ash-project/ash_graphql/compare/v0.16.5...v0.16.6) (2021-05-04)
 
 
