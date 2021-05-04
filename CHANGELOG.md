@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.6](https://github.com/ash-project/ash_graphql/compare/v0.16.5...v0.16.6) (2021-05-04)
+
+
+
+
+### Bug Fixes:
+
+* properly support limit/offset on relationships
+
 ## [v0.16.5](https://github.com/ash-project/ash_graphql/compare/v0.16.4...v0.16.5) (2021-05-01)
 
 
