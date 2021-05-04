@@ -17,6 +17,16 @@ defmodule AshGraphql.Test.Comment do
     end
   end
 
+  actions do
+    read :read do
+      primary?(true)
+    end
+
+    read :paginated do
+      pagination(required?: true, offset?: true, countable: true)
+    end
+  end
+
   attributes do
     uuid_primary_key(:id)
     attribute(:text, :string)

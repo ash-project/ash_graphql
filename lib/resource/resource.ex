@@ -807,6 +807,26 @@ defmodule AshGraphql.Resource do
     args ++ pagination_args(action) ++ read_args(resource, action, schema)
   end
 
+  defp args(:list_related, resource, action, schema, identity) do
+    args(:list, resource, action, schema, identity) ++
+      [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "limit",
+          identifier: :limit,
+          type: :integer,
+          description: "The number of records to return.",
+          __reference__: ref(__ENV__)
+        },
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "offset",
+          identifier: :offset,
+          type: :integer,
+          description: "The number of records to skip.",
+          __reference__: ref(__ENV__)
+        }
+      ]
+  end
+
   defp read_args(resource, action, schema) do
     action.arguments
     |> Enum.reject(& &1.private?)
@@ -1912,7 +1932,7 @@ defmodule AshGraphql.Resource do
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
-          arguments: args(:list, relationship.destination, read_action, schema),
+          arguments: args(:list_related, relationship.destination, read_action, schema),
           type: query_type,
           __reference__: ref(__ENV__)
         }

@@ -177,4 +177,165 @@ defmodule AshGraphql.ReadTest do
               }
             }} == Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
   end
+
+  describe "pagination" do
+    setup do
+      letters = ["a", "b", "c", "d", "e"]
+
+      for text <- letters do
+        post =
+          AshGraphql.Test.Post
+          |> Ash.Changeset.for_create(:create, text: text, published: true)
+          |> AshGraphql.Test.Api.create!()
+
+        for text <- letters do
+          AshGraphql.Test.Comment
+          |> Ash.Changeset.for_create(:create, text: text)
+          |> Ash.Changeset.replace_relationship(:post, post)
+          |> AshGraphql.Test.Api.create!()
+        end
+      end
+
+      :ok
+    end
+
+    test "the first can be fetched" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 1, sort: [{field: TEXT}]) {
+          count
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "results" => [
+                      %{"text" => "a"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
+    test "it can be paged through" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 2, offset: 2, sort: [{field: TEXT}]) {
+          count
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "results" => [
+                      %{"text" => "c"},
+                      %{"text" => "d"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
+    test "related items can be requested while paginating" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 2, offset: 2, sort: [{field: TEXT}]) {
+          count
+          results{
+            text
+            comments(sort:[{field: TEXT}]){
+              text
+            }
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "results" => [
+                      %{
+                        "text" => "c",
+                        "comments" => [
+                          %{"text" => "a"},
+                          %{"text" => "b"},
+                          %{"text" => "c"},
+                          %{"text" => "d"},
+                          %{"text" => "e"}
+                        ]
+                      },
+                      %{
+                        "text" => "d",
+                        "comments" => [
+                          %{"text" => "a"},
+                          %{"text" => "b"},
+                          %{"text" => "c"},
+                          %{"text" => "d"},
+                          %{"text" => "e"}
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
+    test "related items can be limited and offset while paginating" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 2, offset: 2, sort: [{field: TEXT}]) {
+          count
+          results{
+            text
+            comments(limit: 2, offset: 2, sort:[{field: TEXT}]){
+              text
+            }
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "results" => [
+                      %{
+                        "text" => "c",
+                        "comments" => [
+                          %{"text" => "c"},
+                          %{"text" => "d"}
+                        ]
+                      },
+                      %{
+                        "text" => "d",
+                        "comments" => [
+                          %{"text" => "c"},
+                          %{"text" => "d"}
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+  end
 end

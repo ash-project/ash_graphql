@@ -11,6 +11,7 @@ defmodule AshGraphql.Test.Post do
     queries do
       get :get_post, :read
       list :post_library, :library
+      list :paginated_posts, :paginated
     end
 
     managed_relationships do
@@ -53,6 +54,10 @@ defmodule AshGraphql.Test.Post do
       change(manage_relationship(:comments, type: :direct_control))
     end
 
+    read :paginated do
+      pagination(required?: true, offset?: true, countable: true)
+    end
+
     read(:read, primary?: true)
 
     read :library do
@@ -90,5 +95,6 @@ defmodule AshGraphql.Test.Post do
 
   relationships do
     has_many(:comments, AshGraphql.Test.Comment)
+    has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated)
   end
 end
