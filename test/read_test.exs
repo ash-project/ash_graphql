@@ -14,6 +14,35 @@ defmodule AshGraphql.ReadTest do
     end)
   end
 
+  test "float fields works correctly" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "foo", published: true, score: 9.8)
+    |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", published: true, score: 9.85)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostScore($score: Float) {
+        postScore(score: $score) {
+          text
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "score" => 9.8
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"postScore" => [%{"text" => "foo"}]}} = result
+  end
+
   test "a read with arguments works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true)
