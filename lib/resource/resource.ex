@@ -2103,6 +2103,7 @@ defmodule AshGraphql.Resource do
   defp do_field_type(Ash.Type.UtcDatetime, _, _), do: :naive_datetime
   defp do_field_type(Ash.Type.UtcDatetimeUsec, _, _), do: :naive_datetime
   defp do_field_type(Ash.Type.UUID, _, _), do: :string
+  defp do_field_type(Ash.Type.Float, _, _), do: :float
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp atom_enum_type(resource, attribute_name) do
