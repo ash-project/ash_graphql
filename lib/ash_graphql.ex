@@ -23,7 +23,8 @@ defmodule AshGraphql do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
 
-          Code.ensure_compiled(api)
+          # Ensures the api is compiled, and any errors are raised
+          _ = api.ash_dsl_config()
 
           def pipeline(pipeline) do
             Pipeline.insert_before(
