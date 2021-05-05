@@ -11,6 +11,7 @@ defmodule AshGraphql.Test.Post do
     queries do
       get :get_post, :read
       list :post_library, :library
+      list :post_score, :score
       list :paginated_posts, :paginated
     end
 
@@ -70,6 +71,12 @@ defmodule AshGraphql.Test.Post do
       )
     end
 
+    read :score do
+      argument(:score, :float, allow_nil?: true)
+
+      filter(expr(score == ^arg(:score)))
+    end
+
     read :best_post do
       filter(expr(best == true))
     end
@@ -87,6 +94,7 @@ defmodule AshGraphql.Test.Post do
     attribute(:status, AshGraphql.Test.Status)
     attribute(:status_enum, AshGraphql.Test.StatusEnum)
     attribute(:best, :boolean)
+    attribute(:score, :float)
   end
 
   calculations do
