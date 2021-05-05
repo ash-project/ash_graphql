@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.8](https://github.com/ash-project/ash_graphql/compare/v0.16.7...v0.16.8) (2021-05-05)
+
+
+
+
+### Bug Fixes:
+
+* ensure api modules are properly compiled first
+
+### Improvements:
+
+* Add float type (#20)
+
 ## [v0.16.7](https://github.com/ash-project/ash_graphql/compare/v0.16.6...v0.16.7) (2021-05-04)
 
 
