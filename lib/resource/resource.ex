@@ -1030,6 +1030,9 @@ defmodule AshGraphql.Resource do
       |> Enum.group_by(& &1.field.identifier)
       |> Enum.map(fn {identifier, data} ->
         case Keyword.fetch(managed_relationship.types || [], identifier) do
+          {:ok, nil} ->
+            nil
+
           {:ok, type} ->
             type = unwrap_managed_relationship_type(type)
             {:ok, %{Enum.at(data, 0).field | type: type}}
@@ -1038,6 +1041,7 @@ defmodule AshGraphql.Resource do
             get_conflicts(data)
         end
       end)
+      |> Enum.reject(&is_nil/1)
       |> Enum.split_with(&match?({:ok, _}, &1))
 
     unless Enum.empty?(errors) do

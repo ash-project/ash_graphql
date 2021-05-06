@@ -32,6 +32,12 @@ defmodule AshGraphql.Resource.ManagedRelationship do
 
       Since managed relationships can ultimately call multiple actions, there is the possibility
       of field type conflicts. Use this to determine the type of fields and remove the conflict warnings.
+
+      For `non_null` use `{:non_null, type}`, and for a list, use `{:array, type}`, for example:
+
+      `{:non_null, {:array, {:non_null, :string}}}` for a non null list of non null strings.
+
+      To *remove* a key from the input object, simply pass `nil` as the type.
       """
     ]
   ]
