@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.10](https://github.com/ash-project/ash_graphql/compare/v0.16.9...v0.16.10) (2021-05-10)
+
+
+
+
+### Bug Fixes:
+
+* support soft destroys
+
+* support actions with no input objects
+
 ## [v0.16.9](https://github.com/ash-project/ash_graphql/compare/v0.16.8...v0.16.9) (2021-05-06)
 
 
