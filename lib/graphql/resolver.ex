@@ -181,9 +181,11 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def mutate(
-        %{arguments: %{input: input}, context: context} = resolution,
+        %{arguments: arguments, context: context} = resolution,
         {api, resource, %{type: :create, action: action, upsert?: upsert?}}
       ) do
+    input = arguments[:input] || %{}
+
     opts = [
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
@@ -222,10 +224,11 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def mutate(
-        %{arguments: %{input: input} = arguments, context: context} = resolution,
+        %{arguments: arguments, context: context} = resolution,
         {api, resource,
          %{type: :update, action: action, identity: identity, read_action: read_action}}
       ) do
+    input = arguments[:input] || %{}
     filter = identity_filter(identity, resource, arguments)
 
     case filter do
@@ -279,6 +282,7 @@ defmodule AshGraphql.Graphql.Resolver do
          %{type: :destroy, action: action, identity: identity, read_action: read_action}}
       ) do
     filter = identity_filter(identity, resource, arguments)
+    input = arguments[:input] || %{}
 
     case filter do
       {:ok, filter} ->
@@ -302,6 +306,8 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
               |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+              |> Ash.Changeset.for_destroy(action, input, actor: Map.get(context, :actor))
+              |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
               |> api.destroy(opts)
               |> destroy_result(initial, resource, resolution)

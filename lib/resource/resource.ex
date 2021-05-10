@@ -344,29 +344,53 @@ defmodule AshGraphql.Resource do
     |> mutations()
     |> Enum.map(fn
       %{type: :destroy} = mutation ->
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: mutation_args(mutation, resource, schema),
-          identifier: mutation.name,
-          middleware: [
-            {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
-          ],
-          module: schema,
-          name: to_string(mutation.name),
-          type: String.to_atom("#{mutation.name}_result"),
-          __reference__: ref(__ENV__)
-        }
+        action = Ash.Resource.Info.action(resource, mutation.action)
+
+        if action.soft? do
+          update_mutation(resource, schema, mutation, schema, api)
+        else
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            arguments: mutation_args(mutation, resource, schema),
+            identifier: mutation.name,
+            middleware: [
+              {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+            ],
+            module: schema,
+            name: to_string(mutation.name),
+            type: String.to_atom("#{mutation.name}_result"),
+            __reference__: ref(__ENV__)
+          }
+        end
 
       %{type: :create} = mutation ->
+        action = Ash.Resource.Info.action(resource, mutation.action)
+
+        args =
+          case(
+            mutation_fields(
+              resource,
+              schema,
+              action,
+              mutation.type
+            )
+          ) do
+            [] ->
+              []
+
+            _ ->
+              [
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  identifier: :input,
+                  module: schema,
+                  name: "input",
+                  placement: :argument_definition,
+                  type: String.to_atom("#{mutation.name}_input")
+                }
+              ]
+          end
+
         %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: [
-            %Absinthe.Blueprint.Schema.InputValueDefinition{
-              identifier: :input,
-              module: schema,
-              name: "input",
-              placement: :argument_definition,
-              type: String.to_atom("#{mutation.name}_input")
-            }
-          ],
+          arguments: args,
           identifier: mutation.name,
           middleware: [
             {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
@@ -378,29 +402,49 @@ defmodule AshGraphql.Resource do
         }
 
       mutation ->
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments:
-            mutation_args(mutation, resource, schema) ++
-              [
-                %Absinthe.Blueprint.Schema.InputValueDefinition{
-                  identifier: :input,
-                  module: schema,
-                  name: "input",
-                  placement: :argument_definition,
-                  type: String.to_atom("#{mutation.name}_input"),
-                  __reference__: ref(__ENV__)
-                }
-              ],
-          identifier: mutation.name,
-          middleware: [
-            {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
-          ],
-          module: schema,
-          name: to_string(mutation.name),
-          type: String.to_atom("#{mutation.name}_result"),
-          __reference__: ref(__ENV__)
-        }
+        update_mutation(resource, schema, mutation, schema, api)
     end)
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp update_mutation(resource, schema, mutation, schema, api) do
+    action = Ash.Resource.Info.action(resource, mutation.action)
+
+    args =
+      case mutation_fields(
+             resource,
+             schema,
+             action,
+             mutation.type
+           ) do
+        [] ->
+          mutation_args(mutation, resource, schema)
+
+        _ ->
+          mutation_args(mutation, resource, schema) ++
+            [
+              %Absinthe.Blueprint.Schema.InputValueDefinition{
+                identifier: :input,
+                module: schema,
+                name: "input",
+                placement: :argument_definition,
+                type: String.to_atom("#{mutation.name}_input"),
+                __reference__: ref(__ENV__)
+              }
+            ]
+      end
+
+    %Absinthe.Blueprint.Schema.FieldDefinition{
+      arguments: args,
+      identifier: mutation.name,
+      middleware: [
+        {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+      ],
+      module: schema,
+      name: to_string(mutation.name),
+      type: String.to_atom("#{mutation.name}_result"),
+      __reference__: ref(__ENV__)
+    }
   end
 
   defp mutation_args(%{identity: false}, _resource, _schema) do
@@ -489,21 +533,26 @@ defmodule AshGraphql.Resource do
       if mutation.type == :destroy do
         [result]
       else
-        input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          fields:
-            mutation_fields(
-              resource,
-              schema,
-              mutation.action,
-              mutation.type
-            ),
-          identifier: String.to_atom("#{mutation.name}_input"),
-          module: schema,
-          name: Macro.camelize("#{mutation.name}_input"),
-          __reference__: ref(__ENV__)
-        }
+        case mutation_fields(
+               resource,
+               schema,
+               mutation.action,
+               mutation.type
+             ) do
+          [] ->
+            [result]
 
-        [input, result]
+          fields ->
+            input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+              fields: fields,
+              identifier: String.to_atom("#{mutation.name}_input"),
+              module: schema,
+              name: Macro.camelize("#{mutation.name}_input"),
+              __reference__: ref(__ENV__)
+            }
+
+            [input, result]
+        end
       end
     end)
   end
@@ -1561,19 +1610,23 @@ defmodule AshGraphql.Resource do
   end
 
   defp aggregate_filter_fields(resource, schema) do
-    resource
-    |> Ash.Resource.Info.public_aggregates()
-    |> Enum.flat_map(fn aggregate ->
-      [
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          identifier: aggregate.name,
-          module: schema,
-          name: to_string(aggregate.name),
-          type: attribute_filter_field_type(resource, aggregate),
-          __reference__: ref(__ENV__)
-        }
-      ]
-    end)
+    if Ash.DataLayer.data_layer_can?(resource, :aggregate_filter) do
+      resource
+      |> Ash.Resource.Info.public_aggregates()
+      |> Enum.flat_map(fn aggregate ->
+        [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            identifier: aggregate.name,
+            module: schema,
+            name: to_string(aggregate.name),
+            type: attribute_filter_field_type(resource, aggregate),
+            __reference__: ref(__ENV__)
+          }
+        ]
+      end)
+    else
+      []
+    end
   end
 
   defp relationship_filter_fields(resource, schema) do
