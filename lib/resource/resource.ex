@@ -1365,7 +1365,7 @@ defmodule AshGraphql.Resource do
       |> Ash.Resource.Info.identities()
       |> Enum.filter(fn identity ->
         is_nil(managed_relationship.lookup_identities) ||
-          identity.name in managed_relationship.identities
+          identity.name in managed_relationship.lookup_identities
       end)
       |> Enum.flat_map(fn identity ->
         identity
