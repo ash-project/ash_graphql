@@ -17,6 +17,10 @@ defmodule AshGraphql.Test.Post do
 
     managed_relationships do
       managed_relationship :with_comments, :comments
+      managed_relationship :with_comments_and_tags, :comments,
+        type_name: :create_post_comment_with_tag
+      managed_relationship :with_comments_and_tags, :tags,
+        lookup_with_primary_key?: false, lookup_identities: [:name]
     end
 
     mutations do
@@ -24,6 +28,7 @@ defmodule AshGraphql.Test.Post do
       create :upsert_post, :upsert, upsert?: true
 
       create :create_post_with_comments, :with_comments
+      create :create_post_with_comments_and_tags, :with_comments_and_tags
 
       update :update_post, :update
       update :update_best_post, :update, read_action: :best_post, identity: false
@@ -53,6 +58,14 @@ defmodule AshGraphql.Test.Post do
       argument(:comments, {:array, :map})
 
       change(manage_relationship(:comments, type: :direct_control))
+    end
+
+    create :with_comments_and_tags do
+      argument(:comments, {:array, :map})
+      argument(:tags, {:array, :map}, allow_nil?: false)
+
+      change(manage_relationship(:comments, on_lookup: :relate, on_no_match: :create))
+      change(manage_relationship(:tags, on_lookup: :relate, on_no_match: :create))
     end
 
     read :paginated do
@@ -104,5 +117,6 @@ defmodule AshGraphql.Test.Post do
   relationships do
     has_many(:comments, AshGraphql.Test.Comment)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated)
+    many_to_many(:tags, AshGraphql.Test.Tag, through: AshGraphql.Test.PostTag, source_field_on_join_table: :post_id, destination_field_on_join_table: :tag_id)
   end
 end
