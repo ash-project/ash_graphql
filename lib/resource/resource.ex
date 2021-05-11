@@ -642,7 +642,7 @@ defmodule AshGraphql.Resource do
         field_type =
           attribute.type
           |> field_type(attribute, resource, true)
-          |> maybe_wrap_non_null(explicitly_required || !allow_nil?)
+          |> maybe_wrap_non_null(explicitly_required || attribute_required?(attribute))
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
@@ -663,7 +663,7 @@ defmodule AshGraphql.Resource do
             type =
               argument.type
               |> field_type(argument, resource, true)
-              |> maybe_wrap_non_null(not argument.allow_nil?)
+              |> maybe_wrap_non_null(attribute_required?(argument))
 
             %Absinthe.Blueprint.Schema.FieldDefinition{
               identifier: argument.name,
@@ -689,7 +689,7 @@ defmodule AshGraphql.Resource do
               identifier: argument.name,
               module: schema,
               name: to_string(argument.name),
-              type: maybe_wrap_non_null(type, !argument.allow_nil?),
+              type: maybe_wrap_non_null(type, attribute_required?(argument)),
               __reference__: ref(__ENV__)
             }
         end
@@ -883,7 +883,7 @@ defmodule AshGraphql.Resource do
       type =
         argument.type
         |> field_type(argument, resource, true)
-        |> maybe_wrap_non_null(not argument.allow_nil?)
+        |> maybe_wrap_non_null(attribute_required?(argument))
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: argument.name,
@@ -1960,7 +1960,7 @@ defmodule AshGraphql.Resource do
               field_type =
                 attribute.type
                 |> field_type(attribute, resource)
-                |> maybe_wrap_non_null(not attribute.allow_nil?)
+                |> maybe_wrap_non_null(require? && not attribute.allow_nil?)
 
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 description: attribute.description,
@@ -1985,6 +1985,11 @@ defmodule AshGraphql.Resource do
         ] ++ added_pkey_fields
     end
   end
+
+  defp attribute_required?(%{allow_nil?: true}), do: false
+  defp attribute_required?(%{generated?: true}), do: false
+  defp attribute_required?(%{default: default}) when not is_nil(default), do: false
+  defp attribute_required?(_), do: true
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp relationships(resource, api, schema) do
