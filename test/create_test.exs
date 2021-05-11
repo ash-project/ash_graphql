@@ -58,6 +58,56 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "a create with a managed relationship works with many_to_many and [on_lookup: :relate, on_match: :relate]" do
+    resp =
+      """
+      mutation CreatePostWithCommentsAndTags($input: CreatePostWithCommentsAndTagsInput) {
+        createPostWithCommentsAndTags(input: $input) {
+          result{
+            text
+            comments(sort:{field:TEXT}){
+              text
+            }
+            tags(sort:{field:NAME}){
+              name
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "comments" => [
+              %{"text" => "foobar"},
+              %{"text" => "barfoo"}
+            ],
+            "tags" => [%{"name" => "test"}, %{"name" => "tag"}]
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithCommentsAndTags" => %{
+                 "result" => %{
+                   "text" => "foobar",
+                   "comments" => [%{"text" => "barfoo"}, %{"text" => "foobar"}],
+                   "tags" => [%{"name" => "tag"}, %{"name" => "test"}]
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create with arguments works" do
     resp =
       """
