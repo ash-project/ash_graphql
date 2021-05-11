@@ -11,7 +11,6 @@ defmodule AshGraphql.Test.Tag do
     queries do
       get :get_tag, :read
       list :get_tags, :read
-      # list :paginated_tags, :paginated
     end
 
     mutations do
@@ -24,10 +23,6 @@ defmodule AshGraphql.Test.Tag do
     create :create do
       primary?(true)
     end
-
-    # read :paginated do
-    #   pagination(required?: true, offset?: true, countable: true)
-    # end
   end
 
   attributes do

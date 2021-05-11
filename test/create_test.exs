@@ -58,7 +58,7 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
-  test "a create with a managed relationship works with [on_lookup: :relate, on_match: :relate]" do
+  test "a create with a managed relationship works with many_to_many and [on_lookup: :relate, on_match: :relate]" do
     resp =
       """
       mutation CreatePostWithCommentsAndTags($input: CreatePostWithCommentsAndTagsInput) {
