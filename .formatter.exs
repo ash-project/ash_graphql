@@ -13,6 +13,8 @@ locals_without_parens = [
   identity: 1,
   list: 2,
   list: 3,
+  lookup_identities: 1,
+  lookup_with_primary_key?: 1,
   managed_relationship: 2,
   managed_relationship: 3,
   primary_key_delimiter: 1,

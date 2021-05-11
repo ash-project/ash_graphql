@@ -1055,7 +1055,7 @@ defmodule AshGraphql.Resource do
       on_match_fields(manage_opts, relationship, schema) ++
         on_no_match_fields(manage_opts, relationship, schema) ++
         on_lookup_fields(manage_opts, relationship, schema) ++
-        pkey_fields(manage_opts, relationship.destination, schema)
+        manage_pkey_fields(manage_opts, managed_relationship, relationship.destination, schema)
 
     type = managed_relationship.type_name || default_managed_type_name(resource, action, argument)
 
@@ -1122,10 +1122,19 @@ defmodule AshGraphql.Resource do
        ) do
     formatted_types =
       fields
-      |> Enum.map(fn field ->
-        "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}.#{
-          field.source.action
-        }"
+      |> Enum.map(fn
+        %{source: %{action: :__primary_key}} = field ->
+          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}'s lookup by primary key"
+
+        %{source: %{action: {:identity, identity}}} = field ->
+          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}'s identity: #{
+            identity
+          }"
+
+        field ->
+          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}.#{
+            field.source.action
+          }"
       end)
       |> Enum.uniq()
 
@@ -1339,13 +1348,47 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp pkey_fields(opts, resource, schema) do
+  defp manage_pkey_fields(opts, managed_relationship, resource, schema) do
     if ManagedRelationshipHelpers.could_lookup?(opts) do
+      pkey_fields =
+        if managed_relationship.lookup_with_primary_key? do
+          resource
+          |> pkey_fields(schema, false)
+          |> Enum.map(fn field ->
+            {resource, :__primary_key, field}
+          end)
+        else
+          []
+        end
+
       resource
-      |> pkey_fields(schema)
-      |> Enum.map(fn field ->
-        {resource, :__primary_key, field}
+      |> Ash.Resource.Info.identities()
+      |> Enum.filter(fn identity ->
+        is_nil(managed_relationship.lookup_identities) ||
+          identity.name in managed_relationship.identities
       end)
+      |> Enum.flat_map(fn identity ->
+        identity
+        |> Map.get(:keys)
+        |> Enum.map(fn key ->
+          {identity.name, key}
+        end)
+      end)
+      |> Enum.uniq_by(&elem(&1, 1))
+      |> Enum.map(fn {identity_name, key} ->
+        attribute = Ash.Resource.Info.attribute(resource, key)
+
+        field = %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: to_string(key),
+          identifier: key,
+          type: field_type(attribute.type, attribute, resource),
+          description: attribute.description || "",
+          __reference__: ref(__ENV__)
+        }
+
+        {resource, {:identity, identity_name}, field}
+      end)
+      |> Enum.concat(pkey_fields)
     else
       []
     end
@@ -1881,7 +1924,7 @@ defmodule AshGraphql.Resource do
     non_id_attributes ++ pkey_fields
   end
 
-  defp pkey_fields(resource, schema) do
+  defp pkey_fields(resource, schema, require? \\ true) do
     case Ash.Resource.Info.primary_key(resource) do
       [field] ->
         attribute = Ash.Resource.Info.attribute(resource, field)
@@ -1892,7 +1935,7 @@ defmodule AshGraphql.Resource do
           field_type =
             attribute.type
             |> field_type(attribute, resource)
-            |> maybe_wrap_non_null(not attribute.allow_nil?)
+            |> maybe_wrap_non_null(require? && not attribute.allow_nil?)
 
           [
             %Absinthe.Blueprint.Schema.FieldDefinition{
