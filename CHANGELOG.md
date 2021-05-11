@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.11](https://github.com/ash-project/ash_graphql/compare/v0.16.10...v0.16.11) (2021-05-11)
+
+
+
+
+### Bug Fixes:
+
+* fix compiler warning
+
+* identities -> lookup_identities
+
+* don't require attributes that should not be required
+
+### Improvements:
+
+* allow customizing identity/pkey on_lookup
+
 ## [v0.16.10](https://github.com/ash-project/ash_graphql/compare/v0.16.9...v0.16.10) (2021-05-10)
 
 
