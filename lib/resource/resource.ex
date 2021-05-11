@@ -634,7 +634,7 @@ defmodule AshGraphql.Resource do
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
         allow_nil? =
-          attribute.allow_nil? || attribute.default || type == :update ||
+          attribute.allow_nil? || attribute.default || type == :update || attribute.generated? ||
             (type == :create && attribute.name in action.allow_nil_input)
 
         explicitly_required = attribute.name in action.require_attributes
@@ -642,7 +642,7 @@ defmodule AshGraphql.Resource do
         field_type =
           attribute.type
           |> field_type(attribute, resource, true)
-          |> maybe_wrap_non_null(explicitly_required || attribute_required?(attribute))
+          |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
@@ -663,7 +663,7 @@ defmodule AshGraphql.Resource do
             type =
               argument.type
               |> field_type(argument, resource, true)
-              |> maybe_wrap_non_null(attribute_required?(argument))
+              |> maybe_wrap_non_null(argument_required?(argument))
 
             %Absinthe.Blueprint.Schema.FieldDefinition{
               identifier: argument.name,
@@ -689,7 +689,7 @@ defmodule AshGraphql.Resource do
               identifier: argument.name,
               module: schema,
               name: to_string(argument.name),
-              type: maybe_wrap_non_null(type, attribute_required?(argument)),
+              type: maybe_wrap_non_null(type, argument_required?(argument)),
               __reference__: ref(__ENV__)
             }
         end
@@ -883,7 +883,7 @@ defmodule AshGraphql.Resource do
       type =
         argument.type
         |> field_type(argument, resource, true)
-        |> maybe_wrap_non_null(attribute_required?(argument))
+        |> maybe_wrap_non_null(argument_required?(argument))
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: argument.name,
@@ -1986,10 +1986,9 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp attribute_required?(%{allow_nil?: true}), do: false
-  defp attribute_required?(%{generated?: true}), do: false
-  defp attribute_required?(%{default: default}) when not is_nil(default), do: false
-  defp attribute_required?(_), do: true
+  defp argument_required?(%{allow_nil?: true}), do: false
+  defp argument_required?(%{default: default}) when not is_nil(default), do: false
+  defp argument_required?(_), do: true
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp relationships(resource, api, schema) do

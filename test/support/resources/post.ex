@@ -17,10 +17,13 @@ defmodule AshGraphql.Test.Post do
 
     managed_relationships do
       managed_relationship :with_comments, :comments
+
       managed_relationship :with_comments_and_tags, :comments,
         type_name: :create_post_comment_with_tag
+
       managed_relationship :with_comments_and_tags, :tags,
-        lookup_with_primary_key?: false, lookup_identities: [:name]
+        lookup_with_primary_key?: false,
+        lookup_identities: [:name]
     end
 
     mutations do
@@ -117,6 +120,11 @@ defmodule AshGraphql.Test.Post do
   relationships do
     has_many(:comments, AshGraphql.Test.Comment)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated)
-    many_to_many(:tags, AshGraphql.Test.Tag, through: AshGraphql.Test.PostTag, source_field_on_join_table: :post_id, destination_field_on_join_table: :tag_id)
+
+    many_to_many(:tags, AshGraphql.Test.Tag,
+      through: AshGraphql.Test.PostTag,
+      source_field_on_join_table: :post_id,
+      destination_field_on_join_table: :tag_id
+    )
   end
 end

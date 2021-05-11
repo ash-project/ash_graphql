@@ -86,7 +86,7 @@ defmodule AshGraphql.CreateTest do
               %{"text" => "foobar"},
               %{"text" => "barfoo"}
             ],
-            "tags" => [%{"name" => "test"},%{"name" => "tag"}]
+            "tags" => [%{"name" => "test"}, %{"name" => "tag"}]
           }
         }
       )
@@ -101,7 +101,7 @@ defmodule AshGraphql.CreateTest do
                  "result" => %{
                    "text" => "foobar",
                    "comments" => [%{"text" => "barfoo"}, %{"text" => "foobar"}],
-                   "tags" => [%{"name" => "tag"},%{"name" => "test"}]
+                   "tags" => [%{"name" => "tag"}, %{"name" => "test"}]
                  }
                }
              }
