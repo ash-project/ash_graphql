@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.12](https://github.com/ash-project/ash_graphql/compare/v0.16.11...v0.16.12) (2021-05-12)
+
+
+
+
+### Bug Fixes:
+
+* Check for nil rather than the value as `not` does not accept a function (#23)
+
 ## [v0.16.11](https://github.com/ash-project/ash_graphql/compare/v0.16.10...v0.16.11) (2021-05-11)
 
 
