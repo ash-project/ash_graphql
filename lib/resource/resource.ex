@@ -634,7 +634,8 @@ defmodule AshGraphql.Resource do
       |> Enum.filter(& &1.writable?)
       |> Enum.map(fn attribute ->
         allow_nil? =
-          attribute.allow_nil? || attribute.default != nil || type == :update || attribute.generated? ||
+          attribute.allow_nil? || attribute.default != nil || type == :update ||
+            attribute.generated? ||
             (type == :create && attribute.name in action.allow_nil_input)
 
         explicitly_required = attribute.name in action.require_attributes
