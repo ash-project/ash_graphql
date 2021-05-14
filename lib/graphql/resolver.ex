@@ -12,7 +12,8 @@ defmodule AshGraphql.Graphql.Resolver do
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api)
+      verbose?: AshGraphql.Api.debug?(api),
+      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
     ]
 
     filter =
@@ -70,7 +71,8 @@ defmodule AshGraphql.Graphql.Resolver do
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api)
+      verbose?: AshGraphql.Api.debug?(api),
+      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
     ]
 
     query =
@@ -112,7 +114,8 @@ defmodule AshGraphql.Graphql.Resolver do
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api)
+      verbose?: AshGraphql.Api.debug?(api),
+      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
     ]
 
     page_opts =
@@ -191,6 +194,7 @@ defmodule AshGraphql.Graphql.Resolver do
       authorize?: AshGraphql.Api.authorize?(api),
       action: action,
       verbose?: AshGraphql.Api.debug?(api),
+      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
       upsert?: upsert?
     ]
 
@@ -238,7 +242,11 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
         |> set_query_arguments(action, arguments)
-        |> api.read_one!(action: read_action, verbose?: AshGraphql.Api.debug?(api))
+        |> api.read_one!(
+          action: read_action,
+          verbose?: AshGraphql.Api.debug?(api),
+          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+        )
         |> case do
           nil ->
             result = not_found(filter, resource)
@@ -250,7 +258,8 @@ defmodule AshGraphql.Graphql.Resolver do
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Api.authorize?(api),
               action: action,
-              verbose?: AshGraphql.Api.debug?(api)
+              verbose?: AshGraphql.Api.debug?(api),
+              stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
             ]
 
             result =
@@ -291,7 +300,11 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
         |> set_query_arguments(action, arguments)
-        |> api.read_one!(action: read_action, verbose?: AshGraphql.Api.debug?(api))
+        |> api.read_one!(
+          action: read_action,
+          verbose?: AshGraphql.Api.debug?(api),
+          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+        )
         |> case do
           nil ->
             result = not_found(filter, resource)
@@ -521,9 +534,18 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp destroy_opts(api, context, action) do
     if AshGraphql.Api.authorize?(api) do
-      [actor: Map.get(context, :actor), action: action, verbose?: AshGraphql.Api.debug?(api)]
+      [
+        actor: Map.get(context, :actor),
+        action: action,
+        verbose?: AshGraphql.Api.debug?(api),
+        stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+      ]
     else
-      [action: action, verbose?: AshGraphql.Api.debug?(api)]
+      [
+        action: action,
+        verbose?: AshGraphql.Api.debug?(api),
+        stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+      ]
     end
   end
 
@@ -584,7 +606,8 @@ defmodule AshGraphql.Graphql.Resolver do
     api_opts = [
       actor: Map.get(context, :actor),
       authorize?: AshGraphql.Api.authorize?(api),
-      verbose?: AshGraphql.Api.debug?(api)
+      verbose?: AshGraphql.Api.debug?(api),
+      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
     ]
 
     query = load_filter_and_sort_requirements(relationship.destination, args)

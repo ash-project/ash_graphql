@@ -17,6 +17,11 @@ defmodule AshGraphql.Api do
         doc: "Whether or not to perform authorization for this API",
         default: true
       ],
+      stacktraces?: [
+        type: :boolean,
+        doc: "Whether or not to include stacktraces in generated errors",
+        default: false
+      ],
       debug?: [
         type: :boolean,
         doc: "Whether or not to log (extremely verbose) debug information",
@@ -44,6 +49,10 @@ defmodule AshGraphql.Api do
 
   def debug?(api) do
     Extension.get_opt(api, [:graphql], :debug?, false)
+  end
+
+  def stacktraces?(api) do
+    Extension.get_opt(api, [:graphql], :stacktraces?, false)
   end
 
   @doc false

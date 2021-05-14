@@ -1056,7 +1056,7 @@ defmodule AshGraphql.Resource do
       on_match_fields(manage_opts, relationship, schema) ++
         on_no_match_fields(manage_opts, relationship, schema) ++
         on_lookup_fields(manage_opts, relationship, schema) ++
-        manage_pkey_fields(manage_opts, managed_relationship, relationship.destination, schema)
+        manage_pkey_fields(manage_opts, managed_relationship, relationship, schema)
 
     type = managed_relationship.type_name || default_managed_type_name(resource, action, argument)
 
@@ -1349,8 +1349,13 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp manage_pkey_fields(opts, managed_relationship, resource, schema) do
-    if ManagedRelationshipHelpers.could_lookup?(opts) do
+  defp manage_pkey_fields(opts, managed_relationship, relationship, schema) do
+    resource = relationship.destination
+    could_lookup? = ManagedRelationshipHelpers.could_lookup?(opts)
+    could_match? = ManagedRelationshipHelpers.could_update?(opts)
+    needs_pkey? = opts[:on_no_match] == :match
+
+    if could_lookup? || (could_match? && needs_pkey?) do
       pkey_fields =
         if managed_relationship.lookup_with_primary_key? do
           resource
