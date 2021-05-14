@@ -440,24 +440,26 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp load_fields(query_or_record, resource, api, resolution, nested \\ nil) do
-    loading =
-      resolution
-      |> fields(nested)
-      |> Enum.map(fn identifier ->
-        Ash.Resource.Info.aggregate(resource, identifier) ||
-          Ash.Resource.Info.calculation(resource, identifier)
-      end)
-      |> Enum.filter(& &1)
-      |> Enum.map(& &1.name)
+    resolution
+    |> fields(nested)
+    |> Enum.map(fn identifier ->
+      Ash.Resource.Info.aggregate(resource, identifier) ||
+        Ash.Resource.Info.calculation(resource, identifier)
+    end)
+    |> Enum.filter(& &1)
+    |> Enum.map(& &1.name)
+    |> case do
+      [] ->
+        {:ok, query_or_record}
 
-    case query_or_record do
-      %Ash.Query{} = query ->
-        {:ok, Ash.Query.load(query, loading)}
+      loading ->
+        case query_or_record do
+          %Ash.Query{} = query ->
+            {:ok, Ash.Query.load(query, loading)}
 
-      record ->
-        IO.inspect(record, label: "record")
-        IO.inspect(loading, label: "loading")
-        api.load(record, loading) |> IO.inspect(label: "result")
+          record ->
+            api.load(record, loading)
+        end
     end
   end
 
