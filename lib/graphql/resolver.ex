@@ -452,6 +452,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
     case query_or_record do
       %Ash.Query{} = query ->
+        IO.inspect(query, label: "query")
+        IO.inspect(loading, label: "loading")
         {:ok, Ash.Query.load(query, loading)}
 
       record ->
