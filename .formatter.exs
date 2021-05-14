@@ -21,6 +21,7 @@ locals_without_parens = [
   read_action: 1,
   read_one: 2,
   read_one: 3,
+  stacktraces?: 1,
   type: 1,
   type_name: 1,
   types: 1,

@@ -590,7 +590,28 @@ defmodule AshGraphql.Graphql.Resolver do
         AshGraphql.Error.to_error(error)
       else
         uuid = Ash.UUID.generate()
-        Logger.warn("`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{inspect(error)}")
+
+        if is_exception(error) do
+          case error do
+            %{stacktrace: %{stacktrace: stacktrace}} ->
+              Logger.warn(
+                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{
+                  Exception.format(:error, error, stacktrace)
+                }"
+              )
+
+            error ->
+              Logger.warn(
+                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{
+                  Exception.format(:error, error)
+                }"
+              )
+          end
+        else
+          Logger.warn(
+            "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{inspect(error)}"
+          )
+        end
 
         %{
           message: "something went wrong. Unique error id: `#{uuid}`"
