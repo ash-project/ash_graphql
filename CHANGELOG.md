@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.13](https://github.com/ash-project/ash_graphql/compare/v0.16.12...v0.16.13) (2021-05-14)
+
+
+
+
+### Bug Fixes:
+
+* don't load fields if no fields to load
+
+### Improvements:
+
+* log error stacktraces
+
+* add `stacktraces?` option
+
 ## [v0.16.12](https://github.com/ash-project/ash_graphql/compare/v0.16.11...v0.16.12) (2021-05-12)
 
 
