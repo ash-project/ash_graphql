@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.14](https://github.com/ash-project/ash_graphql/compare/v0.16.13...v0.16.14) (2021-05-15)
+
+
+
+
+### Improvements:
+
+* non nullable aggregates where possible
+
 ## [v0.16.13](https://github.com/ash-project/ash_graphql/compare/v0.16.12...v0.16.13) (2021-05-14)
 
 
