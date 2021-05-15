@@ -1432,7 +1432,12 @@ defmodule AshGraphql.Resource do
       end
 
     {:ok, aggregate_type} = Ash.Query.Aggregate.kind_to_type(kind, field_type)
-    aggregate_type
+
+    if is_nil(Ash.Query.Aggregate.default_value(kind)) do
+      aggregate_type
+    else
+      %Absinthe.Blueprint.TypeReference.NonNull{of_type: aggregate_type}
+    end
   end
 
   defp filter_type(attribute_or_aggregate, resource, schema) do
