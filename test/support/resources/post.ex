@@ -111,6 +111,7 @@ defmodule AshGraphql.Test.Post do
     attribute(:status_enum, AshGraphql.Test.StatusEnum)
     attribute(:best, :boolean)
     attribute(:score, :float)
+    attribute(:embed, AshGraphql.Test.Embed)
   end
 
   calculations do
