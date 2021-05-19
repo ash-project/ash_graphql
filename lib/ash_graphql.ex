@@ -7,7 +7,7 @@ defmodule AshGraphql do
   """
 
   defmacro __using__(opts) do
-    quote bind_quoted: [apis: opts[:apis], api: opts[:api]] do
+    quote bind_quoted: [apis: opts[:apis], api: opts[:api]], generated: true do
       apis =
         api
         |> List.wrap()
@@ -34,6 +34,7 @@ defmodule AshGraphql do
             )
           end
 
+          @dialyzer {:nowarn_function, {:run, 2}}
           def run(blueprint, _opts) do
             api = unquote(api)
 
