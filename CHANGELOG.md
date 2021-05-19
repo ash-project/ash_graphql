@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.15](https://github.com/ash-project/ash_graphql/compare/v0.16.14...v0.16.15) (2021-05-19)
+
+
+
+
+### Bug Fixes:
+
+* avoid dialyzer errors on generated code
+
+* traverse all nested embeds for enum type defs
+
 ## [v0.16.14](https://github.com/ash-project/ash_graphql/compare/v0.16.13...v0.16.14) (2021-05-15)
 
 
