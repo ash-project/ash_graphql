@@ -36,6 +36,7 @@ defmodule AshGraphql.Test.Post do
       update :update_post, :update
       update :update_best_post, :update, read_action: :best_post, identity: false
 
+      destroy :archive_post, :archive
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
     end
@@ -98,7 +99,12 @@ defmodule AshGraphql.Test.Post do
     end
 
     update(:update)
-    destroy(:destroy)
+    destroy(:destroy, primary?: true)
+
+    destroy :archive do
+      soft? true
+      change set_attribute(:deleted_at, &DateTime.utc_now/0)
+    end
   end
 
   attributes do
