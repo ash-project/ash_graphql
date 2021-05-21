@@ -41,6 +41,34 @@ defmodule AshGraphql.DestroyTest do
     assert %{data: %{"deletePost" => %{"result" => %{"text" => "foobar"}}}} = result
   end
 
+  test "a soft destroy works" do
+    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+
+    resp =
+      """
+      mutation ArchivePost($id: ID) {
+        deletePost(id: $id) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"deletePost" => %{"result" => %{"text" => "foobar"}}}} = result
+  end
+
   test "a destroy with a configured read action and no identity works" do
     AshGraphql.Test.Api.create!(
       Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
