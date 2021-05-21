@@ -366,14 +366,12 @@ defmodule AshGraphql.Resource do
         action = Ash.Resource.Info.action(resource, mutation.action)
 
         args =
-          case(
-            mutation_fields(
-              resource,
-              schema,
-              action,
-              mutation.type
-            )
-          ) do
+          case mutation_fields(
+                 resource,
+                 schema,
+                 action,
+                 mutation.type
+               ) do
             [] ->
               []
 
@@ -530,29 +528,25 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
 
-      if mutation.type == :destroy do
-        [result]
-      else
-        case mutation_fields(
-               resource,
-               schema,
-               mutation.action,
-               mutation.type
-             ) do
-          [] ->
-            [result]
+      case mutation_fields(
+             resource,
+             schema,
+             mutation.action,
+             mutation.type
+           ) do
+        [] ->
+          [result]
 
-          fields ->
-            input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-              fields: fields,
-              identifier: String.to_atom("#{mutation.name}_input"),
-              module: schema,
-              name: Macro.camelize("#{mutation.name}_input"),
-              __reference__: ref(__ENV__)
-            }
+        fields ->
+          input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+            fields: fields,
+            identifier: String.to_atom("#{mutation.name}_input"),
+            module: schema,
+            name: Macro.camelize("#{mutation.name}_input"),
+            __reference__: ref(__ENV__)
+          }
 
-            [input, result]
-        end
+          [input, result]
       end
     end)
   end
@@ -626,34 +620,38 @@ defmodule AshGraphql.Resource do
       )
 
     attribute_fields =
-      resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.filter(fn attribute ->
-        is_nil(action.accept) || attribute.name in action.accept
-      end)
-      |> Enum.filter(& &1.writable?)
-      |> Enum.map(fn attribute ->
-        allow_nil? =
-          attribute.allow_nil? || attribute.default != nil || type == :update ||
-            attribute.generated? ||
-            (type == :create && attribute.name in action.allow_nil_input)
+      if action.type == :destroy && !action.soft? do
+        []
+      else
+        resource
+        |> Ash.Resource.Info.public_attributes()
+        |> Enum.filter(fn attribute ->
+          is_nil(action.accept) || attribute.name in action.accept
+        end)
+        |> Enum.filter(& &1.writable?)
+        |> Enum.map(fn attribute ->
+          allow_nil? =
+            attribute.allow_nil? || attribute.default != nil || type == :update ||
+              attribute.generated? ||
+              (type == :create && attribute.name in action.allow_nil_input)
 
-        explicitly_required = attribute.name in action.require_attributes
+          explicitly_required = attribute.name in action.require_attributes
 
-        field_type =
-          attribute.type
-          |> field_type(attribute, resource, true)
-          |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
+          field_type =
+            attribute.type
+            |> field_type(attribute, resource, true)
+            |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
 
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: attribute.description,
-          identifier: attribute.name,
-          module: schema,
-          name: to_string(attribute.name),
-          type: field_type,
-          __reference__: ref(__ENV__)
-        }
-      end)
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: attribute.description,
+            identifier: attribute.name,
+            module: schema,
+            name: to_string(attribute.name),
+            type: field_type,
+            __reference__: ref(__ENV__)
+          }
+        end)
+      end
 
     argument_fields =
       action.arguments
