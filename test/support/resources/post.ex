@@ -102,8 +102,8 @@ defmodule AshGraphql.Test.Post do
     destroy(:destroy, primary?: true)
 
     destroy :archive do
-      soft? true
-      change set_attribute(:deleted_at, &DateTime.utc_now/0)
+      soft?(true)
+      change(set_attribute(:deleted_at, &DateTime.utc_now/0))
     end
   end
 
