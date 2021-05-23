@@ -17,21 +17,21 @@ defmodule AshGraphql.Types.JSON do
 
   @spec decode(Absinthe.Blueprint.Input.String.t()) :: {:ok, term()} | :error
   @spec decode(Absinthe.Blueprint.Input.Null.t()) :: {:ok, nil}
-  defp decode(%Absinthe.Blueprint.Input.String{value: value}) do
+  def decode(%Absinthe.Blueprint.Input.String{value: value}) do
     case Jason.decode(value) do
       {:ok, result} -> {:ok, result}
       _ -> :error
     end
   end
 
-  defp decode(%Absinthe.Blueprint.Input.Null{}) do
+  def decode(%Absinthe.Blueprint.Input.Null{}) do
     {:ok, nil}
   end
 
-  defp decode(_) do
+  def decode(_) do
     :error
   end
 
-  defp encode(nil), do: nil
-  defp encode(value), do: Jason.encode!(value)
+  def encode(nil), do: nil
+  def encode(value), do: Jason.encode!(value)
 end

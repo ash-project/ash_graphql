@@ -15,7 +15,7 @@ defmodule AshGraphql.Resource.Query do
     ],
     identity: [
       type: :atom,
-      doc: "The identity to use for looking up the user",
+      doc: "The identity to use for looking up the record. Pass `false` to not use an identity.",
       required: false
     ],
     allow_nil?: [

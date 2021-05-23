@@ -702,7 +702,7 @@ defmodule AshGraphql.Resource do
       of_type:
         maybe_wrap_non_null(
           wrap_arrays(arg_type, type, constraints[:items] || []),
-          !constraints[:nil_items?]
+          !constraints[:nil_items?] || Ash.Type.embedded_type?(type)
         )
     }
   end
@@ -773,23 +773,27 @@ defmodule AshGraphql.Resource do
   end
 
   defp args(:get, resource, action, schema, identity) do
-    resource
-    |> Ash.Resource.Info.identities()
-    |> Enum.find(&(&1.name == identity))
-    |> Map.get(:keys)
-    |> Enum.map(fn key ->
-      attribute = Ash.Resource.Info.attribute(resource, key)
+    if identity do
+      resource
+      |> Ash.Resource.Info.identities()
+      |> Enum.find(&(&1.name == identity))
+      |> Map.get(:keys)
+      |> Enum.map(fn key ->
+        attribute = Ash.Resource.Info.attribute(resource, key)
 
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: to_string(key),
-        identifier: key,
-        type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: field_type(attribute.type, attribute, resource, true)
-        },
-        description: attribute.description || "",
-        __reference__: ref(__ENV__)
-      }
-    end)
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: to_string(key),
+          identifier: key,
+          type: %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: field_type(attribute.type, attribute, resource, true)
+          },
+          description: attribute.description || "",
+          __reference__: ref(__ENV__)
+        }
+      end)
+    else
+      []
+    end
     |> Enum.concat(read_args(resource, action, schema))
   end
 
@@ -1575,7 +1579,10 @@ defmodule AshGraphql.Resource do
        ) do
     %{
       attribute
-      | constraints: [items: constraints, nil_items?: allow_nil?]
+      | constraints: [
+          items: constraints,
+          nil_items?: allow_nil? || Ash.Type.embedded_type?(attribute.type)
+        ]
     }
   end
 
@@ -2141,7 +2148,9 @@ defmodule AshGraphql.Resource do
     field_type =
       type
       |> field_type(new_attribute, resource, input?)
-      |> maybe_wrap_non_null(!attribute.constraints[:nil_items?])
+      |> maybe_wrap_non_null(
+        !attribute.constraints[:nil_items?] || Ash.Type.embedded_type?(attribute.type)
+      )
 
     %Absinthe.Blueprint.TypeReference.List{
       of_type: field_type

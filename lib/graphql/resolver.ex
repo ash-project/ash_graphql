@@ -16,22 +16,7 @@ defmodule AshGraphql.Graphql.Resolver do
       stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
     ]
 
-    filter =
-      if identity do
-        {:ok,
-         resource
-         |> Ash.Resource.Info.identities()
-         |> Enum.find(&(&1.name == identity))
-         |> Map.get(:keys)
-         |> Enum.map(fn key ->
-           {key, Map.get(arguments, key)}
-         end)}
-      else
-        case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
-          {:ok, value} -> {:ok, [id: value]}
-          {:error, error} -> {:error, error}
-        end
-      end
+    filter = identity_filter(identity, resource, arguments)
 
     result =
       case filter do
@@ -46,7 +31,9 @@ defmodule AshGraphql.Graphql.Resolver do
           |> load_fields(resource, api, resolution)
           |> case do
             {:ok, query} ->
-              api.read_one(query, opts)
+              query
+              |> Ash.Query.for_read(action, %{}, actor: opts[:actor])
+              |> api.read_one(opts)
 
             {:error, error} ->
               {:error, error}
