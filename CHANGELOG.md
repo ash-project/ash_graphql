@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.17](https://github.com/ash-project/ash_graphql/compare/v0.16.16...v0.16.17) (2021-05-23)
+
+
+
+
+### Improvements:
+
+* support `identity: false` for read
+
+* don't type embedded resources is nullable
+
 ## [v0.16.16](https://github.com/ash-project/ash_graphql/compare/v0.16.15...v0.16.16) (2021-05-21)
 
 
