@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.18-rc0](https://github.com/ash-project/ash_graphql/compare/v0.16.17...v0.16.18-rc0) (2021-06-04)
+
+
+
+
+### Improvements:
+
+* support expression calculations
+
 ## [v0.16.17](https://github.com/ash-project/ash_graphql/compare/v0.16.16...v0.16.17) (2021-05-23)
 
 
