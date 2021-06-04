@@ -46,7 +46,7 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e])
+      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
   end
 
@@ -89,7 +89,7 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e])
+      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
   end
 
@@ -166,7 +166,7 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e])
+      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
   end
 
@@ -210,7 +210,7 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, to_resolution(result))
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e])
+      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
   end
 
@@ -268,7 +268,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e])
+      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
   end
 
@@ -320,7 +320,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e])
+      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
   end
 
@@ -364,26 +364,7 @@ defmodule AshGraphql.Graphql.Resolver do
     query =
       case Map.fetch(args, :filter) do
         {:ok, filter} ->
-          aggregates =
-            resource
-            |> Ash.Resource.Info.public_aggregates()
-            |> Enum.map(& &1.name)
-
-          query =
-            resource
-            |> Ash.Query.load(aggregates)
-            |> Ash.Query.filter(^filter)
-
-          used =
-            if query.filter do
-              query.filter
-              |> Ash.Filter.used_aggregates()
-              |> Enum.map(& &1.name)
-            else
-              []
-            end
-
-          Ash.Query.unload(query, aggregates -- used)
+          Ash.Query.filter(resource, ^massage_filter(resource, filter))
 
         _ ->
           Ash.Query.new(resource)
@@ -410,6 +391,31 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp massage_filter(_resource, nil), do: nil
+
+  defp massage_filter(resource, filter) do
+    filter
+    |> Enum.map(fn {key, value} ->
+      cond do
+        rel = Ash.Resource.Info.relationship(resource, key) ->
+          {key, massage_filter(rel.destination, value)}
+
+        Ash.Resource.Info.calculation(resource, key) ->
+          calc_input(key, value)
+      end
+    end)
+  end
+
+  defp calc_input(key, value) do
+    case Map.fetch(value, :input) do
+      {:ok, input} ->
+        [{key, {input, Map.delete(value, :input)}}]
+
+      :error ->
+        {key, value}
+    end
+  end
+
   defp clear_fields(nil, _, _), do: nil
 
   defp clear_fields(result, resource, resolution) do
@@ -427,14 +433,23 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp load_fields(query_or_record, resource, api, resolution, nested \\ nil) do
-    resolution
-    |> fields(nested)
-    |> Enum.map(fn identifier ->
-      Ash.Resource.Info.aggregate(resource, identifier) ||
-        Ash.Resource.Info.calculation(resource, identifier)
+    fields = fields(resolution, nested, false)
+
+    fields
+    |> Enum.map(fn selection ->
+      aggregate = Ash.Resource.Info.aggregate(resource, selection.schema_node.identifier)
+
+      if aggregate do
+        aggregate.name
+      else
+        calculation = Ash.Resource.Info.calculation(resource, selection.schema_node.identifier)
+
+        if calculation do
+          {calculation.name, selection.argument_data || %{}}
+        end
+      end
     end)
     |> Enum.filter(& &1)
-    |> Enum.map(& &1.name)
     |> case do
       [] ->
         {:ok, query_or_record}
@@ -483,7 +498,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp fields(resolution, nested \\ nil) do
+  defp fields(resolution, nested \\ nil, names_only? \\ true) do
     if nested do
       projected_once =
         resolution
@@ -501,16 +516,22 @@ defmodule AshGraphql.Graphql.Resolver do
         resolution
       )
       |> elem(0)
-      |> Enum.map(fn %{schema_node: %{identifier: identifier}} ->
-        identifier
-      end)
+      |> names_only(names_only?)
     else
       resolution
       |> Absinthe.Resolution.project()
-      |> Enum.map(fn %{schema_node: %{identifier: identifier}} ->
-        identifier
-      end)
+      |> names_only(names_only?)
     end
+  end
+
+  defp names_only(fields, true) do
+    Enum.map(fields, fn %{schema_node: %{identifier: identifier}} ->
+      identifier
+    end)
+  end
+
+  defp names_only(fields, _) do
+    fields
   end
 
   defp set_query_arguments(query, action, arg_values) do
@@ -702,8 +723,19 @@ defmodule AshGraphql.Graphql.Resolver do
        else
          uuid = Ash.UUID.generate()
 
+         stacktrace =
+           case error do
+             %{stacktrace: %{stacktrace: v}} ->
+               v
+
+             _ ->
+               nil
+           end
+
          Logger.warn(
-           "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{inspect(error)}"
+           "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{
+             Exception.format(:error, error, stacktrace)
+           }"
          )
 
          [

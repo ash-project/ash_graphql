@@ -20,7 +20,7 @@ defmodule AshGraphql.Api do
       stacktraces?: [
         type: :boolean,
         doc: "Whether or not to include stacktraces in generated errors",
-        default: false
+        default: true
       ],
       debug?: [
         type: :boolean,

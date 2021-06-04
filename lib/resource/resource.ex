@@ -945,6 +945,14 @@ defmodule AshGraphql.Resource do
     )
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp calculation_filter_field_type(resource, calculation) do
+    String.to_atom(
+      to_string(AshGraphql.Resource.type(resource)) <>
+        "_filter_" <> to_string(calculation.name)
+    )
+  end
+
   defp keyset_pagination_args(action) do
     if action.pagination.keyset? do
       [
@@ -986,7 +994,8 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def type_definitions(resource, api, schema) do
-    List.wrap(type_definition(resource, api, schema)) ++
+    List.wrap(calculation_input(resource, schema)) ++
+      List.wrap(type_definition(resource, api, schema)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
@@ -1435,15 +1444,12 @@ defmodule AshGraphql.Resource do
 
     {:ok, aggregate_type} = Ash.Query.Aggregate.kind_to_type(kind, field_type)
 
-    if is_nil(Ash.Query.Aggregate.default_value(kind)) do
-      aggregate_type
-    else
-      %Absinthe.Blueprint.TypeReference.NonNull{of_type: aggregate_type}
-    end
+    aggregate_type
   end
 
   defp filter_type(attribute_or_aggregate, resource, schema) do
     type = attribute_or_aggregate_type(attribute_or_aggregate, resource)
+
     array_type? = match?({:array, _}, type)
 
     fields =
@@ -1638,10 +1644,79 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp calculation_input(resource, schema) do
+    resource
+    |> Ash.Resource.Info.public_calculations()
+    |> Enum.filter(fn %{calculation: {module, _}} ->
+      Code.ensure_compiled(module)
+      :erlang.function_exported(module, :expression, 2)
+    end)
+    |> Enum.flat_map(fn calculation ->
+      field_type = calculation_type(calculation, resource)
+
+      arguments = calculation_args(calculation, resource, schema)
+
+      array_type? = match?({:array, _}, field_type)
+
+      filter_fields =
+        Ash.Filter.builtin_operators()
+        |> Enum.filter(& &1.predicate?)
+        |> restrict_for_lists(field_type)
+        |> Enum.flat_map(
+          &filter_fields(
+            &1,
+            calculation.type,
+            array_type?,
+            schema,
+            calculation,
+            resource
+          )
+        )
+
+      filter_input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+        fields: arguments,
+        identifier:
+          String.to_atom(
+            to_string(calculation_filter_field_type(resource, calculation)) <> "_input"
+          ),
+        module: schema,
+        name:
+          Macro.camelize(
+            to_string(calculation_filter_field_type(resource, calculation)) <> "_input"
+          ),
+        __reference__: ref(__ENV__)
+      }
+
+      filter_input_field = %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: :input,
+        module: schema,
+        name: "input",
+        type:
+          String.to_atom(
+            to_string(calculation_filter_field_type(resource, calculation)) <> "_input"
+          ),
+        __reference__: ref(__ENV__)
+      }
+
+      [
+        filter_input,
+        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          fields: [filter_input_field | filter_fields],
+          identifier: calculation_filter_field_type(resource, calculation),
+          module: schema,
+          name: Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
+          __reference__: ref(__ENV__)
+        }
+      ]
+    end)
+  end
+
   defp resource_filter_fields(resource, schema) do
     boolean_filter_fields(resource, schema) ++
       attribute_filter_fields(resource, schema) ++
-      relationship_filter_fields(resource, schema) ++ aggregate_filter_fields(resource, schema)
+      relationship_filter_fields(resource, schema) ++
+      aggregate_filter_fields(resource, schema) ++ calculation_filter_fields(resource, schema)
   end
 
   defp attribute_filter_fields(resource, schema) do
@@ -1682,6 +1757,27 @@ defmodule AshGraphql.Resource do
             __reference__: ref(__ENV__)
           }
         ]
+      end)
+    else
+      []
+    end
+  end
+
+  defp calculation_filter_fields(resource, schema) do
+    if Ash.DataLayer.data_layer_can?(resource, :expression_calculation) do
+      resource
+      |> Ash.Resource.Info.public_calculations()
+      |> Enum.filter(fn %{calculation: {module, _}} ->
+        :erlang.function_exported(module, :expression, 2)
+      end)
+      |> Enum.map(fn calculation ->
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: calculation.name,
+          module: schema,
+          name: to_string(calculation.name),
+          type: calculation_filter_field_type(resource, calculation),
+          __reference__: ref(__ENV__)
+        }
       end)
     else
       []
@@ -2073,11 +2169,20 @@ defmodule AshGraphql.Resource do
 
       {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
 
+      type =
+        if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) do
+          field_type(type, aggregate, resource)
+        else
+          %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: field_type(type, aggregate, resource)
+          }
+        end
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: aggregate.name,
         module: schema,
         name: to_string(aggregate.name),
-        type: field_type(type, aggregate, resource),
+        type: type,
         __reference__: ref(__ENV__)
       }
     end)
@@ -2087,16 +2192,40 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_calculations()
     |> Enum.map(fn calculation ->
-      field_type =
-        calculation.type
-        |> field_type(nil, resource)
-        |> maybe_wrap_non_null(not calculation.allow_nil?)
+      field_type = calculation_type(calculation, resource)
+
+      arguments = calculation_args(calculation, resource, schema)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: calculation.name,
         module: schema,
+        arguments: arguments,
         name: to_string(calculation.name),
         type: field_type,
+        __reference__: ref(__ENV__)
+      }
+    end)
+  end
+
+  defp calculation_type(calculation, resource) do
+    calculation.type
+    |> Ash.Type.get_type()
+    |> field_type(nil, resource)
+    |> maybe_wrap_non_null(not calculation.allow_nil?)
+  end
+
+  defp calculation_args(calculation, resource, schema) do
+    Enum.map(calculation.arguments, fn argument ->
+      type =
+        argument.type
+        |> field_type(argument, resource, true)
+        |> maybe_wrap_non_null(argument_required?(argument))
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: argument.name,
+        module: schema,
+        name: to_string(argument.name),
+        type: type,
         __reference__: ref(__ENV__)
       }
     end)
@@ -2193,7 +2322,7 @@ defmodule AshGraphql.Resource do
             apply(type, function, [attribute.constraints])
           else
             raise """
-            Could not determine graphql type for #{type}, please define: #{function}/1!
+            Could not determine graphql type for #{inspect(type)}, please define: #{function}/1!
             """
           end
         end
