@@ -393,18 +393,22 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp massage_filter(_resource, nil), do: nil
 
-  defp massage_filter(resource, filter) do
-    filter
-    |> Enum.map(fn {key, value} ->
+  defp massage_filter(resource, filter) when is_map(filter) do
+    Map.new(filter, fn {key, value} ->
       cond do
         rel = Ash.Resource.Info.relationship(resource, key) ->
           {key, massage_filter(rel.destination, value)}
 
         Ash.Resource.Info.calculation(resource, key) ->
           calc_input(key, value)
+
+        true ->
+          {key, value}
       end
     end)
   end
+
+  defp massage_filter(_resource, other), do: other
 
   defp calc_input(key, value) do
     case Map.fetch(value, :input) do
