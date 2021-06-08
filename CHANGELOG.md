@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.18-rc1](https://github.com/ash-project/ash_graphql/compare/v0.16.18-rc0...v0.16.18-rc1) (2021-06-08)
+
+
+
+
+### Bug Fixes:
+
+* catch error in `massage_filter/2
+
 ## [v0.16.18-rc0](https://github.com/ash-project/ash_graphql/compare/v0.16.17...v0.16.18-rc0) (2021-06-04)
 
 
