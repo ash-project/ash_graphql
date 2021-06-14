@@ -17,6 +17,7 @@ locals_without_parens = [
   lookup_with_primary_key?: 1,
   managed_relationship: 2,
   managed_relationship: 3,
+  modify_resolution: 1,
   primary_key_delimiter: 1,
   read_action: 1,
   read_one: 2,

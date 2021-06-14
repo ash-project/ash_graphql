@@ -172,7 +172,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def mutate(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource, %{type: :create, action: action, upsert?: upsert?}}
+        {api, resource,
+         %{type: :create, action: action, upsert?: upsert?, modify_resolution: modify}}
       ) do
     input = arguments[:input] || %{}
 
@@ -185,29 +186,35 @@ defmodule AshGraphql.Graphql.Resolver do
       upsert?: upsert?
     ]
 
-    result =
+    changeset =
       resource
       |> Ash.Changeset.new()
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
       |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
       |> Ash.Changeset.for_create(action, input, actor: Map.get(context, :actor))
       |> select_fields(resource, resolution, "result")
+
+    {result, modify_args} =
+      changeset
       |> api.create(opts)
       |> case do
         {:ok, value} ->
           case load_fields(value, resource, api, resolution, "result") do
             {:ok, result} ->
-              {:ok, %{result: result, errors: []}}
+              {{:ok, %{result: result, errors: []}}, [changeset, {:ok, result}]}
 
             {:error, error} ->
-              {:ok, %{result: nil, errors: to_errors(List.wrap(error))}}
+              {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}},
+               [changeset, {:error, error}]}
           end
 
-        {:error, %{changeset: changeset}} ->
-          {:ok, %{result: nil, errors: to_errors(changeset.errors)}}
+        {:error, %{changeset: changeset} = error} ->
+          {{:ok, %{result: nil, errors: to_errors(changeset.errors)}}, [changeset, error]}
       end
 
-    Absinthe.Resolution.put_result(resolution, to_resolution(result))
+    resolution
+    |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> modify_resolution(modify, modify_args)
   rescue
     e ->
       error = Ash.Error.to_ash_error([e], __STACKTRACE__)
@@ -217,7 +224,13 @@ defmodule AshGraphql.Graphql.Resolver do
   def mutate(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
-         %{type: :update, action: action, identity: identity, read_action: read_action}}
+         %{
+           type: :update,
+           action: action,
+           identity: identity,
+           read_action: read_action,
+           modify_resolution: modify
+         }}
       ) do
     input = arguments[:input] || %{}
     filter = identity_filter(identity, resource, arguments)
@@ -249,7 +262,7 @@ defmodule AshGraphql.Graphql.Resolver do
               stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
             ]
 
-            result =
+            changeset =
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
@@ -257,10 +270,15 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.for_update(action, input, actor: Map.get(context, :actor))
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
-              |> api.update(opts)
-              |> update_result(resource, api, resolution)
 
-            Absinthe.Resolution.put_result(resolution, to_resolution(result))
+            {result, modify_args} =
+              changeset
+              |> api.update(opts)
+              |> update_result(resource, api, changeset, resolution)
+
+            resolution
+            |> Absinthe.Resolution.put_result(to_resolution(result))
+            |> modify_resolution(modify, modify_args)
         end
 
       {:error, error} ->
@@ -275,7 +293,13 @@ defmodule AshGraphql.Graphql.Resolver do
   def mutate(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
-         %{type: :destroy, action: action, identity: identity, read_action: read_action}}
+         %{
+           type: :destroy,
+           action: action,
+           identity: identity,
+           read_action: read_action,
+           modify_resolution: modify
+         }}
       ) do
     filter = identity_filter(identity, resource, arguments)
     input = arguments[:input] || %{}
@@ -301,7 +325,7 @@ defmodule AshGraphql.Graphql.Resolver do
           initial ->
             opts = destroy_opts(api, context, action)
 
-            result =
+            changeset =
               initial
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
@@ -309,10 +333,15 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.for_destroy(action, input, actor: Map.get(context, :actor))
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
-              |> api.destroy(opts)
-              |> destroy_result(initial, resource, resolution)
 
-            Absinthe.Resolution.put_result(resolution, to_resolution(result))
+            {result, modify_args} =
+              changeset
+              |> api.destroy(opts)
+              |> destroy_result(initial, resource, changeset, resolution)
+
+            resolution
+            |> Absinthe.Resolution.put_result(to_resolution(result))
+            |> modify_resolution(modify, modify_args)
         end
 
       {:error, error} ->
@@ -322,6 +351,12 @@ defmodule AshGraphql.Graphql.Resolver do
     e ->
       error = Ash.Error.to_ash_error([e], __STACKTRACE__)
       Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+  end
+
+  defp modify_resolution(resolution, nil, _), do: resolution
+
+  defp modify_resolution(resolution, {m, f, a}, args) do
+    apply(m, f, [resolution | args] ++ a)
   end
 
   def identity_filter(false, _resource, _arguments) do
@@ -565,29 +600,31 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp update_result(result, resource, api, resolution) do
+  defp update_result(result, resource, api, changeset, resolution) do
     case result do
       {:ok, value} ->
         case load_fields(value, resource, api, resolution, "result") do
           {:ok, result} ->
-            {:ok, %{result: result, errors: []}}
+            {{:ok, %{result: result, errors: []}}, [changeset, {:ok, result}]}
 
           {:error, error} ->
-            {:ok, %{result: nil, errors: to_errors(List.wrap(error))}}
+            # Even though the loading of fields failed, the mutation was successful
+            {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, {:ok, value}}
         end
 
       {:error, error} ->
-        {:ok, %{result: nil, errors: to_errors(List.wrap(error))}}
+        {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, {:ok, result}}
     end
   end
 
-  defp destroy_result(result, initial, resource, resolution) do
+  defp destroy_result(result, initial, resource, changeset, resolution) do
     case result do
       :ok ->
-        {:ok, %{result: clear_fields(initial, resource, resolution), errors: []}}
+        {{:ok, %{result: clear_fields(initial, resource, resolution), errors: []}},
+         [changeset, :ok]}
 
-      {:error, %{changeset: changeset}} ->
-        {:ok, %{result: nil, errors: to_errors(changeset.error)}}
+      {:error, %{changeset: changeset} = error} ->
+        {{:ok, %{result: nil, errors: to_errors(changeset.error)}}, {:error, error}}
     end
   end
 

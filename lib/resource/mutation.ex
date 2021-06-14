@@ -1,6 +1,6 @@
 defmodule AshGraphql.Resource.Mutation do
   @moduledoc "Represents a configured mutation on a resource"
-  defstruct [:name, :action, :type, :identity, :read_action, :upsert?]
+  defstruct [:name, :action, :type, :identity, :read_action, :upsert?, :modify_resolution]
 
   @create_schema [
     name: [
@@ -17,6 +17,14 @@ defmodule AshGraphql.Resource.Mutation do
       type: :boolean,
       default: false,
       doc: "Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`."
+    ],
+    modify_resolution: [
+      type: :mfa,
+      doc: """
+      An MFA that will be called with the resolution, the changeset, and the result of the action as the first three arguments (followed by the arguments in the mfa).
+      Must return a new absinthe resolution. This can be used to implement things like setting cookies based on resource actions. A method of using resolution context
+      for that is documented here: https://hexdocs.pm/absinthe_plug/Absinthe.Plug.html#module-before-send
+      """
     ]
   ]
 
