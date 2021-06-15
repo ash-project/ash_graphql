@@ -2297,7 +2297,7 @@ defmodule AshGraphql.Resource do
         else
           case type(type) do
             nil ->
-              :json
+              Application.get_env(:ash_graphql, :json_type) || :json_string
 
             type ->
               type
@@ -2348,7 +2348,10 @@ defmodule AshGraphql.Resource do
   defp do_field_type(Ash.Type.Date, _, _), do: :date
   defp do_field_type(Ash.Type.Decimal, _, _), do: :decimal
   defp do_field_type(Ash.Type.Integer, _, _), do: :integer
-  defp do_field_type(Ash.Type.Map, _, _), do: :json
+
+  defp do_field_type(Ash.Type.Map, _, _),
+    do: Application.get_env(:ash_graphql, :json_type) || :json_string
+
   defp do_field_type(Ash.Type.String, _, _), do: :string
   defp do_field_type(Ash.Type.Term, _, _), do: :string
   defp do_field_type(Ash.Type.UtcDatetime, _, _), do: :naive_datetime

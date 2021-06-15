@@ -1,10 +1,10 @@
-defmodule AshGraphql.Types.JSON do
+defmodule AshGraphql.Types.JSONString do
   @moduledoc """
   The Json scalar type allows arbitrary JSON values to be passed in and out.
   """
   use Absinthe.Schema.Notation
 
-  scalar :json, name: "Json" do
+  scalar :json_string, name: "JsonString" do
     description("""
     The `Json` scalar type represents arbitrary json string data, represented as UTF-8
     character sequences. The Json type is most often used to represent a free-form
@@ -32,5 +32,6 @@ defmodule AshGraphql.Types.JSON do
     :error
   end
 
-  def encode(value), do: value
+  def encode(nil), do: nil
+  def encode(value), do: Jason.encode!(value)
 end
