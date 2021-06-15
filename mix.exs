@@ -48,7 +48,8 @@ defmodule AshGraphql.MixProject do
         "documentation/introduction/getting_started.md",
         "documentation/multitenancy.md",
         "documentation/enums.md",
-        "documentation/authorization.md"
+        "documentation/authorization.md",
+        "documentation/json.md"
       ],
       groups_for_extras: [
         Introduction: Path.wildcard("documentation/introduction/*.md")
