@@ -84,6 +84,7 @@ defmodule AshGraphql do
         if first? do
           import_types(Absinthe.Type.Custom)
           import_types(AshGraphql.Types.JSON)
+          import_types(AshGraphql.Types.JSONString)
         end
 
         @pipeline_modifier Module.concat(api, AshTypes)
