@@ -388,7 +388,7 @@ defmodule AshGraphql.Graphql.Resolver do
        errors:
          to_errors(
            Ash.Error.Query.NotFound.exception(
-             primary_key: Map.new(filter),
+             primary_key: Map.new(filter || []),
              resource: resource
            )
          )
@@ -628,16 +628,23 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp to_errors(errors) do
+  defp unwrap_errors([]), do: []
+
+  defp unwrap_errors(errors) do
     errors
     |> List.wrap()
     |> Enum.flat_map(fn
       %Ash.Error.Invalid{errors: errors} ->
-        List.wrap(errors)
+        unwrap_errors(List.wrap(errors))
 
       errors ->
         List.wrap(errors)
     end)
+  end
+
+  defp to_errors(errors) do
+    errors
+    |> unwrap_errors()
     |> Enum.map(fn error ->
       if AshGraphql.Error.impl_for(error) do
         AshGraphql.Error.to_error(error)
@@ -757,7 +764,7 @@ defmodule AshGraphql.Graphql.Resolver do
   defp to_resolution({:error, error}) do
     {:error,
      error
-     |> List.wrap()
+     |> unwrap_errors()
      |> Enum.map(fn error ->
        if AshGraphql.Error.impl_for(error) do
          AshGraphql.Error.to_error(error) |> Map.to_list()

@@ -5,12 +5,7 @@ defmodule AshGraphql.ReadTest do
 
   setup do
     on_exit(fn ->
-      try do
-        ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Post))
-      rescue
-        _ ->
-          :ok
-      end
+      Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
     end)
   end
 

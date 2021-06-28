@@ -4,8 +4,8 @@ defmodule AshGraphql.DestroyTest do
   setup do
     on_exit(fn ->
       try do
-        ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Post))
-        ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Comment))
+        Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
+        Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
       rescue
         _ ->
           :ok
@@ -118,6 +118,8 @@ defmodule AshGraphql.DestroyTest do
     assert {:ok, result} = resp
 
     refute Map.has_key?(result, :errors)
-    assert %{data: %{"deletePost" => %{"errors" => [%{"message" => "not found"}]}}} = result
+
+    assert %{data: %{"deletePost" => %{"errors" => [%{"message" => "could not be found"}]}}} =
+             result
   end
 end

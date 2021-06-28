@@ -135,6 +135,20 @@ defmodule AshGraphql.Api do
         type: :string
       },
       %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "A shorter error message, with vars not replaced",
+        identifier: :short_message,
+        module: schema,
+        name: "short_message",
+        type: :string
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "Replacements for the short message",
+        identifier: :vars,
+        module: schema,
+        name: "vars",
+        type: :json
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
         description: "An error code for the given error",
         identifier: :code,
         module: schema,

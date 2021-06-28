@@ -4,8 +4,8 @@ defmodule AshGraphql.UpdateTest do
   setup do
     on_exit(fn ->
       try do
-        ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Post))
-        ETS.Set.delete(ETS.Set.wrap_existing!(AshGraphql.Test.Comment))
+        Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
+        Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
       rescue
         _ ->
           :ok
