@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.18-rc4](https://github.com/ash-project/ash_graphql/compare/v0.16.18-rc3...v0.16.18-rc4) (2021-06-28)
+
+
+
+
+### Bug Fixes:
+
+* include new custom type
+
+### Improvements:
+
+* update to latest rc
+
+* add `short_message` and `vars` to errors
+
 ## [v0.16.18-rc3](https://github.com/ash-project/ash_graphql/compare/v0.16.18-rc2...v0.16.18-rc3) (2021-06-21)
 
 
