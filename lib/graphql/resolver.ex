@@ -6,7 +6,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource, %{type: :get, action: action, identity: identity}}
+        {api, resource,
+         %{type: :get, action: action, identity: identity, modify_resolution: modify}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -18,32 +19,49 @@ defmodule AshGraphql.Graphql.Resolver do
 
     filter = identity_filter(identity, resource, arguments)
 
-    result =
+    query =
+      resource
+      |> Ash.Query.new()
+      |> Ash.Query.set_tenant(Map.get(context, :tenant))
+      |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+      |> set_query_arguments(action, arguments)
+      |> select_fields(resource, resolution)
+
+    {result, modify_args} =
       case filter do
         {:ok, filter} ->
-          resource
-          |> Ash.Query.new()
-          |> Ash.Query.set_tenant(Map.get(context, :tenant))
-          |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+          query
           |> Ash.Query.filter(^filter)
-          |> set_query_arguments(action, arguments)
-          |> select_fields(resource, resolution)
           |> load_fields(resource, api, resolution)
           |> case do
             {:ok, query} ->
-              query
-              |> Ash.Query.for_read(action, %{}, actor: opts[:actor])
-              |> api.read_one(opts)
+              result =
+                query
+                |> Ash.Query.for_read(action, %{}, actor: opts[:actor])
+                |> api.read_one(opts)
+
+              {result, [query, result]}
 
             {:error, error} ->
-              {:error, error}
+              {{:error, error}, [query, {:error, error}]}
           end
 
         {:error, error} ->
-          {:error, error}
+          query =
+            resource
+            |> Ash.Query.new()
+            |> Ash.Query.set_tenant(Map.get(context, :tenant))
+            |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+            |> set_query_arguments(action, arguments)
+            |> select_fields(resource, resolution)
+            |> load_fields(resource, api, resolution)
+
+          {{:error, error}, [query, {:error, error}]}
       end
 
-    Absinthe.Resolution.put_result(resolution, to_resolution(result))
+    resolution
+    |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> modify_resolution(modify, modify_args)
   rescue
     e ->
       error = Ash.Error.to_ash_error([e], __STACKTRACE__)
@@ -52,7 +70,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource, %{type: :read_one, action: action}}
+        {api, resource, %{type: :read_one, action: action, modify_resolution: modify}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -71,22 +89,26 @@ defmodule AshGraphql.Graphql.Resolver do
           Ash.Query.new(resource)
       end
 
-    result =
+    query =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
       |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
       |> set_query_arguments(action, args)
       |> select_fields(resource, resolution)
-      |> load_fields(resource, api, resolution)
-      |> case do
+
+    {result, modify_args} =
+      case load_fields(query, resource, api, resolution) do
         {:ok, query} ->
-          api.read_one(query, opts)
+          result = api.read_one(query, opts)
+          {result, [query, result]}
 
         {:error, error} ->
-          {:error, error}
+          {{:error, error}, [query, {:error, error}]}
       end
 
-    Absinthe.Resolution.put_result(resolution, to_resolution(result))
+    resolution
+    |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> modify_resolution(modify, modify_args)
   rescue
     e ->
       error = Ash.Error.to_ash_error([e], __STACKTRACE__)
@@ -95,7 +117,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource, %{type: :list, action: action}}
+        {api, resource, %{type: :list, action: action, modify_resolution: modify}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -133,37 +155,42 @@ defmodule AshGraphql.Graphql.Resolver do
         nil
       end
 
-    result =
+    initial_query =
       query
       |> Ash.Query.set_tenant(Map.get(context, :tenant))
       |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
       |> set_query_arguments(action, args)
       |> select_fields(resource, resolution, nested)
-      |> load_fields(resource, api, resolution, nested)
-      |> case do
+
+    {result, modify_args} =
+      case load_fields(initial_query, resource, api, resolution, nested) do
         {:ok, query} ->
           query
           |> api.read(opts)
           |> case do
-            {:ok, %{results: results, count: count}} ->
-              {:ok, %{results: results, count: count}}
+            {:ok, %{results: results, count: count} = page} ->
+              {{:ok, %{results: results, count: count}}, [query, {:ok, page}]}
 
             {:ok, results} ->
               if Ash.Resource.Info.action(resource, action, :read).pagination do
-                {:ok, %{results: results, count: Enum.count(results)}}
+                result = {:ok, %{results: results, count: Enum.count(results)}}
+                {result, [query, result]}
               else
-                {:ok, results}
+                result = {:ok, results}
+                {result, [query, result]}
               end
 
             error ->
-              error
+              {error, [query, error]}
           end
 
         {:error, error} ->
-          {:error, error}
+          {{:error, error}, [query, {:error, error}]}
       end
 
-    Absinthe.Resolution.put_result(resolution, to_resolution(result))
+    resolution
+    |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> modify_resolution(modify, modify_args)
   rescue
     e ->
       error = Ash.Error.to_ash_error([e], __STACKTRACE__)

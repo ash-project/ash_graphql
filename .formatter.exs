@@ -2,6 +2,7 @@
 # DONT MODIFY IT BY HAND
 locals_without_parens = [
   allow_nil?: 1,
+  as_mutation?: 1,
   authorize?: 1,
   create: 2,
   create: 3,

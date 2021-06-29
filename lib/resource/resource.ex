@@ -311,12 +311,13 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def queries(api, resource, schema) do
+  def queries(api, resource, schema, as_mutations? \\ false) do
     type = Resource.type(resource)
 
     if type do
       resource
       |> queries()
+      |> Enum.filter(&(&1.as_mutation? == as_mutations?))
       |> Enum.map(fn query ->
         query_action = Ash.Resource.Info.action(resource, query.action, :read)
 
@@ -402,6 +403,7 @@ defmodule AshGraphql.Resource do
       mutation ->
         update_mutation(resource, schema, mutation, schema, api)
     end)
+    |> Enum.concat(queries(api, resource, schema, true))
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
