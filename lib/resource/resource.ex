@@ -1701,16 +1701,32 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
 
-      [
-        filter_input,
-        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+      if Enum.empty?(arguments) do
+        type_def = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          fields: filter_fields,
+          identifier: calculation_filter_field_type(resource, calculation),
+          module: schema,
+          name: Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
+          __reference__: ref(__ENV__)
+        }
+
+        [
+          type_def
+        ]
+      else
+        type_def = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
           fields: [filter_input_field | filter_fields],
           identifier: calculation_filter_field_type(resource, calculation),
           module: schema,
           name: Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
           __reference__: ref(__ENV__)
         }
-      ]
+
+        [
+          filter_input,
+          type_def
+        ]
+      end
     end)
   end
 

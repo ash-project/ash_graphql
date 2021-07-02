@@ -475,7 +475,7 @@ defmodule AshGraphql.Graphql.Resolver do
   defp calc_input(key, value) do
     case Map.fetch(value, :input) do
       {:ok, input} ->
-        [{key, {input, Map.delete(value, :input)}}]
+        {key, {input, Map.delete(value, :input)}}
 
       :error ->
         {key, value}
