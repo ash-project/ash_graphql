@@ -2132,7 +2132,7 @@ defmodule AshGraphql.Resource do
         type =
           relationship.destination
           |> Resource.type()
-          |> maybe_wrap_non_null(relationship.type == :belongs_to && relationship.required?)
+          |> maybe_wrap_non_null(relationship.required?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
