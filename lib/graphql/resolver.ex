@@ -272,7 +272,9 @@ defmodule AshGraphql.Graphql.Resolver do
         |> api.read_one!(
           action: read_action,
           verbose?: AshGraphql.Api.debug?(api),
-          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+          actor: Map.get(context, :actor),
+          authorize?: AshGraphql.Api.authorize?(api)
         )
         |> case do
           nil ->
