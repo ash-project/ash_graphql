@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.22](https://github.com/ash-project/ash_graphql/compare/v0.16.21...v0.16.22) (2021-07-30)
+
+
+
+
+### Bug Fixes:
+
+* set actor on initial read of record for update
+
 ## [v0.16.21](https://github.com/ash-project/ash_graphql/compare/v0.16.20...v0.16.21) (2021-07-04)
 
 
