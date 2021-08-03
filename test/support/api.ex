@@ -9,5 +9,7 @@ defmodule AshGraphql.Test.Api do
     resource(AshGraphql.Test.PostTag)
     resource(AshGraphql.Test.Tag)
     resource(AshGraphql.Test.User)
+    resource(AshGraphql.Test.NonIdPrimaryKey)
+    resource(AshGraphql.Test.CompositePrimaryKey)
   end
 end

@@ -103,6 +103,51 @@ defmodule AshGraphql.ReadTest do
              result
   end
 
+  test "complexity is calculated for relationships" do
+    query = """
+    query PostLibrary {
+      paginatedPosts(limit: 2) {
+        results{
+          text
+          comments(limit: 2){
+            text
+            post {
+              comments(limit: 2) {
+                text
+                post {
+                  text
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    query
+    |> Absinthe.run(AshGraphql.Test.Schema,
+      analyze_complexity: true,
+      max_complexity: 36
+    )
+
+    resp =
+      query
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        analyze_complexity: true,
+        max_complexity: 35
+      )
+
+    assert {:ok, %{errors: errors}} = resp
+
+    assert errors |> Enum.map(& &1.message) |> Enum.sort() == [
+             "Field paginatedPosts is too complex: complexity is 36 and maximum is 35",
+             "Operation PostLibrary is too complex: complexity is 36 and maximum is 35"
+           ]
+
+    # assert
+  end
+
   test "a read with a loaded field works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true)
@@ -129,6 +174,62 @@ defmodule AshGraphql.ReadTest do
 
     assert %{data: %{"postLibrary" => [%{"text" => "bar", "staticCalculation" => "static"}]}} =
              result
+  end
+
+  test "a read with a non-id primary key fills in the id field" do
+    record =
+      AshGraphql.Test.NonIdPrimaryKey
+      |> Ash.Changeset.for_create(:create, %{})
+      |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query GetNonIdPrimaryKey($id: ID!) {
+        getNonIdPrimaryKey(id: $id) {
+          id
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => record.other
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    id = record.other
+
+    assert %{data: %{"getNonIdPrimaryKey" => %{"id" => ^id}}} = result
+  end
+
+  test "a read with a composite primary key fills in the id field" do
+    record =
+      AshGraphql.Test.CompositePrimaryKey
+      |> Ash.Changeset.for_create(:create, %{})
+      |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query GetCompositePrimaryKey($id: ID!) {
+        getCompositePrimaryKey(id: $id) {
+          id
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => AshGraphql.Resource.encode_primary_key(record)
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    id = AshGraphql.Resource.encode_primary_key(record)
+
+    assert %{data: %{"getCompositePrimaryKey" => %{"id" => ^id}}} = result
   end
 
   test "a read with custom types works" do

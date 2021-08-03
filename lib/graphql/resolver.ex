@@ -394,8 +394,11 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def identity_filter(nil, resource, arguments) do
     case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
-      {:ok, value} -> {:ok, [id: value]}
-      {:error, error} -> {:error, error}
+      {:ok, value} ->
+        {:ok, value}
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 
@@ -684,16 +687,12 @@ defmodule AshGraphql.Graphql.Resolver do
           case error do
             %{stacktrace: %{stacktrace: stacktrace}} ->
               Logger.warn(
-                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{
-                  Exception.format(:error, error, stacktrace)
-                }"
+                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
               )
 
             error ->
               Logger.warn(
-                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{
-                  Exception.format(:error, error)
-                }"
+                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error)}"
               )
           end
         else
@@ -741,6 +740,43 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, error} ->
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
     end
+  end
+
+  def resolve_id(
+        %{source: parent} = resolution,
+        {_resource, field}
+      ) do
+    Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent, field)})
+  end
+
+  def resolve_composite_id(
+        %{source: parent} = resolution,
+        {_resource, _fields}
+      ) do
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:ok, AshGraphql.Resource.encode_primary_key(parent)}
+    )
+  end
+
+  def query_complexity(
+        %{limit: limit},
+        child_complexity,
+        _
+      ) do
+    if child_complexity == 0 do
+      1
+    else
+      limit * child_complexity
+    end
+  end
+
+  def query_complexity(
+        _,
+        child_complexity,
+        _
+      ) do
+    child_complexity + 1
   end
 
   defp do_dataloader(
@@ -810,9 +846,7 @@ defmodule AshGraphql.Graphql.Resolver do
            end
 
          Logger.warn(
-           "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{
-             Exception.format(:error, error, stacktrace)
-           }"
+           "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
          )
 
          [

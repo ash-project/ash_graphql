@@ -225,6 +225,26 @@ defmodule AshGraphql.Resource do
         type: :string,
         doc:
           "If a composite primary key exists, this must be set to determine the `id` field value"
+      ],
+      depth_limit: [
+        type: :integer,
+        doc: """
+        A simple way to prevent massive queries.
+        """
+      ],
+      relay?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        NOT YET SUPPORTED
+
+        If true, the graphql queries/resolvers for this resource will be built to honor the [relay specification](https://relay.dev/graphql/connections.htm).
+
+        The two changes that are made currently are:
+
+        * the type for the resource will implement the `Node` interface
+        * pagination over that resource will behave as a Connection.
+        """
       ]
     ],
     sections: [
@@ -268,8 +288,12 @@ defmodule AshGraphql.Resource do
     Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
+  def relay?(resource) do
+    Extension.get_opt(resource, [:graphql], :relay?, nil)
+  end
+
   def primary_key_delimiter(resource) do
-    Extension.get_opt(resource, [:graphql], :primary_key_delimiter, [], false)
+    Extension.get_opt(resource, [:graphql], :primary_key_delimiter, nil)
   end
 
   def ref(env) do
@@ -295,8 +319,8 @@ defmodule AshGraphql.Resource do
 
   def decode_primary_key(resource, value) do
     case Ash.Resource.Info.primary_key(resource) do
-      [_field] ->
-        {:ok, value}
+      [field] ->
+        {:ok, [{field, value}]}
 
       fields ->
         delimiter = primary_key_delimiter(resource)
@@ -327,9 +351,10 @@ defmodule AshGraphql.Resource do
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
           ],
+          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(query.name),
-          type: query_type(query, query_action, type),
+          type: query_type(query, resource, query_action, type),
           __reference__: ref(__ENV__)
         }
       end)
@@ -734,9 +759,13 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp query_type(%{type: :list}, action, type) do
+  defp query_type(%{type: :list}, resource, action, type) do
     if action.pagination do
-      String.to_atom("page_of_#{type}")
+      if relay?(resource) do
+        String.to_atom("#{type}_connection")
+      else
+        String.to_atom("page_of_#{type}")
+      end
     else
       %Absinthe.Blueprint.TypeReference.NonNull{
         of_type: %Absinthe.Blueprint.TypeReference.List{
@@ -748,7 +777,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp query_type(query, _action, type) do
+  defp query_type(query, _resource, _action, type) do
     maybe_wrap_non_null(type, not query.allow_nil?)
   end
 
@@ -1141,14 +1170,10 @@ defmodule AshGraphql.Resource do
           "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}'s lookup by primary key"
 
         %{source: %{action: {:identity, identity}}} = field ->
-          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}'s identity: #{
-            identity
-          }"
+          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}'s identity: #{identity}"
 
         field ->
-          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}.#{
-            field.source.action
-          }"
+          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}.#{field.source.action}"
       end)
       |> Enum.uniq()
 
@@ -1975,35 +2000,40 @@ defmodule AshGraphql.Resource do
       end)
 
     if paginatable? do
-      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-        description: "A page of #{inspect(type)}",
-        fields: [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The records contained in the page",
-            identifier: :results,
-            module: schema,
-            name: "results",
-            __reference__: ref(__ENV__),
-            type: %Absinthe.Blueprint.TypeReference.List{
-              of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: type
+      if relay?(resource) do
+        # "#{type}_connection"
+        raise "Relay pagination is not yet supported."
+      else
+        %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+          description: "A page of #{inspect(type)}",
+          fields: [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The records contained in the page",
+              identifier: :results,
+              module: schema,
+              name: "results",
+              __reference__: ref(__ENV__),
+              type: %Absinthe.Blueprint.TypeReference.List{
+                of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: type
+                }
               }
+            },
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The count of records",
+              identifier: :count,
+              module: schema,
+              name: "count",
+              type: :integer,
+              __reference__: ref(__ENV__)
             }
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The count of records",
-            identifier: :count,
-            module: schema,
-            name: "count",
-            type: :integer,
-            __reference__: ref(__ENV__)
-          }
-        ],
-        identifier: String.to_atom("page_of_#{type}"),
-        module: schema,
-        name: Macro.camelize("page_of_#{type}"),
-        __reference__: ref(__ENV__)
-      }
+          ],
+          identifier: String.to_atom("page_of_#{type}"),
+          module: schema,
+          name: Macro.camelize("page_of_#{type}"),
+          __reference__: ref(__ENV__)
+        }
+      end
     else
       nil
     end
@@ -2012,8 +2042,16 @@ defmodule AshGraphql.Resource do
   def type_definition(resource, api, schema) do
     type = Resource.type(resource)
 
+    interfaces =
+      if relay?(resource) do
+        [:node]
+      else
+        []
+      end
+
     %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
       description: Ash.Resource.Info.description(resource),
+      interfaces: interfaces,
       fields: fields(resource, api, schema),
       identifier: type,
       module: schema,
@@ -2033,7 +2071,7 @@ defmodule AshGraphql.Resource do
     non_id_attributes =
       resource
       |> Ash.Resource.Info.public_attributes()
-      |> Enum.reject(& &1.primary_key?)
+      |> Enum.reject(&(&1.name == :id))
       |> Enum.map(fn attribute ->
         field_type =
           attribute.type
@@ -2050,11 +2088,42 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    pkey_fields = pkey_fields(resource, schema)
-    non_id_attributes ++ pkey_fields
+    [id_field(resource, schema) | non_id_attributes]
   end
 
-  defp pkey_fields(resource, schema, require? \\ true) do
+  defp id_field(resource, schema) do
+    case Ash.Resource.Info.primary_key(resource) do
+      [field] ->
+        attribute = Ash.Resource.Info.attribute(resource, field)
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: attribute.description,
+          identifier: :id,
+          module: schema,
+          name: "id",
+          type: :id,
+          middleware: [
+            {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
+          ],
+          __reference__: ref(__ENV__)
+        }
+
+      fields ->
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: "A unique identifier",
+          identifier: :id,
+          module: schema,
+          name: "id",
+          type: :id,
+          middleware: [
+            {{AshGraphql.Graphql.Resolver, :resolve_composite_id}, {resource, fields}}
+          ],
+          __reference__: ref(__ENV__)
+        }
+    end
+  end
+
+  defp pkey_fields(resource, schema, require?) do
     case Ash.Resource.Info.primary_key(resource) do
       [field] ->
         attribute = Ash.Resource.Info.attribute(resource, field)
@@ -2163,6 +2232,7 @@ defmodule AshGraphql.Resource do
           identifier: relationship.name,
           module: schema,
           name: to_string(relationship.name),
+          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
@@ -2218,6 +2288,7 @@ defmodule AshGraphql.Resource do
         identifier: calculation.name,
         module: schema,
         arguments: arguments,
+        complexity: 2,
         name: to_string(calculation.name),
         type: field_type,
         __reference__: ref(__ENV__)

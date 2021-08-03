@@ -86,7 +86,25 @@ defmodule AshGraphql.Api do
         end
       end)
 
-    resource_types
+    if Enum.any?(Ash.Api.resources(api), &AshGraphql.Resource.relay?/1) do
+      %Absinthe.Blueprint.Schema.InterfaceTypeDefinition{
+        description: "A relay node",
+        name: "Node",
+        fields: [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "A unique identifier",
+            identifier: :id,
+            module: schema,
+            name: "id",
+            type: :id
+          }
+        ],
+        identifier: :node,
+        module: schema
+      }
+    else
+      resource_types
+    end
   end
 
   def global_type_definitions(schema) do
