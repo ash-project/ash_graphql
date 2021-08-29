@@ -228,7 +228,8 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, value} ->
           case load_fields(value, resource, api, resolution, "result") do
             {:ok, result} ->
-              {{:ok, %{result: result, errors: []}}, [changeset, {:ok, result}]}
+              {{:ok, add_metadata(%{result: result, errors: []}, value, changeset.action)},
+               [changeset, {:ok, result}]}
 
             {:error, error} ->
               {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}},
@@ -637,7 +638,8 @@ defmodule AshGraphql.Graphql.Resolver do
       {:ok, value} ->
         case load_fields(value, resource, api, resolution, "result") do
           {:ok, result} ->
-            {{:ok, %{result: result, errors: []}}, [changeset, {:ok, result}]}
+            {{:ok, add_metadata(%{result: result, errors: []}, result, changeset.action)},
+             [changeset, {:ok, result}]}
 
           {:error, error} ->
             # Even though the loading of fields failed, the mutation was successful
@@ -646,6 +648,21 @@ defmodule AshGraphql.Graphql.Resolver do
 
       {:error, error} ->
         {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, {:ok, result}}
+    end
+  end
+
+  defp add_metadata(result, action_result, action) do
+    metadata = Map.get(action, :metadata, [])
+
+    if Enum.empty?(metadata) do
+      result
+    else
+      metadata =
+        Map.new(action.metadata, fn metadata ->
+          {metadata.name, Map.get(action_result.__metadata__ || %{}, metadata.name)}
+        end)
+
+      Map.put(result, :metadata, metadata)
     end
   end
 

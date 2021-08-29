@@ -13,6 +13,48 @@ defmodule AshGraphql.CreateTest do
     end)
   end
 
+  test "metadata is in the result" do
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text
+            comments(sort:{field:TEXT}){
+              text
+            }
+          }
+          metadata{
+            foo
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"text" => "foobar"}}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "text" => "foobar"
+                 },
+                 "metadata" => %{
+                   "foo" => "bar"
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create with a managed relationship works" do
     resp =
       """

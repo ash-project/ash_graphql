@@ -1,6 +1,17 @@
 defmodule AshGraphql.Test.Post do
   @moduledoc false
 
+  defmodule SetMetadata do
+    @moduledoc false
+    use Ash.Resource.Change
+
+    def change(changeset, _, _) do
+      Ash.Changeset.after_action(changeset, fn _changeset, result ->
+        {:ok, Ash.Resource.Info.put_metadata(result, :foo, "bar")}
+      end)
+    end
+  end
+
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
@@ -27,6 +38,7 @@ defmodule AshGraphql.Test.Post do
     end
 
     mutations do
+      create :simple_create_post, :create
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
 
@@ -45,6 +57,9 @@ defmodule AshGraphql.Test.Post do
   actions do
     create :create do
       primary?(true)
+      metadata(:foo, :string)
+
+      change(SetMetadata)
     end
 
     create :upsert do

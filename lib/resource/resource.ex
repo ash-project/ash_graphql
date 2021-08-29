@@ -527,28 +527,49 @@ defmodule AshGraphql.Resource do
           "The successful result of the mutation"
         end
 
+      fields = [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: description,
+          identifier: :result,
+          module: schema,
+          name: "result",
+          type: Resource.type(resource),
+          __reference__: ref(__ENV__)
+        },
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: "Any errors generated, if the mutation failed",
+          identifier: :errors,
+          module: schema,
+          name: "errors",
+          type: %Absinthe.Blueprint.TypeReference.List{
+            of_type: :mutation_error
+          },
+          __reference__: ref(__ENV__)
+        }
+      ]
+
+      metadata_object_type = metadata_field(resource, mutation, schema)
+
+      fields =
+        if metadata_object_type do
+          fields ++
+            [
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                description: "Metadata produced by the mutation",
+                identifier: :metadata,
+                module: schema,
+                name: "metadata",
+                type: metadata_object_type.identifier,
+                __reference__: ref(__ENV__)
+              }
+            ]
+        else
+          fields
+        end
+
       result = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
         description: "The result of the #{inspect(mutation.name)} mutation",
-        fields: [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: description,
-            identifier: :result,
-            module: schema,
-            name: "result",
-            type: Resource.type(resource),
-            __reference__: ref(__ENV__)
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "Any errors generated, if the mutation failed",
-            identifier: :errors,
-            module: schema,
-            name: "errors",
-            type: %Absinthe.Blueprint.TypeReference.List{
-              of_type: :mutation_error
-            },
-            __reference__: ref(__ENV__)
-          }
-        ],
+        fields: fields,
         identifier: String.to_atom("#{mutation.name}_result"),
         module: schema,
         name: Macro.camelize("#{mutation.name}_result"),
@@ -562,7 +583,7 @@ defmodule AshGraphql.Resource do
              mutation.type
            ) do
         [] ->
-          [result]
+          [result] ++ List.wrap(metadata_object_type)
 
         fields ->
           input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
@@ -573,9 +594,42 @@ defmodule AshGraphql.Resource do
             __reference__: ref(__ENV__)
           }
 
-          [input, result]
+          [input, result] ++ List.wrap(metadata_object_type)
       end
     end)
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp metadata_field(resource, mutation, schema) do
+    metadata_fields =
+      Map.get(mutation.action, :metadata, [])
+      |> Enum.map(fn metadata ->
+        field_type =
+          metadata.type
+          |> field_type(metadata, resource)
+          |> maybe_wrap_non_null(not metadata.allow_nil?)
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: metadata.description,
+          identifier: metadata.name,
+          module: schema,
+          name: to_string(metadata.name),
+          type: field_type,
+          __reference__: ref(__ENV__)
+        }
+      end)
+
+    if !Enum.empty?(metadata_fields) do
+      name = "#{mutation.name}_metadata"
+
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        fields: metadata_fields,
+        identifier: String.to_atom(name),
+        module: schema,
+        name: Macro.camelize(name),
+        __reference__: ref(__ENV__)
+      }
+    end
   end
 
   @doc false
