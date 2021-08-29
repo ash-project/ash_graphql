@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.23](https://github.com/ash-project/ash_graphql/compare/v0.16.22...v0.16.23) (2021-08-29)
+
+
+
+
+### Improvements:
+
+* support create/update metadata
+
+* add groundwork for relay support
+
 ## [v0.16.22](https://github.com/ash-project/ash_graphql/compare/v0.16.21...v0.16.22) (2021-07-30)
 
 
