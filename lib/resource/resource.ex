@@ -2188,7 +2188,7 @@ defmodule AshGraphql.Resource do
           field_type =
             attribute.type
             |> field_type(attribute, resource)
-            |> maybe_wrap_non_null(require? && not attribute.allow_nil?)
+            |> maybe_wrap_non_null(require?)
 
           [
             %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2213,7 +2213,7 @@ defmodule AshGraphql.Resource do
               field_type =
                 attribute.type
                 |> field_type(attribute, resource)
-                |> maybe_wrap_non_null(require? && not attribute.allow_nil?)
+                |> maybe_wrap_non_null(require?)
 
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 description: attribute.description,
