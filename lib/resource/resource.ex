@@ -2142,7 +2142,13 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    [id_field(resource, schema) | non_id_attributes]
+    case id_field(resource, schema) do
+      nil ->
+        non_id_attributes
+
+      id_field ->
+        [id_field | non_id_attributes]
+    end
   end
 
   defp id_field(resource, schema) do
@@ -2150,17 +2156,19 @@ defmodule AshGraphql.Resource do
       [field] ->
         attribute = Ash.Resource.Info.attribute(resource, field)
 
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: attribute.description,
-          identifier: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-          module: schema,
-          name: "id",
-          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-          middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
-          ],
-          __reference__: ref(__ENV__)
-        }
+        unless attribute.private? do
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: attribute.description,
+            identifier: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+            module: schema,
+            name: "id",
+            type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+            middleware: [
+              {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
+            ],
+            __reference__: ref(__ENV__)
+          }
+        end
 
       fields ->
         %Absinthe.Blueprint.Schema.FieldDefinition{
