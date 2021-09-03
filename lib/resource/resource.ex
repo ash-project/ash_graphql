@@ -2152,7 +2152,7 @@ defmodule AshGraphql.Resource do
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           description: attribute.description,
-          identifier: :id,
+          identifier: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
           module: schema,
           name: "id",
           type: :id,

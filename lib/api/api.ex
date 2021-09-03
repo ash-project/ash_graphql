@@ -96,7 +96,7 @@ defmodule AshGraphql.Api do
             identifier: :id,
             module: schema,
             name: "id",
-            type: :id
+            type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
           }
         ],
         identifier: :node,
