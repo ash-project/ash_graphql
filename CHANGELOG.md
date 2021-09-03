@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.27](https://github.com/ash-project/ash_graphql/compare/v0.16.26...v0.16.27) (2021-09-03)
+
+
+
+
+### Bug Fixes:
+
+* if no primary key (only embeds support that), don't require id
+
 ## [v0.16.26](https://github.com/ash-project/ash_graphql/compare/v0.16.25...v0.16.26) (2021-09-03)
 
 
