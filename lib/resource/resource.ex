@@ -2155,7 +2155,7 @@ defmodule AshGraphql.Resource do
           identifier: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
           module: schema,
           name: "id",
-          type: :id,
+          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
           ],
@@ -2168,7 +2168,7 @@ defmodule AshGraphql.Resource do
           identifier: :id,
           module: schema,
           name: "id",
-          type: :id,
+          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_composite_id}, {resource, fields}}
           ],
