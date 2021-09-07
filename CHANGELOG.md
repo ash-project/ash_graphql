@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.28](https://github.com/ash-project/ash_graphql/compare/v0.16.27...v0.16.28) (2021-09-07)
+
+
+
+
+### Bug Fixes:
+
+* search for types in calculations
+
 ## [v0.16.27](https://github.com/ash-project/ash_graphql/compare/v0.16.26...v0.16.27) (2021-09-03)
 
 
