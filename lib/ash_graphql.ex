@@ -121,6 +121,7 @@ defmodule AshGraphql do
     resource
     |> Ash.Resource.Info.public_attributes()
     |> Enum.concat(all_arguments(resource))
+    |> Enum.concat(Ash.Resource.Info.calculations(resource))
     |> Enum.flat_map(fn %{type: type} = attr ->
       if Ash.Type.embedded_type?(type) do
         [
@@ -161,6 +162,7 @@ defmodule AshGraphql do
       resource
       |> Ash.Resource.Info.public_attributes()
       |> Enum.concat(all_arguments(resource))
+      |> Enum.concat(Ash.Resource.Info.calculations(resource))
       |> Enum.map(&{resource, &1})
     end)
     |> Enum.filter(fn {_resource, attribute} ->

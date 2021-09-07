@@ -23,3 +23,5 @@ erl_crash.dump
 ash_graphql-*.tar
 
 .tool-versions
+
+.vscode/
