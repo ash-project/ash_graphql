@@ -61,6 +61,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> add_root_errors(result)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
@@ -108,6 +109,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> add_root_errors(result)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
@@ -190,6 +192,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> add_root_errors(modify_args)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
@@ -237,11 +240,13 @@ defmodule AshGraphql.Graphql.Resolver do
           end
 
         {:error, %{changeset: changeset} = error} ->
-          {{:ok, %{result: nil, errors: to_errors(changeset.errors)}}, [changeset, error]}
+          {{:ok, %{result: nil, errors: to_errors(changeset.errors)}},
+           [changeset, {:error, error}]}
       end
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
+    |> add_root_errors(modify_args)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
@@ -308,6 +313,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
             resolution
             |> Absinthe.Resolution.put_result(to_resolution(result))
+            |> add_root_errors(modify_args)
             |> modify_resolution(modify, modify_args)
         end
 
@@ -371,6 +377,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
             resolution
             |> Absinthe.Resolution.put_result(to_resolution(result))
+            |> add_root_errors(result)
             |> modify_resolution(modify, modify_args)
         end
 
@@ -633,6 +640,22 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp add_root_errors(resolution, {:error, error_or_errors}) do
+    Map.update!(resolution, :errors, fn current_errors ->
+      Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
+    end)
+  end
+
+  defp add_root_errors(resolution, [_, {:error, error_or_errors}]) do
+    Map.update!(resolution, :errors, fn current_errors ->
+      Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
+    end)
+  end
+
+  defp add_root_errors(resolution, _other_thing) do
+    resolution
+  end
+
   defp update_result(result, resource, api, changeset, resolution) do
     case result do
       {:ok, value} ->
@@ -647,7 +670,7 @@ defmodule AshGraphql.Graphql.Resolver do
         end
 
       {:error, error} ->
-        {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, {:ok, result}}
+        {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, [changeset, {:error, error}]}
     end
   end
 
