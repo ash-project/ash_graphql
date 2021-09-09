@@ -12,6 +12,15 @@ defmodule AshGraphql.Test.Post do
     end
   end
 
+  defmodule RaiseResourceError do
+    @moduledoc false
+    use Ash.Resource.Change
+
+    def change(_changeset, _, _) do
+      raise Ash.Error.Changes.Required, field: :foo, type: :attribute
+    end
+  end
+
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
@@ -39,6 +48,7 @@ defmodule AshGraphql.Test.Post do
 
     mutations do
       create :simple_create_post, :create
+      create :create_post_with_error, :create_with_error
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
 
@@ -60,6 +70,10 @@ defmodule AshGraphql.Test.Post do
       metadata(:foo, :string)
 
       change(SetMetadata)
+    end
+
+    create :create_with_error do
+      change(RaiseResourceError)
     end
 
     create :upsert do

@@ -17,6 +17,18 @@ defmodule AshGraphql.Api do
         doc: "Whether or not to perform authorization for this API",
         default: true
       ],
+      root_level_errors?: [
+        type: :boolean,
+        default: false,
+        doc:
+          "By default, mutation errors are shown in their result object's errors key, but this setting places those errors in the top level errors list"
+      ],
+      show_raised_errors?: [
+        type: :boolean,
+        default: false,
+        doc:
+          "For security purposes, if an error is *raised* then Ash simply shows a generic error. If you want to show those errors, set this to true."
+      ],
       stacktraces?: [
         type: :boolean,
         doc: "Whether or not to include stacktraces in generated errors",
@@ -45,6 +57,14 @@ defmodule AshGraphql.Api do
 
   def authorize?(api) do
     Extension.get_opt(api, [:graphql], :authorize?, true)
+  end
+
+  def root_level_errors?(api) do
+    Extension.get_opt(api, [:graphql], :root_level_errors?, false, true)
+  end
+
+  def show_raised_errors?(api) do
+    Extension.get_opt(api, [:graphql], :show_raised_errors?, false, true)
   end
 
   def debug?(api) do

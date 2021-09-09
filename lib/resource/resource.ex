@@ -1327,7 +1327,7 @@ defmodule AshGraphql.Resource do
         []
 
       {:destination, action} ->
-        action = Ash.Resource.Info.action(relationship.through, action)
+        action = Ash.Resource.Info.action(relationship.destination, action)
 
         relationship.destination
         |> mutation_fields(schema, action, action.type)

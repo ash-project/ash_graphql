@@ -25,6 +25,8 @@ locals_without_parens = [
   read_one: 2,
   read_one: 3,
   relay?: 1,
+  root_level_errors?: 1,
+  show_raised_errors?: 1,
   stacktraces?: 1,
   type: 1,
   type_name: 1,

@@ -61,12 +61,16 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
-    |> add_root_errors(result)
+    |> add_root_errors(api, result)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-      Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      if AshGraphql.Api.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      else
+        something_went_wrong(resolution, e)
+      end
   end
 
   def resolve(
@@ -109,12 +113,16 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
-    |> add_root_errors(result)
+    |> add_root_errors(api, result)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-      Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      if AshGraphql.Api.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      else
+        something_went_wrong(resolution, e)
+      end
   end
 
   def resolve(
@@ -192,12 +200,16 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
-    |> add_root_errors(modify_args)
+    |> add_root_errors(api, modify_args)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-      Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      if AshGraphql.Api.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      else
+        something_went_wrong(resolution, e)
+      end
   end
 
   def mutate(
@@ -246,12 +258,27 @@ defmodule AshGraphql.Graphql.Resolver do
 
     resolution
     |> Absinthe.Resolution.put_result(to_resolution(result))
-    |> add_root_errors(modify_args)
+    |> add_root_errors(api, modify_args)
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-      Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      if AshGraphql.Api.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+
+        if AshGraphql.Api.root_level_errors?(api) do
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error})
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:ok, %{result: nil, errors: to_errors(error)}})
+          )
+        end
+      else
+        something_went_wrong(resolution, e)
+      end
   end
 
   def mutate(
@@ -313,7 +340,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
             resolution
             |> Absinthe.Resolution.put_result(to_resolution(result))
-            |> add_root_errors(modify_args)
+            |> add_root_errors(api, modify_args)
             |> modify_resolution(modify, modify_args)
         end
 
@@ -322,8 +349,23 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-      Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      if AshGraphql.Api.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+
+        if AshGraphql.Api.root_level_errors?(api) do
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error})
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:ok, %{result: nil, errors: to_errors(error)}})
+          )
+        end
+      else
+        something_went_wrong(resolution, e)
+      end
   end
 
   def mutate(
@@ -377,7 +419,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
             resolution
             |> Absinthe.Resolution.put_result(to_resolution(result))
-            |> add_root_errors(result)
+            |> add_root_errors(api, result)
             |> modify_resolution(modify, modify_args)
         end
 
@@ -386,8 +428,53 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-      Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
+      if AshGraphql.Api.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+
+        if AshGraphql.Api.root_level_errors?(api) do
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error})
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:ok, %{result: nil, errors: to_errors(error)}})
+          )
+        end
+      else
+        something_went_wrong(resolution, e)
+      end
+  end
+
+  defp log_exception(e) do
+    uuid = Ash.UUID.generate()
+
+    Logger.error("""
+    #{uuid}: Exception raised while resolving query.
+
+    #{Exception.message(e)}
+    """)
+
+    uuid
+  end
+
+  defp something_went_wrong(resolution, e) do
+    uuid = log_exception(e)
+
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:error,
+       [
+         %{
+           message: "Something went wrong. Unique error id: `#{uuid}`",
+           code: "something_went_wrong",
+           vars: %{},
+           fields: [],
+           short_message: "Something went wrong."
+         }
+       ]}
+    )
   end
 
   defp modify_resolution(resolution, nil, _), do: resolution
@@ -640,19 +727,27 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp add_root_errors(resolution, {:error, error_or_errors}) do
-    Map.update!(resolution, :errors, fn current_errors ->
-      Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
-    end)
+  defp add_root_errors(resolution, api, {:error, error_or_errors}) do
+    if AshGraphql.Api.root_level_errors?(api) do
+      Map.update!(resolution, :errors, fn current_errors ->
+        Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
+      end)
+    else
+      resolution
+    end
   end
 
-  defp add_root_errors(resolution, [_, {:error, error_or_errors}]) do
-    Map.update!(resolution, :errors, fn current_errors ->
-      Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
-    end)
+  defp add_root_errors(resolution, api, [_, {:error, error_or_errors}]) do
+    if AshGraphql.Api.root_level_errors?(api) do
+      Map.update!(resolution, :errors, fn current_errors ->
+        Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
+      end)
+    else
+      resolution
+    end
   end
 
-  defp add_root_errors(resolution, _other_thing) do
+  defp add_root_errors(resolution, _api, _other_thing) do
     resolution
   end
 
@@ -890,7 +985,7 @@ defmodule AshGraphql.Graphql.Resolver do
          )
 
          [
-           message: "something went wrong. Unique error id: `#{uuid}`"
+           message: "Something went wrong. Unique error id: `#{uuid}`"
          ]
        end
      end)}
