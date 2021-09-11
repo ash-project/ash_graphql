@@ -21,6 +21,17 @@ defmodule AshGraphql.Test.Post do
     end
   end
 
+  defmodule AfterActionRaiseResourceError do
+    @moduledoc false
+    use Ash.Resource.Change
+
+    def change(changeset, _, _) do
+      Ash.Changeset.after_action(changeset, fn _changeset, _record ->
+        {:error, %Ash.Error.Query.NotFound{}}
+      end)
+    end
+  end
+
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
@@ -61,6 +72,7 @@ defmodule AshGraphql.Test.Post do
       destroy :archive_post, :archive
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
+      destroy :delete_with_error, :destroy_with_error
     end
   end
 
@@ -133,6 +145,10 @@ defmodule AshGraphql.Test.Post do
     destroy :archive do
       soft?(true)
       change(set_attribute(:deleted_at, &DateTime.utc_now/0))
+    end
+
+    destroy :destroy_with_error do
+      change(AfterActionRaiseResourceError)
     end
   end
 

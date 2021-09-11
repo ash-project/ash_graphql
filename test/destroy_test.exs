@@ -95,6 +95,40 @@ defmodule AshGraphql.DestroyTest do
     assert %{data: %{"deleteBestPost" => %{"result" => %{"text" => "foobar"}}}} = result
   end
 
+  test "a destroy with an error" do
+    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+
+    resp =
+      """
+      mutation DeleteWithError($id: ID) {
+        deleteWithError(id: $id) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: %{
+               "deleteWithError" => %{
+                 "errors" => [%{"message" => "could not be found"}],
+                 "result" => nil
+               }
+             }
+           } == result
+  end
+
   test "destroying a non-existent record returns a not found error" do
     resp =
       """

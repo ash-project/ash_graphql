@@ -791,7 +791,7 @@ defmodule AshGraphql.Graphql.Resolver do
          [changeset, :ok]}
 
       {:error, %{changeset: changeset} = error} ->
-        {{:ok, %{result: nil, errors: to_errors(changeset.error)}}, {:error, error}}
+        {{:ok, %{result: nil, errors: to_errors(changeset.errors)}}, {:error, error}}
     end
   end
 
