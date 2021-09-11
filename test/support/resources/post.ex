@@ -67,6 +67,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_comments_and_tags, :with_comments_and_tags
 
       update :update_post, :update
+      create :update_post_confirm, :update_confirm
       update :update_best_post, :update, read_action: :best_post, identity: false
 
       destroy :archive_post, :archive
@@ -139,7 +140,13 @@ defmodule AshGraphql.Test.Post do
       filter(expr(best == true))
     end
 
-    update(:update)
+    update :update, primary?: true
+
+    update :update_confirm do
+      argument(:confirmation, :string)
+      validate(confirm(:text, :confirmation))
+    end
+
     destroy(:destroy, primary?: true)
 
     destroy :archive do
