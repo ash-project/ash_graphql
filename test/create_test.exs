@@ -3,6 +3,8 @@ defmodule AshGraphql.CreateTest do
 
   setup do
     on_exit(fn ->
+      Application.delete_env(:ash, AshGraphql.Test.Api)
+
       try do
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
@@ -94,6 +96,40 @@ defmodule AshGraphql.CreateTest do
                  "result" => %{
                    "text" => "foobar",
                    "comments" => [%{"text" => "barfoo"}, %{"text" => "foobar"}]
+                 }
+               }
+             }
+           } = result
+  end
+
+  test "a create can load a calculation without selecting the fields the calculation needs" do
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text1
+            fullText
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"text1" => "foo", "text2" => "bar"}}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "fullText" => "foobar"
                  }
                }
              }

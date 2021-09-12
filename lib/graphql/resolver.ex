@@ -225,7 +225,10 @@ defmodule AshGraphql.Graphql.Resolver do
       action: action,
       verbose?: AshGraphql.Api.debug?(api),
       stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
-      upsert?: upsert?
+      upsert?: upsert?,
+      after_action: fn _changeset, result ->
+        load_fields(result, resource, api, resolution, "result")
+      end
     ]
 
     changeset =
@@ -241,15 +244,8 @@ defmodule AshGraphql.Graphql.Resolver do
       |> api.create(opts)
       |> case do
         {:ok, value} ->
-          case load_fields(value, resource, api, resolution, "result") do
-            {:ok, result} ->
-              {{:ok, add_metadata(%{result: result, errors: []}, value, changeset.action)},
-               [changeset, {:ok, result}]}
-
-            {:error, error} ->
-              {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}},
-               [changeset, {:error, error}]}
-          end
+          {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
+           [changeset, {:ok, value}]}
 
         {:error, %{changeset: changeset} = error} ->
           {{:ok, %{result: nil, errors: to_errors(changeset.errors)}},
@@ -313,7 +309,9 @@ defmodule AshGraphql.Graphql.Resolver do
           nil ->
             result = not_found(filter, resource)
 
-            Absinthe.Resolution.put_result(resolution, result)
+            resolution
+            |> Absinthe.Resolution.put_result(result)
+            |> add_root_errors(api, result)
 
           initial ->
             opts = [
@@ -321,7 +319,10 @@ defmodule AshGraphql.Graphql.Resolver do
               authorize?: AshGraphql.Api.authorize?(api),
               action: action,
               verbose?: AshGraphql.Api.debug?(api),
-              stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+              stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+              after_action: fn _changeset, result ->
+                load_fields(result, resource, api, resolution, "result")
+              end
             ]
 
             changeset =
@@ -336,7 +337,15 @@ defmodule AshGraphql.Graphql.Resolver do
             {result, modify_args} =
               changeset
               |> api.update(opts)
-              |> update_result(resource, api, changeset, resolution)
+              |> case do
+                {:ok, value} ->
+                  {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
+                   [changeset, {:ok, value}]}
+
+                {:error, error} ->
+                  {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}},
+                   [changeset, {:error, error}]}
+              end
 
             resolution
             |> Absinthe.Resolution.put_result(to_resolution(result))
@@ -398,7 +407,9 @@ defmodule AshGraphql.Graphql.Resolver do
           nil ->
             result = not_found(filter, resource)
 
-            Absinthe.Resolution.put_result(resolution, result)
+            resolution
+            |> Absinthe.Resolution.put_result(result)
+            |> add_root_errors(api, result)
 
           initial ->
             opts = destroy_opts(api, context, action)
@@ -728,44 +739,38 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp add_root_errors(resolution, api, {:error, error_or_errors}) do
-    if AshGraphql.Api.root_level_errors?(api) do
-      Map.update!(resolution, :errors, fn current_errors ->
-        Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
-      end)
-    else
-      resolution
-    end
+    do_root_errors(api, resolution, error_or_errors)
   end
 
   defp add_root_errors(resolution, api, [_, {:error, error_or_errors}]) do
-    if AshGraphql.Api.root_level_errors?(api) do
-      Map.update!(resolution, :errors, fn current_errors ->
-        Enum.concat(current_errors || [], to_errors(List.wrap(error_or_errors)))
-      end)
-    else
-      resolution
-    end
+    do_root_errors(api, resolution, error_or_errors)
+  end
+
+  defp add_root_errors(resolution, api, [_, {:ok, %{errors: errors}}])
+       when errors not in [nil, []] do
+    do_root_errors(api, resolution, errors, false)
+  end
+
+  defp add_root_errors(resolution, api, {:ok, %{errors: errors}})
+       when errors not in [nil, []] do
+    do_root_errors(api, resolution, errors, false)
   end
 
   defp add_root_errors(resolution, _api, _other_thing) do
     resolution
   end
 
-  defp update_result(result, resource, api, changeset, resolution) do
-    case result do
-      {:ok, value} ->
-        case load_fields(value, resource, api, resolution, "result") do
-          {:ok, result} ->
-            {{:ok, add_metadata(%{result: result, errors: []}, result, changeset.action)},
-             [changeset, {:ok, result}]}
-
-          {:error, error} ->
-            # Even though the loading of fields failed, the mutation was successful
-            {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, {:ok, value}}
+  defp do_root_errors(api, resolution, error_or_errors, to_errors? \\ true) do
+    if AshGraphql.Api.root_level_errors?(api) do
+      Map.update!(resolution, :errors, fn current_errors ->
+        if to_errors? do
+          Enum.concat(current_errors || [], List.wrap(to_errors(error_or_errors)))
+        else
+          Enum.concat(current_errors || [], List.wrap(error_or_errors))
         end
-
-      {:error, error} ->
-        {{:ok, %{result: nil, errors: to_errors(List.wrap(error))}}, [changeset, {:error, error}]}
+      end)
+    else
+      resolution
     end
   end
 

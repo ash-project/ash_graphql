@@ -21,6 +21,19 @@ defmodule AshGraphql.Test.Post do
     end
   end
 
+  defmodule FullTextCalculation do
+    @moduledoc false
+    use Ash.Calculation
+
+    def calculate(posts, _, _) do
+      Enum.map(posts, fn post ->
+        post.text1 <> post.text2
+      end)
+    end
+
+    def select(_, _, _), do: [:text1, :text2]
+  end
+
   defmodule AfterActionRaiseResourceError do
     @moduledoc false
     use Ash.Resource.Change
@@ -73,7 +86,7 @@ defmodule AshGraphql.Test.Post do
       destroy :archive_post, :archive
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
-      destroy :delete_with_error, :destroy_with_error
+      destroy :delete_post_with_error, :destroy_with_error
     end
   end
 
@@ -170,10 +183,13 @@ defmodule AshGraphql.Test.Post do
     attribute(:best, :boolean)
     attribute(:score, :float)
     attribute(:embed, AshGraphql.Test.Embed)
+    attribute(:text1, :string)
+    attribute(:text2, :string)
   end
 
   calculations do
     calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation)
+    calculate(:full_text, :string, FullTextCalculation)
   end
 
   relationships do

@@ -3,6 +3,8 @@ defmodule AshGraphql.DestroyTest do
 
   setup do
     on_exit(fn ->
+      Application.delete_env(:ash, AshGraphql.Test.Api)
+
       try do
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
@@ -101,7 +103,7 @@ defmodule AshGraphql.DestroyTest do
     resp =
       """
       mutation DeleteWithError($id: ID) {
-        deleteWithError(id: $id) {
+        deletePostWithError(id: $id) {
           result{
             text
           }
@@ -121,7 +123,7 @@ defmodule AshGraphql.DestroyTest do
 
     assert %{
              data: %{
-               "deleteWithError" => %{
+               "deletePostWithError" => %{
                  "errors" => [%{"message" => "could not be found"}],
                  "result" => nil
                }
@@ -162,10 +164,12 @@ defmodule AshGraphql.DestroyTest do
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 
+    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+
     resp =
       """
       mutation DeletePost($id: ID) {
-        deletePost(id: $id) {
+        deletePostWithError(id: $id) {
           result{
             text
           }
@@ -177,7 +181,7 @@ defmodule AshGraphql.DestroyTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema,
         variables: %{
-          "id" => Ash.UUID.generate()
+          "id" => post.id
         }
       )
 

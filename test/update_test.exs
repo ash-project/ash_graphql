@@ -3,6 +3,8 @@ defmodule AshGraphql.UpdateTest do
 
   setup do
     on_exit(fn ->
+      Application.delete_env(:ash, AshGraphql.Test.Api)
+
       try do
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
@@ -100,8 +102,11 @@ defmodule AshGraphql.UpdateTest do
 
     assert {:ok, result} = resp
 
-    assert %{data: %{"updatePostConfirm" => %{"result" => nil, "errors" => [%{"message" => message}]}}} =
-             result
+    assert %{
+             data: %{
+               "updatePostConfirm" => %{"result" => nil, "errors" => [%{"message" => message}]}
+             }
+           } = result
 
     assert message =~ "Confirmation did not match value"
   end
