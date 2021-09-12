@@ -156,4 +156,33 @@ defmodule AshGraphql.DestroyTest do
     assert %{data: %{"deletePost" => %{"errors" => [%{"message" => "could not be found"}]}}} =
              result
   end
+
+  test "root level error on destroy" do
+    Application.put_env(:ash, AshGraphql.Test.Api,
+      graphql: [show_raised_errors?: true, root_level_errors?: true]
+    )
+
+    resp =
+      """
+      mutation DeletePost($id: ID) {
+        deletePost(id: $id) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => Ash.UUID.generate()
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{errors: [%{message: "could not be found"}]} = result
+  end
 end

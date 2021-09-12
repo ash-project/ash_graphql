@@ -280,6 +280,40 @@ defmodule AshGraphql.CreateTest do
     assert message =~ "Confirmation did not match value"
   end
 
+  test "root level error" do
+    Application.put_env(:ash, AshGraphql.Test.Api,
+      graphql: [show_raised_errors?: true, root_level_errors?: true]
+    )
+
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "confirmation" => "foobar2"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{errors: [%{message: message}]} = result
+
+    assert message =~ "Confirmation did not match value"
+  end
+
   test "custom input types are used" do
     resp =
       """
