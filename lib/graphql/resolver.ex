@@ -7,7 +7,7 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
-         %{type: :get, action: action, identity: identity, modify_resolution: modify}}
+         %{type: :get, action: action, identity: identity, modify_resolution: modify} = gql_query}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -59,10 +59,20 @@ defmodule AshGraphql.Graphql.Resolver do
           {{:error, error}, [query, {:error, error}]}
       end
 
-    resolution
-    |> Absinthe.Resolution.put_result(to_resolution(result))
-    |> add_root_errors(api, result)
-    |> modify_resolution(modify, modify_args)
+    case {result, gql_query.allow_nil?} do
+      {{{:ok, nil}, _}, false} ->
+        result = not_found(filter, resource)
+
+        resolution
+        |> Absinthe.Resolution.put_result(result)
+        |> add_root_errors(api, result)
+
+      {result, _} ->
+        resolution
+        |> Absinthe.Resolution.put_result(to_resolution(result))
+        |> add_root_errors(api, result)
+        |> modify_resolution(modify, modify_args)
+    end
   rescue
     e ->
       if AshGraphql.Api.show_raised_errors?(api) do
@@ -401,7 +411,9 @@ defmodule AshGraphql.Graphql.Resolver do
         |> api.read_one!(
           action: read_action,
           verbose?: AshGraphql.Api.debug?(api),
-          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+          actor: Map.get(context, :actor),
+          authorize?: AshGraphql.Api.authorize?(api)
         )
         |> case do
           nil ->
