@@ -60,7 +60,8 @@ defmodule AshGraphql.Graphql.Resolver do
       end
 
     case {result, gql_query.allow_nil?} do
-      {{{:ok, nil}, _}, false} ->
+      {{:ok, nil}, false} ->
+        {:ok, filter} = filter
         result = not_found(filter, resource)
 
         resolution
