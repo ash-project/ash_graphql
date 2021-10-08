@@ -2361,7 +2361,7 @@ defmodule AshGraphql.Resource do
   defp calculation_type(calculation, resource) do
     calculation.type
     |> Ash.Type.get_type()
-    |> field_type(nil, resource)
+    |> field_type(calculation, resource)
     |> maybe_wrap_non_null(not calculation.allow_nil?)
   end
 
