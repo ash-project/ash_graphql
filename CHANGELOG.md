@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.17.0](https://github.com/ash-project/ash_graphql/compare/v0.16.28...v0.17.0) (2021-11-13)
+
+
+
+
+### Features:
+
+* more configurable error behavior
+
+### Bug Fixes:
+
+* pass calculation to field type (#29)
+
+* fix `get` resolver not_found message
+
+* authorize reads before destroy
+
+* return error when get is nil w/ allow_nil? == false
+
+* select in the new after_action hook, for calculations
+
+* fix changeset.errors on destroy (#26)
+
 ## [v0.16.28](https://github.com/ash-project/ash_graphql/compare/v0.16.27...v0.16.28) (2021-09-07)
 
 
