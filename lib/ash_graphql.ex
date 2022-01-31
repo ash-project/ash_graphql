@@ -104,9 +104,19 @@ defmodule AshGraphql do
     |> only_enum_types()
     |> Enum.uniq()
     |> Enum.map(fn type ->
+      {name, identifier} =
+        case type do
+          Ash.Type.Interval ->
+            {"Interval", :interval}
+
+          type ->
+            graphql_type = type.graphql_type()
+            {graphql_type |> to_string() |> Macro.camelize(), graphql_type}
+        end
+
       %Absinthe.Blueprint.Schema.EnumTypeDefinition{
         module: schema,
-        name: type.graphql_type() |> to_string() |> Macro.camelize(),
+        name: name,
         values:
           Enum.map(type.values(), fn value ->
             %Absinthe.Blueprint.Schema.EnumValueDefinition{
@@ -116,7 +126,7 @@ defmodule AshGraphql do
               value: value
             }
           end),
-        identifier: type.graphql_type(),
+        identifier: identifier,
         __reference__: AshGraphql.Resource.ref(env)
       }
     end)
