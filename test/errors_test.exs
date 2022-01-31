@@ -4,7 +4,7 @@ defmodule AshGraphql.ErrorsTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
 
       try do
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
@@ -17,7 +17,7 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "errors can be configured to be shown in the root" do
-    Application.put_env(:ash, AshGraphql.Test.Api, graphql: [root_level_errors?: true])
+    Application.put_env(:ash_graphql, AshGraphql.Test.Api, graphql: [root_level_errors?: true])
 
     resp =
       """
@@ -81,7 +81,7 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "raised errors can be configured to be shown" do
-    Application.put_env(:ash, AshGraphql.Test.Api, graphql: [show_raised_errors?: true])
+    Application.put_env(:ash_graphql, AshGraphql.Test.Api, graphql: [show_raised_errors?: true])
 
     resp =
       """
@@ -116,7 +116,7 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "showing raised errors alongside root errors shows raised errors in the root" do
-    Application.put_env(:ash, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 

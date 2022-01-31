@@ -38,7 +38,12 @@ defmodule AshGraphql do
           def run(blueprint, _opts) do
             api = unquote(api)
 
-            Code.ensure_compiled(api)
+            Code.ensure_compiled!(api)
+            registry = Ash.Api.registry(api)
+
+            if registry do
+              Code.ensure_compiled!(registry)
+            end
 
             blueprint_with_queries =
               api

@@ -3,7 +3,7 @@ defmodule AshGraphql.CreateTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
 
       try do
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
@@ -317,7 +317,7 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "root level error" do
-    Application.put_env(:ash, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 
