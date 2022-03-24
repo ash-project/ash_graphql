@@ -130,6 +130,7 @@ defmodule AshGraphql do
         __reference__: AshGraphql.Resource.ref(env)
       }
     end)
+    |> Enum.uniq_by(& &1.identifier)
   end
 
   defp all_attributes_and_arguments(resource) do
