@@ -1085,7 +1085,7 @@ defmodule AshGraphql.Resource do
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_of(resource, schema)) ++
-      enum_definitions(resource, schema, true) ++
+      enum_definitions(resource, schema) ++
       managed_relationship_definitions(resource, schema)
   end
 
