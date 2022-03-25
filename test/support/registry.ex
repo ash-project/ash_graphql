@@ -9,5 +9,8 @@ defmodule AshGraphql.Test.Registry do
     entry(AshGraphql.Test.User)
     entry(AshGraphql.Test.NonIdPrimaryKey)
     entry(AshGraphql.Test.CompositePrimaryKey)
+    entry(AshGraphql.Test.DoubleRelEmbed)
+    entry(AshGraphql.Test.DoubleRelRecursive)
+    entry(AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed)
   end
 end
