@@ -66,13 +66,15 @@ defmodule AshGraphql do
 
                 global_enums = AshGraphql.global_enums(apis, __MODULE__, __ENV__)
 
-                AshGraphql.Api.global_type_definitions(__MODULE__) ++
+                AshGraphql.Api.global_type_definitions(__MODULE__, __ENV__) ++
                   AshGraphql.Api.type_definitions(api, __MODULE__) ++
                   global_enums ++
                   embedded_types
               else
                 AshGraphql.Api.type_definitions(api, __MODULE__)
               end
+
+            Enum.filter(type_definitions, &is_nil(&1.__reference__))
 
             new_defs =
               List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
@@ -122,6 +124,7 @@ defmodule AshGraphql do
             %Absinthe.Blueprint.Schema.EnumValueDefinition{
               module: schema,
               identifier: value,
+              __reference__: AshGraphql.Resource.ref(env),
               name: String.upcase(to_string(value)),
               value: value
             }
@@ -208,7 +211,7 @@ defmodule AshGraphql do
             __MODULE__
           )
         ] ++
-          AshGraphql.Resource.enum_definitions(embedded_type, __MODULE__)
+          AshGraphql.Resource.enum_definitions(embedded_type, __MODULE__, __ENV__)
       else
         [
           AshGraphql.Resource.embedded_type_input(
@@ -217,7 +220,7 @@ defmodule AshGraphql do
             embedded_type,
             __MODULE__
           )
-        ] ++ AshGraphql.Resource.enum_definitions(embedded_type, __MODULE__)
+        ] ++ AshGraphql.Resource.enum_definitions(embedded_type, __MODULE__, __ENV__)
       end
     end)
     |> Enum.uniq_by(& &1.identifier)

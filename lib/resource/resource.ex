@@ -1085,7 +1085,7 @@ defmodule AshGraphql.Resource do
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_of(resource, schema)) ++
-      enum_definitions(resource, schema) ++
+      enum_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
@@ -1935,7 +1935,7 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(type) <> "_sort_field")
   end
 
-  def enum_definitions(resource, schema, only_auto? \\ false) do
+  def enum_definitions(resource, schema, env, only_auto? \\ false) do
     atom_enums =
       resource
       |> get_auto_enums()
@@ -1951,6 +1951,7 @@ defmodule AshGraphql.Resource do
               %Absinthe.Blueprint.Schema.EnumValueDefinition{
                 module: schema,
                 identifier: value,
+                __reference__: AshGraphql.Resource.ref(env),
                 name: String.upcase(to_string(value)),
                 value: value
               }
@@ -1975,6 +1976,7 @@ defmodule AshGraphql.Resource do
             %Absinthe.Blueprint.Schema.EnumValueDefinition{
               module: schema,
               identifier: sort_value,
+              __reference__: AshGraphql.Resource.ref(env),
               name: String.upcase(to_string(sort_value)),
               value: sort_value
             }

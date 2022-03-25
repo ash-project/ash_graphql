@@ -10,6 +10,6 @@ defmodule AshGraphql.Test.DoubleRelEmbed do
   end
 
   attributes do
-    attribute(:recursive?, :string, default: "No, not I, but me dad be!")
+    attribute(:recursive, :string, default: "No, not I, but me dad be!")
   end
 end
