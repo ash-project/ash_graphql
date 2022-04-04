@@ -93,7 +93,7 @@ defmodule AshGraphql.Api do
   end
 
   @doc false
-  def type_definitions(api, schema) do
+  def type_definitions(api, schema, first?) do
     resource_types =
       api
       |> Ash.Api.resources()
@@ -107,22 +107,25 @@ defmodule AshGraphql.Api do
         end
       end)
 
-    if Enum.any?(Ash.Api.resources(api), &AshGraphql.Resource.relay?/1) do
-      %Absinthe.Blueprint.Schema.InterfaceTypeDefinition{
-        description: "A relay node",
-        name: "Node",
-        fields: [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "A unique identifier",
-            identifier: :id,
-            module: schema,
-            name: "id",
-            type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
-          }
-        ],
-        identifier: :node,
-        module: schema
-      }
+    if Enum.any?(Ash.Api.resources(api), &AshGraphql.Resource.relay?/1) && first? do
+      [
+        %Absinthe.Blueprint.Schema.InterfaceTypeDefinition{
+          description: "A relay node",
+          name: "Node",
+          fields: [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "A unique identifier",
+              identifier: :id,
+              module: schema,
+              name: "id",
+              type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
+            }
+          ],
+          identifier: :node,
+          module: schema
+        }
+        | resource_types
+      ]
     else
       resource_types
     end
