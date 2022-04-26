@@ -1,4 +1,5 @@
 defmodule AshGraphql.Test.Registry do
+  @moduledoc false
   use Ash.Registry
 
   entries do

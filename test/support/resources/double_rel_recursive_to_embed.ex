@@ -1,4 +1,3 @@
-
 defmodule AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed do
   @moduledoc false
 
@@ -9,7 +8,7 @@ defmodule AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed do
   alias AshGraphql.Test.DoubleRelRecursive
 
   attributes do
-    uuid_primary_key :id
+    uuid_primary_key(:id)
 
     attribute(:dummy, :string, default: "Dummy")
   end
@@ -20,7 +19,7 @@ defmodule AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed do
 
   relationships do
     has_many :all, DoubleRelRecursive do
-      destination_field :double_rel_id
+      destination_field(:double_rel_id)
     end
   end
 end

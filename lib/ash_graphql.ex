@@ -74,8 +74,6 @@ defmodule AshGraphql do
                 AshGraphql.Api.type_definitions(api, __MODULE__, false)
               end
 
-            Enum.filter(type_definitions, &is_nil(&1.__reference__))
-
             new_defs =
               List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
                 %{

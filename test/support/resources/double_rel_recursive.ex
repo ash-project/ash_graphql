@@ -23,24 +23,24 @@ defmodule AshGraphql.Test.DoubleRelRecursive do
 
   relationships do
     belongs_to :double_rel, DoubleRelToRecursiveParentOfEmbed do
-      source_field :double_rel_id
-      required? true
+      source_field(:double_rel_id)
+      required?(true)
     end
 
     belongs_to :myself, DoubleRelRecursive do
-      source_field :recursive_id
-      required? false
-      private? true
+      source_field(:recursive_id)
+      required?(false)
+      private?(true)
     end
 
     has_many :first_rel, DoubleRelRecursive do
-      destination_field :recursive_id
-      filter expr(type == :first)
+      destination_field(:recursive_id)
+      filter(expr(type == :first))
     end
 
     has_many :second_rel, DoubleRelRecursive do
-      destination_field :recursive_id
-      filter expr(type == :second)
+      destination_field(:recursive_id)
+      filter(expr(type == :second))
     end
   end
 end

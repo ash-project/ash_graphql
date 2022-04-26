@@ -707,9 +707,8 @@ defmodule AshGraphql.Resource do
         resource
         |> Ash.Resource.Info.public_attributes()
         |> Enum.filter(fn attribute ->
-          is_nil(action.accept) || attribute.name in action.accept
+          (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable?
         end)
-        |> Enum.filter(& &1.writable?)
         |> Enum.map(fn attribute ->
           allow_nil? =
             attribute.allow_nil? || attribute.default != nil || type == :update ||
@@ -1823,10 +1822,9 @@ defmodule AshGraphql.Resource do
       {:array, _} ->
         true
 
-      _ ->
-        false
+      attribute ->
+        Ash.Type.embedded_type?(attribute.type)
     end)
-    |> Enum.reject(&Ash.Type.embedded_type?/1)
     |> Enum.flat_map(fn attribute ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2010,10 +2008,9 @@ defmodule AshGraphql.Resource do
         %{type: {:array, _}} ->
           true
 
-        _ ->
-          false
+        attribute ->
+          Ash.Type.embedded_type?(attribute.type)
       end)
-      |> Enum.reject(&Ash.Type.embedded_type?(&1.type))
       |> Enum.map(& &1.name)
 
     aggregate_sort_values =
