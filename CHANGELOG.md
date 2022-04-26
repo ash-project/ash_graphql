@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.17.4](https://github.com/ash-project/ash_graphql/compare/v0.17.3...v0.17.4) (2022-04-26)
+
+
+
+
+### Improvements:
+
+* fix lint/credo/versions
+
 ## [v0.17.3](https://github.com/ash-project/ash_graphql/compare/v0.17.2...v0.17.3) (2022-04-26)
 
 
