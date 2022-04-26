@@ -18,6 +18,14 @@ defmodule AshGraphql do
         |> Enum.map(&{&1, false})
         |> List.update_at(0, fn {api, _} -> {api, true} end)
 
+      for {api, _} <- apis do
+        registry = Ash.Api.registry(api)
+
+        if registry do
+          Code.ensure_compiled!(registry)
+        end
+      end
+
       for {api, first?} <- apis do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
@@ -39,11 +47,6 @@ defmodule AshGraphql do
             api = unquote(api)
 
             Code.ensure_compiled!(api)
-            registry = Ash.Api.registry(api)
-
-            if registry do
-              Code.ensure_compiled!(registry)
-            end
 
             blueprint_with_queries =
               api
