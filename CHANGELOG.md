@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.17.3](https://github.com/ash-project/ash_graphql/compare/v0.17.2...v0.17.3) (2022-04-26)
+
+
+
+
+### Bug Fixes:
+
+* add relay node type properly
+
+* ignore embedded resources accidentally placed in API
+
+* don't include the same enum multiple times
+
+### Improvements:
+
+* only do auto enums when doing resource types
+
 ## [v0.17.2](https://github.com/ash-project/ash_graphql/compare/v0.17.1...v0.17.2) (2022-01-31)
 
 
