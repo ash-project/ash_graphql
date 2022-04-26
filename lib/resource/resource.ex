@@ -1089,7 +1089,7 @@ defmodule AshGraphql.Resource do
   end
 
   def no_graphql_types(resource, schema) do
-    enum_definitions(resource, schema, true) ++
+    enum_definitions(resource, schema, __ENV__, true) ++
       managed_relationship_definitions(resource, schema)
   end
 
