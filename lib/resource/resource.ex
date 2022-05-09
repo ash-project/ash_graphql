@@ -2122,8 +2122,6 @@ defmodule AshGraphql.Resource do
         name: Macro.camelize(to_string(type)),
         __reference__: ref(__ENV__)
       }
-    else
-      []
     end
   end
 
