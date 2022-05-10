@@ -263,11 +263,13 @@ defmodule AshGraphql do
     end)
   end
 
-  def add_context(ctx, apis) do
+  def add_context(ctx, apis, options \\ []) do
+    empty_dataloader = Dataloader.new(options ++ [get_policy: :tuples])
+
     dataloader =
       apis
       |> List.wrap()
-      |> Enum.reduce(Dataloader.new(), fn {api, _registry}, dataloader ->
+      |> Enum.reduce(empty_dataloader, fn {api, _registry}, dataloader ->
         Dataloader.add_source(
           dataloader,
           api,

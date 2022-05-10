@@ -932,6 +932,10 @@ defmodule AshGraphql.Graphql.Resolver do
     child_complexity + 1
   end
 
+  def fetch_dataloader(loader, api, batch_key, parent) do
+    to_resolution(Dataloader.get(loader, api, batch_key, parent))
+  end
+
   defp do_dataloader(
          resolution,
          loader,
@@ -943,7 +947,7 @@ defmodule AshGraphql.Graphql.Resolver do
     loader = Dataloader.load(loader, api, batch_key, parent)
 
     fun = fn loader ->
-      {:ok, Dataloader.get(loader, api, batch_key, parent)}
+      fetch_dataloader(loader, api, batch_key, parent)
     end
 
     Absinthe.Resolution.put_result(

@@ -201,5 +201,11 @@ defmodule AshGraphql.Test.Post do
       source_field_on_join_table: :post_id,
       destination_field_on_join_table: :tag_id
     )
+
+    many_to_many(:multitenant_tags, AshGraphql.Test.MultitenantTag,
+      through: AshGraphql.Test.MultitenantPostTag,
+      source_field_on_join_table: :post_id,
+      destination_field_on_join_table: :tag_id
+    )
   end
 end
