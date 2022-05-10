@@ -15,24 +15,30 @@ defmodule AshGraphql do
 
       apis =
         apis
-        |> Enum.map(&{&1, false})
-        |> List.update_at(0, fn {api, _} -> {api, true} end)
+        |> Enum.map(fn
+          {api, registry} ->
+            {api, registry}
 
-      for {api, _} <- apis do
-        registry = Ash.Api.registry(api)
+          api ->
+            raise """
+            Must now include registry with api when using `AshGraphql`. For example:
 
-        if registry do
-          Code.ensure_compiled!(registry)
-        end
-      end
+              use AshGraphql, apis: [{My.App.Api, My.App.Registry}]
 
-      for {api, first?} <- apis do
+            In order to ensure the absinthe schema is recompiled properly, the Registry for each Api must be provided explicitly.
+            """
+        end)
+        |> Enum.map(fn {api, registry} -> {api, registry, false} end)
+        |> List.update_at(0, fn {api, registry, _} -> {api, registry, true} end)
+
+      for {api, registry, first?} <- apis do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
 
           # Ensures the api is compiled, and any errors are raised
           _ = api.ash_dsl_config()
+          _ = registry.ash_dsl_config()
 
           def pipeline(pipeline) do
             Pipeline.insert_before(
@@ -261,7 +267,7 @@ defmodule AshGraphql do
     dataloader =
       apis
       |> List.wrap()
-      |> Enum.reduce(Dataloader.new(), fn api, dataloader ->
+      |> Enum.reduce(Dataloader.new(), fn {api, _registry}, dataloader ->
         Dataloader.add_source(
           dataloader,
           api,

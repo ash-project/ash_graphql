@@ -3,7 +3,7 @@ defmodule AshGraphql.Test.Schema do
 
   use Absinthe.Schema
 
-  @apis [AshGraphql.Test.Api]
+  @apis [{AshGraphql.Test.Api, AshGraphql.Test.Registry}]
 
   use AshGraphql, apis: @apis
 

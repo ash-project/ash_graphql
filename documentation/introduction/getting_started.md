@@ -75,7 +75,8 @@ You will need an empty `query` block and `mutations` block in your schema, as sh
 defmodule MyApp.Schema do
   use Absinthe.Schema
 
-  @apis [MyApp.Api]
+  # The registry must be included alongside the api to ensure the schema is properly recompiled on changes.
+  @apis [{MyApp.Api, MyApp.Registry}]
 
   use AshGraphql, apis: @apis
 
