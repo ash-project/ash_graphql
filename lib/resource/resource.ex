@@ -245,6 +245,12 @@ defmodule AshGraphql.Resource do
         * the type for the resource will implement the `Node` interface
         * pagination over that resource will behave as a Connection.
         """
+      ],
+      generate_object?: [
+        type: :boolean,
+        doc:
+          "Whether or not to create the GraphQL object, this allows you to manually create the GraphQL object.",
+        default: true
       ]
     ],
     sections: [
@@ -294,6 +300,10 @@ defmodule AshGraphql.Resource do
 
   def primary_key_delimiter(resource) do
     Extension.get_opt(resource, [:graphql], :primary_key_delimiter, nil)
+  end
+
+  def generate_object?(resource) do
+    Extension.get_opt(resource, [:graphql], :generate_object?, nil)
   end
 
   def ref(env) do
@@ -2093,24 +2103,26 @@ defmodule AshGraphql.Resource do
   end
 
   def type_definition(resource, api, schema) do
-    type = Resource.type(resource)
+    if generate_object?(resource) do
+      type = Resource.type(resource)
 
-    interfaces =
-      if relay?(resource) do
-        [:node]
-      else
-        []
-      end
+      interfaces =
+        if relay?(resource) do
+          [:node]
+        else
+          []
+        end
 
-    %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-      description: Ash.Resource.Info.description(resource),
-      interfaces: interfaces,
-      fields: fields(resource, api, schema),
-      identifier: type,
-      module: schema,
-      name: Macro.camelize(to_string(type)),
-      __reference__: ref(__ENV__)
-    }
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        description: Ash.Resource.Info.description(resource),
+        interfaces: interfaces,
+        fields: fields(resource, api, schema),
+        identifier: type,
+        module: schema,
+        name: Macro.camelize(to_string(type)),
+        __reference__: ref(__ENV__)
+      }
+    end
   end
 
   defp fields(resource, api, schema) do

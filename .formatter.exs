@@ -10,6 +10,7 @@ locals_without_parens = [
   depth_limit: 1,
   destroy: 2,
   destroy: 3,
+  generate_object?: 1,
   get: 2,
   get: 3,
   identity: 1,
