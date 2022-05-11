@@ -264,7 +264,8 @@ defmodule AshGraphql do
   end
 
   def add_context(ctx, apis, options \\ []) do
-    empty_dataloader = Dataloader.new(options ++ [get_policy: :tuples])
+    options = Keyword.put(options, :get_policy, :tuples)
+    empty_dataloader = Dataloader.new(options)
 
     dataloader =
       apis
