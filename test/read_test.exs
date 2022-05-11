@@ -303,6 +303,95 @@ defmodule AshGraphql.ReadTest do
             }} == Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
   end
 
+  test "a multitenant object can be read if tenant is set" do
+    tenant = "Some Tenant"
+
+    tag =
+      AshGraphql.Test.MultitenantTag
+      |> Ash.Changeset.for_create(
+        :create,
+        [name: "My Tag"],
+        tenant: tenant
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    doc = """
+    query MultitenantTag($id: ID!) {
+      getMultitenantTag(id: $id) {
+        name
+      }
+    }
+    """
+
+    assert {:ok,
+            %{
+              data: %{
+                "getMultitenantTag" => %{
+                  "name" => "My Tag"
+                }
+              }
+            }} ==
+             Absinthe.run(doc, AshGraphql.Test.Schema,
+               context: %{tenant: tenant},
+               variables: %{"id" => tag.id}
+             )
+  end
+
+  test "a multitenant relation can be read if tenant is set" do
+    tenant = "Some Tenant"
+
+    tag =
+      AshGraphql.Test.MultitenantTag
+      |> Ash.Changeset.for_create(
+        :create,
+        [name: "My Tag"],
+        tenant: tenant
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> Ash.Changeset.manage_relationship(
+        :multitenant_tags,
+        [tag],
+        on_no_match: {:create, :create_action},
+        on_lookup: :relate
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    doc = """
+    query MultitenantPostTag($id: ID!) {
+      getPost(id: $id) {
+        text
+        published
+        multitenantTags {
+          name
+        }
+      }
+    }
+    """
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{
+                  "published" => true,
+                  "text" => "foo",
+                  "multitenantTags" => [
+                    %{
+                      "name" => "My Tag"
+                    }
+                  ]
+                }
+              }
+            }} ==
+             Absinthe.run(doc, AshGraphql.Test.Schema,
+               context: %{tenant: tenant},
+               variables: %{"id" => post.id}
+             )
+  end
+
   describe "pagination" do
     setup do
       letters = ["a", "b", "c", "d", "e"]
