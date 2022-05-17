@@ -24,6 +24,8 @@ defmodule AshGraphql.Test.MultitenantTag do
   end
 
   actions do
+    defaults([:read, :update, :destroy])
+
     create :create do
       primary?(true)
     end

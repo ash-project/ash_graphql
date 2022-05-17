@@ -14,6 +14,10 @@ defmodule AshGraphql.Test.CompositePrimaryKey do
     end
   end
 
+  actions do
+    defaults([:create, :update, :destroy, :read])
+  end
+
   attributes do
     uuid_primary_key(:first)
     uuid_primary_key(:second)

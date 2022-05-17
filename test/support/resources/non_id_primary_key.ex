@@ -13,6 +13,10 @@ defmodule AshGraphql.Test.NonIdPrimaryKey do
     end
   end
 
+  actions do
+    defaults([:create, :read, :update, :destroy])
+  end
+
   attributes do
     uuid_primary_key(:other)
   end

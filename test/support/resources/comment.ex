@@ -18,6 +18,8 @@ defmodule AshGraphql.Test.Comment do
   end
 
   actions do
+    defaults([:create, :update, :destroy])
+
     read :read do
       primary?(true)
     end

@@ -17,6 +17,10 @@ defmodule AshGraphql.Test.DoubleRelRecursive do
     attribute(:or_that, DoubleRelEmbed, allow_nil?: true)
   end
 
+  actions do
+    defaults([:create, :read, :update, :destroy])
+  end
+
   graphql do
     type :double_rel_recursive
   end

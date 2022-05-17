@@ -4,6 +4,10 @@ defmodule AshGraphql.Test.MultitenantPostTag do
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets
 
+  actions do
+    defaults([:create, :read, :update, :destroy])
+  end
+
   relationships do
     belongs_to :post, AshGraphql.Test.Post do
       primary_key?(true)

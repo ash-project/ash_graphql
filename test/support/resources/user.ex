@@ -14,6 +14,8 @@ defmodule AshGraphql.Test.User do
   end
 
   actions do
+    defaults([:create, :update, :destroy, :read])
+
     read :current_user do
       filter(id: actor(:id))
     end
