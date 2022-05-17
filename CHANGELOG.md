@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.17.5-rc0](https://github.com/ash-project/ash_graphql/compare/v0.17.5...v0.17.5-rc0) (2022-05-17)
+
+
+
+
+### Bug Fixes:
+
+* update to latest ash, fix transformer, get tests working
+
+* Handle error if multitenant resource was fetched without tenant being set (#33)
+
+* depend on registry at compile time
+
+### Improvements:
+
+* require registry explicitly to help with compile times
+
+* setup generate_object? setting on resource (#32)
+
 ## [v0.17.5](https://github.com/ash-project/ash_graphql/compare/v0.17.4...v0.17.5) (2022-04-26)
 
 
