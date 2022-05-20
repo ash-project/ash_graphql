@@ -2481,7 +2481,7 @@ defmodule AshGraphql.Resource do
             end
 
           if :erlang.function_exported(type, function, 1) do
-            apply(type, function, [attribute.constraints])
+            apply(type, function, [Map.get(attribute, :constraints)])
           else
             raise """
             Could not determine graphql type for #{inspect(type)}, please define: #{function}/1!
