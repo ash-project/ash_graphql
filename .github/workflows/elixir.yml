@@ -2,13 +2,13 @@ name: Ash CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     tags-ignore: ["v*"]
   pull_request:
-    branches: [master]
+    branches: [main]
   create:
     tags: ["v*"]
-    branches: master
+    branches: main
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,7 +18,7 @@ jobs:
       matrix:
         otp: ["23"]
         elixir: ["1.12.0"]
-        ash: ["master", "1.52.0-rc.4"]
+        ash: ["main", "1.52.0-rc.8"]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ASH_VERSION: ${{matrix.ash}}
@@ -112,7 +112,7 @@ jobs:
             #myelixirstatus
 
             See the changelog for more info:
-            https://github.com/ash-project/ash_graphql/blob/master/CHANGELOG.md
+            https://github.com/ash-project/ash_graphql/blob/main/CHANGELOG.md
           consumer-key: ${{ secrets.TWITTER_CONSUMER_API_KEY }}
           consumer-secret: ${{ secrets.TWITTER_CONSUMER_API_SECRET }}
           access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
