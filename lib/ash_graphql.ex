@@ -115,8 +115,8 @@ defmodule AshGraphql do
     |> Enum.map(fn type ->
       {name, identifier} =
         case type do
-          Ash.Type.Interval ->
-            {"Interval", :interval}
+          Ash.Type.DurationName ->
+            {"DurationName", :duration_name}
 
           type ->
             graphql_type = type.graphql_type()

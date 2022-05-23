@@ -2510,7 +2510,7 @@ defmodule AshGraphql.Resource do
   defp do_field_type(Ash.Type.Date, _, _), do: :date
   defp do_field_type(Ash.Type.Decimal, _, _), do: :decimal
   defp do_field_type(Ash.Type.Integer, _, _), do: :integer
-  defp do_field_type(Ash.Type.Interval, _, _), do: :interval
+  defp do_field_type(Ash.Type.DurationName, _, _), do: :duration_name
 
   defp do_field_type(Ash.Type.Map, _, _),
     do: Application.get_env(:ash_graphql, :json_type) || :json_string
