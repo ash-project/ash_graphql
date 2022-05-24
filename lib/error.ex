@@ -84,48 +84,48 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.Required do
       fields: [error.field]
     }
   end
+end
 
-  defimpl AshGraphql.Error, for: Ash.Error.Forbidden do
-    def to_error(error) do
-      message =
-        if Application.get_env(:ash_graphql, :policies)[:show_policy_breakdowns?] ||
-             false do
-          Enum.map_join(
-            error.errors,
-            fn error -> Ash.Error.Forbidden.Policy.report(error, help_text?: false) end,
-            "\n\n\n\n\n"
-          )
-        else
-          "forbidden"
-        end
+defimpl AshGraphql.Error, for: Ash.Error.Forbidden do
+  def to_error(error) do
+    message =
+      if Application.get_env(:ash_graphql, :policies)[:show_policy_breakdowns?] ||
+           false do
+        Enum.map_join(
+          error.errors,
+          fn error -> Ash.Error.Forbidden.Policy.report(error, help_text?: false) end,
+          "\n\n\n\n\n"
+        )
+      else
+        "forbidden"
+      end
 
-      %{
-        message: message,
-        short_message: "forbidden",
-        vars: Map.new(error.vars),
-        code: Ash.ErrorKind.code(error),
-        fields: []
-      }
-    end
+    %{
+      message: message,
+      short_message: "forbidden",
+      vars: Map.new(error.vars),
+      code: Ash.ErrorKind.code(error),
+      fields: []
+    }
   end
+end
 
-  defimpl AshGraphql.Error, for: Ash.Error.Forbidden.Policy do
-    def to_error(error) do
-      message =
-        if Application.get_env(:ash_graphql, :policies)[:show_policy_breakdowns?] ||
-             false do
-          Ash.Error.Forbidden.Policy.report(error, help_text?: false)
-        else
-          "forbidden"
-        end
+defimpl AshGraphql.Error, for: Ash.Error.Forbidden.Policy do
+  def to_error(error) do
+    message =
+      if Application.get_env(:ash_graphql, :policies)[:show_policy_breakdowns?] ||
+           false do
+        Ash.Error.Forbidden.Policy.report(error, help_text?: false)
+      else
+        "forbidden"
+      end
 
-      %{
-        message: message,
-        short_message: "forbidden",
-        vars: Map.new(error.vars),
-        code: Ash.ErrorKind.code(error),
-        fields: []
-      }
-    end
+    %{
+      message: message,
+      short_message: "forbidden",
+      vars: Map.new(error.vars),
+      code: Ash.ErrorKind.code(error),
+      fields: []
+    }
   end
 end
