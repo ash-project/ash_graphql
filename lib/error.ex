@@ -93,8 +93,8 @@ defimpl AshGraphql.Error, for: Ash.Error.Forbidden do
            false do
         Enum.map_join(
           error.errors,
-          fn error -> Ash.Error.Forbidden.Policy.report(error, help_text?: false) end,
-          "\n\n\n\n\n"
+          "\n\n\n\n\n",
+          fn error -> Ash.Error.Forbidden.Policy.report(error, help_text?: false) end
         )
       else
         "forbidden"
