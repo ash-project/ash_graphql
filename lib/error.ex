@@ -90,9 +90,11 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.Required do
       message =
         if Application.get_env(:ash_graphql, :policies)[:show_policy_breakdowns?] ||
              false do
-          error.errors
-          |> Enum.map(fn error -> Ash.Error.Forbidden.Policy.report(error, help_text?: false) end)
-          |> Enum.join("\n\n\n\n\n")
+          Enum.map_join(
+            error.errors,
+            fn error -> Ash.Error.Forbidden.Policy.report(error, help_text?: false) end,
+            "\n\n\n\n\n"
+          )
         else
           "forbidden"
         end
