@@ -44,3 +44,39 @@ defmodule MyAppWeb.UserPlug do
   end
 end
 ```
+
+## Policy Breakdowns
+
+By default, unauthorized requests simply return `forbidden` in the message. If you prefer to show policy breakdowns in your GraphQL errors, you can set the config option:
+
+```elixir
+config :ash_graphql, :policies, show_policy_breakdowns?: true
+```
+
+```json
+{
+  "data": {
+    "attendanceRecords": null
+  },
+  "errors": [
+    {
+      "code": "forbidden",
+      "fields": [],
+      "locations": [
+        {
+          "column": 3,
+          "line": 2
+        }
+      ],
+      "message": "MyApp.Authentication.User.read\n\n\n\n\nPolicy Breakdown\n  Policy | ⛔:\n    forbid unless: actor is active | ✓ | ⬇    \n    authorize if: actor is Executive | ✘ | ⬇",
+      "path": [
+        "attendanceRecords"
+      ],
+      "short_message": "forbidden",
+      "vars": {}
+    }
+  ]
+}
+```
+
+Be careful, as this can be an attack vector in some systems (i.e "here is exactly what you need to make true to do what you want to do").
