@@ -5,6 +5,7 @@ defmodule AshGraphql.ErrorsTest do
   setup do
     on_exit(fn ->
       Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, :policies)
 
       try do
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
@@ -271,5 +272,97 @@ defmodule AshGraphql.ErrorsTest do
              assert message =~ "Something went wrong."
            end) =~
              "Queries against the AshGraphql.Test.MultitenantTag resource require a tenant to be specified"
+  end
+
+  test "unauthorized requests do not show policy breakdowns by default" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      mutation CreateUser($input: CreateUserInput) {
+        createUser(input: $input) {
+          result{
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"name" => "The Dude"}},
+        context: %{actor: user}
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: %{
+               "createUser" => %{
+                 "errors" => [
+                   %{
+                     "message" => message
+                   }
+                 ]
+               }
+             }
+           } = result
+
+    assert message == "forbidden"
+  end
+
+  test "unauthorized requests can be configured to show policy breakdowns" do
+    Application.put_env(
+      :ash_graphql,
+      :policies,
+      show_policy_breakdowns?: true
+    )
+
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      mutation CreateUser($input: CreateUserInput) {
+        createUser(input: $input) {
+          result{
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"name" => "The Dude"}},
+        context: %{actor: user}
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: %{
+               "createUser" => %{
+                 "errors" => [
+                   %{
+                     "message" => message
+                   }
+                 ]
+               }
+             }
+           } = result
+
+    assert message =~ "Breakdown"
   end
 end
