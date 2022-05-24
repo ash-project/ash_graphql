@@ -50,7 +50,7 @@ end
 By default, unauthorized requests simply return `forbidden` in the message. If you prefer to show policy breakdowns in your GraphQL errors, you can set the config option:
 
 ```elixir
-config :ash_graphql, :policies, :show_policy_breakdowns_in_errors?, true
+config :ash_graphql, :policies, show_policy_breakdowns?: true
 ```
 
 ```json
