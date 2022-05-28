@@ -57,6 +57,8 @@ defmodule AshGraphql.Test.Post do
       list :post_library, :library
       list :post_score, :score
       list :paginated_posts, :paginated
+      list :paginated_posts_without_limit, :paginated_without_limit
+      list :paginated_posts_limit_not_required, :paginated_limit_not_required
     end
 
     managed_relationships do
@@ -130,7 +132,15 @@ defmodule AshGraphql.Test.Post do
     end
 
     read :paginated do
+      pagination(required?: true, offset?: true, countable: true, default_limit: 20)
+    end
+
+    read :paginated_without_limit do
       pagination(required?: true, offset?: true, countable: true)
+    end
+
+    read :paginated_limit_not_required do
+      pagination(required?: false, offset?: true, countable: true)
     end
 
     read(:read, primary?: true)
@@ -208,6 +218,12 @@ defmodule AshGraphql.Test.Post do
 
     many_to_many(:multitenant_tags, AshGraphql.Test.MultitenantTag,
       through: AshGraphql.Test.MultitenantPostTag,
+      source_attribute_on_join_resource: :post_id,
+      destination_attribute_on_join_resource: :tag_id
+    )
+
+    many_to_many(:relay_tags, AshGraphql.Test.RelayTag,
+      through: AshGraphql.Test.RelayPostTag,
       source_attribute_on_join_resource: :post_id,
       destination_attribute_on_join_resource: :tag_id
     )

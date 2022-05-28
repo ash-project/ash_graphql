@@ -1,7 +1,11 @@
 defmodule AshGraphql.Test.Api do
   @moduledoc false
 
-  use Ash.Api, otp_app: :ash_graphql
+  use Ash.Api,
+    extensions: [
+      AshGraphql.Api
+    ],
+    otp_app: :ash_graphql
 
   resources do
     registry(AshGraphql.Test.Registry)

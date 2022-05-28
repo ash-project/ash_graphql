@@ -92,7 +92,6 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.Info.authorize?(api),
       action: action,
       verbose?: AshGraphql.Api.Info.debug?(api),
       stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
@@ -117,7 +116,14 @@ defmodule AshGraphql.Graphql.Resolver do
     {result, modify_args} =
       case load_fields(query, resource, api, resolution) do
         {:ok, query} ->
-          result = api.read_one(query, opts)
+          result =
+            query
+            |> Ash.Query.for_read(action, %{},
+              actor: opts[:actor],
+              authorize?: AshGraphql.Api.Info.authorize?(api)
+            )
+            |> api.read_one(opts)
+
           {result, [query, result]}
 
         {:error, error} ->
@@ -144,73 +150,34 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.Info.authorize?(api),
       action: action,
       verbose?: AshGraphql.Api.Info.debug?(api),
       stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
     ]
 
-    page_opts =
-      args
-      |> Map.take([:limit, :offset, :after, :before])
-      |> Enum.reject(fn {_, val} -> is_nil(val) end)
-
-    opts =
-      case page_opts do
-        [] ->
-          opts
-
-        page_opts ->
-          if Enum.any?(fields(resolution), &(&1 == :count)) do
-            page_opts = Keyword.put(page_opts, :count, true)
-            Keyword.put(opts, :page, page_opts)
-          else
-            Keyword.put(opts, :page, page_opts)
-          end
-      end
-
+    pagination = Ash.Resource.Info.action(resource, action).pagination
     query = load_filter_and_sort_requirements(resource, args)
 
-    nested =
-      if Ash.Resource.Info.action(resource, action).pagination do
-        "results"
-      else
-        nil
-      end
-
-    initial_query =
-      query
-      |> Ash.Query.set_tenant(Map.get(context, :tenant))
-      |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-      |> set_query_arguments(action, args)
-      |> select_fields(resource, resolution, nested)
-
     {result, modify_args} =
-      case load_fields(initial_query, resource, api, resolution, nested) do
-        {:ok, query} ->
-          query
-          |> Ash.Query.for_read(action, %{},
-            actor: Map.get(context, :actor),
-            authorize?: AshGraphql.Api.Info.authorize?(api)
-          )
-          |> api.read(opts)
-          |> case do
-            {:ok, %{results: results, count: count} = page} ->
-              {{:ok, %{results: results, count: count}}, [query, {:ok, page}]}
-
-            {:ok, results} ->
-              if Ash.Resource.Info.action(resource, action).pagination do
-                result = {:ok, %{results: results, count: Enum.count(results)}}
-                {result, [query, result]}
-              else
-                result = {:ok, results}
-                {result, [query, result]}
-              end
-
-            error ->
-              {error, [query, error]}
-          end
-
+      with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
+           result_fields <- get_result_fields(pagination),
+           initial_query <-
+             query
+             |> Ash.Query.set_tenant(Map.get(context, :tenant))
+             |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+             |> set_query_arguments(action, args)
+             |> select_fields(resource, resolution, result_fields),
+           {:ok, query} <- load_fields(initial_query, resource, api, resolution, result_fields),
+           {:ok, page} <-
+             query
+             |> Ash.Query.for_read(action, %{},
+               actor: Map.get(context, :actor),
+               authorize?: AshGraphql.Api.Info.authorize?(api)
+             )
+             |> api.read(opts) do
+        result = paginate(resource, action, page)
+        {result, [query, result]}
+      else
         {:error, error} ->
           {{:error, error}, [query, {:error, error}]}
       end
@@ -229,6 +196,186 @@ defmodule AshGraphql.Graphql.Resolver do
       end
   end
 
+  def validate_resolve_opts(resolution, pagination, opts, args) do
+    case args
+         |> Map.take([:limit, :offset, :first, :after, :before, :last])
+         |> Enum.reject(fn {_, val} -> is_nil(val) end)
+         |> validate_pagination_opts(pagination) do
+      {:ok, []} ->
+        {:ok, opts}
+
+      {:ok, page_opts} ->
+        page_fields = get_page_fields(pagination)
+        field_names = resolution |> fields(page_fields) |> names_only()
+
+        page =
+          if Enum.any?(field_names, &(&1 == :count)) do
+            Keyword.put(page_opts, :count, true)
+          else
+            page_opts
+          end
+
+        {:ok, Keyword.put(opts, :page, page)}
+
+      error ->
+        error
+    end
+  end
+
+  defp validate_pagination_opts(opts, %{offset?: true, max_page_size: max_page_size}) do
+    limit =
+      case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
+        %{limit: limit} ->
+          min(limit, max_page_size)
+
+        _ ->
+          max_page_size
+      end
+
+    {:ok, Keyword.put(opts, :limit, limit)}
+  end
+
+  defp validate_pagination_opts(opts, %{keyset?: true, max_page_size: max_page_size}) do
+    case opts |> Keyword.take([:first, :last, :after, :before]) |> Enum.into(%{}) do
+      %{first: _first, last: _last} ->
+        {:error,
+         %Ash.Error.Query.InvalidQuery{
+           message: "You can pass either `first` or `last`, not both",
+           field: :first
+         }}
+
+      %{first: _first, before: _before} ->
+        {:error,
+         %Ash.Error.Query.InvalidQuery{
+           message:
+             "You can pass either `first` and `after` cursor, or `last` and `before` cursor",
+           field: :first
+         }}
+
+      %{last: _last, after: _after} ->
+        {:error,
+         %Ash.Error.Query.InvalidQuery{
+           message:
+             "You can pass either `first` and `after` cursor, or `last` and `before` cursor",
+           field: :last
+         }}
+
+      %{first: first} ->
+        {:ok, opts |> Keyword.delete(:first) |> Keyword.put(:limit, min(first, max_page_size))}
+
+      %{last: last, before: before} when not is_nil(before) ->
+        {:ok, opts |> Keyword.delete(:last) |> Keyword.put(:limit, min(last, max_page_size))}
+
+      %{last: _last} ->
+        {:error,
+         %Ash.Error.Query.InvalidQuery{
+           message: "You can pass `last` only with `before` cursor",
+           field: :last
+         }}
+
+      _ ->
+        {:ok, Keyword.put(opts, :limit, max_page_size)}
+    end
+  end
+
+  defp validate_pagination_opts(opts, _) do
+    {:ok, opts}
+  end
+
+  defp get_result_fields(%{keyset?: true}) do
+    ["edges", "node"]
+  end
+
+  defp get_result_fields(%{offset?: true}) do
+    ["results"]
+  end
+
+  defp get_result_fields(_pagination) do
+    []
+  end
+
+  defp get_page_fields(%{keyset?: true}) do
+    ["pageInfo"]
+  end
+
+  defp get_page_fields(_pagination) do
+    []
+  end
+
+  defp paginate(_resource, _action, %Ash.Page.Keyset{
+         results: results,
+         more?: more,
+         after: after_cursor,
+         before: before_cursor
+       }) do
+    {start_cursor, end_cursor} =
+      case results do
+        [] ->
+          {nil, nil}
+
+        [first] ->
+          {first.__metadata__.keyset, first.__metadata__.keyset}
+
+        [first | rest] ->
+          last = List.last(rest)
+          {first.__metadata__.keyset, last.__metadata__.keyset}
+      end
+
+    {has_previous_page, has_next_page} =
+      case {after_cursor, before_cursor} do
+        {nil, nil} ->
+          {false, more}
+
+        {_, nil} ->
+          {true, more}
+
+        {nil, _} ->
+          # https://github.com/ash-project/ash_graphql/pull/36#issuecomment-1243892511
+          {more, not Enum.empty?(results)}
+      end
+
+    {
+      :ok,
+      %{
+        page_info: %{
+          start_cursor: start_cursor,
+          end_cursor: end_cursor,
+          has_next_page: has_next_page,
+          has_previous_page: has_previous_page
+        },
+        edges:
+          Enum.map(results, fn result ->
+            %{
+              cursor: result.__metadata__.keyset,
+              node: result
+            }
+          end)
+      }
+    }
+  end
+
+  defp paginate(_resource, _action, %Ash.Page.Offset{results: results, count: count}) do
+    {:ok, %{results: results, count: count}}
+  end
+
+  defp paginate(resource, action, page) do
+    case Ash.Resource.Info.action(resource, action).pagination do
+      %{offset?: true} ->
+        paginate(resource, action, %Ash.Page.Offset{results: page, count: Enum.count(page)})
+
+      %{keyset?: true} ->
+        paginate(resource, action, %Ash.Page.Keyset{
+          results: page,
+          more?: false,
+          after: nil,
+          before: nil
+        })
+
+      _ ->
+        {:ok, page}
+    end
+  end
+
   def mutate(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
@@ -243,7 +390,7 @@ defmodule AshGraphql.Graphql.Resolver do
       stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api),
       upsert?: upsert?,
       after_action: fn _changeset, result ->
-        load_fields(result, resource, api, resolution, "result")
+        load_fields(result, resource, api, resolution, ["result"])
       end
     ]
 
@@ -256,7 +403,7 @@ defmodule AshGraphql.Graphql.Resolver do
         actor: Map.get(context, :actor),
         authorize?: AshGraphql.Api.Info.authorize?(api)
       )
-      |> select_fields(resource, resolution, "result")
+      |> select_fields(resource, resolution, ["result"])
 
     {result, modify_args} =
       changeset
@@ -340,7 +487,7 @@ defmodule AshGraphql.Graphql.Resolver do
               stacktraces?:
                 AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api),
               after_action: fn _changeset, result ->
-                load_fields(result, resource, api, resolution, "result")
+                load_fields(result, resource, api, resolution, ["result"])
               end
             ]
 
@@ -354,7 +501,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 authorize?: AshGraphql.Api.Info.authorize?(api)
               )
               |> Ash.Changeset.set_arguments(arguments)
-              |> select_fields(resource, resolution, "result")
+              |> select_fields(resource, resolution, ["result"])
 
             {result, modify_args} =
               changeset
@@ -448,7 +595,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 authorize?: AshGraphql.Api.Info.authorize?(api)
               )
               |> Ash.Changeset.set_arguments(arguments)
-              |> select_fields(resource, resolution, "result")
+              |> select_fields(resource, resolution, ["result"])
 
             {result, modify_args} =
               changeset
@@ -624,7 +771,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp clear_fields(result, resource, resolution) do
     resolution
-    |> fields("result")
+    |> fields(["result"])
+    |> names_only()
     |> Enum.map(fn identifier ->
       Ash.Resource.Info.aggregate(resource, identifier) ||
         Ash.Resource.Info.calculation(resource, identifier)
@@ -636,8 +784,8 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp load_fields(query_or_record, resource, api, resolution, nested \\ nil) do
-    fields = fields(resolution, nested, false)
+  defp load_fields(query_or_record, resource, api, resolution, nested \\ []) do
+    fields = fields(resolution, nested)
 
     fields
     |> Enum.map(fn selection ->
@@ -669,20 +817,21 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp select_fields(query_or_changeset, resource, resolution, nested \\ nil) do
+  defp select_fields(query_or_changeset, resource, resolution, nested \\ []) do
     subfields =
       resolution
       |> fields(nested)
+      |> names_only()
       |> Enum.map(&field_or_relationship(resource, &1))
       |> Enum.filter(& &1)
-      |> Enum.map(& &1.name)
+      |> names_only()
 
     case query_or_changeset do
       %Ash.Query{} = query ->
-        Ash.Query.select(query, subfields)
+        query |> Ash.Query.select(subfields)
 
       %Ash.Changeset{} = changeset ->
-        Ash.Changeset.select(changeset, subfields)
+        changeset |> Ash.Changeset.select(subfields)
     end
   end
 
@@ -702,46 +851,45 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp fields(resolution, nested \\ nil, names_only? \\ true) do
-    if nested do
-      projected_once =
-        resolution
-        |> Absinthe.Resolution.project()
-        |> Enum.find(&(&1.name == nested))
+  defp fields(resolution, []) do
+    resolution
+    |> Absinthe.Resolution.project()
+  end
 
-      if projected_once do
-        type = Absinthe.Schema.lookup_type(resolution.schema, projected_once.schema_node.type)
-
-        projected_once
-        |> Map.get(:selections)
-        |> Absinthe.Resolution.Projector.project(
-          type,
-          resolution.path ++ [projected_once],
-          resolution.fields_cache,
-          resolution
-        )
-        |> elem(0)
-        |> names_only(names_only?)
-      else
-        resolution
-        |> Absinthe.Resolution.project()
-        |> names_only(names_only?)
-      end
-    else
+  defp fields(resolution, names) do
+    project =
       resolution
       |> Absinthe.Resolution.project()
-      |> names_only(names_only?)
-    end
-  end
 
-  defp names_only(fields, true) do
-    Enum.map(fields, fn %{schema_node: %{identifier: identifier}} ->
-      identifier
+    Enum.reduce(names, {project, resolution.fields_cache}, fn name, {fields, cache} ->
+      case fields |> Enum.find(&(&1.name == name)) do
+        nil ->
+          {fields, cache}
+
+        path ->
+          type = Absinthe.Schema.lookup_type(resolution.schema, path.schema_node.type)
+
+          path
+          |> Map.get(:selections)
+          |> Absinthe.Resolution.Projector.project(
+            type,
+            resolution.path ++ [path],
+            cache,
+            resolution
+          )
+      end
     end)
+    |> elem(0)
   end
 
-  defp names_only(fields, _) do
-    fields
+  defp names_only(fields) do
+    Enum.map(fields, fn
+      %{schema_node: %{identifier: identifier}} ->
+        identifier
+
+      %{name: name} ->
+        name
+    end)
   end
 
   defp set_query_arguments(query, action, arg_values) do
