@@ -80,7 +80,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_comments_and_tags, :with_comments_and_tags
 
       update :update_post, :update
-      create :update_post_confirm, :update_confirm
+      update :update_post_confirm, :update_confirm
       update :update_best_post, :update, read_action: :best_post, identity: false
 
       destroy :archive_post, :archive

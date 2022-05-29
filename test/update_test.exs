@@ -78,10 +78,15 @@ defmodule AshGraphql.UpdateTest do
   end
 
   test "arguments are threaded properly" do
+    post =
+      AshGraphql.Test.Api.create!(
+        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
+      )
+
     resp =
       """
-      mutation UpdatePostConfirm($input: UpdatePostConfirmInput) {
-        updatePostConfirm(input: $input) {
+      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID) {
+        updatePostConfirm(input: $input, id: $id) {
           result{
             text
           }
@@ -93,6 +98,7 @@ defmodule AshGraphql.UpdateTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema,
         variables: %{
+          "id" => post.id,
           "input" => %{
             "text" => "foobar",
             "confirmation" => "foobar2"
@@ -116,10 +122,15 @@ defmodule AshGraphql.UpdateTest do
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 
+    post =
+      AshGraphql.Test.Api.create!(
+        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
+      )
+
     resp =
       """
-      mutation UpdatePostConfirm($input: UpdatePostConfirmInput) {
-        updatePostConfirm(input: $input) {
+      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID) {
+        updatePostConfirm(input: $input, id: $id) {
           result{
             text
           }
@@ -131,6 +142,7 @@ defmodule AshGraphql.UpdateTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema,
         variables: %{
+          "id" => post.id,
           "input" => %{
             "text" => "foobar",
             "confirmation" => "foobar2"
