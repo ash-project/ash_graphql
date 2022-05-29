@@ -20,8 +20,7 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
 
       unless Ash.Resource.Info.action(
                resource,
-               query_or_mutation.action,
-               type
+               query_or_mutation.action
              ) do
         available_actions =
           resource
