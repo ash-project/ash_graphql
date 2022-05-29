@@ -164,7 +164,7 @@ defmodule AshGraphql.ErrorsTest do
                AshGraphql.Test.MultitenantTag
                |> Ash.Changeset.for_create(
                  :create,
-                 [name: "My Tag"],
+                 [name: "My Tag4"],
                  tenant: tenant
                )
                |> AshGraphql.Test.Api.create!()
@@ -195,7 +195,7 @@ defmodule AshGraphql.ErrorsTest do
                AshGraphql.Test.MultitenantTag
                |> Ash.Changeset.for_create(
                  :create,
-                 [name: "My Tag"],
+                 [name: "My Tag2"],
                  tenant: tenant
                )
                |> AshGraphql.Test.Api.create!()
@@ -226,7 +226,7 @@ defmodule AshGraphql.ErrorsTest do
                AshGraphql.Test.MultitenantTag
                |> Ash.Changeset.for_create(
                  :create,
-                 [name: "My Tag"],
+                 [name: "My Tag3"],
                  tenant: tenant
                )
                |> AshGraphql.Test.Api.create!()

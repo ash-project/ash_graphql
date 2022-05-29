@@ -310,7 +310,7 @@ defmodule AshGraphql.ReadTest do
       AshGraphql.Test.MultitenantTag
       |> Ash.Changeset.for_create(
         :create,
-        [name: "My Tag"],
+        [name: "My Tag1"],
         tenant: tenant
       )
       |> AshGraphql.Test.Api.create!()
@@ -327,7 +327,7 @@ defmodule AshGraphql.ReadTest do
             %{
               data: %{
                 "getMultitenantTag" => %{
-                  "name" => "My Tag"
+                  "name" => "My Tag1"
                 }
               }
             }} ==

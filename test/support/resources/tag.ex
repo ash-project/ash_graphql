@@ -34,7 +34,7 @@ defmodule AshGraphql.Test.Tag do
   end
 
   identities do
-    identity(:name, [:name])
+    identity(:name, [:name], pre_check_with: AshGraphql.Test.Api)
   end
 
   relationships do
