@@ -353,7 +353,7 @@ defmodule AshGraphql.Resource do
       |> queries()
       |> Enum.filter(&(&1.as_mutation? == as_mutations?))
       |> Enum.map(fn query ->
-        query_action = Ash.Resource.Info.action(resource, query.action, :read)
+        query_action = Ash.Resource.Info.action(resource, query.action)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           arguments: args(query.type, resource, query_action, schema, query.identity),
@@ -527,7 +527,7 @@ defmodule AshGraphql.Resource do
     |> Enum.flat_map(fn mutation ->
       mutation = %{
         mutation
-        | action: Ash.Resource.Info.action(resource, mutation.action, mutation.type)
+        | action: Ash.Resource.Info.action(resource, mutation.action)
       }
 
       description =
@@ -651,7 +651,7 @@ defmodule AshGraphql.Resource do
           Ash.Resource.Info.primary_action!(resource, :create)
 
         name ->
-          Ash.Resource.Info.action(resource, name, :create)
+          Ash.Resource.Info.action(resource, name)
       end
 
     update_action =
@@ -660,7 +660,7 @@ defmodule AshGraphql.Resource do
           Ash.Resource.Info.primary_action!(resource, :update)
 
         name ->
-          Ash.Resource.Info.action(resource, name, :update)
+          Ash.Resource.Info.action(resource, name)
       end
 
     fields =

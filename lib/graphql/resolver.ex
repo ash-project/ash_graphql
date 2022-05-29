@@ -170,7 +170,7 @@ defmodule AshGraphql.Graphql.Resolver do
     query = load_filter_and_sort_requirements(resource, args)
 
     nested =
-      if Ash.Resource.Info.action(resource, action, :read).pagination do
+      if Ash.Resource.Info.action(resource, action).pagination do
         "results"
       else
         nil
@@ -193,7 +193,7 @@ defmodule AshGraphql.Graphql.Resolver do
               {{:ok, %{results: results, count: count}}, [query, {:ok, page}]}
 
             {:ok, results} ->
-              if Ash.Resource.Info.action(resource, action, :read).pagination do
+              if Ash.Resource.Info.action(resource, action).pagination do
                 result = {:ok, %{results: results, count: Enum.count(results)}}
                 {result, [query, result]}
               else
@@ -725,7 +725,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp set_query_arguments(query, action, arg_values) do
-    action = Ash.Resource.Info.action(query.resource, action, :read)
+    action = Ash.Resource.Info.action(query.resource, action)
 
     action.arguments
     |> Enum.reject(& &1.private?)
