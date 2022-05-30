@@ -14,6 +14,18 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
   end
 end
 
+defimpl AshGraphql.Error, for: Ash.Error.Page.InvalidKeyset do
+  def to_error(error) do
+    %{
+      message: Exception.message(error),
+      short_message: error.message,
+      vars: Map.new(error.vars),
+      code: Ash.ErrorKind.code(error),
+      fields: List.wrap(Map.get(error, :key))
+    }
+  end
+end
+
 defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidAttribute do
   def to_error(error) do
     %{
