@@ -35,6 +35,10 @@ defmodule AshGraphql.Test.User do
     attribute(:name, :string)
   end
 
+  calculations do
+    calculate(:name_twice, :string, expr(name <> " " <> name))
+  end
+
   policies do
     policy action_type(:create) do
       actor_attribute_equals(:name, "My Name")

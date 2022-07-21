@@ -94,8 +94,10 @@ defmodule AshGraphql.Test.Post do
     create :create do
       primary?(true)
       metadata(:foo, :string)
+      argument(:author_id, :uuid)
 
       change(SetMetadata)
+      change(set_attribute(:author_id, arg(:author_id)))
     end
 
     create :create_with_error do
@@ -193,6 +195,8 @@ defmodule AshGraphql.Test.Post do
   end
 
   relationships do
+    belongs_to(:author, AshGraphql.Test.User)
+
     has_many(:comments, AshGraphql.Test.Comment)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated)
 

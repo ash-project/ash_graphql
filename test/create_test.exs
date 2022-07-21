@@ -6,6 +6,7 @@ defmodule AshGraphql.CreateTest do
       Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
 
       try do
+        Ash.DataLayer.Ets.stop(AshGraphql.Test.Author)
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
         Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
       rescue
@@ -130,6 +131,50 @@ defmodule AshGraphql.CreateTest do
                "simpleCreatePost" => %{
                  "result" => %{
                    "fullText" => "foobar"
+                 }
+               }
+             }
+           } = result
+  end
+
+  test "a create can load a calculation on a related belongs_to record" do
+    author = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.User, name: "bob"))
+
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text1
+            fullText
+            author {
+              nameTwice
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"text1" => "foo", "text2" => "bar", "authorId" => author.id}}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    IO.inspect(result)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "fullText" => "foobar",
+                   "author" => %{
+                     "nameTwice" => "bob bob"
+                   }
                  }
                }
              }
