@@ -165,8 +165,6 @@ defmodule AshGraphql.CreateTest do
 
     refute Map.has_key?(result, :errors)
 
-    IO.inspect(result)
-
     assert %{
              data: %{
                "simpleCreatePost" => %{
