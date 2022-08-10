@@ -11,7 +11,6 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.authorize?(api),
       action: action,
       verbose?: AshGraphql.Api.debug?(api),
       stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
@@ -37,7 +36,10 @@ defmodule AshGraphql.Graphql.Resolver do
             {:ok, query} ->
               result =
                 query
-                |> Ash.Query.for_read(action, %{}, actor: opts[:actor])
+                |> Ash.Query.for_read(action, %{},
+                  actor: opts[:actor],
+                  authorize?: AshGraphql.Api.authorize?(api)
+                )
                 |> api.read_one(opts)
 
               {result, [query, result]}
@@ -187,6 +189,10 @@ defmodule AshGraphql.Graphql.Resolver do
       case load_fields(initial_query, resource, api, resolution, nested) do
         {:ok, query} ->
           query
+          |> Ash.Query.for_read(action, %{},
+            actor: Map.get(context, :actor),
+            authorize?: AshGraphql.Api.authorize?(api)
+          )
           |> api.read(opts)
           |> case do
             {:ok, %{results: results, count: count} = page} ->
@@ -232,7 +238,6 @@ defmodule AshGraphql.Graphql.Resolver do
 
     opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.authorize?(api),
       action: action,
       verbose?: AshGraphql.Api.debug?(api),
       stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
@@ -247,7 +252,10 @@ defmodule AshGraphql.Graphql.Resolver do
       |> Ash.Changeset.new()
       |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
       |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
-      |> Ash.Changeset.for_create(action, input, actor: Map.get(context, :actor))
+      |> Ash.Changeset.for_create(action, input,
+        actor: Map.get(context, :actor),
+        authorize?: AshGraphql.Api.authorize?(api)
+      )
       |> select_fields(resource, resolution, "result")
 
     {result, modify_args} =
@@ -327,7 +335,6 @@ defmodule AshGraphql.Graphql.Resolver do
           initial ->
             opts = [
               actor: Map.get(context, :actor),
-              authorize?: AshGraphql.Api.authorize?(api),
               action: action,
               verbose?: AshGraphql.Api.debug?(api),
               stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
@@ -341,7 +348,10 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
               |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
-              |> Ash.Changeset.for_update(action, input, actor: Map.get(context, :actor))
+              |> Ash.Changeset.for_update(action, input,
+                actor: Map.get(context, :actor),
+                authorize?: AshGraphql.Api.authorize?(api)
+              )
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
 
@@ -432,7 +442,10 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.new()
               |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
               |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
-              |> Ash.Changeset.for_destroy(action, input, actor: Map.get(context, :actor))
+              |> Ash.Changeset.for_destroy(action, input,
+                actor: Map.get(context, :actor),
+                authorize?: AshGraphql.Api.authorize?(api)
+              )
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
 

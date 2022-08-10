@@ -157,7 +157,7 @@ defmodule AshGraphql.Resource do
   @managed_relationships %Ash.Dsl.Section{
     name: :managed_relationships,
     describe: """
-    Generates input objects for `manage_relationship` arguments on reosurce actions.
+    Generates input objects for `manage_relationship` arguments on resource actions.
     """,
     examples: [
       """
