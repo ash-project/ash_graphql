@@ -33,8 +33,8 @@ defmodule AshGraphql.DocIndex do
     [
       {"Introspection",
        [
-         AshGraphl.Resource.Info,
-         AshGraphl.Api.Info
+         AshGraphql.Resource.Info,
+         AshGraphql.Api.Info
        ]}
     ]
   end
