@@ -19,7 +19,7 @@ defmodule AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed do
 
   relationships do
     has_many :all, DoubleRelRecursive do
-      destination_field(:double_rel_id)
+      destination_attribute(:double_rel_id)
     end
   end
 end

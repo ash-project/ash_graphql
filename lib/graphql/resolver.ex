@@ -12,8 +12,8 @@ defmodule AshGraphql.Graphql.Resolver do
     opts = [
       actor: Map.get(context, :actor),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api),
-      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+      verbose?: AshGraphql.Api.Info.debug?(api),
+      stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
     ]
 
     filter = identity_filter(identity, resource, arguments)
@@ -38,7 +38,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 query
                 |> Ash.Query.for_read(action, %{},
                   actor: opts[:actor],
-                  authorize?: AshGraphql.Api.authorize?(api)
+                  authorize?: AshGraphql.Api.Info.authorize?(api)
                 )
                 |> api.read_one(opts)
 
@@ -78,7 +78,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.show_raised_errors?(api) do
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
       else
@@ -92,10 +92,10 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.authorize?(api),
+      authorize?: AshGraphql.Api.Info.authorize?(api),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api),
-      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+      verbose?: AshGraphql.Api.Info.debug?(api),
+      stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
     ]
 
     query =
@@ -130,7 +130,7 @@ defmodule AshGraphql.Graphql.Resolver do
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      if AshGraphql.Api.show_raised_errors?(api) do
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
       else
@@ -144,10 +144,10 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.authorize?(api),
+      authorize?: AshGraphql.Api.Info.authorize?(api),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api),
-      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+      verbose?: AshGraphql.Api.Info.debug?(api),
+      stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
     ]
 
     page_opts =
@@ -191,7 +191,7 @@ defmodule AshGraphql.Graphql.Resolver do
           query
           |> Ash.Query.for_read(action, %{},
             actor: Map.get(context, :actor),
-            authorize?: AshGraphql.Api.authorize?(api)
+            authorize?: AshGraphql.Api.Info.authorize?(api)
           )
           |> api.read(opts)
           |> case do
@@ -221,7 +221,7 @@ defmodule AshGraphql.Graphql.Resolver do
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      if AshGraphql.Api.show_raised_errors?(api) do
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}))
       else
@@ -239,8 +239,8 @@ defmodule AshGraphql.Graphql.Resolver do
     opts = [
       actor: Map.get(context, :actor),
       action: action,
-      verbose?: AshGraphql.Api.debug?(api),
-      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+      verbose?: AshGraphql.Api.Info.debug?(api),
+      stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api),
       upsert?: upsert?,
       after_action: fn _changeset, result ->
         load_fields(result, resource, api, resolution, "result")
@@ -254,7 +254,7 @@ defmodule AshGraphql.Graphql.Resolver do
       |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
       |> Ash.Changeset.for_create(action, input,
         actor: Map.get(context, :actor),
-        authorize?: AshGraphql.Api.authorize?(api)
+        authorize?: AshGraphql.Api.Info.authorize?(api)
       )
       |> select_fields(resource, resolution, "result")
 
@@ -277,10 +277,10 @@ defmodule AshGraphql.Graphql.Resolver do
     |> modify_resolution(modify, modify_args)
   rescue
     e ->
-      if AshGraphql.Api.show_raised_errors?(api) do
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
 
-        if AshGraphql.Api.root_level_errors?(api) do
+        if AshGraphql.Api.Info.root_level_errors?(api) do
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution({:error, error})
@@ -319,10 +319,10 @@ defmodule AshGraphql.Graphql.Resolver do
         |> set_query_arguments(action, arguments)
         |> api.read_one!(
           action: read_action,
-          verbose?: AshGraphql.Api.debug?(api),
-          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+          verbose?: AshGraphql.Api.Info.debug?(api),
+          stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api),
           actor: Map.get(context, :actor),
-          authorize?: AshGraphql.Api.authorize?(api)
+          authorize?: AshGraphql.Api.Info.authorize?(api)
         )
         |> case do
           nil ->
@@ -336,8 +336,9 @@ defmodule AshGraphql.Graphql.Resolver do
             opts = [
               actor: Map.get(context, :actor),
               action: action,
-              verbose?: AshGraphql.Api.debug?(api),
-              stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+              verbose?: AshGraphql.Api.Info.debug?(api),
+              stacktraces?:
+                AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api),
               after_action: fn _changeset, result ->
                 load_fields(result, resource, api, resolution, "result")
               end
@@ -350,7 +351,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
               |> Ash.Changeset.for_update(action, input,
                 actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Api.authorize?(api)
+                authorize?: AshGraphql.Api.Info.authorize?(api)
               )
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
@@ -379,10 +380,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.show_raised_errors?(api) do
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
 
-        if AshGraphql.Api.root_level_errors?(api) do
+        if AshGraphql.Api.Info.root_level_errors?(api) do
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution({:error, error})
@@ -421,10 +422,10 @@ defmodule AshGraphql.Graphql.Resolver do
         |> set_query_arguments(action, arguments)
         |> api.read_one!(
           action: read_action,
-          verbose?: AshGraphql.Api.debug?(api),
-          stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api),
+          verbose?: AshGraphql.Api.Info.debug?(api),
+          stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api),
           actor: Map.get(context, :actor),
-          authorize?: AshGraphql.Api.authorize?(api)
+          authorize?: AshGraphql.Api.Info.authorize?(api)
         )
         |> case do
           nil ->
@@ -444,7 +445,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
               |> Ash.Changeset.for_destroy(action, input,
                 actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Api.authorize?(api)
+                authorize?: AshGraphql.Api.Info.authorize?(api)
               )
               |> Ash.Changeset.set_arguments(arguments)
               |> select_fields(resource, resolution, "result")
@@ -465,10 +466,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.show_raised_errors?(api) do
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
 
-        if AshGraphql.Api.root_level_errors?(api) do
+        if AshGraphql.Api.Info.root_level_errors?(api) do
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution({:error, error})
@@ -693,7 +694,7 @@ defmodule AshGraphql.Graphql.Resolver do
             nil
 
           rel ->
-            Ash.Resource.Info.attribute(resource, rel.source_field)
+            Ash.Resource.Info.attribute(resource, rel.source_attribute)
         end
 
       attr ->
@@ -748,18 +749,18 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp destroy_opts(api, context, action) do
-    if AshGraphql.Api.authorize?(api) do
+    if AshGraphql.Api.Info.authorize?(api) do
       [
         actor: Map.get(context, :actor),
         action: action,
-        verbose?: AshGraphql.Api.debug?(api),
-        stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+        verbose?: AshGraphql.Api.Info.debug?(api),
+        stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
       ]
     else
       [
         action: action,
-        verbose?: AshGraphql.Api.debug?(api),
-        stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+        verbose?: AshGraphql.Api.Info.debug?(api),
+        stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
       ]
     end
   end
@@ -787,7 +788,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp do_root_errors(api, resolution, error_or_errors, to_errors? \\ true) do
-    if AshGraphql.Api.root_level_errors?(api) do
+    if AshGraphql.Api.Info.root_level_errors?(api) do
       Map.update!(resolution, :errors, fn current_errors ->
         if to_errors? do
           Enum.concat(current_errors || [], List.wrap(to_errors(error_or_errors)))
@@ -880,9 +881,9 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     api_opts = [
       actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.authorize?(api),
-      verbose?: AshGraphql.Api.debug?(api),
-      stacktraces?: AshGraphql.Api.debug?(api) || AshGraphql.Api.stacktraces?(api)
+      authorize?: AshGraphql.Api.Info.authorize?(api),
+      verbose?: AshGraphql.Api.Info.debug?(api),
+      stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
     ]
 
     query = load_filter_and_sort_requirements(relationship.destination, args)

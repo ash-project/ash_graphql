@@ -38,22 +38,54 @@ defmodule AshGraphql.MixProject do
     ["lib"]
   end
 
+  defp extras() do
+    "documentation/**/*.md"
+    |> Path.wildcard()
+    |> Enum.map(fn path ->
+      title =
+        path
+        |> Path.basename(".md")
+        |> String.split(~r/[-_]/)
+        |> Enum.map(&String.capitalize/1)
+        |> Enum.join(" ")
+        |> case do
+          "F A Q" ->
+            "FAQ"
+
+          other ->
+            other
+        end
+
+      {String.to_atom(path),
+       [
+         title: title
+       ]}
+    end)
+  end
+
+  defp groups_for_extras() do
+    "documentation/*"
+    |> Path.wildcard()
+    |> Enum.map(fn folder ->
+      name =
+        folder
+        |> Path.basename()
+        |> String.split(~r/[-_]/)
+        |> Enum.map(&String.capitalize/1)
+        |> Enum.join(" ")
+
+      {name, folder |> Path.join("**") |> Path.wildcard()}
+    end)
+  end
+
   defp docs do
     [
       main: "AshGraphql",
       source_ref: "v#{@version}",
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
-      extras: [
-        "documentation/introduction/getting_started.md",
-        "documentation/multitenancy.md",
-        "documentation/enums.md",
-        "documentation/authorization.md",
-        "documentation/json.md"
-      ],
-      groups_for_extras: [
-        Introduction: Path.wildcard("documentation/introduction/*.md")
-      ],
+      extras: extras(),
+      groups_for_extras: groups_for_extras(),
       groups_for_modules: [
         "Resource DSL": ~r/AshGraphql.Resource/,
         "Api DSL": ~r/AshGraphql.Api/
@@ -81,7 +113,7 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 1.53 and >= 1.53.2")},
+      {:ash, ash_version("~> 2.0.0-rc.0")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:dataloader, "~> 1.0"},

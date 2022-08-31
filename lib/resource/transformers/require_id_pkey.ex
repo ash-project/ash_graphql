@@ -1,11 +1,11 @@
 defmodule AshGraphql.Resource.Transformers.RequireIdPkey do
   @moduledoc "Ensures that the resource has a primary key called `id`"
-  use Ash.Dsl.Transformer
+  use Spark.Dsl.Transformer
 
-  alias Ash.Dsl.Transformer
+  alias Spark.Dsl.Transformer
 
-  def transform(resource, dsl) do
-    if Ash.Resource.Info.embedded?(resource) do
+  def transform(dsl) do
+    if Transformer.get_persisted(dsl, :embedded?) do
       {:ok, dsl}
     else
       primary_key =
@@ -18,7 +18,7 @@ defmodule AshGraphql.Resource.Transformers.RequireIdPkey do
           {:ok, dsl}
 
         [_ | _] ->
-          if AshGraphql.Resource.primary_key_delimiter(resource) do
+          if Transformer.get_persisted(dsl, :primary_key) do
             {:ok, dsl}
           else
             {:error,

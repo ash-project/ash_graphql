@@ -1,10 +1,12 @@
 defmodule AshGraphql.Resource.Transformers.ValidateActions do
   @moduledoc "Ensures that all referenced actiosn exist"
-  use Ash.Dsl.Transformer
+  use Spark.Dsl.Transformer
 
-  alias Ash.Dsl.Transformer
+  alias Spark.Dsl.Transformer
 
-  def transform(resource, dsl) do
+  def after_compile?, do: true
+
+  def transform(dsl) do
     dsl
     |> Transformer.get_entities([:graphql, :queries])
     |> Enum.concat(Transformer.get_entities(dsl, [:graphql, :mutations]))
@@ -18,17 +20,17 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
             type
         end
 
-      unless Ash.Resource.Info.action(
-               resource,
-               query_or_mutation.action
-             ) do
-        available_actions =
-          resource
-          |> Ash.Resource.Info.actions()
-          |> Enum.filter(&(&1.type == type))
-          |> Enum.map(&"  * #{&1.name}\n")
+      available_actions = Transformer.get_entities(dsl, [:actions]) || []
 
-        raise Ash.Error.Dsl.DslError,
+      action =
+        Enum.find(available_actions, fn action ->
+          action.name == query_or_mutation.action
+        end)
+
+      unless action do
+        resource = Transformer.get_persisted(dsl, :module)
+
+        raise Spark.Error.DslError,
           module: __MODULE__,
           message: """
           No such action #{query_or_mutation.action} of type #{type} on #{inspect(resource)}
@@ -42,7 +44,4 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
 
     {:ok, dsl}
   end
-
-  def after?(Ash.Resource.Transformers.ValidatePrimaryActions), do: true
-  def after?(_), do: false
 end

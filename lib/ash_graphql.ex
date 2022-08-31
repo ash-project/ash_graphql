@@ -37,8 +37,8 @@ defmodule AshGraphql do
           alias Absinthe.{Blueprint, Phase, Pipeline}
 
           # Ensures the api is compiled, and any errors are raised
-          _ = api.ash_dsl_config()
-          _ = registry.ash_dsl_config()
+          _ = api.spark_dsl_config()
+          _ = registry.spark_dsl_config()
 
           def pipeline(pipeline) do
             Pipeline.insert_before(
@@ -108,7 +108,7 @@ defmodule AshGraphql do
 
   def global_enums(apis, schema, env) do
     apis
-    |> Enum.flat_map(&Ash.Api.resources/1)
+    |> Enum.flat_map(&Ash.Api.Info.resources/1)
     |> Enum.flat_map(&all_attributes_and_arguments/1)
     |> only_enum_types()
     |> Enum.uniq()
@@ -183,7 +183,7 @@ defmodule AshGraphql do
 
   def get_embedded_types(apis) do
     apis
-    |> Enum.flat_map(&Ash.Api.resources/1)
+    |> Enum.flat_map(&Ash.Api.Info.resources/1)
     |> Enum.flat_map(fn resource ->
       resource
       |> Ash.Resource.Info.public_attributes()
@@ -204,7 +204,7 @@ defmodule AshGraphql do
       [{source_resource, attribute, embedded}] ++ get_nested_embedded_types(embedded)
     end)
     |> Enum.flat_map(fn {source_resource, attribute, embedded_type} ->
-      if AshGraphql.Resource.type(embedded_type) do
+      if AshGraphql.Resource.Info.type(embedded_type) do
         [
           AshGraphql.Resource.type_definition(
             embedded_type,

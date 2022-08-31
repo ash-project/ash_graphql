@@ -1,5 +1,5 @@
 defmodule AshGraphql.Api do
-  @graphql %Ash.Dsl.Section{
+  @graphql %Spark.Dsl.Section{
     name: :graphql,
     describe: """
     Global configuration for graphql
@@ -47,47 +47,50 @@ defmodule AshGraphql.Api do
   @moduledoc """
   The entrypoint for adding graphql behavior to an Ash API
 
-  # Table of Contents
-  #{Ash.Dsl.Extension.doc_index(@sections)}
+  <!--- ash-hq-hide-start --> <!--- -->
 
-  #{Ash.Dsl.Extension.doc(@sections)}
+  ## DSL Documentation
+
+  ### Index
+
+  #{Spark.Dsl.Extension.doc_index(@sections)}
+
+  ### Docs
+
+  #{Spark.Dsl.Extension.doc(@sections)}
+  <!--- ash-hq-hide-stop --> <!--- -->
   """
 
-  use Ash.Dsl.Extension, sections: @sections
+  use Spark.Dsl.Extension, sections: @sections
 
-  def authorize?(api) do
-    Extension.get_opt(api, [:graphql], :authorize?, true)
-  end
+  @deprecated "See `AshGraphql.Api.Info.authorize?/1`"
+  defdelegate authorize?(api), to: AshGraphql.Api.Info
 
-  def root_level_errors?(api) do
-    Extension.get_opt(api, [:graphql], :root_level_errors?, false, true)
-  end
+  @deprecated "See `AshGraphql.Api.Info.root_level_errors?/1`"
+  defdelegate root_level_errors?(api), to: AshGraphql.Api.Info
 
-  def show_raised_errors?(api) do
-    Extension.get_opt(api, [:graphql], :show_raised_errors?, false, true)
-  end
+  @deprecated "See `AshGraphql.Api.Info.show_raised_errors?/1`"
+  defdelegate show_raised_errors?(api), to: AshGraphql.Api.Info
 
-  def debug?(api) do
-    Extension.get_opt(api, [:graphql], :debug?, false)
-  end
+  @deprecated "See `AshGraphql.Api.Info.debug?/1`"
+  defdelegate debug?(api), to: AshGraphql.Api.Info
 
-  def stacktraces?(api) do
-    Extension.get_opt(api, [:graphql], :stacktraces?, false)
-  end
+  @deprecated "See `AshGraphql.Api.Info.stacktraces?/1`"
+  defdelegate stacktraces?(api), to: AshGraphql.Api.Info
 
   @doc false
   def queries(api, schema) do
     api
-    |> Ash.Api.resources()
+    |> Ash.Api.Info.resources()
     |> Enum.flat_map(&AshGraphql.Resource.queries(api, &1, schema))
   end
 
   @doc false
   def mutations(api, schema) do
     api
-    |> Ash.Api.resources()
+    |> Ash.Api.Info.resources()
     |> Enum.filter(fn resource ->
-      AshGraphql.Resource in Ash.Resource.Info.extensions(resource)
+      AshGraphql.Resource in Spark.extensions(resource)
     end)
     |> Enum.flat_map(&AshGraphql.Resource.mutations(api, &1, schema))
   end
@@ -96,10 +99,10 @@ defmodule AshGraphql.Api do
   def type_definitions(api, schema, first?) do
     resource_types =
       api
-      |> Ash.Api.resources()
+      |> Ash.Api.Info.resources()
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
-        if AshGraphql.Resource in Ash.Resource.Info.extensions(resource) do
+        if AshGraphql.Resource in Spark.extensions(resource) do
           AshGraphql.Resource.type_definitions(resource, api, schema) ++
             AshGraphql.Resource.mutation_types(resource, schema)
         else
@@ -107,7 +110,7 @@ defmodule AshGraphql.Api do
         end
       end)
 
-    if Enum.any?(Ash.Api.resources(api), &AshGraphql.Resource.relay?/1) && first? do
+    if Enum.any?(Ash.Api.Info.resources(api), &AshGraphql.Resource.Info.relay?/1) && first? do
       [
         %Absinthe.Blueprint.Schema.InterfaceTypeDefinition{
           description: "A relay node",

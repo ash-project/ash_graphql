@@ -40,8 +40,8 @@ defmodule AshGraphql.Test.Tag do
   relationships do
     many_to_many(:posts, AshGraphql.Test.Post,
       through: AshGraphql.Test.PostTag,
-      source_field_on_join_table: :tag_id,
-      destination_field_on_join_table: :post_id
+      source_attribute_on_join_resource: :tag_id,
+      destination_attribute_on_join_resource: :post_id
     )
   end
 end

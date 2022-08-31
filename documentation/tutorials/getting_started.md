@@ -1,4 +1,4 @@
-# Getting Started
+# Getting Started With Graphql
 
 ## Get familiar with Ash resources
 

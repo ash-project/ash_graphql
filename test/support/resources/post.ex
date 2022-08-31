@@ -7,7 +7,7 @@ defmodule AshGraphql.Test.Post do
 
     def change(changeset, _, _) do
       Ash.Changeset.after_action(changeset, fn _changeset, result ->
-        {:ok, Ash.Resource.Info.put_metadata(result, :foo, "bar")}
+        {:ok, Ash.Resource.put_metadata(result, :foo, "bar")}
       end)
     end
   end
@@ -202,14 +202,14 @@ defmodule AshGraphql.Test.Post do
 
     many_to_many(:tags, AshGraphql.Test.Tag,
       through: AshGraphql.Test.PostTag,
-      source_field_on_join_table: :post_id,
-      destination_field_on_join_table: :tag_id
+      source_attribute_on_join_resource: :post_id,
+      destination_attribute_on_join_resource: :tag_id
     )
 
     many_to_many(:multitenant_tags, AshGraphql.Test.MultitenantTag,
       through: AshGraphql.Test.MultitenantPostTag,
-      source_field_on_join_table: :post_id,
-      destination_field_on_join_table: :tag_id
+      source_attribute_on_join_resource: :post_id,
+      destination_attribute_on_join_resource: :tag_id
     )
   end
 end

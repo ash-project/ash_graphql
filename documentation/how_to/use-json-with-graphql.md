@@ -1,4 +1,4 @@
-# JSON
+# Use JSON with Graphql
 
 AshGraphql provides two json types that may be used. They are the same except for how the type is serialized in responses.
 
