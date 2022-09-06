@@ -45,9 +45,9 @@ defmodule Post do
     type :post
 
     queries do
-      get :get_post, :read # <- create a field called `get_post` that uses the `default` read action to fetch a single post
+      get :get_post, :read # <- create a field called `get_post` that uses the `read` read action to fetch a single post
       read_one :current_user, :current_user # <- create a field called `current_user` that uses the `current_user` read action to fetch a single record
-      list :list_posts, :read # <- create a field called `list_posts` that uses the `default` read action to fetch a list of posts
+      list :list_posts, :read # <- create a field called `list_posts` that uses the `read` read action to fetch a list of posts
     end
 
     mutations do
@@ -62,8 +62,7 @@ end
 
 ## Add AshGraphql to your schema
 
-If you don't have an absinthe schema, you can create one just for ash
-
+If you don't have an absinthe schema, you can create one just for ash.
 
 Define a `context/1` function, and call `AshGraphql.add_context/2` with the current context and your apis. Additionally, add the `Absinthe.Middleware.Dataloader` to your plugins, as shown below. If you're starting fresh, just copy the schema below and adjust the module name and api name.
 
@@ -120,7 +119,7 @@ forward "/playground",
 
 ### Using Phoenix
 
-You will simply want to add some code to your router, like so:
+You will simply want to add some code to your router, like so.
 
 You will also likely want to set up the "playground" for trying things out.
 
