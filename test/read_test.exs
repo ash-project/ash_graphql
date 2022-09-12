@@ -438,6 +438,25 @@ defmodule AshGraphql.ReadTest do
               }} = Absinthe.run(doc, AshGraphql.Test.Schema)
     end
 
+    test "the count can be fetched on its own" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 1) {
+          count
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
     test "it can be paged through" do
       doc = """
       query PaginatedPosts {

@@ -709,18 +709,24 @@ defmodule AshGraphql.Graphql.Resolver do
         |> Absinthe.Resolution.project()
         |> Enum.find(&(&1.name == nested))
 
-      type = Absinthe.Schema.lookup_type(resolution.schema, projected_once.schema_node.type)
+      if projected_once do
+        type = Absinthe.Schema.lookup_type(resolution.schema, projected_once.schema_node.type)
 
-      projected_once
-      |> Map.get(:selections)
-      |> Absinthe.Resolution.Projector.project(
-        type,
-        resolution.path ++ [projected_once],
-        resolution.fields_cache,
+        projected_once
+        |> Map.get(:selections)
+        |> Absinthe.Resolution.Projector.project(
+          type,
+          resolution.path ++ [projected_once],
+          resolution.fields_cache,
+          resolution
+        )
+        |> elem(0)
+        |> names_only(names_only?)
+      else
         resolution
-      )
-      |> elem(0)
-      |> names_only(names_only?)
+        |> Absinthe.Resolution.project()
+        |> names_only(names_only?)
+      end
     else
       resolution
       |> Absinthe.Resolution.project()
