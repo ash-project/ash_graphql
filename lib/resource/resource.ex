@@ -1945,54 +1945,58 @@ defmodule AshGraphql.Resource do
   end
 
   def enum_definitions(resource, schema, env, only_auto? \\ false) do
-    atom_enums =
-      resource
-      |> get_auto_enums()
-      |> Enum.filter(&is_list(&1.constraints[:one_of]))
-      |> Enum.map(fn attribute ->
-        type_name = atom_enum_type(resource, attribute.name)
+    if AshGraphql.Resource.Info.type(resource) do
+      atom_enums =
+        resource
+        |> get_auto_enums()
+        |> Enum.filter(&is_list(&1.constraints[:one_of]))
+        |> Enum.map(fn attribute ->
+          type_name = atom_enum_type(resource, attribute.name)
 
-        %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+          %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+            module: schema,
+            name: type_name |> to_string() |> Macro.camelize(),
+            values:
+              Enum.map(attribute.constraints[:one_of], fn value ->
+                %Absinthe.Blueprint.Schema.EnumValueDefinition{
+                  module: schema,
+                  identifier: value,
+                  __reference__: AshGraphql.Resource.ref(env),
+                  name: String.upcase(to_string(value)),
+                  value: value
+                }
+              end),
+            identifier: type_name,
+            __reference__: ref(__ENV__)
+          }
+        end)
+
+      if only_auto? do
+        atom_enums
+      else
+        sort_values = sort_values(resource)
+
+        sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
           module: schema,
-          name: type_name |> to_string() |> Macro.camelize(),
+          name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
+          identifier: resource_sort_field_type(resource),
+          __reference__: ref(__ENV__),
           values:
-            Enum.map(attribute.constraints[:one_of], fn value ->
+            Enum.map(sort_values, fn sort_value ->
               %Absinthe.Blueprint.Schema.EnumValueDefinition{
                 module: schema,
-                identifier: value,
+                identifier: sort_value,
                 __reference__: AshGraphql.Resource.ref(env),
-                name: String.upcase(to_string(value)),
-                value: value
+                name: String.upcase(to_string(sort_value)),
+                value: sort_value
               }
-            end),
-          identifier: type_name,
-          __reference__: ref(__ENV__)
+            end)
         }
-      end)
 
-    if only_auto? do
-      atom_enums
+        [sort_order | atom_enums]
+      end
     else
-      sort_values = sort_values(resource)
-
-      sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
-        module: schema,
-        name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
-        identifier: resource_sort_field_type(resource),
-        __reference__: ref(__ENV__),
-        values:
-          Enum.map(sort_values, fn sort_value ->
-            %Absinthe.Blueprint.Schema.EnumValueDefinition{
-              module: schema,
-              identifier: sort_value,
-              __reference__: AshGraphql.Resource.ref(env),
-              name: String.upcase(to_string(sort_value)),
-              value: sort_value
-            }
-          end)
-      }
-
-      [sort_order | atom_enums]
+      []
     end
   end
 
