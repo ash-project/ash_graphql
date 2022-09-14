@@ -28,12 +28,12 @@ defmodule AshGraphql.Test.DoubleRelRecursive do
   relationships do
     belongs_to :double_rel, DoubleRelToRecursiveParentOfEmbed do
       source_attribute(:double_rel_id)
-      required?(true)
+      allow_nil?(false)
     end
 
     belongs_to :myself, DoubleRelRecursive do
       source_attribute(:recursive_id)
-      required?(false)
+      allow_nil?(false)
       private?(true)
     end
 

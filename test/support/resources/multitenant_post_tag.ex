@@ -11,12 +11,12 @@ defmodule AshGraphql.Test.MultitenantPostTag do
   relationships do
     belongs_to :post, AshGraphql.Test.Post do
       primary_key?(true)
-      required?(true)
+      allow_nil?(false)
     end
 
     belongs_to :tag, AshGraphql.Test.MultitenantTag do
       primary_key?(true)
-      required?(true)
+      allow_nil?(false)
     end
   end
 end
