@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.20.0-rc.1](https://github.com/ash-project/ash_graphql/compare/v0.20.0-rc.0...v0.20.0-rc.1) (2022-09-15)
+
+
+
+
+### Bug Fixes:
+
+* don't generate duplicate types
+
+* error when selecting only the count for pagination
+
+* reference proper modules in doc index
+
+* add documentation files to package
+
+### Improvements:
+
+* update to latest ash
+
+* support latest ash
+
 ## [v0.19.0](https://github.com/ash-project/ash_graphql/compare/v0.18.0-rc0...v0.19.0) (2022-08-10)
 
 
