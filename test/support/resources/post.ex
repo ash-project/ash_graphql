@@ -1,49 +1,49 @@
+defmodule SetMetadata do
+  @moduledoc false
+  use Ash.Resource.Change
+
+  def change(changeset, _, _) do
+    Ash.Changeset.after_action(changeset, fn _changeset, result ->
+      {:ok, Ash.Resource.put_metadata(result, :foo, "bar")}
+    end)
+  end
+end
+
+defmodule RaiseResourceError do
+  @moduledoc false
+  use Ash.Resource.Change
+
+  def change(_changeset, _, _) do
+    raise Ash.Error.Changes.Required, field: :foo, type: :attribute
+  end
+end
+
+defmodule FullTextCalculation do
+  @moduledoc false
+  use Ash.Calculation
+
+  def calculate(posts, _, _) do
+    Enum.map(posts, fn post ->
+      post.text1 <> post.text2
+    end)
+  end
+
+  def select(_, _, _), do: [:text1, :text2]
+end
+
+defmodule AfterActionRaiseResourceError do
+  @moduledoc false
+  use Ash.Resource.Change
+
+  def change(changeset, _, _) do
+    Ash.Changeset.after_action(changeset, fn _changeset, _record ->
+      {:error, %Ash.Error.Query.NotFound{}}
+    end)
+  end
+end
+
 defmodule AshGraphql.Test.Post do
   @moduledoc false
-
-  defmodule SetMetadata do
-    @moduledoc false
-    use Ash.Resource.Change
-
-    def change(changeset, _, _) do
-      Ash.Changeset.after_action(changeset, fn _changeset, result ->
-        {:ok, Ash.Resource.put_metadata(result, :foo, "bar")}
-      end)
-    end
-  end
-
-  defmodule RaiseResourceError do
-    @moduledoc false
-    use Ash.Resource.Change
-
-    def change(_changeset, _, _) do
-      raise Ash.Error.Changes.Required, field: :foo, type: :attribute
-    end
-  end
-
-  defmodule FullTextCalculation do
-    @moduledoc false
-    use Ash.Calculation
-
-    def calculate(posts, _, _) do
-      Enum.map(posts, fn post ->
-        post.text1 <> post.text2
-      end)
-    end
-
-    def select(_, _, _), do: [:text1, :text2]
-  end
-
-  defmodule AfterActionRaiseResourceError do
-    @moduledoc false
-    use Ash.Resource.Change
-
-    def change(changeset, _, _) do
-      Ash.Changeset.after_action(changeset, fn _changeset, _record ->
-        {:error, %Ash.Error.Query.NotFound{}}
-      end)
-    end
-  end
 
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
