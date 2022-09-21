@@ -1692,36 +1692,40 @@ defmodule AshGraphql.Resource do
   defp constraints_to_item_constraints(_, attribute_or_aggregate), do: attribute_or_aggregate
 
   defp sort_input(resource, schema) do
-    case sort_values(resource) do
-      [] ->
-        nil
+    if AshGraphql.Resource.Info.type(resource) do
+      case sort_values(resource) do
+        [] ->
+          nil
 
-      _ ->
-        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          fields: [
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              identifier: :order,
-              module: schema,
-              name: "order",
-              default_value: :asc,
-              type: :sort_order,
-              __reference__: ref(__ENV__)
-            },
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              identifier: :field,
-              module: schema,
-              name: "field",
-              type: %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: resource_sort_field_type(resource)
+        _ ->
+          %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+            fields: [
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                identifier: :order,
+                module: schema,
+                name: "order",
+                default_value: :asc,
+                type: :sort_order,
+                __reference__: ref(__ENV__)
               },
-              __reference__: ref(__ENV__)
-            }
-          ],
-          identifier: resource_sort_type(resource),
-          module: schema,
-          name: resource |> resource_sort_type() |> to_string() |> Macro.camelize(),
-          __reference__: ref(__ENV__)
-        }
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                identifier: :field,
+                module: schema,
+                name: "field",
+                type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: resource_sort_field_type(resource)
+                },
+                __reference__: ref(__ENV__)
+              }
+            ],
+            identifier: resource_sort_type(resource),
+            module: schema,
+            name: resource |> resource_sort_type() |> to_string() |> Macro.camelize(),
+            __reference__: ref(__ENV__)
+          }
+      end
+    else
+      nil
     end
   end
 
