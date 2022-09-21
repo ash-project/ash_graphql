@@ -23,7 +23,7 @@ defmodule AshGraphql.PaginateTest do
         for text <- letters do
           AshGraphql.Test.Comment
           |> Ash.Changeset.for_create(:create, text: text)
-          |> Ash.Changeset.replace_relationship(:post, post)
+          |> Ash.Changeset.manage_relationship(:post, post, type: :append_and_remove)
           |> AshGraphql.Test.Api.create!()
         end
       end
