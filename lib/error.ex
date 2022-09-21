@@ -18,7 +18,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Page.InvalidKeyset do
   def to_error(error) do
     %{
       message: Exception.message(error),
-      short_message: error.message,
+      short_message: "invalid keyset",
       vars: Map.new(error.vars),
       code: Ash.ErrorKind.code(error),
       fields: List.wrap(Map.get(error, :key))

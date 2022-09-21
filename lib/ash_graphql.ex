@@ -76,11 +76,11 @@ defmodule AshGraphql do
                 global_enums = AshGraphql.global_enums(apis, __MODULE__, __ENV__)
 
                 AshGraphql.Api.global_type_definitions(__MODULE__, __ENV__) ++
-                  AshGraphql.Api.type_definitions(api, __MODULE__, true) ++
+                  AshGraphql.Api.type_definitions(api, __MODULE__, __ENV__, true) ++
                   global_enums ++
                   embedded_types
               else
-                AshGraphql.Api.type_definitions(api, __MODULE__, false)
+                AshGraphql.Api.type_definitions(api, __MODULE__, __ENV__, false)
               end
 
             new_defs =

@@ -13,6 +13,8 @@ defmodule AshGraphql.Test.Registry do
     entry(AshGraphql.Test.NoObject)
     entry(AshGraphql.Test.Post)
     entry(AshGraphql.Test.PostTag)
+    entry(AshGraphql.Test.RelayTag)
+    entry(AshGraphql.Test.RelayPostTag)
     entry(AshGraphql.Test.Tag)
     entry(AshGraphql.Test.User)
   end

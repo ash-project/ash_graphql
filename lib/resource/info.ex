@@ -23,11 +23,6 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
-  @doc "Wether or not the graphql supports relay"
-  def relay?(resource) do
-    Extension.get_opt(resource, [:graphql], :relay?, nil)
-  end
-
   @doc "The delimiter for a resource with a composite primary key"
   def primary_key_delimiter(resource) do
     Extension.get_opt(resource, [:graphql], :primary_key_delimiter, nil)

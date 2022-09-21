@@ -38,7 +38,8 @@ defmodule AshGraphql.Resource do
     args: [:name, :action],
     describe: "A query to fetch a list of records",
     examples: [
-      "list :list_posts, :read"
+      "list :list_posts, :read",
+      "list :list_posts_paginated, :read, relay?: true"
     ],
     target: Query,
     auto_set_fields: [
@@ -231,20 +232,6 @@ defmodule AshGraphql.Resource do
         A simple way to prevent massive queries.
         """
       ],
-      relay?: [
-        type: :boolean,
-        default: false,
-        doc: """
-        NOT YET SUPPORTED
-
-        If true, the graphql queries/resolvers for this resource will be built to honor the [relay specification](https://relay.dev/graphql/connections.htm).
-
-        The two changes that are made currently are:
-
-        * the type for the resource will implement the `Node` interface
-        * pagination over that resource will behave as a Connection.
-        """
-      ],
       generate_object?: [
         type: :boolean,
         doc:
@@ -296,9 +283,6 @@ defmodule AshGraphql.Resource do
 
   @deprecated "See `AshGraphql.Resource.Info.type/1`"
   defdelegate type(resource), to: AshGraphql.Resource.Info
-
-  @deprecated "See `AshGraphql.Resource.Info.relay?/1`"
-  defdelegate relay?(resource), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.primary_key_delimiter/1`"
   defdelegate primary_key_delimiter(resource), to: AshGraphql.Resource.Info
@@ -822,9 +806,9 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp query_type(%{type: :list}, resource, action, type) do
+  defp query_type(%{type: :list, relay?: relay?}, _resource, action, type) do
     if action.pagination do
-      if relay?(resource) do
+      if relay? do
         String.to_atom("#{type}_connection")
       else
         String.to_atom("page_of_#{type}")
@@ -994,29 +978,7 @@ defmodule AshGraphql.Resource do
 
   defp pagination_args(action) do
     if action.pagination do
-      max_message =
-        if action.pagination.max_page_size do
-          " Maximum #{action.pagination.max_page_size}"
-        else
-          ""
-        end
-
-      limit_type =
-        maybe_wrap_non_null(
-          :integer,
-          action.pagination.required? && is_nil(action.pagination.default_limit)
-        )
-
-      [
-        %Absinthe.Blueprint.Schema.InputValueDefinition{
-          name: "limit",
-          identifier: :limit,
-          type: limit_type,
-          default_value: action.pagination.default_limit,
-          description: "The number of records to return." <> max_message,
-          __reference__: ref(__ENV__)
-        }
-      ] ++ keyset_pagination_args(action) ++ offset_pagination_args(action)
+      keyset_pagination_args(action) ++ offset_pagination_args(action)
     else
       []
     end
@@ -1050,7 +1012,22 @@ defmodule AshGraphql.Resource do
 
   defp keyset_pagination_args(action) do
     if action.pagination.keyset? do
+      max_message =
+        if action.pagination.max_page_size do
+          " Maximum #{action.pagination.max_page_size}"
+        else
+          ""
+        end
+
       [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "first",
+          identifier: :first,
+          type: :integer,
+          default_value: action.pagination.default_limit,
+          description: "The number of records to return from the beginning." <> max_message,
+          __reference__: ref(__ENV__)
+        },
         %Absinthe.Blueprint.Schema.InputValueDefinition{
           name: "before",
           identifier: :before,
@@ -1064,6 +1041,14 @@ defmodule AshGraphql.Resource do
           type: :string,
           description: "Show records after the specified keyset.",
           __reference__: ref(__ENV__)
+        },
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "last",
+          identifier: :last,
+          type: :integer,
+          default_value: action.pagination.default_limit,
+          description: "The number of records to return to the end." <> max_message,
+          __reference__: ref(__ENV__)
         }
       ]
     else
@@ -1073,7 +1058,28 @@ defmodule AshGraphql.Resource do
 
   defp offset_pagination_args(action) do
     if action.pagination.offset? do
+      max_message =
+        if action.pagination.max_page_size do
+          " Maximum #{action.pagination.max_page_size}"
+        else
+          ""
+        end
+
+      limit_type =
+        maybe_wrap_non_null(
+          :integer,
+          action.pagination.required? && is_nil(action.pagination.default_limit)
+        )
+
       [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "limit",
+          identifier: :limit,
+          type: limit_type,
+          default_value: action.pagination.default_limit,
+          description: "The number of records to return." <> max_message,
+          __reference__: ref(__ENV__)
+        },
         %Absinthe.Blueprint.Schema.InputValueDefinition{
           name: "offset",
           identifier: :offset,
@@ -2068,9 +2074,70 @@ defmodule AshGraphql.Resource do
       end)
 
     if paginatable? do
-      if relay?(resource) do
-        # "#{type}_connection"
-        raise "Relay pagination is not yet supported."
+      relay? =
+        resource
+        |> queries()
+        |> Enum.any?(& &1.relay?)
+
+      if relay? do
+        [
+          %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+            description: "#{inspect(type)} edge",
+            fields: [
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                description: "Cursor",
+                identifier: :cursor,
+                module: schema,
+                name: "cursor",
+                __reference__: ref(__ENV__),
+                type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: :string
+                }
+              },
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                description: "#{inspect(type)} node",
+                identifier: :node,
+                module: schema,
+                name: "node",
+                __reference__: ref(__ENV__),
+                type: type
+              }
+            ],
+            identifier: String.to_atom("#{type}_edge"),
+            module: schema,
+            name: Macro.camelize("#{type}_edge"),
+            __reference__: ref(__ENV__)
+          },
+          %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+            description: "#{inspect(type)} connection",
+            fields: [
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                description: "Page information",
+                identifier: :page_info,
+                module: schema,
+                name: "page_info",
+                __reference__: ref(__ENV__),
+                type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: :page_info
+                }
+              },
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                description: "#{inspect(type)} edges",
+                identifier: :edges,
+                module: schema,
+                name: "edges",
+                __reference__: ref(__ENV__),
+                type: %Absinthe.Blueprint.TypeReference.List{
+                  of_type: String.to_atom("#{type}_edge")
+                }
+              }
+            ],
+            identifier: String.to_atom("#{type}_connection"),
+            module: schema,
+            name: Macro.camelize("#{type}_connection"),
+            __reference__: ref(__ENV__)
+          }
+        ]
       else
         %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
           description: "A page of #{inspect(type)}",
@@ -2107,15 +2174,31 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  def is_node_type(type) do
+    type.identifier == :node
+  end
+
   def type_definition(resource, api, schema) do
     if generate_object?(resource) do
       type = AshGraphql.Resource.Info.type(resource)
 
+      relay? =
+        resource
+        |> queries()
+        |> Enum.any?(& &1.relay?)
+
       interfaces =
-        if relay?(resource) do
+        if relay? do
           [:node]
         else
           []
+        end
+
+      is_type_of =
+        if relay? do
+          &AshGraphql.Resource.is_node_type/1
+        else
+          nil
         end
 
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
@@ -2125,7 +2208,8 @@ defmodule AshGraphql.Resource do
         identifier: type,
         module: schema,
         name: Macro.camelize(to_string(type)),
-        __reference__: ref(__ENV__)
+        __reference__: ref(__ENV__),
+        is_type_of: is_type_of
       }
     end
   end
@@ -2175,7 +2259,7 @@ defmodule AshGraphql.Resource do
         unless attribute.private? do
           %Absinthe.Blueprint.Schema.FieldDefinition{
             description: attribute.description,
-            identifier: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+            identifier: :id,
             module: schema,
             name: "id",
             type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},

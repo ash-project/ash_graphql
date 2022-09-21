@@ -7,7 +7,8 @@ defmodule AshGraphql.Resource.Query do
     :identity,
     :allow_nil?,
     :modify_resolution,
-    as_mutation?: false
+    as_mutation?: false,
+    relay?: false
   ]
 
   @get_schema [
@@ -85,6 +86,18 @@ defmodule AshGraphql.Resource.Query do
       type: :atom,
       doc: "The action to use for the query.",
       required: true
+    ],
+    relay?: [
+      type: :boolean,
+      default: false,
+      doc: """
+      If true, the graphql queries/resolvers for this resource will be built to honor the [relay specification](https://relay.dev/graphql/connections.htm).
+
+      The two changes that are made currently are:
+
+      * the type for the resource will implement the `Node` interface
+      * pagination over that resource will behave as a Connection.
+      """
     ]
   ]
 
