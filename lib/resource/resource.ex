@@ -194,6 +194,7 @@ defmodule AshGraphql.Resource do
 
   @graphql %Spark.Dsl.Section{
     name: :graphql,
+    imports: [AshGraphql.Resource.Helpers],
     describe: """
     Configuration for a given resource in graphql
     """,
@@ -220,6 +221,16 @@ defmodule AshGraphql.Resource do
         type: :atom,
         required: true,
         doc: "The type to use for this entity in the graphql schema"
+      ],
+      attribute_types: [
+        type: :keyword_list,
+        doc:
+          "A keyword list of type overrides for attributes. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used."
+      ],
+      attribute_input_types: [
+        type: :keyword_list,
+        doc:
+          "A keyword list of input type overrides for attributes. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used."
       ],
       primary_key_delimiter: [
         type: :string,
@@ -1196,7 +1207,7 @@ defmodule AshGraphql.Resource do
             nil
 
           {:ok, type} ->
-            type = unwrap_managed_relationship_type(type)
+            type = unwrap_literal_type(type)
             {:ok, %{Enum.at(data, 0).field | type: type}}
 
           :error ->
@@ -1254,15 +1265,23 @@ defmodule AshGraphql.Resource do
     """
   end
 
-  defp unwrap_managed_relationship_type({:non_null, type}) do
-    %Absinthe.Blueprint.TypeReference.NonNull{of_type: unwrap_managed_relationship_type(type)}
+  defp unwrap_literal_type({:non_null, {:non_null, type}}) do
+    unwrap_literal_type({:non_null, type})
   end
 
-  defp unwrap_managed_relationship_type({:array, type}) do
-    %Absinthe.Blueprint.TypeReference.List{of_type: unwrap_managed_relationship_type(type)}
+  defp unwrap_literal_type({:array, {:array, type}}) do
+    unwrap_literal_type({:array, type})
   end
 
-  defp unwrap_managed_relationship_type(type) do
+  defp unwrap_literal_type({:non_null, type}) do
+    %Absinthe.Blueprint.TypeReference.NonNull{of_type: unwrap_literal_type(type)}
+  end
+
+  defp unwrap_literal_type({:array, type}) do
+    %Absinthe.Blueprint.TypeReference.List{of_type: unwrap_literal_type(type)}
+  end
+
+  defp unwrap_literal_type(type) do
     type
   end
 
@@ -2486,9 +2505,30 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp field_type(type, field, resource, input? \\ false)
+  def field_type(type, field, resource, input? \\ false) do
+    case field do
+      %Ash.Resource.Attribute{name: name} ->
+        override =
+          if input? do
+            AshGraphql.Resource.Info.attribute_input_types(resource)[name]
+          else
+            AshGraphql.Resource.Info.attribute_types(resource)[name]
+          end
 
-  defp field_type(
+        if override do
+          unwrap_literal_type(override)
+        else
+          do_field_type(type, field, resource, input?)
+        end
+
+      _ ->
+        do_field_type(type, field, resource, input?)
+    end
+  end
+
+  defp do_field_type(type, field, resource, input?)
+
+  defp do_field_type(
          {:array, type},
          %Ash.Resource.Aggregate{kind: :list} = aggregate,
          resource,
@@ -2499,39 +2539,39 @@ defmodule AshGraphql.Resource do
          attr when not is_nil(related) <- Ash.Resource.Info.attribute(related, aggregate.field) do
       if attr.allow_nil? do
         %Absinthe.Blueprint.TypeReference.List{
-          of_type: field_type(type, aggregate, resource, input?)
+          of_type: do_field_type(type, aggregate, resource, input?)
         }
       else
         %Absinthe.Blueprint.TypeReference.List{
           of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(type, aggregate, resource, input?)
+            of_type: do_field_type(type, aggregate, resource, input?)
           }
         }
       end
     end
   end
 
-  defp field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?) do
+  defp do_field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?) do
     %Absinthe.Blueprint.TypeReference.List{
-      of_type: field_type(type, aggregate, resource, input?)
+      of_type: do_field_type(type, aggregate, resource, input?)
     }
   end
 
-  defp field_type({:array, type}, nil, resource, input?) do
-    field_type = field_type(type, nil, resource, input?)
+  defp do_field_type({:array, type}, nil, resource, input?) do
+    field_type = do_field_type(type, nil, resource, input?)
 
     %Absinthe.Blueprint.TypeReference.List{
       of_type: field_type
     }
   end
 
-  defp field_type({:array, type}, attribute, resource, input?) do
+  defp do_field_type({:array, type}, attribute, resource, input?) do
     new_constraints = attribute.constraints[:items] || []
     new_attribute = %{attribute | constraints: new_constraints, type: type}
 
     field_type =
       type
-      |> field_type(new_attribute, resource, input?)
+      |> do_field_type(new_attribute, resource, input?)
       |> maybe_wrap_non_null(
         !attribute.constraints[:nil_items?] || Ash.Type.embedded_type?(attribute.type)
       )
@@ -2542,9 +2582,9 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
-  defp field_type(type, attribute, resource, input?) do
+  defp do_field_type(type, attribute, resource, input?) do
     if Ash.Type.builtin?(type) do
-      do_field_type(type, attribute, resource)
+      get_specific_field_type(type, attribute, resource)
     else
       if Ash.Type.embedded_type?(type) do
         if input? do
@@ -2585,7 +2625,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp do_field_type(
+  defp get_specific_field_type(
          Ash.Type.Atom,
          %Ash.Resource.Attribute{constraints: constraints, name: name},
          resource
@@ -2597,23 +2637,49 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp do_field_type(Ash.Type.Boolean, _, _), do: :boolean
-  defp do_field_type(Ash.Type.Atom, _, _), do: :string
-  defp do_field_type(Ash.Type.CiString, _, _), do: :string
-  defp do_field_type(Ash.Type.Date, _, _), do: :date
-  defp do_field_type(Ash.Type.Decimal, _, _), do: :decimal
-  defp do_field_type(Ash.Type.Integer, _, _), do: :integer
-  defp do_field_type(Ash.Type.DurationName, _, _), do: :duration_name
+  defp get_specific_field_type(Ash.Type.Boolean, _, _), do: :boolean
+  defp get_specific_field_type(Ash.Type.Atom, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.CiString, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.Date, _, _), do: :date
+  defp get_specific_field_type(Ash.Type.Decimal, _, _), do: :decimal
+  defp get_specific_field_type(Ash.Type.Integer, _, _), do: :integer
+  defp get_specific_field_type(Ash.Type.DurationName, _, _), do: :duration_name
 
-  defp do_field_type(Ash.Type.Map, _, _),
+  defp get_specific_field_type(Ash.Type.Map, _, _),
     do: Application.get_env(:ash_graphql, :json_type) || :json_string
 
-  defp do_field_type(Ash.Type.String, _, _), do: :string
-  defp do_field_type(Ash.Type.Term, _, _), do: :string
-  defp do_field_type(Ash.Type.UtcDatetime, _, _), do: :naive_datetime
-  defp do_field_type(Ash.Type.UtcDatetimeUsec, _, _), do: :naive_datetime
-  defp do_field_type(Ash.Type.UUID, _, _), do: :string
-  defp do_field_type(Ash.Type.Float, _, _), do: :float
+  defp get_specific_field_type(Ash.Type.String, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.Term, _, _), do: :string
+
+  defp get_specific_field_type(Ash.Type.UtcDatetime, _, _),
+    do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
+
+  defp get_specific_field_type(Ash.Type.UtcDatetimeUsec, _, _),
+    do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
+
+  defp get_specific_field_type(Ash.Type.UUID, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.Float, _, _), do: :float
+
+  defp raise_datetime_error do
+    raise """
+    No type configured for utc_datetimes!
+
+    The existing default of using `:naive_datetime` for `:utc_datetime` and `:utc_datetime_usec` is being deprecated.
+
+    To prevent accidental API breakages, we are requiring that you configure your selected type for these, via
+
+        # This was the previous default, so use this if you want to ensure no unintended
+        # change in your API, although switching to `:datetime` eventually is suggested.
+        config :ash, :utc_datetime_type, :naive_datetime
+
+        or
+
+        config :ash, :utc_datetime_type, :datetime
+
+    When the 1.0 version of ash_graphql is released, the default will be changed to `:datetime`, and this error message will
+    no longer be shown (but any configuration set will be retained indefinitely).
+    """
+  end
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp atom_enum_type(resource, attribute_name) do

@@ -137,6 +137,40 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "a create can use custom input types" do
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text1
+            integerAsStringInApi
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"text1" => "foo", "integerAsStringInApi" => "1"}}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "integerAsStringInApi" => "1"
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create can load a calculation on a related belongs_to record" do
     author = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.User, name: "bob"))
 

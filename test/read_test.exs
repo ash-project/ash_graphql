@@ -67,6 +67,28 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"postLibrary" => [%{"text" => "foo"}]}} = result
   end
 
+  test "a read with custom set types works" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "foo", integer_as_string_in_api: 1, published: true)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary {
+        postLibrary {
+          text
+          integerAsStringInApi
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"postLibrary" => [%{"integerAsStringInApi" => "1"}]}} = result
+  end
+
   test "reading relationships works, without selecting the id field" do
     post =
       AshGraphql.Test.Post

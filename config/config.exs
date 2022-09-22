@@ -1,5 +1,7 @@
 import Config
 
+config :ash, :utc_datetime_type, :datetime
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,

@@ -52,6 +52,9 @@ defmodule AshGraphql.Test.Post do
   graphql do
     type :post
 
+    attribute_types integer_as_string_in_api: :string
+    attribute_input_types integer_as_string_in_api: :string
+
     queries do
       get :get_post, :read
       list :post_library, :library
@@ -194,9 +197,12 @@ defmodule AshGraphql.Test.Post do
     attribute(:status_enum, AshGraphql.Test.StatusEnum)
     attribute(:best, :boolean)
     attribute(:score, :float)
+    attribute(:integer_as_string_in_api, :integer)
     attribute(:embed, AshGraphql.Test.Embed)
     attribute(:text1, :string)
     attribute(:text2, :string)
+
+    create_timestamp(:created_at, private?: false)
   end
 
   calculations do

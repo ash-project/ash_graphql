@@ -23,6 +23,16 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
+  @doc "Graphql type overrides for the resource"
+  def attribute_types(resource) do
+    Extension.get_opt(resource, [:graphql], :attribute_types, [])
+  end
+
+  @doc "Graphql type overrides for the resource"
+  def attribute_input_types(resource) do
+    Extension.get_opt(resource, [:graphql], :attribute_input_types, [])
+  end
+
   @doc "The delimiter for a resource with a composite primary key"
   def primary_key_delimiter(resource) do
     Extension.get_opt(resource, [:graphql], :primary_key_delimiter, nil)

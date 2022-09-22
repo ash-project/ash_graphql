@@ -898,7 +898,13 @@ defmodule AshGraphql.Graphql.Resolver do
     action.arguments
     |> Enum.reject(& &1.private?)
     |> Enum.reduce(query, fn argument, query ->
-      Ash.Query.set_argument(query, argument.name, Map.get(arg_values, argument.name))
+      case Map.fetch(arg_values, argument.name) do
+        {:ok, value} ->
+          Ash.Query.set_argument(query, argument.name, value)
+
+        _ ->
+          query
+      end
     end)
   end
 

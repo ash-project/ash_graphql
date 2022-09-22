@@ -143,7 +143,7 @@ defmodule AshGraphql.MixProject do
     [
       sobelow: "sobelow --skip",
       credo: "credo --strict",
-      "ash.formatter": "ash.formatter --extensions AshGraphql.Resource,AshGraphql.Api"
+      "spark.formatter": "spark.formatter --extensions AshGraphql.Resource,AshGraphql.Api"
     ]
   end
 end
