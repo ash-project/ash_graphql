@@ -122,7 +122,8 @@ defmodule AshGraphql.Dataloader do
         """
     end
 
-    defp get_keys({assoc_field, opts}, %resource{} = record) when is_atom(assoc_field) do
+    defp get_keys({assoc_field, %{type: :relationship} = opts}, %resource{} = record)
+         when is_atom(assoc_field) do
       validate_resource(resource)
       pkey = Ash.Resource.Info.primary_key(resource)
       id = Enum.map(pkey, &Map.get(record, &1))
@@ -132,11 +133,18 @@ defmodule AshGraphql.Dataloader do
       {{:assoc, resource, self(), assoc_field, queryable, opts}, id, record}
     end
 
+    defp get_keys({calc, %{type: :calculation} = opts}, %resource{} = record) do
+      validate_resource(resource)
+      pkey = Ash.Resource.Info.primary_key(resource)
+      id = Enum.map(pkey, &Map.get(record, &1))
+
+      {{:calc, resource, self(), calc, opts}, id, record}
+    end
+
     defp get_keys(key, item) do
       raise """
-      Invalid: #{inspect(key)}
+      Invalid batch key: #{inspect(key)}
       #{inspect(item)}
-      The batch key must either be a schema module, or an association name.
       """
     end
 
@@ -228,6 +236,20 @@ defmodule AshGraphql.Dataloader do
               Map.get(record, field)
             end)
         end
+
+      {key, Map.new(Enum.zip(ids, results))}
+    end
+
+    defp run_batch(
+           {{:calc, _, _pid, calc, %{args: args, api_opts: api_opts}} = key, records},
+           source
+         ) do
+      {ids, records} = Enum.unzip(records)
+
+      results =
+        records
+        |> source.api.load!([{calc, args}], api_opts)
+        |> Enum.map(&Map.get(&1, calc))
 
       {key, Map.new(Enum.zip(ids, results))}
     end

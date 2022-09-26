@@ -28,6 +28,16 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :attribute_types, [])
   end
 
+  @doc "Graphql field name (attribute/relationship/calculation/arguments) overrides for the resource"
+  def field_names(resource) do
+    Extension.get_opt(resource, [:graphql], :field_names, [])
+  end
+
+  @doc "Graphql argument name overrides for the resource"
+  def argument_names(resource) do
+    Extension.get_opt(resource, [:graphql], :argument_names, [])
+  end
+
   @doc "Graphql type overrides for the resource"
   def attribute_input_types(resource) do
     Extension.get_opt(resource, [:graphql], :attribute_input_types, [])

@@ -6,6 +6,7 @@ defmodule AshGraphql.ReadTest do
   setup do
     on_exit(fn ->
       Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
+      Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
     end)
   end
 
@@ -125,6 +126,56 @@ defmodule AshGraphql.ReadTest do
              result
   end
 
+  test "the same relationship can be fetched with different parameters" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> AshGraphql.Test.Api.create!()
+
+    for _ <- 0..1 do
+      AshGraphql.Test.Comment
+      |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+      |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+      |> AshGraphql.Test.Api.create!()
+    end
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          text
+          foo: comments(limit: 1){
+            text
+          }
+          bar: comments(limit: 2){
+            text
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "postLibrary" => [
+                 %{
+                   "text" => "foo",
+                   "foo" => [%{"text" => "stuff"}],
+                   "bar" => [%{"text" => "stuff"}, %{"text" => "stuff"}]
+                 }
+               ]
+             }
+           } = result
+  end
+
   test "complexity is calculated for relationships" do
     query = """
     query PostLibrary {
@@ -196,6 +247,29 @@ defmodule AshGraphql.ReadTest do
 
     assert %{data: %{"postLibrary" => [%{"text" => "bar", "staticCalculation" => "static"}]}} =
              result
+  end
+
+  test "the same calculation can be loaded twice with different arguments via aliases" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          foo: text1And2(separator: "foo")
+          bar: text1And2(separator: "bar")
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postLibrary" => [%{"foo" => "1foo2", "bar" => "1bar2"}]}} = result
   end
 
   test "a read with a non-id primary key fills in the id field" do

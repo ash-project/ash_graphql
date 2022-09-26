@@ -1,5 +1,6 @@
 spark_locals_without_parens = [
   allow_nil?: 1,
+  argument_names: 1,
   as_mutation?: 1,
   attribute_input_types: 1,
   attribute_types: 1,
@@ -10,6 +11,7 @@ spark_locals_without_parens = [
   depth_limit: 1,
   destroy: 2,
   destroy: 3,
+  field_names: 1,
   generate_object?: 1,
   get: 2,
   get: 3,

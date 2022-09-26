@@ -1,6 +1,14 @@
 defmodule AshGraphql.Resource.Mutation do
   @moduledoc "Represents a configured mutation on a resource"
-  defstruct [:name, :action, :type, :identity, :read_action, :upsert?, :modify_resolution]
+  defstruct [
+    :name,
+    :action,
+    :type,
+    :identity,
+    :read_action,
+    :upsert?,
+    :modify_resolution
+  ]
 
   @create_schema [
     name: [

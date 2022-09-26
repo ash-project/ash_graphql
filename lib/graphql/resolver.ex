@@ -774,8 +774,7 @@ defmodule AshGraphql.Graphql.Resolver do
     |> fields(["result"])
     |> names_only()
     |> Enum.map(fn identifier ->
-      Ash.Resource.Info.aggregate(resource, identifier) ||
-        Ash.Resource.Info.calculation(resource, identifier)
+      Ash.Resource.Info.aggregate(resource, identifier)
     end)
     |> Enum.filter(& &1)
     |> Enum.map(& &1.name)
@@ -793,12 +792,6 @@ defmodule AshGraphql.Graphql.Resolver do
 
       if aggregate do
         aggregate.name
-      else
-        calculation = Ash.Resource.Info.calculation(resource, selection.schema_node.identifier)
-
-        if calculation do
-          {calculation.name, selection.argument_data || %{}}
-        end
       end
     end)
     |> Enum.filter(& &1)
@@ -1035,6 +1028,29 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
+  def resolve_calculation(
+        %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
+        {api, _resource, calculation}
+      ) do
+    api_opts = [
+      actor: Map.get(context, :actor),
+      authorize?: AshGraphql.Api.Info.authorize?(api),
+      verbose?: AshGraphql.Api.Info.debug?(api),
+      stacktraces?: AshGraphql.Api.Info.debug?(api) || AshGraphql.Api.Info.stacktraces?(api)
+    ]
+
+    opts = [
+      api_opts: api_opts,
+      type: :calculation,
+      args: args,
+      tenant: Map.get(context, :tenant)
+    ]
+
+    batch_key = {calculation.name, opts}
+
+    do_dataloader(resolution, loader, api, batch_key, opts, parent)
+  end
+
   def resolve_assoc(
         %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
         {api, relationship}
@@ -1057,11 +1073,13 @@ defmodule AshGraphql.Graphql.Resolver do
         opts = [
           query: related_query,
           api_opts: api_opts,
+          type: :relationship,
           args: args,
+          resource: relationship.source,
           tenant: Map.get(context, :tenant)
         ]
 
-        {batch_key, parent} = {{relationship.name, opts}, parent}
+        batch_key = {relationship.name, opts}
         do_dataloader(resolution, loader, api, batch_key, args, parent)
 
       {:error, error} ->

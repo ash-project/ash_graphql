@@ -54,6 +54,7 @@ defmodule AshGraphql.Test.Post do
 
     attribute_types integer_as_string_in_api: :string
     attribute_input_types integer_as_string_in_api: :string
+    field_names(text_1_and_2: :text1_and2)
 
     queries do
       get :get_post, :read
@@ -208,6 +209,13 @@ defmodule AshGraphql.Test.Post do
   calculations do
     calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation)
     calculate(:full_text, :string, FullTextCalculation)
+
+    calculate(:text_1_and_2, :string, expr(text1 <> ^arg(:separator) <> text2)) do
+      argument :separator, :string do
+        allow_nil? false
+        default(" ")
+      end
+    end
   end
 
   relationships do

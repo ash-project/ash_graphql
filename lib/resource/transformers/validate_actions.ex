@@ -31,7 +31,7 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
         resource = Transformer.get_persisted(dsl, :module)
 
         raise Spark.Error.DslError,
-          module: __MODULE__,
+          module: resource,
           message: """
           No such action #{query_or_mutation.action} of type #{type} on #{inspect(resource)}
 
