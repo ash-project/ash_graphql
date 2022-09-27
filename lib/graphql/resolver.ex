@@ -30,7 +30,7 @@ defmodule AshGraphql.Graphql.Resolver do
       case filter do
         {:ok, filter} ->
           query
-          |> Ash.Query.filter(^filter)
+          |> Ash.Query.do_filter(filter)
           |> load_fields(resource, api, resolution)
           |> case do
             {:ok, query} ->
@@ -99,8 +99,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
     query =
       case Map.fetch(args, :filter) do
-        {:ok, filter} ->
-          Ash.Query.filter(resource, ^filter)
+        {:ok, filter} when filter != %{} ->
+          Ash.Query.do_filter(resource, filter)
 
         _ ->
           Ash.Query.new(resource)
@@ -460,7 +460,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case filter do
       {:ok, filter} ->
         resource
-        |> Ash.Query.filter(^filter)
+        |> Ash.Query.do_filter(filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
         |> set_query_arguments(action, arguments)
@@ -563,7 +563,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case filter do
       {:ok, filter} ->
         resource
-        |> Ash.Query.filter(^filter)
+        |> Ash.Query.do_filter(filter)
         |> Ash.Query.set_tenant(Map.get(context, :tenant))
         |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
         |> set_query_arguments(action, arguments)
@@ -711,7 +711,7 @@ defmodule AshGraphql.Graphql.Resolver do
     query =
       case Map.fetch(args, :filter) do
         {:ok, filter} ->
-          Ash.Query.filter(resource, ^massage_filter(resource, filter))
+          Ash.Query.do_filter(resource, massage_filter(resource, filter))
 
         _ ->
           Ash.Query.new(resource)
@@ -1170,7 +1170,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp decode_and_filter(query, value) do
-    Ash.Query.filter(query, ^value)
+    Ash.Query.do_filter(query, value)
   end
 
   defp to_resolution({:ok, value}), do: {:ok, value}
