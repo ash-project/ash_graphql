@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.20.0-rc.3](https://github.com/ash-project/ash_graphql/compare/v0.20.0-rc.2...v0.20.0-rc.3) (2022-09-28)
+
+
+
+
+### Bug Fixes:
+
+* use the dataloader for loading calculations, to allow for aliases
+
+* only create sort input if type is set
+
+### Improvements:
+
+* update to latest ash
+
+* handle generated `nil` filters better
+
+* add options for remapping field/argument names
+
+* add attribute_types and attribute_input_types
+
+* require configuration of datetime types
+
 ## [v0.20.0-rc.2](https://github.com/ash-project/ash_graphql/compare/v0.20.0-rc.1...v0.20.0-rc.2) (2022-09-21)
 
 
