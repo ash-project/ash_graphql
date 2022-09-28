@@ -216,8 +216,6 @@ defmodule AshGraphql.ReadTest do
              "Field paginatedPosts is too complex: complexity is 36 and maximum is 35",
              "Operation PostLibrary is too complex: complexity is 36 and maximum is 35"
            ]
-
-    # assert
   end
 
   test "a read with a loaded field works" do
