@@ -7,13 +7,7 @@ defmodule AshGraphql.ErrorsTest do
       Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
       Application.delete_env(:ash_graphql, :policies)
 
-      try do
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
-      rescue
-        _ ->
-          :ok
-      end
+      AshGraphql.TestHelpers.stop_ets()
     end)
   end
 

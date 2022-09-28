@@ -5,8 +5,7 @@ defmodule AshGraphql.PaginateTest do
 
   setup do
     on_exit(fn ->
-      Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
-      Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
+      AshGraphql.TestHelpers.stop_ets()
     end)
   end
 

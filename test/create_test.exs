@@ -5,14 +5,7 @@ defmodule AshGraphql.CreateTest do
     on_exit(fn ->
       Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
 
-      try do
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Author)
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
-      rescue
-        _ ->
-          :ok
-      end
+      AshGraphql.TestHelpers.stop_ets()
     end)
   end
 
