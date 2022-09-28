@@ -6,8 +6,7 @@ defmodule AshGraphql.UpdateTest do
 
     on_exit(fn ->
       try do
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Post)
-        Ash.DataLayer.Ets.stop(AshGraphql.Test.Comment)
+        AshGraphql.TestHelpers.stop_ets()
       rescue
         _ ->
           :ok
