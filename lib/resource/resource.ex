@@ -387,7 +387,9 @@ defmodule AshGraphql.Resource do
     |> mutations()
     |> Enum.map(fn
       %{type: :destroy} = mutation ->
-        action = Ash.Resource.Info.action(resource, mutation.action)
+        action =
+          Ash.Resource.Info.action(resource, mutation.action) ||
+            raise "No such action #{mutation.action} for #{inspect(resource)}"
 
         if action.soft? do
           update_mutation(resource, schema, mutation, schema, api)
@@ -406,7 +408,9 @@ defmodule AshGraphql.Resource do
         end
 
       %{type: :create} = mutation ->
-        action = Ash.Resource.Info.action(resource, mutation.action)
+        action =
+          Ash.Resource.Info.action(resource, mutation.action) ||
+            raise "No such action #{mutation.action} for #{inspect(resource)}"
 
         args =
           case mutation_fields(
@@ -450,7 +454,9 @@ defmodule AshGraphql.Resource do
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp update_mutation(resource, schema, mutation, schema, api) do
-    action = Ash.Resource.Info.action(resource, mutation.action)
+    action =
+      Ash.Resource.Info.action(resource, mutation.action) ||
+        raise "No such action #{mutation.action} for #{inspect(resource)}"
 
     args =
       case mutation_fields(
@@ -534,7 +540,9 @@ defmodule AshGraphql.Resource do
     |> Enum.flat_map(fn mutation ->
       mutation = %{
         mutation
-        | action: Ash.Resource.Info.action(resource, mutation.action)
+        | action:
+            Ash.Resource.Info.action(resource, mutation.action) ||
+              raise("No such action #{mutation.action} for #{inspect(resource)}")
       }
 
       description =
