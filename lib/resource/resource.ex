@@ -358,7 +358,9 @@ defmodule AshGraphql.Resource do
       |> queries()
       |> Enum.filter(&(&1.as_mutation? == as_mutations?))
       |> Enum.map(fn query ->
-        query_action = Ash.Resource.Info.action(resource, query.action)
+        query_action =
+          Ash.Resource.Info.action(resource, query.action) ||
+            raise "No such action #{query.action} on #{resource}"
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           arguments: args(query.type, resource, query_action, schema, query.identity),
