@@ -2657,39 +2657,47 @@ defmodule AshGraphql.Resource do
     if Ash.Type.builtin?(type) do
       get_specific_field_type(type, attribute, resource)
     else
-      if Ash.Type.embedded_type?(type) do
+      if Spark.Dsl.is?(type, Ash.Resource) && !Ash.Type.embedded_type?(type) do
         if input? do
-          :"#{AshGraphql.Resource.Info.type(resource)}_#{attribute.name}_input"
-        else
-          case type(type) do
-            nil ->
-              Application.get_env(:ash_graphql, :json_type) || :json_string
-
-            type ->
-              type
-          end
+          raise "Cannot construct an input type for #{inspect(type)}"
         end
+
+        AshGraphql.Resource.Info.type(resource)
       else
-        if :erlang.function_exported(type, :values, 0) do
-          if :erlang.function_exported(type, :graphql_type, 0) do
-            type.graphql_type()
+        if Ash.Type.embedded_type?(type) do
+          if input? do
+            :"#{AshGraphql.Resource.Info.type(resource)}_#{attribute.name}_input"
           else
-            :string
+            case type(type) do
+              nil ->
+                Application.get_env(:ash_graphql, :json_type) || :json_string
+
+              type ->
+                type
+            end
           end
         else
-          function =
-            if input? do
-              :graphql_input_type
+          if :erlang.function_exported(type, :values, 0) do
+            if :erlang.function_exported(type, :graphql_type, 0) do
+              type.graphql_type()
             else
-              :graphql_type
+              :string
             end
-
-          if :erlang.function_exported(type, function, 1) do
-            apply(type, function, [Map.get(attribute, :constraints)])
           else
-            raise """
-            Could not determine graphql type for #{inspect(type)}, please define: #{function}/1!
-            """
+            function =
+              if input? do
+                :graphql_input_type
+              else
+                :graphql_type
+              end
+
+            if :erlang.function_exported(type, function, 1) do
+              apply(type, function, [Map.get(attribute, :constraints)])
+            else
+              raise """
+              Could not determine graphql type for #{inspect(type)}, please define: #{function}/1!
+              """
+            end
           end
         end
       end
