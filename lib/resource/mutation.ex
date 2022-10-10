@@ -7,6 +7,7 @@ defmodule AshGraphql.Resource.Mutation do
     :identity,
     :read_action,
     :upsert?,
+    :upsert_identity,
     :modify_resolution
   ]
 
@@ -25,6 +26,11 @@ defmodule AshGraphql.Resource.Mutation do
       type: :boolean,
       default: false,
       doc: "Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`."
+    ],
+    upsert_identity: [
+      type: :atom,
+      default: false,
+      doc: "Which identity to use for the upsert"
     ],
     modify_resolution: [
       type: :mfa,

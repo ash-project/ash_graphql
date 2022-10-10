@@ -379,7 +379,13 @@ defmodule AshGraphql.Graphql.Resolver do
   def mutate(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
-         %{type: :create, action: action, upsert?: upsert?, modify_resolution: modify}}
+         %{
+           type: :create,
+           action: action,
+           upsert?: upsert?,
+           upsert_identity: upsert_identity,
+           modify_resolution: modify
+         }}
       ) do
     input = arguments[:input] || %{}
 
@@ -393,6 +399,13 @@ defmodule AshGraphql.Graphql.Resolver do
         load_fields(result, resource, api, resolution, ["result"])
       end
     ]
+
+    opts =
+      if upsert? && upsert_identity do
+        Keyword.put(opts, :upsert_identity, upsert_identity)
+      else
+        opts
+      end
 
     changeset =
       resource
