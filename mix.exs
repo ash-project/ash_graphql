@@ -125,7 +125,7 @@ defmodule AshGraphql.MixProject do
       {:credo, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:sobelow, ">= 0.0.0", only: :dev, runtime: false},
-      {:git_ops, "~> 2.4.3", only: :dev},
+      {:git_ops, "~> 2.5.1", only: :dev},
       {:excoveralls, "~> 0.13.0", only: [:dev, :test]}
     ]
   end
