@@ -222,6 +222,12 @@ defmodule AshGraphql.Resource do
         required: true,
         doc: "The type to use for this entity in the graphql schema"
       ],
+      relationships: [
+        type: {:list, :atom},
+        required: false,
+        doc:
+          "A list of relationships to include on the created type. Defaults to all public relationships where the destination defines a graphql type."
+      ],
       field_names: [
         type: :keyword_list,
         doc: "A keyword list of name overrides for attributes."
@@ -1965,10 +1971,12 @@ defmodule AshGraphql.Resource do
   defp relationship_filter_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
+    relationships = AshGraphql.Resource.Info.relationships(resource)
+
     resource
     |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
-      AshGraphql.Resource.Info.type(relationship.destination)
+      Resource in Spark.extensions(relationship.destination) && relationship.name in relationships
     end)
     |> Enum.map(fn relationship ->
       %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2434,10 +2442,12 @@ defmodule AshGraphql.Resource do
   defp relationships(resource, api, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
+    relationships = AshGraphql.Resource.Info.relationships(resource)
+
     resource
     |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
-      Resource in Spark.extensions(relationship.destination)
+      Resource in Spark.extensions(relationship.destination) && relationship.name in relationships
     end)
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->

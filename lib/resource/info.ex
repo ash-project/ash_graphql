@@ -33,6 +33,12 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :field_names, [])
   end
 
+  @doc "Which relationships should be included in the generated type"
+  def relationships(resource) do
+    Extension.get_opt(resource, [:graphql], :relationships, nil) ||
+      resource |> Ash.Resource.Info.public_relationships() |> Enum.map(& &1.name)
+  end
+
   @doc "Graphql argument name overrides for the resource"
   def argument_names(resource) do
     Extension.get_opt(resource, [:graphql], :argument_names, [])
