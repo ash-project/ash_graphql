@@ -1078,7 +1078,6 @@ defmodule AshGraphql.Resource do
           name: "first",
           identifier: :first,
           type: :integer,
-          default_value: action.pagination.default_limit,
           description: "The number of records to return from the beginning." <> max_message,
           __reference__: ref(__ENV__)
         },
@@ -1100,7 +1099,6 @@ defmodule AshGraphql.Resource do
           name: "last",
           identifier: :last,
           type: :integer,
-          default_value: action.pagination.default_limit,
           description: "The number of records to return to the end." <> max_message,
           __reference__: ref(__ENV__)
         }

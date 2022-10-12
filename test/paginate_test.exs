@@ -9,7 +9,58 @@ defmodule AshGraphql.PaginateTest do
     end)
   end
 
-  describe "pagination" do
+  describe "keyset pagination" do
+    setup do
+      letters = ["a", "b", "c", "d", "e"]
+
+      for text <- letters do
+        post =
+          AshGraphql.Test.Post
+          |> Ash.Changeset.for_create(:create, text: text, published: true)
+          |> AshGraphql.Test.Api.create!()
+
+        for text <- letters do
+          AshGraphql.Test.Comment
+          |> Ash.Changeset.for_create(:create, text: text)
+          |> Ash.Changeset.manage_relationship(:post, post, type: :append_and_remove)
+          |> AshGraphql.Test.Api.create!()
+        end
+      end
+
+      :ok
+    end
+
+    test "default_limit records are fetched" do
+      doc = """
+      query KeysetPaginatedPosts {
+        keysetPaginatedPosts(sort: [{field: TEXT}]) {
+          count
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "keysetPaginatedPosts" => %{
+                    "count" => 5,
+                    "results" => [
+                      %{"text" => "a"},
+                      %{"text" => "b"},
+                      %{"text" => "c"},
+                      %{"text" => "d"},
+                      %{"text" => "e"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+  end
+
+  describe "offset pagination" do
     setup do
       letters = ["a", "b", "c", "d", "e"]
 

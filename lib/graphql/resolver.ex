@@ -144,7 +144,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource, %{type: :list, action: action, modify_resolution: modify}}
+        {api, resource, %{type: :list, relay?: relay?, action: action, modify_resolution: modify}}
       ) do
     opts = [
       actor: Map.get(context, :actor),
@@ -157,7 +157,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
     {result, modify_args} =
       with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
-           result_fields <- get_result_fields(pagination),
+           result_fields <- get_result_fields(pagination, relay?),
            initial_query <-
              query
              |> Ash.Query.set_tenant(Map.get(context, :tenant))
@@ -172,7 +172,7 @@ defmodule AshGraphql.Graphql.Resolver do
                authorize?: AshGraphql.Api.Info.authorize?(api)
              )
              |> api.read(opts) do
-        result = paginate(resource, action, page)
+        result = paginate(resource, action, page, relay?)
         {result, [query, result]}
       else
         {:error, error} ->
@@ -279,15 +279,19 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok, opts}
   end
 
-  defp get_result_fields(%{keyset?: true}) do
+  defp get_result_fields(%{keyset?: true}, true) do
     ["edges", "node"]
   end
 
-  defp get_result_fields(%{offset?: true}) do
+  defp get_result_fields(%{keyset?: true}, false) do
     ["results"]
   end
 
-  defp get_result_fields(_pagination) do
+  defp get_result_fields(%{offset?: true}, _) do
+    ["results"]
+  end
+
+  defp get_result_fields(_pagination, _) do
     []
   end
 
@@ -299,12 +303,17 @@ defmodule AshGraphql.Graphql.Resolver do
     []
   end
 
-  defp paginate(_resource, _action, %Ash.Page.Keyset{
-         results: results,
-         more?: more,
-         after: after_cursor,
-         before: before_cursor
-       }) do
+  defp paginate(
+         _resource,
+         _action,
+         %Ash.Page.Keyset{
+           results: results,
+           more?: more,
+           after: after_cursor,
+           before: before_cursor
+         },
+         true
+       ) do
     {start_cursor, end_cursor} =
       case results do
         [] ->
@@ -351,22 +360,44 @@ defmodule AshGraphql.Graphql.Resolver do
     }
   end
 
-  defp paginate(_resource, _action, %Ash.Page.Offset{results: results, count: count}) do
+  defp paginate(
+         _resource,
+         _action,
+         %Ash.Page.Keyset{
+           results: results,
+           count: count
+         },
+         false
+       ) do
     {:ok, %{results: results, count: count}}
   end
 
-  defp paginate(resource, action, page) do
+  defp paginate(_resource, _action, %Ash.Page.Offset{results: results, count: count}, _) do
+    {:ok, %{results: results, count: count}}
+  end
+
+  defp paginate(resource, action, page, relay?) do
     case Ash.Resource.Info.action(resource, action).pagination do
       %{offset?: true} ->
-        paginate(resource, action, %Ash.Page.Offset{results: page, count: Enum.count(page)})
+        paginate(
+          resource,
+          action,
+          %Ash.Page.Offset{results: page, count: Enum.count(page)},
+          relay?
+        )
 
       %{keyset?: true} ->
-        paginate(resource, action, %Ash.Page.Keyset{
-          results: page,
-          more?: false,
-          after: nil,
-          before: nil
-        })
+        paginate(
+          resource,
+          action,
+          %Ash.Page.Keyset{
+            results: page,
+            more?: false,
+            after: nil,
+            before: nil
+          },
+          relay?
+        )
 
       _ ->
         {:ok, page}

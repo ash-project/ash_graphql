@@ -77,6 +77,7 @@ defmodule AshGraphql.Test.Post do
       list :post_library, :library
       list :post_score, :score
       list :paginated_posts, :paginated
+      list :keyset_paginated_posts, :keyset_paginated
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
     end
@@ -158,6 +159,10 @@ defmodule AshGraphql.Test.Post do
 
     read :paginated do
       pagination(required?: true, offset?: true, countable: true, default_limit: 20)
+    end
+
+    read :keyset_paginated do
+      pagination(required?: true, keyset?: true, countable: true, default_limit: 20)
     end
 
     read :paginated_without_limit do
