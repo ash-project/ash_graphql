@@ -53,6 +53,7 @@ defmodule AshGraphql do
             api = unquote(api)
 
             Code.ensure_compiled!(api)
+            blueprint = AshGraphql.add_root_types(blueprint, __ENV__)
 
             blueprint_with_queries =
               api
@@ -231,6 +232,72 @@ defmodule AshGraphql do
       end
     end)
     |> Enum.uniq_by(& &1.identifier)
+  end
+
+  def add_root_types(%Absinthe.Blueprint{} = blueprint, env) do
+    %{
+      blueprint
+      | schema_definitions: Enum.map(blueprint.schema_definitions, &do_add_root_types(&1, env))
+    }
+  end
+
+  defp do_add_root_types(%Absinthe.Blueprint.Schema.SchemaDefinition{} = schema, env) do
+    schema
+    |> add_root_query_type(env)
+    |> add_root_mutation_type(env)
+  end
+
+  defp add_root_query_type(schema, env) do
+    if Enum.any?(schema.type_definitions, &(&1.name == "RootQueryType")) do
+      schema
+    else
+      root_query = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        name: "RootQueryType",
+        identifier: :query,
+        module: AshHqWeb.Schema,
+        description: nil,
+        interfaces: [],
+        interface_blueprints: [],
+        fields: [],
+        directives: [],
+        is_type_of: {:ref, env.module, {Absinthe.Blueprint.Schema.ObjectTypeDefinition, :query}},
+        source_location: nil,
+        flags: %{},
+        imports: [],
+        errors: [],
+        __reference__: AshGraphql.Resource.ref(env),
+        __private__: []
+      }
+
+      %{schema | type_definitions: [root_query | schema.type_definitions]}
+    end
+  end
+
+  defp add_root_mutation_type(schema, env) do
+    if Enum.any?(schema.type_definitions, &(&1.name == "RootMutationType")) do
+      schema
+    else
+      root_mutation = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        name: "RootMutationType",
+        identifier: :mutation,
+        module: AshHqWeb.Schema,
+        description: nil,
+        interfaces: [],
+        interface_blueprints: [],
+        fields: [],
+        directives: [],
+        is_type_of:
+          {:ref, env.module, {Absinthe.Blueprint.Schema.ObjectTypeDefinition, :mutation}},
+        source_location: nil,
+        flags: %{},
+        imports: [],
+        errors: [],
+        __reference__: AshGraphql.Resource.ref(env),
+        __private__: []
+      }
+
+      %{schema | type_definitions: [root_mutation | schema.type_definitions]}
+    end
   end
 
   defp all_arguments(resource) do

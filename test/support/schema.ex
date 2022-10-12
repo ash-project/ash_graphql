@@ -22,12 +22,6 @@ defmodule AshGraphql.Test.Schema do
     value(:closed, description: "The post is closed")
   end
 
-  query do
-  end
-
-  mutation do
-  end
-
   def context(ctx) do
     AshGraphql.add_context(ctx, @apis)
   end
