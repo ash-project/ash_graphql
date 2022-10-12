@@ -18,6 +18,22 @@ defmodule RaiseResourceError do
   end
 end
 
+defmodule ReturnResourceError do
+  @moduledoc false
+  use Ash.Resource.Change
+
+  def change(changeset, _, _) do
+    Ash.Changeset.add_error(
+      changeset,
+      Ash.Error.Changes.InvalidAttribute.exception(
+        message: "%{var}",
+        vars: [var: "hello"],
+        field: :foo
+      )
+    )
+  end
+end
+
 defmodule FullTextCalculation do
   @moduledoc false
   use Ash.Calculation
@@ -79,6 +95,7 @@ defmodule AshGraphql.Test.Post do
     mutations do
       create :simple_create_post, :create
       create :create_post_with_error, :create_with_error
+      create :create_post_with_required_error, :create_with_required_error
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
 
@@ -108,6 +125,10 @@ defmodule AshGraphql.Test.Post do
 
     create :create_with_error do
       change(RaiseResourceError)
+    end
+
+    create :create_with_required_error do
+      change(ReturnResourceError)
     end
 
     create :upsert do

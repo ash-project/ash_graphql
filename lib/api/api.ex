@@ -23,16 +23,18 @@ defmodule AshGraphql.Api do
         doc:
           "By default, mutation errors are shown in their result object's errors key, but this setting places those errors in the top level errors list"
       ],
+      error_handler: [
+        type: :mfa,
+        default: {AshGraphql.DefaultErrorHandler, :handle_error, []},
+        doc: """
+        Set an MFA to intercept/handle any errors that are generated.
+        """
+      ],
       show_raised_errors?: [
         type: :boolean,
         default: false,
         doc:
           "For security purposes, if an error is *raised* then Ash simply shows a generic error. If you want to show those errors, set this to true."
-      ],
-      stacktraces?: [
-        type: :boolean,
-        doc: "Whether or not to include stacktraces in generated errors",
-        default: true
       ],
       debug?: [
         type: :boolean,
@@ -74,9 +76,6 @@ defmodule AshGraphql.Api do
 
   @deprecated "See `AshGraphql.Api.Info.debug?/1`"
   defdelegate debug?(api), to: AshGraphql.Api.Info
-
-  @deprecated "See `AshGraphql.Api.Info.stacktraces?/1`"
-  defdelegate stacktraces?(api), to: AshGraphql.Api.Info
 
   @doc false
   def queries(api, schema) do

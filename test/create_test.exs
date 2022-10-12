@@ -386,6 +386,52 @@ defmodule AshGraphql.CreateTest do
     assert message =~ "Confirmation did not match value"
   end
 
+  defmodule ErrorHandler do
+    def handle_error(error, _context) do
+      %{error | message: "replaced!"}
+    end
+  end
+
+  test "errors can be intercepted" do
+    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+      graphql: [
+        error_handler: {ErrorHandler, :handle_error, []}
+      ]
+    )
+
+    resp =
+      """
+      mutation CreatePost($input: CreatePostWithRequiredErrorInput) {
+        createPostWithRequiredError(input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{}
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: %{
+               "createPostWithRequiredError" => %{
+                 "result" => nil,
+                 "errors" => [%{"message" => message}]
+               }
+             }
+           } = result
+
+    assert message =~ "replaced!"
+  end
+
   test "root level error" do
     Application.put_env(:ash_graphql, AshGraphql.Test.Api,
       graphql: [show_raised_errors?: true, root_level_errors?: true]

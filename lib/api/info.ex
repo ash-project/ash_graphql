@@ -13,6 +13,17 @@ defmodule AshGraphql.Api.Info do
     Extension.get_opt(api, [:graphql], :root_level_errors?, false, true)
   end
 
+  @doc "An error handler for errors produced by api"
+  def error_handler(api) do
+    Extension.get_opt(
+      api,
+      [:graphql],
+      :error_handler,
+      {AshGraphql.DefaultErrorHandler, :handle_error, []},
+      true
+    )
+  end
+
   @doc "Wether or not to render raised errors in the graphql response"
   def show_raised_errors?(api) do
     Extension.get_opt(api, [:graphql], :show_raised_errors?, false, true)
@@ -21,10 +32,5 @@ defmodule AshGraphql.Api.Info do
   @doc "Wether or not to pass debug? down to internal execution"
   def debug?(api) do
     Extension.get_opt(api, [:graphql], :debug?, false)
-  end
-
-  @doc "Wether or not to show stacktraces? in the graphql response"
-  def stacktraces?(api) do
-    Extension.get_opt(api, [:graphql], :stacktraces?, false)
   end
 end

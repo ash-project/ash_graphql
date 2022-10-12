@@ -5,7 +5,7 @@ end
 defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
   def to_error(error) do
     %{
-      message: Exception.message(error),
+      message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
       code: Ash.ErrorKind.code(error),
@@ -17,9 +17,9 @@ end
 defimpl AshGraphql.Error, for: Ash.Error.Page.InvalidKeyset do
   def to_error(error) do
     %{
-      message: Exception.message(error),
+      message: "Invalid value provided as a keyset for %{key}: %{value}",
       short_message: "invalid keyset",
-      vars: Map.new(error.vars),
+      vars: Map.merge(Map.new(error.vars), %{value: inspect(error.value), key: error.key}),
       code: Ash.ErrorKind.code(error),
       fields: List.wrap(Map.get(error, :key))
     }
@@ -29,7 +29,7 @@ end
 defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidAttribute do
   def to_error(error) do
     %{
-      message: Exception.message(error),
+      message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
       code: Ash.ErrorKind.code(error),
@@ -41,7 +41,7 @@ end
 defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidArgument do
   def to_error(error) do
     %{
-      message: Exception.message(error),
+      message: error.message,
       code: Ash.ErrorKind.code(error),
       short_message: error.message,
       vars: Map.new(error.vars),
@@ -53,7 +53,7 @@ end
 defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidArgument do
   def to_error(error) do
     %{
-      message: Exception.message(error),
+      message: error.message,
       code: Ash.ErrorKind.code(error),
       short_message: error.message,
       vars: Map.new(error.vars),
