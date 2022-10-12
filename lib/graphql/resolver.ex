@@ -721,12 +721,30 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def identity_filter(nil, resource, arguments) do
-    case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
-      {:ok, value} ->
-        {:ok, value}
+    if AshGraphql.Resource.Info.encode_primary_key?(resource) do
+      case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
+        {:ok, value} ->
+          {:ok, value}
 
-      {:error, error} ->
-        {:error, error}
+        {:error, error} ->
+          {:error, error}
+      end
+    else
+      resource
+      |> Ash.Resource.Info.primary_key()
+      |> Enum.reduce_while({:ok, nil}, fn key, {:ok, expr} ->
+        value = Map.get(arguments, key)
+
+        if value do
+          if expr do
+            {:cont, {:ok, Ash.Query.expr(^expr and ref(^key) == ^value)}}
+          else
+            {:cont, {:ok, Ash.Query.expr(ref(^key) == ^value)}}
+          end
+        else
+          {:halt, {:error, "Required key not present"}}
+        end
+      end)
     end
   end
 

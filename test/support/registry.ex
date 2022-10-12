@@ -5,6 +5,7 @@ defmodule AshGraphql.Test.Registry do
   entries do
     entry(AshGraphql.Test.Comment)
     entry(AshGraphql.Test.CompositePrimaryKey)
+    entry(AshGraphql.Test.CompositePrimaryKeyNotEncoded)
     entry(AshGraphql.Test.DoubleRelRecursive)
     entry(AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed)
     entry(AshGraphql.Test.MultitenantTag)

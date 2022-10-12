@@ -13,6 +13,11 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_entities(resource, [:graphql, :mutations]) || []
   end
 
+  @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"
+  def encode_primary_key?(resource) do
+    Extension.get_opt(resource, [:graphql], :encode_primary_key?, true)
+  end
+
   @doc "The managed_relationship configurations"
   def managed_relationships(resource) do
     Extension.get_entities(resource, [:graphql, :managed_relationships]) || []

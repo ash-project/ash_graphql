@@ -222,6 +222,12 @@ defmodule AshGraphql.Resource do
         required: true,
         doc: "The type to use for this entity in the graphql schema"
       ],
+      encode_primary_key?: [
+        type: :boolean,
+        default: true,
+        doc:
+          "For resources with composite primary keys, or primary keys not called `:id`, this will cause the id to be encoded as a single `id` attribute, both in the representation of the resource and in get requests"
+      ],
       relationships: [
         type: {:list, :atom},
         required: false,
@@ -886,18 +892,41 @@ defmodule AshGraphql.Resource do
 
   defp maybe_wrap_non_null(type, _), do: type
 
+  defp get_fields(resource) do
+    if AshGraphql.Resource.Info.encode_primary_key?(resource) do
+      [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: "id",
+          identifier: :id,
+          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+          description: "The id of the record",
+          __reference__: ref(__ENV__)
+        }
+      ]
+    else
+      resource
+      |> Ash.Resource.Info.primary_key()
+      |> Enum.map(fn key ->
+        attribute = Ash.Resource.Info.attribute(resource, key)
+
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          name: to_string(key),
+          identifier: key,
+          type: %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: field_type(attribute.type, attribute, resource, true)
+          },
+          description: attribute.description || "",
+          __reference__: ref(__ENV__)
+        }
+      end)
+    end
+  end
+
   defp args(action_type, resource, action, schema, identity \\ nil)
 
   defp args(:get, resource, action, schema, nil) do
-    [
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: "id",
-        identifier: :id,
-        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-        description: "The id of the record",
-        __reference__: ref(__ENV__)
-      }
-    ] ++ read_args(resource, action, schema)
+    get_fields(resource) ++
+      read_args(resource, action, schema)
   end
 
   defp args(:get, resource, action, schema, identity) do
@@ -2305,10 +2334,17 @@ defmodule AshGraphql.Resource do
   defp attributes(resource, schema) do
     attribute_names = AshGraphql.Resource.Info.field_names(resource)
 
-    non_id_attributes =
-      resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.reject(&(&1.name == :id))
+    attributes =
+      if AshGraphql.Resource.Info.encode_primary_key?(resource) do
+        resource
+        |> Ash.Resource.Info.public_attributes()
+        |> Enum.reject(& &1.primary_key?)
+      else
+        Ash.Resource.Info.public_attributes(resource)
+      end
+
+    attributes =
+      attributes
       |> Enum.map(fn attribute ->
         field_type =
           attribute.type
@@ -2327,50 +2363,15 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    case id_field(resource, schema) do
-      nil ->
-        non_id_attributes
-
-      id_field ->
-        [id_field | non_id_attributes]
+    if AshGraphql.Resource.Info.encode_primary_key?(resource) do
+      encoded_primary_key_attributes(resource, schema) ++
+        attributes
+    else
+      attributes
     end
   end
 
-  defp id_field(resource, schema) do
-    case Ash.Resource.Info.primary_key(resource) do
-      [field] ->
-        attribute = Ash.Resource.Info.attribute(resource, field)
-
-        unless attribute.private? do
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: attribute.description,
-            identifier: :id,
-            module: schema,
-            name: "id",
-            type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-            middleware: [
-              {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
-            ],
-            __reference__: ref(__ENV__)
-          }
-        end
-
-      fields ->
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: "A unique identifier",
-          identifier: :id,
-          module: schema,
-          name: "id",
-          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-          middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_composite_id}, {resource, fields}}
-          ],
-          __reference__: ref(__ENV__)
-        }
-    end
-  end
-
-  defp pkey_fields(resource, schema, require?) do
+  defp encoded_primary_key_attributes(resource, schema) do
     case Ash.Resource.Info.primary_key(resource) do
       [field] ->
         attribute = Ash.Resource.Info.attribute(resource, field)
@@ -2378,57 +2379,73 @@ defmodule AshGraphql.Resource do
         if attribute.private? do
           []
         else
-          field_type =
-            attribute.type
-            |> field_type(attribute, resource)
-            |> maybe_wrap_non_null(require?)
-
           [
             %Absinthe.Blueprint.Schema.FieldDefinition{
               description: attribute.description,
-              identifier: attribute.name,
+              identifier: :id,
               module: schema,
-              name: to_string(attribute.name),
-              type: field_type,
+              name: "id",
+              type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+              middleware: [
+                {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
+              ],
               __reference__: ref(__ENV__)
             }
           ]
         end
 
       fields ->
-        added_pkey_fields =
-          if :id in fields do
-            []
-          else
-            for field <- fields do
-              attribute = Ash.Resource.Info.attribute(resource, field)
-
-              field_type =
-                attribute.type
-                |> field_type(attribute, resource)
-                |> maybe_wrap_non_null(require?)
-
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                description: attribute.description,
-                identifier: attribute.name,
-                module: schema,
-                name: to_string(attribute.name),
-                type: field_type,
-                __reference__: ref(__ENV__)
-              }
-            end
-          end
-
         [
           %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The primary key of the resource",
+            description: "A unique identifier",
             identifier: :id,
             module: schema,
             name: "id",
-            type: :id,
+            type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+            middleware: [
+              {{AshGraphql.Graphql.Resolver, :resolve_composite_id}, {resource, fields}}
+            ],
             __reference__: ref(__ENV__)
           }
-        ] ++ added_pkey_fields
+        ]
+    end
+  end
+
+  defp pkey_fields(resource, schema, require?) do
+    encode? = AshGraphql.Resource.Info.encode_primary_key?(resource)
+
+    case Ash.Resource.Info.primary_key(resource) do
+      [field] when encode? ->
+        attribute = Ash.Resource.Info.attribute(resource, field)
+        field_type = maybe_wrap_non_null(:id, require?)
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          description: attribute.description,
+          identifier: field,
+          module: schema,
+          name: to_string(attribute.name),
+          type: field_type,
+          __reference__: ref(__ENV__)
+        }
+
+      fields ->
+        for field <- fields do
+          attribute = Ash.Resource.Info.attribute(resource, field)
+
+          field_type =
+            attribute.type
+            |> field_type(attribute, resource)
+            |> maybe_wrap_non_null(require?)
+
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: attribute.description,
+            identifier: attribute.name,
+            module: schema,
+            name: to_string(attribute.name),
+            type: field_type,
+            __reference__: ref(__ENV__)
+          }
+        end
     end
   end
 

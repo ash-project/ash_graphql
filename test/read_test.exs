@@ -297,6 +297,41 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"getNonIdPrimaryKey" => %{"id" => ^id}}} = result
   end
 
+  test "get requests against non-encoded primary key fields accept both fields and display both fields" do
+    record =
+      AshGraphql.Test.CompositePrimaryKeyNotEncoded
+      |> Ash.Changeset.for_create(:create, %{})
+      |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query GetCompositePrimaryKeyNotEncoded($first: String!, $second: String!) {
+        getCompositePrimaryKeyNotEncoded(first: $first, second: $second) {
+          first
+          second
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "first" => record.first,
+          "second" => record.second
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    first = record.first
+    second = record.second
+
+    assert %{
+             data: %{
+               "getCompositePrimaryKeyNotEncoded" => %{"first" => ^first, "second" => ^second}
+             }
+           } = result
+  end
+
   test "a read with a composite primary key fills in the id field" do
     record =
       AshGraphql.Test.CompositePrimaryKey
