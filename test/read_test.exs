@@ -269,6 +269,37 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"postLibrary" => [%{"foo" => "1foo2", "bar" => "1bar2"}]}} = result
   end
 
+  test "the same calculation can be sorted on twice with different arguments via aliases" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)
+    |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published, sort: [{field: TEXT1_AND2, order: DESC, text1And2Input: {separator: "a"}}, {field: TEXT1_AND2, order: DESC, text1And2Input: {separator: "b"}}]) {
+          a: text1And2(separator: "a")
+          b: text1And2(separator: "b")
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "postLibrary" => [%{"a" => "1a2", "b" => "1b2"}, %{"a" => "1a2", "b" => "1b2"}]
+             }
+           } = result
+  end
+
   test "a read with a non-id primary key fills in the id field" do
     record =
       AshGraphql.Test.NonIdPrimaryKey

@@ -788,18 +788,19 @@ defmodule AshGraphql.Graphql.Resolver do
     case Map.fetch(args, :sort) do
       {:ok, sort} ->
         keyword_sort =
-          Enum.map(sort, fn %{order: order, field: field} ->
-            {field, order}
+          Enum.map(sort, fn %{order: order, field: field} = input ->
+            case Ash.Resource.Info.calculation(resource, field) do
+              %{arguments: [_ | _]} ->
+                input_name = String.to_existing_atom("#{field}_input")
+
+                {field, {order, input[input_name] || %{}}}
+
+              _ ->
+                {field, order}
+            end
           end)
 
-        fields =
-          keyword_sort
-          |> Keyword.keys()
-          |> Enum.filter(&Ash.Resource.Info.public_aggregate(resource, &1))
-
-        query
-        |> Ash.Query.load(fields)
-        |> Ash.Query.sort(keyword_sort)
+        Ash.Query.sort(query, keyword_sort)
 
       _ ->
         query

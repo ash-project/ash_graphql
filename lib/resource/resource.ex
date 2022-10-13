@@ -789,7 +789,7 @@ defmodule AshGraphql.Resource do
               |> maybe_wrap_non_null(argument_required?(argument))
 
             %Absinthe.Blueprint.Schema.FieldDefinition{
-              identifier: argument.name,
+              identifier: name,
               module: schema,
               name: to_string(name),
               type: type,
@@ -1788,25 +1788,26 @@ defmodule AshGraphql.Resource do
 
         _ ->
           %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-            fields: [
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: :order,
-                module: schema,
-                name: "order",
-                default_value: :asc,
-                type: :sort_order,
-                __reference__: ref(__ENV__)
-              },
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: :field,
-                module: schema,
-                name: "field",
-                type: %Absinthe.Blueprint.TypeReference.NonNull{
-                  of_type: resource_sort_field_type(resource)
+            fields:
+              [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  identifier: :order,
+                  module: schema,
+                  name: "order",
+                  default_value: :asc,
+                  type: :sort_order,
+                  __reference__: ref(__ENV__)
                 },
-                __reference__: ref(__ENV__)
-              }
-            ],
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  identifier: :field,
+                  module: schema,
+                  name: "field",
+                  type: %Absinthe.Blueprint.TypeReference.NonNull{
+                    of_type: resource_sort_field_type(resource)
+                  },
+                  __reference__: ref(__ENV__)
+                }
+              ] ++ calc_input_fields(resource, schema),
             identifier: resource_sort_type(resource),
             module: schema,
             name: resource |> resource_sort_type() |> to_string() |> Macro.camelize(),
@@ -1816,6 +1817,43 @@ defmodule AshGraphql.Resource do
     else
       nil
     end
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp calc_input_fields(resource, schema) do
+    calcs =
+      resource
+      |> Ash.Resource.Info.public_calculations()
+      |> Enum.reject(fn
+        %{type: {:array, _}} ->
+          true
+
+        calc ->
+          Ash.Type.embedded_type?(calc.type) || Enum.empty?(calc.arguments)
+      end)
+
+    field_names = AshGraphql.Resource.Info.field_names(resource)
+
+    Enum.map(calcs, fn calc ->
+      input_name = "#{field_names[calc.name] || calc.name}_input"
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: String.to_atom("#{calc.name}_input"),
+        module: schema,
+        name: input_name,
+        type: calc_input_type(calc.name, resource),
+        __reference__: ref(__ENV__)
+      }
+    end)
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp calc_input_type(calc, resource) do
+    field_names = AshGraphql.Resource.Info.field_names(resource)
+
+    String.to_atom(
+      "#{AshGraphql.Resource.Info.type(resource)}_#{field_names[calc] || calc}_input"
+    )
   end
 
   defp filter_input(resource, schema) do
@@ -1838,11 +1876,9 @@ defmodule AshGraphql.Resource do
   defp calculation_input(resource, schema) do
     resource
     |> Ash.Resource.Info.public_calculations()
-    |> Enum.filter(fn %{calculation: {module, _}} ->
+    |> Enum.flat_map(fn %{calculation: {module, _}} = calculation ->
       Code.ensure_compiled(module)
-      :erlang.function_exported(module, :expression, 2)
-    end)
-    |> Enum.flat_map(fn calculation ->
+      filterable? = :erlang.function_exported(module, :expression, 2)
       field_type = calculation_type(calculation, resource)
 
       arguments = calculation_args(calculation, resource, schema)
@@ -1864,56 +1900,54 @@ defmodule AshGraphql.Resource do
           )
         )
 
-      filter_input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+      input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
         fields: arguments,
-        identifier:
-          String.to_atom(
-            to_string(calculation_filter_field_type(resource, calculation)) <> "_input"
-          ),
+        identifier: String.to_atom(to_string(calc_input_type(calculation.name, resource))),
         module: schema,
-        name:
-          Macro.camelize(
-            to_string(calculation_filter_field_type(resource, calculation)) <> "_input"
-          ),
+        name: Macro.camelize(to_string(calc_input_type(calculation.name, resource))),
         __reference__: ref(__ENV__)
       }
 
-      filter_input_field = %Absinthe.Blueprint.Schema.FieldDefinition{
-        identifier: :input,
-        module: schema,
-        name: "input",
-        type:
-          String.to_atom(
-            to_string(calculation_filter_field_type(resource, calculation)) <> "_input"
-          ),
-        __reference__: ref(__ENV__)
-      }
+      types =
+        if Enum.empty?(arguments) do
+          []
+        else
+          [input]
+        end
 
-      if Enum.empty?(arguments) do
-        type_def = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          fields: filter_fields,
-          identifier: calculation_filter_field_type(resource, calculation),
-          module: schema,
-          name: Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
-          __reference__: ref(__ENV__)
-        }
+      if filterable? do
+        type_def =
+          if Enum.empty?(arguments) do
+            %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+              fields: filter_fields,
+              identifier: calculation_filter_field_type(resource, calculation),
+              module: schema,
+              name:
+                Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
+              __reference__: ref(__ENV__)
+            }
+          else
+            filter_input_field = %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: :input,
+              module: schema,
+              name: "input",
+              type: String.to_atom(to_string(calc_input_type(calculation.name, resource))),
+              __reference__: ref(__ENV__)
+            }
 
-        [
-          type_def
-        ]
+            %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+              fields: [filter_input_field | filter_fields],
+              identifier: calculation_filter_field_type(resource, calculation),
+              module: schema,
+              name:
+                Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
+              __reference__: ref(__ENV__)
+            }
+          end
+
+        [type_def | types]
       else
-        type_def = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          fields: [filter_input_field | filter_fields],
-          identifier: calculation_filter_field_type(resource, calculation),
-          module: schema,
-          name: Macro.camelize(to_string(calculation_filter_field_type(resource, calculation))),
-          __reference__: ref(__ENV__)
-        }
-
-        [
-          filter_input,
-          type_def
-        ]
+        types
       end
     end)
   end
@@ -2091,12 +2125,12 @@ defmodule AshGraphql.Resource do
           identifier: resource_sort_field_type(resource),
           __reference__: ref(__ENV__),
           values:
-            Enum.map(sort_values, fn sort_value ->
+            Enum.map(sort_values, fn {sort_value_alias, sort_value} ->
               %Absinthe.Blueprint.Schema.EnumValueDefinition{
                 module: schema,
-                identifier: sort_value,
+                identifier: sort_value_alias,
                 __reference__: AshGraphql.Resource.ref(env),
-                name: String.upcase(to_string(sort_value)),
+                name: String.upcase(to_string(sort_value_alias)),
                 value: sort_value
               }
             end)
@@ -2164,12 +2198,25 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.map(& &1.name)
 
+    calculation_sort_values =
+      resource
+      |> Ash.Resource.Info.public_calculations()
+      |> Enum.reject(fn
+        %{type: {:array, _}} ->
+          true
+
+        attribute ->
+          Ash.Type.embedded_type?(attribute.type)
+      end)
+      |> Enum.map(& &1.name)
+
     attribute_sort_values
     |> Enum.concat(aggregate_sort_values)
-    |> Enum.map(fn name ->
-      field_names[name] || name
-    end)
+    |> Enum.concat(calculation_sort_values)
     |> Enum.uniq()
+    |> Enum.map(fn name ->
+      {field_names[name] || name, name}
+    end)
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -2687,7 +2734,7 @@ defmodule AshGraphql.Resource do
           raise "Cannot construct an input type for #{inspect(type)}"
         end
 
-        AshGraphql.Resource.Info.type(resource)
+        AshGraphql.Resource.Info.type(type)
       else
         if Ash.Type.embedded_type?(type) do
           if input? do
@@ -2733,7 +2780,8 @@ defmodule AshGraphql.Resource do
          Ash.Type.Atom,
          %Ash.Resource.Attribute{constraints: constraints, name: name},
          resource
-       ) do
+       )
+       when resource do
     if is_list(constraints[:one_of]) do
       atom_enum_type(resource, name)
     else
