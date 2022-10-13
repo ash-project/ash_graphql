@@ -1852,7 +1852,7 @@ defmodule AshGraphql.Resource do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
     String.to_atom(
-      "#{AshGraphql.Resource.Info.type(resource)}_#{field_names[calc] || calc}_input"
+      "#{AshGraphql.Resource.Info.type(resource)}_#{field_names[calc] || calc}_field_input"
     )
   end
 
@@ -2201,6 +2201,10 @@ defmodule AshGraphql.Resource do
     calculation_sort_values =
       resource
       |> Ash.Resource.Info.public_calculations()
+      |> Enum.filter(fn %{calculation: {module, _}} ->
+        Code.ensure_compiled!(module)
+        function_exported?(module, :expression, 2)
+      end)
       |> Enum.reject(fn
         %{type: {:array, _}} ->
           true
