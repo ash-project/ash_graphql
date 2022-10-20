@@ -2239,6 +2239,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp relay_page(resource, schema) do
     type = AshGraphql.Resource.Info.type(resource)
 

@@ -294,14 +294,6 @@ defmodule AshGraphql.Graphql.Resolver do
     []
   end
 
-  defp get_page_fields(%{keyset?: true}) do
-    ["pageInfo"]
-  end
-
-  defp get_page_fields(_pagination) do
-    []
-  end
-
   defp paginate(
          _resource,
          _action,
