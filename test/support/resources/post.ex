@@ -70,7 +70,8 @@ defmodule AshGraphql.Test.Post do
 
     attribute_types integer_as_string_in_api: :string
     attribute_input_types integer_as_string_in_api: :string
-    field_names(text_1_and_2: :text1_and2)
+    field_names text_1_and_2: :text1_and2
+    keyset_field :keyset
 
     queries do
       get :get_post, :read
@@ -162,7 +163,12 @@ defmodule AshGraphql.Test.Post do
     end
 
     read :keyset_paginated do
-      pagination(required?: true, keyset?: true, countable: true, default_limit: 20)
+      pagination(
+        required?: true,
+        keyset?: true,
+        countable: true,
+        default_limit: 20
+      )
     end
 
     read :paginated_without_limit do

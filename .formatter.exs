@@ -18,6 +18,7 @@ spark_locals_without_parens = [
   get: 2,
   get: 3,
   identity: 1,
+  keyset_field: 1,
   list: 2,
   list: 3,
   lookup_identities: 1,

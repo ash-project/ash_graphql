@@ -48,6 +48,7 @@ defmodule AshGraphql.RelayTest do
             startCursor
             endCursor
           }
+          count
           edges{
             cursor
             node {
@@ -62,6 +63,7 @@ defmodule AshGraphql.RelayTest do
               %{
                 data: %{
                   "getRelayTags" => %{
+                    "count" => 5,
                     "pageInfo" => %{
                       "hasNextPage" => false,
                       "hasPreviousPage" => false,

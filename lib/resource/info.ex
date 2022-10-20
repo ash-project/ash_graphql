@@ -33,6 +33,11 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :attribute_types, [])
   end
 
+  @doc "The field name to place the keyset of a result in"
+  def keyset_field(resource) do
+    Extension.get_opt(resource, [:graphql], :keyset_field, nil)
+  end
+
   @doc "Graphql field name (attribute/relationship/calculation/arguments) overrides for the resource"
   def field_names(resource) do
     Extension.get_opt(resource, [:graphql], :field_names, [])

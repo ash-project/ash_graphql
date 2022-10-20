@@ -35,8 +35,11 @@ defmodule AshGraphql.PaginateTest do
       query KeysetPaginatedPosts {
         keysetPaginatedPosts(sort: [{field: TEXT}]) {
           count
+          startKeyset
+          endKeyset
           results{
             text
+            keyset
           }
         }
       }
@@ -46,9 +49,11 @@ defmodule AshGraphql.PaginateTest do
               %{
                 data: %{
                   "keysetPaginatedPosts" => %{
+                    "startKeyset" => start_keyset,
+                    "endKeyset" => end_keyset,
                     "count" => 5,
                     "results" => [
-                      %{"text" => "a"},
+                      %{"text" => "a", "keyset" => keyset},
                       %{"text" => "b"},
                       %{"text" => "c"},
                       %{"text" => "d"},
@@ -57,6 +62,10 @@ defmodule AshGraphql.PaginateTest do
                   }
                 }
               }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+      assert is_binary(keyset)
+      assert is_binary(start_keyset)
+      assert is_binary(end_keyset)
     end
   end
 

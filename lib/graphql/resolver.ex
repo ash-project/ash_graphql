@@ -202,8 +202,7 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, opts}
 
       {:ok, page_opts} ->
-        page_fields = get_page_fields(pagination)
-        field_names = resolution |> fields(page_fields) |> names_only()
+        field_names = resolution |> fields([]) |> names_only()
 
         page =
           if Enum.any?(field_names, &(&1 == :count)) do
@@ -310,9 +309,10 @@ defmodule AshGraphql.Graphql.Resolver do
            results: results,
            more?: more,
            after: after_cursor,
-           before: before_cursor
+           before: before_cursor,
+           count: count
          },
-         true
+         relay?
        ) do
     {start_cursor, end_cursor} =
       case results do
@@ -340,36 +340,29 @@ defmodule AshGraphql.Graphql.Resolver do
           {more, not Enum.empty?(results)}
       end
 
-    {
-      :ok,
-      %{
-        page_info: %{
-          start_cursor: start_cursor,
-          end_cursor: end_cursor,
-          has_next_page: has_next_page,
-          has_previous_page: has_previous_page
-        },
-        edges:
-          Enum.map(results, fn result ->
-            %{
-              cursor: result.__metadata__.keyset,
-              node: result
-            }
-          end)
+    if relay? do
+      {
+        :ok,
+        %{
+          page_info: %{
+            start_cursor: start_cursor,
+            end_cursor: end_cursor,
+            has_next_page: has_next_page,
+            has_previous_page: has_previous_page
+          },
+          count: count,
+          edges:
+            Enum.map(results, fn result ->
+              %{
+                cursor: result.__metadata__.keyset,
+                node: result
+              }
+            end)
+        }
       }
-    }
-  end
-
-  defp paginate(
-         _resource,
-         _action,
-         %Ash.Page.Keyset{
-           results: results,
-           count: count
-         },
-         false
-       ) do
-    {:ok, %{results: results, count: count}}
+    else
+      {:ok, %{results: results, count: count, start_keyset: start_cursor, end_keyset: end_cursor}}
+    end
   end
 
   defp paginate(_resource, _action, %Ash.Page.Offset{results: results, count: count}, _) do
@@ -1169,6 +1162,14 @@ defmodule AshGraphql.Graphql.Resolver do
         {_resource, field}
       ) do
     Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent, field)})
+  end
+
+  def resolve_keyset(
+        %{source: parent} = resolution,
+        _field
+      ) do
+    parent.__metadata__
+    Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent.__metadata__, :keyset)})
   end
 
   def resolve_composite_id(
