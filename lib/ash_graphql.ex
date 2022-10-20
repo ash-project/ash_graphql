@@ -31,6 +31,8 @@ defmodule AshGraphql do
         |> Enum.map(fn {api, registry} -> {api, registry, false} end)
         |> List.update_at(0, fn {api, registry, _} -> {api, registry, true} end)
 
+      schema = __MODULE__
+
       for {api, registry, first?} <- apis do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
@@ -72,16 +74,16 @@ defmodule AshGraphql do
             type_definitions =
               if unquote(first?) do
                 apis = unquote(Enum.map(apis, &elem(&1, 0)))
-                embedded_types = AshGraphql.get_embedded_types(apis)
+                embedded_types = AshGraphql.get_embedded_types(apis, unquote(schema))
 
-                global_enums = AshGraphql.global_enums(apis, __MODULE__, __ENV__)
+                global_enums = AshGraphql.global_enums(apis, unquote(schema), __ENV__)
 
-                AshGraphql.Api.global_type_definitions(__MODULE__, __ENV__) ++
-                  AshGraphql.Api.type_definitions(api, __MODULE__, __ENV__, true) ++
+                AshGraphql.Api.global_type_definitions(unquote(schema), __ENV__) ++
+                  AshGraphql.Api.type_definitions(api, unquote(schema), __ENV__, true) ++
                   global_enums ++
                   embedded_types
               else
-                AshGraphql.Api.type_definitions(api, __MODULE__, __ENV__, false)
+                AshGraphql.Api.type_definitions(api, unquote(schema), __ENV__, false)
               end
 
             new_defs =
@@ -182,7 +184,7 @@ defmodule AshGraphql do
     end)
   end
 
-  def get_embedded_types(apis) do
+  def get_embedded_types(apis, schema) do
     apis
     |> Enum.flat_map(&Ash.Api.Info.resources/1)
     |> Enum.flat_map(fn resource ->
@@ -210,25 +212,25 @@ defmodule AshGraphql do
           AshGraphql.Resource.type_definition(
             embedded_type,
             Module.concat(embedded_type, ShadowApi),
-            __MODULE__
+            schema
           ),
           AshGraphql.Resource.embedded_type_input(
             source_resource,
             attribute,
             embedded_type,
-            __MODULE__
+            schema
           )
         ] ++
-          AshGraphql.Resource.enum_definitions(embedded_type, __MODULE__, __ENV__)
+          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
       else
         [
           AshGraphql.Resource.embedded_type_input(
             source_resource,
             attribute,
             embedded_type,
-            __MODULE__
+            schema
           )
-        ] ++ AshGraphql.Resource.enum_definitions(embedded_type, __MODULE__, __ENV__)
+        ] ++ AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
       end
     end)
     |> Enum.uniq_by(& &1.identifier)
