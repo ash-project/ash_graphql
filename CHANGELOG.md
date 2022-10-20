@@ -5,6 +5,43 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.20.1](https://github.com/ash-project/ash_graphql/compare/v0.20.0-rc.3...v0.20.1) (2022-10-20)
+
+
+
+
+### Bug Fixes:
+
+* handle empty root query/root mutation blocks
+
+* non relay keyset pagination was broken when relay was introduced
+
+* support determining a type for resource calculations
+
+* raise error on missing query action
+
+### Improvements:
+
+* update to latest ash
+
+* change calculation input type name
+
+* support calculation sort input
+
+* support `encode_primary_key? false`, and set single managed relationship primary keys do `:id` type when its true
+
+* remove `stacktraces?` option
+
+* add error handler
+
+* translatable error messages
+
+* update to latest ash
+
+* support only exposing a subset of public relationships
+
+* add `upsert_identity` option
+
 ## [v0.20.0-rc.3](https://github.com/ash-project/ash_graphql/compare/v0.20.0-rc.2...v0.20.0-rc.3) (2022-09-28)
 
 
