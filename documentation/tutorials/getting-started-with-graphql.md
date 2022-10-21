@@ -70,8 +70,7 @@ Define a `context/1` function, and call `AshGraphql.add_context/2` with the curr
 defmodule MyApp.Schema do
   use Absinthe.Schema
 
-  # The registry must be included alongside the api to ensure the schema is properly recompiled on changes.
-  @apis [{MyApp.Api, MyApp.Registry}]
+  @apis [MyApp.Api]
 
   use AshGraphql, apis: @apis
 
