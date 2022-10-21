@@ -288,7 +288,8 @@ defmodule AshGraphql.Resource do
   }
 
   @transformers [
-    AshGraphql.Resource.Transformers.RequireIdPkey,
+    AshGraphql.Resource.Transformers.RequirePkeyDelimiter,
+    AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
     AshGraphql.Resource.Transformers.ValidateCompatibleNames
   ]
@@ -2318,7 +2319,7 @@ defmodule AshGraphql.Resource do
                   }
                 }
               ]
-              |> add_count_to_relay(schema, countable?),
+              |> add_count_to_page(schema, countable?),
             identifier: String.to_atom("#{type}_connection"),
             module: schema,
             name: Macro.camelize("#{type}_connection"),
@@ -2329,7 +2330,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp add_count_to_relay(fields, schema, true) do
+  defp add_count_to_page(fields, schema, true) do
     [
       %Absinthe.Blueprint.Schema.FieldDefinition{
         description: "Total count on all pages",
@@ -2343,7 +2344,7 @@ defmodule AshGraphql.Resource do
     ]
   end
 
-  defp add_count_to_relay(fields, _, _), do: fields
+  defp add_count_to_page(fields, _, _), do: fields
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp page_of(resource, schema) do
@@ -2356,31 +2357,33 @@ defmodule AshGraphql.Resource do
         action.type == :read && action.pagination
       end)
 
+    countable? =
+      resource
+      |> queries()
+      |> Enum.any?(fn query ->
+        action = Ash.Resource.Info.action(resource, query.action)
+        action.pagination && action.pagination.offset? && action.pagination.countable
+      end)
+
     if paginatable? do
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
         description: "A page of #{inspect(type)}",
-        fields: [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The records contained in the page",
-            identifier: :results,
-            module: schema,
-            name: "results",
-            __reference__: ref(__ENV__),
-            type: %Absinthe.Blueprint.TypeReference.List{
-              of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: type
+        fields:
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The records contained in the page",
+              identifier: :results,
+              module: schema,
+              name: "results",
+              __reference__: ref(__ENV__),
+              type: %Absinthe.Blueprint.TypeReference.List{
+                of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: type
+                }
               }
             }
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The count of records",
-            identifier: :count,
-            module: schema,
-            name: "count",
-            type: :integer,
-            __reference__: ref(__ENV__)
-          }
-        ],
+          ]
+          |> add_count_to_page(schema, countable?),
         identifier: String.to_atom("page_of_#{type}"),
         module: schema,
         name: Macro.camelize("page_of_#{type}"),
@@ -2400,47 +2403,49 @@ defmodule AshGraphql.Resource do
         action.type == :read && action.pagination
       end)
 
+    countable? =
+      resource
+      |> queries()
+      |> Enum.any?(fn query ->
+        action = Ash.Resource.Info.action(resource, query.action)
+        action.pagination && action.pagination.keyset? && action.pagination.countable
+      end)
+
     if paginatable? do
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
         description: "A keyset page of #{inspect(type)}",
-        fields: [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The records contained in the page",
-            identifier: :results,
-            module: schema,
-            name: "results",
-            __reference__: ref(__ENV__),
-            type: %Absinthe.Blueprint.TypeReference.List{
-              of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: type
+        fields:
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The records contained in the page",
+              identifier: :results,
+              module: schema,
+              name: "results",
+              __reference__: ref(__ENV__),
+              type: %Absinthe.Blueprint.TypeReference.List{
+                of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: type
+                }
               }
+            },
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The first keyset in the results",
+              identifier: :start_keyset,
+              module: schema,
+              name: "start_keyset",
+              type: :string,
+              __reference__: ref(__ENV__)
+            },
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "The last keyset in the results",
+              identifier: :end_keyset,
+              module: schema,
+              name: "end_keyset",
+              type: :string,
+              __reference__: ref(__ENV__)
             }
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The count of records",
-            identifier: :count,
-            module: schema,
-            name: "count",
-            type: :integer,
-            __reference__: ref(__ENV__)
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The first keyset in the results",
-            identifier: :start_keyset,
-            module: schema,
-            name: "start_keyset",
-            type: :string,
-            __reference__: ref(__ENV__)
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "The last keyset in the results",
-            identifier: :end_keyset,
-            module: schema,
-            name: "end_keyset",
-            type: :string,
-            __reference__: ref(__ENV__)
-          }
-        ],
+          ]
+          |> add_count_to_page(schema, countable?),
         identifier: String.to_atom("keyset_page_of_#{type}"),
         module: schema,
         name: Macro.camelize("keyset_page_of_#{type}"),

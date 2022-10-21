@@ -1,4 +1,4 @@
-defmodule AshGraphql.Resource.Transformers.RequireIdPkey do
+defmodule AshGraphql.Resource.Transformers.RequirePkeyDelimiter do
   @moduledoc "Ensures that the resource has a primary key called `id`"
   use Spark.Dsl.Transformer
 

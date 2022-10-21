@@ -23,7 +23,7 @@ defmodule AshGraphql.Test.RelayTag do
     defaults([:create, :update, :destroy, :read])
 
     read :read_paginated do
-      pagination(required?: true, keyset?: true, countable: true)
+      pagination(required?: true, offset?: true, keyset?: true, countable: true)
     end
   end
 
