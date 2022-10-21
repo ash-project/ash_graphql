@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.20.2](https://github.com/ash-project/ash_graphql/compare/v0.20.1...v0.20.2) (2022-10-21)
+
+
+
+
+### Bug Fixes:
+
+* various pagination fixes
+
+* reference schema not generated module when adding types
+
+### Improvements:
+
+* handle keyset & offset pagination when combined on an action (by preferring keyset)
+
+* use new `depend_on_resources/` from Ash to remove the need for registry in schema
+
+* validate that relay? queries use `keyset?: true` actions
+
+* only add `count` to pages when one relevant query is countable
+
+* split `keyset_page_of` and `page_of` types
+
+* add `start_keyset` and `end_keyset` to `keyset_page_of` type
+
+* add `count` to relay fields if there exists a countable relay query
+
 ## [v0.20.1](https://github.com/ash-project/ash_graphql/compare/v0.20.0-rc.3...v0.20.1) (2022-10-20)
 
 
