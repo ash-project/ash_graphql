@@ -1072,7 +1072,11 @@ defmodule AshGraphql.Resource do
 
   defp pagination_args(action) do
     if action.pagination do
-      keyset_pagination_args(action) ++ offset_pagination_args(action)
+      if action.pagination.keyset? do
+        keyset_pagination_args(action)
+      else
+        offset_pagination_args(action)
+      end
     else
       []
     end

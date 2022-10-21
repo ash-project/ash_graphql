@@ -194,31 +194,29 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def validate_resolve_opts(resolution, pagination, opts, args) do
-    case args
-         |> Map.take([:limit, :offset, :first, :after, :before, :last])
-         |> Enum.reject(fn {_, val} -> is_nil(val) end)
-         |> validate_pagination_opts(pagination) do
-      {:ok, []} ->
-        {:ok, opts}
+    with page_opts <-
+           args
+           |> Map.take([:limit, :offset, :first, :after, :before, :last])
+           |> Enum.reject(fn {_, val} -> is_nil(val) end),
+         {:ok, page_opts} <- validate_offset_opts(page_opts, pagination),
+         {:ok, page_opts} <- validate_keyset_opts(page_opts, pagination) do
+      field_names = resolution |> fields([]) |> names_only()
 
-      {:ok, page_opts} ->
-        field_names = resolution |> fields([]) |> names_only()
+      page =
+        if Enum.any?(field_names, &(&1 == :count)) do
+          Keyword.put(page_opts, :count, true)
+        else
+          page_opts
+        end
 
-        page =
-          if Enum.any?(field_names, &(&1 == :count)) do
-            Keyword.put(page_opts, :count, true)
-          else
-            page_opts
-          end
-
-        {:ok, Keyword.put(opts, :page, page)}
-
+      {:ok, Keyword.put(opts, :page, page)}
+    else
       error ->
         error
     end
   end
 
-  defp validate_pagination_opts(opts, %{offset?: true, max_page_size: max_page_size}) do
+  defp validate_offset_opts(opts, %{offset?: true, max_page_size: max_page_size}) do
     limit =
       case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
         %{limit: limit} ->
@@ -231,7 +229,11 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok, Keyword.put(opts, :limit, limit)}
   end
 
-  defp validate_pagination_opts(opts, %{keyset?: true, max_page_size: max_page_size}) do
+  defp validate_offset_opts(opts, _) do
+    {:ok, opts}
+  end
+
+  defp validate_keyset_opts(opts, %{keyset?: true, max_page_size: max_page_size}) do
     case opts |> Keyword.take([:first, :last, :after, :before]) |> Enum.into(%{}) do
       %{first: _first, last: _last} ->
         {:error,
@@ -274,7 +276,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp validate_pagination_opts(opts, _) do
+  defp validate_keyset_opts(opts, _) do
     {:ok, opts}
   end
 
@@ -355,6 +357,49 @@ defmodule AshGraphql.Graphql.Resolver do
     else
       {:ok, %{results: results, count: count, start_keyset: start_cursor, end_keyset: end_cursor}}
     end
+  end
+
+  defp paginate(
+         _resource,
+         _action,
+         %Ash.Page.Offset{results: results, count: count, more?: more},
+         true
+       ) do
+    {start_cursor, end_cursor} =
+      case results do
+        [] ->
+          {nil, nil}
+
+        [first] ->
+          {first.__metadata__.keyset, first.__metadata__.keyset}
+
+        [first | rest] ->
+          last = List.last(rest)
+          {first.__metadata__.keyset, last.__metadata__.keyset}
+      end
+
+    has_previous_page = false
+    has_next_page = more
+
+    {
+      :ok,
+      %{
+        page_info: %{
+          start_cursor: start_cursor,
+          end_cursor: end_cursor,
+          has_next_page: has_next_page,
+          has_previous_page: has_previous_page
+        },
+        count: count,
+        edges:
+          Enum.map(results, fn result ->
+            %{
+              cursor: result.__metadata__.keyset,
+              node: result
+            }
+          end)
+      }
+    }
   end
 
   defp paginate(_resource, _action, %Ash.Page.Offset{results: results, count: count}, _) do

@@ -63,6 +63,8 @@ defmodule AshGraphql.Api do
   <!--- ash-hq-hide-stop --> <!--- -->
   """
 
+  require Ash.Api.Info
+
   use Spark.Dsl.Extension, sections: @sections
 
   @deprecated "See `AshGraphql.Api.Info.authorize?/1`"
@@ -78,16 +80,13 @@ defmodule AshGraphql.Api do
   defdelegate debug?(api), to: AshGraphql.Api.Info
 
   @doc false
-  def queries(api, schema) do
-    api
-    |> Ash.Api.Info.resources()
-    |> Enum.flat_map(&AshGraphql.Resource.queries(api, &1, schema))
+  def queries(api, resources, schema) do
+    Enum.flat_map(resources, &AshGraphql.Resource.queries(api, &1, schema))
   end
 
   @doc false
-  def mutations(api, schema) do
-    api
-    |> Ash.Api.Info.resources()
+  def mutations(api, resources, schema) do
+    resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
     end)
@@ -95,10 +94,9 @@ defmodule AshGraphql.Api do
   end
 
   @doc false
-  def type_definitions(api, schema, env, first?) do
+  def type_definitions(api, resources, schema, env, first?) do
     resource_types =
-      api
-      |> Ash.Api.Info.resources()
+      resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do

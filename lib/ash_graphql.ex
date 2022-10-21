@@ -5,6 +5,8 @@ defmodule AshGraphql do
 
   defmacro __using__(opts) do
     quote bind_quoted: [apis: opts[:apis], api: opts[:api]], generated: true do
+      require Ash.Api.Info
+
       apis =
         api
         |> List.wrap()
@@ -14,30 +16,30 @@ defmodule AshGraphql do
         apis
         |> Enum.map(fn
           {api, registry} ->
-            {api, registry}
+            IO.warn("""
+            It is no longer required to list the registry along with an API when using `AshGraphql`
+
+               use AshGraphql, apis: [{My.App.Api, My.App.Registry}]
+
+            Can now be stated simply as
+
+               use AshGraphql, apis: [My.App.Api]
+            """)
+
+            api
 
           api ->
-            raise """
-            Must now include registry with api when using `AshGraphql`. For example:
-
-              use AshGraphql, apis: [{My.App.Api, My.App.Registry}]
-
-            In order to ensure the absinthe schema is recompiled properly, the Registry for each Api must be provided explicitly.
-            """
+            api
         end)
-        |> Enum.map(fn {api, registry} -> {api, registry, false} end)
-        |> List.update_at(0, fn {api, registry, _} -> {api, registry, true} end)
+        |> Enum.map(fn api -> {api, Ash.Api.Info.depend_on_resources(api), false} end)
+        |> List.update_at(0, fn {api, resources, _} -> {api, resources, true} end)
 
       schema = __MODULE__
 
-      for {api, registry, first?} <- apis do
+      for {api, resources, first?} <- apis do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
-
-          # Ensures the api is compiled, and any errors are raised
-          _ = api.spark_dsl_config()
-          _ = registry.spark_dsl_config()
 
           def pipeline(pipeline) do
             Pipeline.insert_before(
@@ -51,19 +53,18 @@ defmodule AshGraphql do
           def run(blueprint, _opts) do
             api = unquote(api)
 
-            Code.ensure_compiled!(api)
             blueprint = AshGraphql.add_root_types(blueprint, __ENV__)
 
             blueprint_with_queries =
               api
-              |> AshGraphql.Api.queries(__MODULE__)
+              |> AshGraphql.Api.queries(unquote(resources), __MODULE__)
               |> Enum.reduce(blueprint, fn query, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootQueryType", query)
               end)
 
             blueprint_with_mutations =
               api
-              |> AshGraphql.Api.mutations(__MODULE__)
+              |> AshGraphql.Api.mutations(unquote(resources), __MODULE__)
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
               end)
@@ -76,11 +77,23 @@ defmodule AshGraphql do
                 global_enums = AshGraphql.global_enums(apis, unquote(schema), __ENV__)
 
                 AshGraphql.Api.global_type_definitions(unquote(schema), __ENV__) ++
-                  AshGraphql.Api.type_definitions(api, unquote(schema), __ENV__, true) ++
+                  AshGraphql.Api.type_definitions(
+                    api,
+                    unquote(resources),
+                    unquote(schema),
+                    __ENV__,
+                    true
+                  ) ++
                   global_enums ++
                   embedded_types
               else
-                AshGraphql.Api.type_definitions(api, unquote(schema), __ENV__, false)
+                AshGraphql.Api.type_definitions(
+                  api,
+                  unquote(resources),
+                  unquote(schema),
+                  __ENV__,
+                  false
+                )
               end
 
             new_defs =
@@ -336,7 +349,14 @@ defmodule AshGraphql do
     dataloader =
       apis
       |> List.wrap()
-      |> Enum.reduce(empty_dataloader, fn {api, _registry}, dataloader ->
+      |> Enum.map(fn
+        {api, _registry} ->
+          api
+
+        api ->
+          api
+      end)
+      |> Enum.reduce(empty_dataloader, fn api, dataloader ->
         Dataloader.add_source(
           dataloader,
           api,
