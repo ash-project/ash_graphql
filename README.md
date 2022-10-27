@@ -6,4 +6,4 @@
 
 AshGraphql is a graphql front extension for the Ash framework.
 
-See the [getting started guide](https://hexdocs.pm/ash_graphql/getting_started.html) for information on setting it up, and see the `AshGraphql.Resource` documentation for docs on its DSL. See the [hexdocs](https://hexdocs.pm/ash_graphql) for more information.
+See the [getting started guide](https://ash-hq.org/docs/guides/ash_graphql/latest/tutorials/getting-started-with-graphql.md) for information on setting it up, and see the `AshGraphql.Resource` documentation for docs on its DSL. See the [hexdocs](https://ash-hq.org/docs/dsl/ash_graphql/latest/ashgraphql-resource) for more information.
