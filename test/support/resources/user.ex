@@ -10,7 +10,7 @@ defmodule AshGraphql.Test.User do
     type :user
 
     queries do
-      read_one :current_user, :current_user, allow_nil?: false
+      read_one :current_user, :current_user
     end
 
     mutations do

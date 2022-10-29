@@ -1,8 +1,9 @@
 # Authorize with Graphql
 
-AshGraphql uses two special keys in the `absinthe` context:
+AshGraphql uses three special keys in the `absinthe` context:
 
 * `:actor` - the current actor, to be used for authorization/preparations/changes
+* `:tenant` - a tenant when using [multitenancy](https://ash-hq.org/docs/guides/ash/latest/topics/multitenancy.md).
 * `:ash_context` - a map of arbitrary context to be passed into the changeset/query. Accessible via `changeset.context` and `query.context`
 
 By default, `authorize?` in the api is set to true. To disable authorization for a given API in graphql, use:
@@ -14,32 +15,39 @@ end
 ```
 
 If you are doing authorization, you'll need to provide an `actor`.
-To set the `actor` for authorization, you'll need to add an `actor` key to the absinthe context. Typically, you would have a plug that fetches the current user, and in that plug you could set the absinthe context. For example:
+
+To set the `actor` for authorization, you'll need to add an `actor` key to the
+absinthe context. Typically, you would have a plug that fetches the current user
+and uses `Ash.PlugHelpers.set_actor/2` to set the actor in the `conn` (likewise
+with `Ash.PlugHelpers.set_tenant/2`).
+
+Just add `AshGraphql.Plug` somewhere _after_ that in the pipeline and the your
+GraphQL APIs will have the correct authorization.
 
 ```elixir
-defmodule MyAppWeb.UserPlug do
-  @behaviour Plug
-
-  import Plug.Conn
-
-  def init(opts), do: opts
-
-  def call(conn, _) do
-    case build_context(conn) do
-      {:ok, context} ->
-        put_private(conn, :absinthe, %{context: context})
-
-      _ ->
-        conn
-    end
+defmodule MyAppWeb.Router do
+  pipeline :api do
+    # ...
+    plug :get_actor_from_token
+    plug AshGraphql.Plug
   end
 
-  defp build_context(conn) do
-    with ["" <> token] <- get_req_header(conn, "authorization"),
+  scope "/" do
+    forward "/gql", Absinthe.Plug, schema: YourSchema
+
+    forward "/playground",
+          Absinthe.Plug.GraphiQL,
+          schema: YourSchema,
+          interface: :playground
+  end
+
+  def get_actor_from_token(conn, _opts) do
+     with ["" <> token] <- get_req_header(conn, "authorization"),
          {:ok, user, _claims} <- MyApp.Guardian.resource_from_token(token) do
-         # ash_context allows you to pass arbitrary data down into the changeset/query context
-         # This can be accessed at `changeset.context` or `query.context`.
-      {:ok, %{actor: user, ash_context: %{some: :data}}}
+      conn
+      |> set_actor(user)
+    else
+    _ -> conn
     end
   end
 end
