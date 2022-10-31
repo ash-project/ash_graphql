@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.21.0](https://github.com/ash-project/ash_graphql/compare/v0.20.2...v0.21.0) (2022-10-31)
+
+
+
+
+### Features:
+
+* AshGraphql.Plug: Support standard actor/tenant configuration. (#43)
+
+### Bug Fixes:
+
+* resolve issues compiling resources with no type
+
+* adding an empty query block is apparently problematic?
+
+### Improvements:
+
+* update to latest ash
+
 ## [v0.20.2](https://github.com/ash-project/ash_graphql/compare/v0.20.1...v0.20.2) (2022-10-21)
 
 
