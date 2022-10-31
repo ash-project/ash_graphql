@@ -85,11 +85,7 @@ defmodule AshGraphql.MixProject do
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
       extras: extras(),
-      groups_for_extras: groups_for_extras(),
-      groups_for_modules: [
-        "Resource DSL": ~r/AshGraphql.Resource/,
-        "Api DSL": ~r/AshGraphql.Api/
-      ]
+      groups_for_extras: groups_for_extras()
     ]
   end
 

@@ -74,6 +74,9 @@ defmodule MyApp.Schema do
 
   use AshGraphql, apis: @apis
 
+  query do
+  end
+
   def context(ctx) do
     AshGraphql.add_context(ctx, @apis)
   end

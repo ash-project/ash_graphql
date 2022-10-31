@@ -35,6 +35,7 @@ defmodule AshGraphql do
         |> List.update_at(0, fn {api, resources, _} -> {api, resources, true} end)
 
       schema = __MODULE__
+      schema_env = __ENV__
 
       for {api, resources, first?} <- apis do
         defmodule Module.concat(api, AshTypes) do
@@ -53,7 +54,12 @@ defmodule AshGraphql do
           def run(blueprint, _opts) do
             api = unquote(api)
 
-            blueprint = AshGraphql.add_root_types(blueprint, __ENV__)
+            blueprint =
+              AshGraphql.add_root_types(
+                blueprint,
+                unquote(resources),
+                unquote(Macro.escape(schema_env))
+              )
 
             blueprint_with_queries =
               api
@@ -175,13 +181,6 @@ defmodule AshGraphql do
     end)
   end
 
-  # defp embedded_enums(%{type: type}) do
-  #   if Ash.Type.embedded_type?(type) do
-  #     type
-  #   end
-
-  # end
-
   defp only_enum_types(attributes) do
     Enum.flat_map(attributes, fn attribute ->
       case enum_type(attribute.type) do
@@ -246,69 +245,75 @@ defmodule AshGraphql do
     |> Enum.uniq_by(& &1.identifier)
   end
 
-  def add_root_types(%Absinthe.Blueprint{} = blueprint, env) do
+  def add_root_types(%Absinthe.Blueprint{} = blueprint, resources, env) do
     %{
       blueprint
-      | schema_definitions: Enum.map(blueprint.schema_definitions, &do_add_root_types(&1, env))
+      | schema_definitions:
+          Enum.map(blueprint.schema_definitions, &do_add_root_types(&1, resources, env))
     }
   end
 
-  defp do_add_root_types(%Absinthe.Blueprint.Schema.SchemaDefinition{} = schema, env) do
+  defp do_add_root_types(%Absinthe.Blueprint.Schema.SchemaDefinition{} = schema, resources, env) do
     schema
-    |> add_root_query_type(env)
-    |> add_root_mutation_type(env)
+    # Adding the root query type is causing strange problems?
+    # |> add_root_query_type(env)
+    |> add_root_mutation_type(resources, env)
   end
 
-  defp add_root_query_type(schema, env) do
-    if Enum.any?(schema.type_definitions, &(&1.name == "RootQueryType")) do
-      schema
-    else
-      root_query = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-        name: "RootQueryType",
-        identifier: :query,
-        module: AshHqWeb.Schema,
-        description: nil,
-        interfaces: [],
-        interface_blueprints: [],
-        fields: [],
-        directives: [],
-        is_type_of: {:ref, env.module, {Absinthe.Blueprint.Schema.ObjectTypeDefinition, :query}},
-        source_location: nil,
-        flags: %{},
-        imports: [],
-        errors: [],
-        __reference__: AshGraphql.Resource.ref(env),
-        __private__: []
-      }
+  # defp add_root_query_type(schema, env) do
+  #   if Enum.any?(schema.type_definitions, &(&1.name == "RootQueryType")) do
+  #     schema
+  #   else
+  #     root_query = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+  #       name: "RootQueryType",
+  #       identifier: :query,
+  #       module: AshHqWeb.Schema,
+  #       description: nil,
+  #       interfaces: [],
+  #       interface_blueprints: [],
+  #       fields: [],
+  #       directives: [],
+  #       is_type_of: {:ref, env.module, {Absinthe.Blueprint.Schema.ObjectTypeDefinition, :query}},
+  #       source_location: nil,
+  #       flags: %{},
+  #       imports: [],
+  #       errors: [],
+  #       __reference__: AshGraphql.Resource.ref(env),
+  #       __private__: []
+  #     }
 
-      %{schema | type_definitions: [root_query | schema.type_definitions]}
-    end
-  end
+  #     %{schema | type_definitions: [root_query | schema.type_definitions]}
+  #   end
+  # end
 
-  defp add_root_mutation_type(schema, env) do
+  defp add_root_mutation_type(schema, resources, env) do
     if Enum.any?(schema.type_definitions, &(&1.name == "RootMutationType")) do
       schema
     else
-      root_mutation = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-        name: "RootMutationType",
-        identifier: :mutation,
-        module: AshHqWeb.Schema,
-        description: nil,
-        interfaces: [],
-        interface_blueprints: [],
-        fields: [],
-        directives: [],
-        is_type_of:
-          {:ref, env.module, {Absinthe.Blueprint.Schema.ObjectTypeDefinition, :mutation}},
-        source_location: nil,
-        flags: %{},
-        imports: [],
-        errors: [],
-        __reference__: AshGraphql.Resource.ref(env),
-        __private__: []
-      }
+      if Enum.all?(resources, &Enum.empty?(AshGraphql.Resource.Info.mutations(&1))) do
+        schema
+      else
+        root_mutation = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+          name: "RootMutationType",
+          identifier: :mutation,
+          module: AshHqWeb.Schema,
+          description: nil,
+          interfaces: [],
+          interface_blueprints: [],
+          fields: [],
+          directives: [],
+          is_type_of:
+            {:ref, env.module, {Absinthe.Blueprint.Schema.ObjectTypeDefinition, :mutation}},
+          source_location: nil,
+          flags: %{},
+          imports: [],
+          errors: [],
+          __reference__: AshGraphql.Resource.ref(env),
+          __private__: []
+        }
 
-      %{schema | type_definitions: [root_mutation | schema.type_definitions]}
+        %{schema | type_definitions: [root_mutation | schema.type_definitions]}
+      end
     end
   end
 

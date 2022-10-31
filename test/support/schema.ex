@@ -7,6 +7,9 @@ defmodule AshGraphql.Test.Schema do
 
   use AshGraphql, apis: @apis
 
+  query do
+  end
+
   object :foo do
     field(:foo, :string)
     field(:bar, :string)

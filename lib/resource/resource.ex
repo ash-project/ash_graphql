@@ -2356,8 +2356,9 @@ defmodule AshGraphql.Resource do
 
     paginatable? =
       resource
-      |> Ash.Resource.Info.actions()
-      |> Enum.any?(fn action ->
+      |> queries()
+      |> Enum.any?(fn query ->
+        action = Ash.Resource.Info.action(resource, query.action)
         action.type == :read && action.pagination
       end)
 
