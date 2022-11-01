@@ -76,6 +76,9 @@ defmodule MyApp.Schema do
 
   query do
   end
+  
+  mutation do
+  end
 
   def context(ctx) do
     AshGraphql.add_context(ctx, @apis)
