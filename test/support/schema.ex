@@ -10,6 +10,9 @@ defmodule AshGraphql.Test.Schema do
   query do
   end
 
+  mutation do
+  end
+
   object :foo do
     field(:foo, :string)
     field(:bar, :string)
