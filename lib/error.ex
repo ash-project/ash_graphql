@@ -9,7 +9,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidChanges do
       short_message: error.message,
       vars: Map.new(error.vars),
       code: Ash.ErrorKind.code(error),
-      fields: [error.field]
+      fields: List.wrap(error.fields)
     }
   end
 end
