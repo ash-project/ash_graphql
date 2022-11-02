@@ -2,6 +2,18 @@ defprotocol AshGraphql.Error do
   def to_error(exception)
 end
 
+defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidChanges do
+  def to_error(error) do
+    %{
+      message: error.message,
+      short_message: error.message,
+      vars: Map.new(error.vars),
+      code: Ash.ErrorKind.code(error),
+      fields: [error.field]
+    }
+  end
+end
+
 defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
   def to_error(error) do
     %{
