@@ -15,8 +15,6 @@ defmodule AshGraphql.Types.JSON do
     parse(&decode/1)
   end
 
-  @spec decode(Absinthe.Blueprint.Input.String.t()) :: {:ok, term()} | :error
-  @spec decode(Absinthe.Blueprint.Input.Null.t()) :: {:ok, nil}
   def decode(%Absinthe.Blueprint.Input.String{value: value}) do
     case Jason.decode(value) do
       {:ok, result} -> {:ok, result}
