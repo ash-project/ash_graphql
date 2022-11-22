@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.20.4](https://github.com/ash-project/ash_graphql/compare/v0.20.3...v0.20.4) (2022-11-22)
+
+
+
+
+### Bug Fixes:
+
+* don't set `mutation` block if no mutations exist
+
+### Improvements:
+
+* support ash tracers and telemetry in graphql
+
+* update to new docs
+
+* Add Ash.Error.Changes.InvalidChanges AshGraphql implementation (#46)
+
 ## [v0.20.3](https://github.com/ash-project/ash_graphql/compare/v0.20.2...v0.20.3) (2022-11-02)
 
 
