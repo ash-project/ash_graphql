@@ -17,6 +17,11 @@ defmodule AshGraphql.Api do
         doc: "Whether or not to perform authorization for this API",
         default: true
       ],
+      tracer: [
+        type: :atom,
+        doc:
+          "A tracer to use to trace execution in the graphql. Will use `config :ash, :tracer` if it is set."
+      ],
       root_level_errors?: [
         type: :boolean,
         default: false,

@@ -8,6 +8,11 @@ defmodule AshGraphql.Api.Info do
     Extension.get_opt(api, [:graphql], :authorize?, true)
   end
 
+  @doc "The tracer to use for the given schema"
+  def tracer(api) do
+    Extension.get_opt(api, [:graphql], :tracer, Application.get_env(:ash, :tracer), true)
+  end
+
   @doc "Wether or not to surface errors to the root of the response"
   def root_level_errors?(api) do
     Extension.get_opt(api, [:graphql], :root_level_errors?, false, true)

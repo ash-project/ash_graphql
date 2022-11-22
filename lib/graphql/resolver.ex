@@ -3,77 +3,102 @@ defmodule AshGraphql.Graphql.Resolver do
 
   require Ash.Query
   require Logger
+  import AshGraphql.TraceHelpers
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
-         %{type: :get, action: action, identity: identity, modify_resolution: modify} = gql_query}
+         %{
+           name: query_name,
+           type: :get,
+           action: action,
+           identity: identity,
+           modify_resolution: modify
+         } = gql_query}
       ) do
-    opts = [
+    metadata = %{
+      api: api,
+      resource: resource,
+      resource_short_name: Ash.Resource.Info.short_name(resource),
       actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant),
       action: action,
-      verbose?: AshGraphql.Api.Info.debug?(api)
-    ]
+      source: :graphql,
+      query: query_name,
+      authorize?: AshGraphql.Api.Info.authorize?(api)
+    }
 
-    filter = identity_filter(identity, resource, arguments)
+    trace api,
+          resource,
+          :gql_query,
+          query_name,
+          metadata do
+      opts = [
+        actor: Map.get(context, :actor),
+        action: action,
+        verbose?: AshGraphql.Api.Info.debug?(api)
+      ]
 
-    query =
-      resource
-      |> Ash.Query.new()
-      |> Ash.Query.set_tenant(Map.get(context, :tenant))
-      |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-      |> set_query_arguments(action, arguments)
-      |> select_fields(resource, resolution)
+      filter = identity_filter(identity, resource, arguments)
 
-    {result, modify_args} =
-      case filter do
-        {:ok, filter} ->
-          query
-          |> Ash.Query.do_filter(filter)
-          |> load_fields(resource, api, resolution)
-          |> case do
-            {:ok, query} ->
-              result =
-                query
-                |> Ash.Query.for_read(action, %{},
-                  actor: opts[:actor],
-                  authorize?: AshGraphql.Api.Info.authorize?(api)
-                )
-                |> api.read_one(opts)
+      query =
+        resource
+        |> Ash.Query.new()
+        |> Ash.Query.set_tenant(Map.get(context, :tenant))
+        |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+        |> set_query_arguments(action, arguments)
+        |> select_fields(resource, resolution)
 
-              {result, [query, result]}
-
-            {:error, error} ->
-              {{:error, error}, [query, {:error, error}]}
-          end
-
-        {:error, error} ->
-          query =
-            resource
-            |> Ash.Query.new()
-            |> Ash.Query.set_tenant(Map.get(context, :tenant))
-            |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-            |> set_query_arguments(action, arguments)
-            |> select_fields(resource, resolution)
+      {result, modify_args} =
+        case filter do
+          {:ok, filter} ->
+            query
+            |> Ash.Query.do_filter(filter)
             |> load_fields(resource, api, resolution)
+            |> case do
+              {:ok, query} ->
+                result =
+                  query
+                  |> Ash.Query.for_read(action, %{},
+                    actor: opts[:actor],
+                    authorize?: AshGraphql.Api.Info.authorize?(api)
+                  )
+                  |> api.read_one(opts)
 
-          {{:error, error}, [query, {:error, error}]}
+                {result, [query, result]}
+
+              {:error, error} ->
+                {{:error, error}, [query, {:error, error}]}
+            end
+
+          {:error, error} ->
+            query =
+              resource
+              |> Ash.Query.new()
+              |> Ash.Query.set_tenant(Map.get(context, :tenant))
+              |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+              |> set_query_arguments(action, arguments)
+              |> select_fields(resource, resolution)
+              |> load_fields(resource, api, resolution)
+
+            {{:error, error}, [query, {:error, error}]}
+        end
+
+      case {result, gql_query.allow_nil?} do
+        {{:ok, nil}, false} ->
+          {:ok, filter} = filter
+          result = not_found(filter, resource, context, api)
+
+          resolution
+          |> Absinthe.Resolution.put_result(result)
+          |> add_root_errors(api, result)
+
+        {result, _} ->
+          resolution
+          |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+          |> add_root_errors(api, result)
+          |> modify_resolution(modify, modify_args)
       end
-
-    case {result, gql_query.allow_nil?} do
-      {{:ok, nil}, false} ->
-        {:ok, filter} = filter
-        result = not_found(filter, resource, context, api)
-
-        resolution
-        |> Absinthe.Resolution.put_result(result)
-        |> add_root_errors(api, result)
-
-      {result, _} ->
-        resolution
-        |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-        |> add_root_errors(api, result)
-        |> modify_resolution(modify, modify_args)
     end
   rescue
     e ->
@@ -87,51 +112,70 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource, %{type: :read_one, action: action, modify_resolution: modify}}
+        {api, resource,
+         %{name: query_name, type: :read_one, action: action, modify_resolution: modify}}
       ) do
-    opts = [
+    metadata = %{
+      api: api,
+      resource: resource,
+      resource_short_name: Ash.Resource.Info.short_name(resource),
       actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant),
       action: action,
-      verbose?: AshGraphql.Api.Info.debug?(api)
-    ]
+      source: :graphql,
+      query: query_name,
+      authorize?: AshGraphql.Api.Info.authorize?(api)
+    }
 
-    query =
-      case Map.fetch(args, :filter) do
-        {:ok, filter} when filter != %{} ->
-          Ash.Query.do_filter(resource, filter)
+    trace api,
+          resource,
+          :gql_query,
+          query_name,
+          metadata do
+      opts = [
+        actor: Map.get(context, :actor),
+        action: action,
+        verbose?: AshGraphql.Api.Info.debug?(api)
+      ]
 
-        _ ->
-          Ash.Query.new(resource)
-      end
+      query =
+        case Map.fetch(args, :filter) do
+          {:ok, filter} when filter != %{} ->
+            Ash.Query.do_filter(resource, filter)
 
-    query =
-      query
-      |> Ash.Query.set_tenant(Map.get(context, :tenant))
-      |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-      |> set_query_arguments(action, args)
-      |> select_fields(resource, resolution)
+          _ ->
+            Ash.Query.new(resource)
+        end
 
-    {result, modify_args} =
-      case load_fields(query, resource, api, resolution) do
-        {:ok, query} ->
-          result =
-            query
-            |> Ash.Query.for_read(action, %{},
-              actor: opts[:actor],
-              authorize?: AshGraphql.Api.Info.authorize?(api)
-            )
-            |> api.read_one(opts)
+      query =
+        query
+        |> Ash.Query.set_tenant(Map.get(context, :tenant))
+        |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+        |> set_query_arguments(action, args)
+        |> select_fields(resource, resolution)
 
-          {result, [query, result]}
+      {result, modify_args} =
+        case load_fields(query, resource, api, resolution) do
+          {:ok, query} ->
+            result =
+              query
+              |> Ash.Query.for_read(action, %{},
+                actor: opts[:actor],
+                authorize?: AshGraphql.Api.Info.authorize?(api)
+              )
+              |> api.read_one(opts)
 
-        {:error, error} ->
-          {{:error, error}, [query, {:error, error}]}
-      end
+            {result, [query, result]}
 
-    resolution
-    |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-    |> add_root_errors(api, result)
-    |> modify_resolution(modify, modify_args)
+          {:error, error} ->
+            {{:error, error}, [query, {:error, error}]}
+        end
+
+      resolution
+      |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+      |> add_root_errors(api, result)
+      |> modify_resolution(modify, modify_args)
+    end
   rescue
     e ->
       if AshGraphql.Api.Info.show_raised_errors?(api) do
@@ -144,45 +188,70 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource, %{type: :list, relay?: relay?, action: action, modify_resolution: modify}}
+        {api, resource,
+         %{
+           name: query_name,
+           type: :list,
+           relay?: relay?,
+           action: action,
+           modify_resolution: modify
+         }}
       ) do
-    opts = [
+    metadata = %{
+      api: api,
+      resource: resource,
+      resource_short_name: Ash.Resource.Info.short_name(resource),
       actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant),
       action: action,
-      verbose?: AshGraphql.Api.Info.debug?(api)
-    ]
+      source: :graphql,
+      query: query_name,
+      authorize?: AshGraphql.Api.Info.authorize?(api)
+    }
 
-    pagination = Ash.Resource.Info.action(resource, action).pagination
-    query = load_filter_and_sort_requirements(resource, args)
+    trace api,
+          resource,
+          :gql_query,
+          query_name,
+          metadata do
+      opts = [
+        actor: Map.get(context, :actor),
+        action: action,
+        verbose?: AshGraphql.Api.Info.debug?(api)
+      ]
 
-    {result, modify_args} =
-      with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
-           result_fields <- get_result_fields(pagination, relay?),
-           initial_query <-
-             query
-             |> Ash.Query.set_tenant(Map.get(context, :tenant))
-             |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-             |> set_query_arguments(action, args)
-             |> select_fields(resource, resolution, result_fields),
-           {:ok, query} <- load_fields(initial_query, resource, api, resolution, result_fields),
-           {:ok, page} <-
-             query
-             |> Ash.Query.for_read(action, %{},
-               actor: Map.get(context, :actor),
-               authorize?: AshGraphql.Api.Info.authorize?(api)
-             )
-             |> api.read(opts) do
-        result = paginate(resource, action, page, relay?)
-        {result, [query, result]}
-      else
-        {:error, error} ->
-          {{:error, error}, [query, {:error, error}]}
-      end
+      pagination = Ash.Resource.Info.action(resource, action).pagination
+      query = load_filter_and_sort_requirements(resource, args)
 
-    resolution
-    |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-    |> add_root_errors(api, modify_args)
-    |> modify_resolution(modify, modify_args)
+      {result, modify_args} =
+        with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
+             result_fields <- get_result_fields(pagination, relay?),
+             initial_query <-
+               query
+               |> Ash.Query.set_tenant(Map.get(context, :tenant))
+               |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+               |> set_query_arguments(action, args)
+               |> select_fields(resource, resolution, result_fields),
+             {:ok, query} <- load_fields(initial_query, resource, api, resolution, result_fields),
+             {:ok, page} <-
+               query
+               |> Ash.Query.for_read(action, %{},
+                 actor: Map.get(context, :actor),
+                 authorize?: AshGraphql.Api.Info.authorize?(api)
+               )
+               |> api.read(opts) do
+          result = paginate(resource, action, page, relay?)
+          {result, [query, result]}
+        else
+          {:error, error} ->
+            {{:error, error}, [query, {:error, error}]}
+        end
+
+      resolution
+      |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+      |> add_root_errors(api, modify_args)
+      |> modify_resolution(modify, modify_args)
+    end
   rescue
     e ->
       if AshGraphql.Api.Info.show_raised_errors?(api) do
@@ -439,162 +508,77 @@ defmodule AshGraphql.Graphql.Resolver do
         {api, resource,
          %{
            type: :create,
+           name: mutation_name,
            action: action,
            upsert?: upsert?,
            upsert_identity: upsert_identity,
            modify_resolution: modify
          }}
       ) do
-    input = arguments[:input] || %{}
-
-    opts = [
+    metadata = %{
+      api: api,
+      resource: resource,
+      resource_short_name: Ash.Resource.Info.short_name(resource),
       actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant),
       action: action,
-      verbose?: AshGraphql.Api.Info.debug?(api),
-      upsert?: upsert?,
-      after_action: fn _changeset, result ->
-        load_fields(result, resource, api, resolution, ["result"])
-      end
-    ]
+      source: :graphql,
+      mutation_name: mutation_name,
+      authorize?: AshGraphql.Api.Info.authorize?(api)
+    }
 
-    opts =
-      if upsert? && upsert_identity do
-        Keyword.put(opts, :upsert_identity, upsert_identity)
-      else
-        opts
-      end
+    trace api,
+          resource,
+          :gql_mutation,
+          mutation_name,
+          metadata do
+      input = arguments[:input] || %{}
 
-    changeset =
-      resource
-      |> Ash.Changeset.new()
-      |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-      |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
-      |> Ash.Changeset.for_create(action, input,
+      opts = [
         actor: Map.get(context, :actor),
-        authorize?: AshGraphql.Api.Info.authorize?(api)
-      )
-      |> select_fields(resource, resolution, ["result"])
-
-    {result, modify_args} =
-      changeset
-      |> api.create(opts)
-      |> case do
-        {:ok, value} ->
-          {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
-           [changeset, {:ok, value}]}
-
-        {:error, %{changeset: changeset} = error} ->
-          {{:ok, %{result: nil, errors: to_errors(changeset.errors, context, api)}},
-           [changeset, {:error, error}]}
-      end
-
-    resolution
-    |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-    |> add_root_errors(api, modify_args)
-    |> modify_resolution(modify, modify_args)
-  rescue
-    e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
-        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-
-        if AshGraphql.Api.Info.root_level_errors?(api) do
-          Absinthe.Resolution.put_result(
-            resolution,
-            to_resolution({:error, error}, context, api)
-          )
-        else
-          Absinthe.Resolution.put_result(
-            resolution,
-            to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, api)}},
-              context,
-              api
-            )
-          )
+        action: action,
+        verbose?: AshGraphql.Api.Info.debug?(api),
+        upsert?: upsert?,
+        after_action: fn _changeset, result ->
+          load_fields(result, resource, api, resolution, ["result"])
         end
-      else
-        something_went_wrong(resolution, e)
-      end
-  end
+      ]
 
-  def mutate(
-        %{arguments: arguments, context: context} = resolution,
-        {api, resource,
-         %{
-           type: :update,
-           action: action,
-           identity: identity,
-           read_action: read_action,
-           modify_resolution: modify
-         }}
-      ) do
-    input = arguments[:input] || %{}
-    filter = identity_filter(identity, resource, arguments)
+      opts =
+        if upsert? && upsert_identity do
+          Keyword.put(opts, :upsert_identity, upsert_identity)
+        else
+          opts
+        end
 
-    case filter do
-      {:ok, filter} ->
+      changeset =
         resource
-        |> Ash.Query.do_filter(filter)
-        |> Ash.Query.set_tenant(Map.get(context, :tenant))
-        |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-        |> set_query_arguments(action, arguments)
-        |> api.read_one!(
-          action: read_action,
-          verbose?: AshGraphql.Api.Info.debug?(api),
+        |> Ash.Changeset.new()
+        |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+        |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+        |> Ash.Changeset.for_create(action, input,
           actor: Map.get(context, :actor),
           authorize?: AshGraphql.Api.Info.authorize?(api)
         )
+        |> select_fields(resource, resolution, ["result"])
+
+      {result, modify_args} =
+        changeset
+        |> api.create(opts)
         |> case do
-          nil ->
-            result = not_found(filter, resource, context, api)
+          {:ok, value} ->
+            {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
+             [changeset, {:ok, value}]}
 
-            resolution
-            |> Absinthe.Resolution.put_result(result)
-            |> add_root_errors(api, result)
-
-          initial ->
-            opts = [
-              actor: Map.get(context, :actor),
-              action: action,
-              verbose?: AshGraphql.Api.Info.debug?(api),
-              after_action: fn _changeset, result ->
-                load_fields(result, resource, api, resolution, ["result"])
-              end
-            ]
-
-            changeset =
-              initial
-              |> Ash.Changeset.new()
-              |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-              |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
-              |> Ash.Changeset.for_update(action, input,
-                actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Api.Info.authorize?(api)
-              )
-              |> Ash.Changeset.set_arguments(arguments)
-              |> select_fields(resource, resolution, ["result"])
-
-            {result, modify_args} =
-              changeset
-              |> api.update(opts)
-              |> case do
-                {:ok, value} ->
-                  {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
-                   [changeset, {:ok, value}]}
-
-                {:error, error} ->
-                  {{:ok, %{result: nil, errors: to_errors(List.wrap(error), context, api)}},
-                   [changeset, {:error, error}]}
-              end
-
-            resolution
-            |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-            |> add_root_errors(api, modify_args)
-            |> modify_resolution(modify, modify_args)
+          {:error, %{changeset: changeset} = error} ->
+            {{:ok, %{result: nil, errors: to_errors(changeset.errors, context, api)}},
+             [changeset, {:error, error}]}
         end
 
-      {:error, error} ->
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+      resolution
+      |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+      |> add_root_errors(api, modify_args)
+      |> modify_resolution(modify, modify_args)
     end
   rescue
     e ->
@@ -625,6 +609,133 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
          %{
+           name: mutation_name,
+           type: :update,
+           action: action,
+           identity: identity,
+           read_action: read_action,
+           modify_resolution: modify
+         }}
+      ) do
+    metadata = %{
+      api: api,
+      resource: resource,
+      resource_short_name: Ash.Resource.Info.short_name(resource),
+      actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant),
+      action: action,
+      mutation: mutation_name,
+      source: :graphql,
+      authorize?: AshGraphql.Api.Info.authorize?(api)
+    }
+
+    trace api,
+          resource,
+          :gql_mutation,
+          mutation_name,
+          metadata do
+      input = arguments[:input] || %{}
+      filter = identity_filter(identity, resource, arguments)
+
+      case filter do
+        {:ok, filter} ->
+          resource
+          |> Ash.Query.do_filter(filter)
+          |> Ash.Query.set_tenant(Map.get(context, :tenant))
+          |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+          |> set_query_arguments(action, arguments)
+          |> api.read_one!(
+            action: read_action,
+            verbose?: AshGraphql.Api.Info.debug?(api),
+            actor: Map.get(context, :actor),
+            authorize?: AshGraphql.Api.Info.authorize?(api)
+          )
+          |> case do
+            nil ->
+              result = not_found(filter, resource, context, api)
+
+              resolution
+              |> Absinthe.Resolution.put_result(result)
+              |> add_root_errors(api, result)
+
+            initial ->
+              opts = [
+                actor: Map.get(context, :actor),
+                action: action,
+                verbose?: AshGraphql.Api.Info.debug?(api),
+                after_action: fn _changeset, result ->
+                  load_fields(result, resource, api, resolution, ["result"])
+                end
+              ]
+
+              changeset =
+                initial
+                |> Ash.Changeset.new()
+                |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+                |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+                |> Ash.Changeset.for_update(action, input,
+                  actor: Map.get(context, :actor),
+                  authorize?: AshGraphql.Api.Info.authorize?(api)
+                )
+                |> Ash.Changeset.set_arguments(arguments)
+                |> select_fields(resource, resolution, ["result"])
+
+              {result, modify_args} =
+                changeset
+                |> api.update(opts)
+                |> case do
+                  {:ok, value} ->
+                    {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
+                     [changeset, {:ok, value}]}
+
+                  {:error, error} ->
+                    {{:ok, %{result: nil, errors: to_errors(List.wrap(error), context, api)}},
+                     [changeset, {:error, error}]}
+                end
+
+              resolution
+              |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+              |> add_root_errors(api, modify_args)
+              |> modify_resolution(modify, modify_args)
+          end
+
+        {:error, error} ->
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error}, context, api)
+          )
+      end
+    end
+  rescue
+    e ->
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+
+        if AshGraphql.Api.Info.root_level_errors?(api) do
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error}, context, api)
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution(
+              {:ok, %{result: nil, errors: to_errors(error, context, api)}},
+              context,
+              api
+            )
+          )
+        end
+      else
+        something_went_wrong(resolution, e)
+      end
+  end
+
+  def mutate(
+        %{arguments: arguments, context: context} = resolution,
+        {api, resource,
+         %{
+           name: mutation_name,
            type: :destroy,
            action: action,
            identity: identity,
@@ -632,58 +743,76 @@ defmodule AshGraphql.Graphql.Resolver do
            modify_resolution: modify
          }}
       ) do
-    filter = identity_filter(identity, resource, arguments)
-    input = arguments[:input] || %{}
+    metadata = %{
+      api: api,
+      resource: resource,
+      resource_short_name: Ash.Resource.Info.short_name(resource),
+      actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant),
+      action: action,
+      source: :graphql,
+      mutation: mutation_name,
+      authorize?: AshGraphql.Api.Info.authorize?(api)
+    }
 
-    case filter do
-      {:ok, filter} ->
-        resource
-        |> Ash.Query.do_filter(filter)
-        |> Ash.Query.set_tenant(Map.get(context, :tenant))
-        |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-        |> set_query_arguments(action, arguments)
-        |> api.read_one!(
-          action: read_action,
-          verbose?: AshGraphql.Api.Info.debug?(api),
-          actor: Map.get(context, :actor),
-          authorize?: AshGraphql.Api.Info.authorize?(api)
-        )
-        |> case do
-          nil ->
-            result = not_found(filter, resource, context, api)
+    trace api,
+          resource,
+          :gql_mutation,
+          mutation_name,
+          metadata do
+      filter = identity_filter(identity, resource, arguments)
+      input = arguments[:input] || %{}
 
-            resolution
-            |> Absinthe.Resolution.put_result(result)
-            |> add_root_errors(api, result)
+      case filter do
+        {:ok, filter} ->
+          resource
+          |> Ash.Query.do_filter(filter)
+          |> Ash.Query.set_tenant(Map.get(context, :tenant))
+          |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+          |> set_query_arguments(action, arguments)
+          |> api.read_one!(
+            action: read_action,
+            verbose?: AshGraphql.Api.Info.debug?(api),
+            actor: Map.get(context, :actor),
+            authorize?: AshGraphql.Api.Info.authorize?(api)
+          )
+          |> case do
+            nil ->
+              result = not_found(filter, resource, context, api)
 
-          initial ->
-            opts = destroy_opts(api, context, action)
+              resolution
+              |> Absinthe.Resolution.put_result(result)
+              |> add_root_errors(api, result)
 
-            changeset =
-              initial
-              |> Ash.Changeset.new()
-              |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-              |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
-              |> Ash.Changeset.for_destroy(action, input,
-                actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Api.Info.authorize?(api)
-              )
-              |> Ash.Changeset.set_arguments(arguments)
-              |> select_fields(resource, resolution, ["result"])
+            initial ->
+              opts = destroy_opts(api, context, action)
 
-            {result, modify_args} =
-              changeset
-              |> api.destroy(opts)
-              |> destroy_result(initial, resource, changeset, api, resolution)
+              changeset =
+                initial
+                |> Ash.Changeset.new()
+                |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+                |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+                |> Ash.Changeset.for_destroy(action, input,
+                  actor: Map.get(context, :actor),
+                  authorize?: AshGraphql.Api.Info.authorize?(api)
+                )
+                |> Ash.Changeset.set_arguments(arguments)
+                |> select_fields(resource, resolution, ["result"])
 
-            resolution
-            |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-            |> add_root_errors(api, result)
-            |> modify_resolution(modify, modify_args)
-        end
+              {result, modify_args} =
+                changeset
+                |> api.destroy(opts)
+                |> destroy_result(initial, resource, changeset, api, resolution)
 
-      {:error, error} ->
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+              resolution
+              |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+              |> add_root_errors(api, result)
+              |> modify_resolution(modify, modify_args)
+          end
+
+        {:error, error} ->
+          Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+      end
     end
   rescue
     e ->
@@ -1139,7 +1268,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_calculation(
         %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
-        {api, _resource, calculation}
+        {api, resource, calculation}
       ) do
     api_opts = [
       actor: Map.get(context, :actor),
@@ -1147,11 +1276,15 @@ defmodule AshGraphql.Graphql.Resolver do
       verbose?: AshGraphql.Api.Info.debug?(api)
     ]
 
+    tracer = AshGraphql.Api.Info.tracer(api)
+
     opts = [
       api_opts: api_opts,
       type: :calculation,
+      resource: resource,
       args: args,
-      tenant: Map.get(context, :tenant)
+      tenant: Map.get(context, :tenant),
+      span_context: tracer && tracer.get_span_context()
     ]
 
     batch_key = {calculation.name, opts}
@@ -1177,13 +1310,16 @@ defmodule AshGraphql.Graphql.Resolver do
     |> load_fields(relationship.destination, api, resolution)
     |> case do
       {:ok, related_query} ->
+        tracer = AshGraphql.Api.Info.tracer(api)
+
         opts = [
           query: related_query,
           api_opts: api_opts,
           type: :relationship,
           args: args,
           resource: relationship.source,
-          tenant: Map.get(context, :tenant)
+          tenant: Map.get(context, :tenant),
+          span_context: tracer && tracer.get_span_context()
         ]
 
         batch_key = {relationship.name, opts}

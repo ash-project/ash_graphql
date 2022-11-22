@@ -17,6 +17,8 @@ defmodule AshGraphql.Dataloader do
   @type api_opts :: Keyword.t()
   @type batch_fun :: (Ash.Resource.t(), Ash.Query.t(), any, [any], api_opts -> [any])
 
+  import AshGraphql.TraceHelpers
+
   @doc """
   Create an Ash Dataloader source.
   This module handles retrieving data from Ash for dataloader. It requires a
@@ -199,59 +201,111 @@ defmodule AshGraphql.Dataloader do
            {{:assoc, source_resource, _pid, field, _resource, opts} = key, records},
            source
          ) do
-      {ids, records} = Enum.unzip(records)
-      query = opts[:query]
-      api_opts = opts[:api_opts]
-      tenant = opts[:tenant] || tenant_from_records(records)
-      empty = source_resource |> struct |> Map.fetch!(field)
-      records = records |> Enum.map(&Map.put(&1, field, empty))
+      tracer = AshGraphql.Api.Info.tracer(source.api)
 
-      cardinality = Ash.Resource.Info.relationship(source_resource, field).cardinality
+      if tracer && opts[:span_context] do
+        tracer.set_span_context(opts[:span_context])
+      end
 
-      query =
-        query
-        |> Ash.Query.new()
-        |> Ash.Query.set_tenant(tenant)
+      resource_short_name = Ash.Resource.Info.short_name(source_resource)
 
-      loaded = source.api.load!(records, [{field, query}], api_opts || [])
+      metadata = %{
+        api: source.api,
+        resource: source_resource,
+        resource_short_name: resource_short_name,
+        actor: opts[:api_opts][:actor],
+        tenant: opts[:api_opts][:tenant],
+        relationship: field,
+        source: :graphql,
+        authorize?: AshGraphql.Api.Info.authorize?(source.api)
+      }
 
-      loaded =
-        case loaded do
-          %struct{results: results} when struct in [Ash.Page.Offset, Ash.Page.Keyset] ->
-            results
+      trace source.api,
+            source_resource,
+            :gql_relationship_batch,
+            "#{resource_short_name}.#{field}",
+            metadata do
+        {ids, records} = Enum.unzip(records)
+        query = opts[:query]
+        api_opts = opts[:api_opts]
+        tenant = opts[:tenant] || tenant_from_records(records)
+        empty = source_resource |> struct |> Map.fetch!(field)
+        records = records |> Enum.map(&Map.put(&1, field, empty))
 
-          loaded ->
-            loaded
-        end
+        cardinality = Ash.Resource.Info.relationship(source_resource, field).cardinality
 
-      results =
-        case cardinality do
-          :many ->
-            Enum.map(loaded, fn record ->
-              List.wrap(Map.get(record, field))
-            end)
+        query =
+          query
+          |> Ash.Query.new()
+          |> Ash.Query.set_tenant(tenant)
 
-          :one ->
-            Enum.map(loaded, fn record ->
-              Map.get(record, field)
-            end)
-        end
+        loaded = source.api.load!(records, [{field, query}], api_opts || [])
 
-      {key, Map.new(Enum.zip(ids, results))}
+        loaded =
+          case loaded do
+            %struct{results: results} when struct in [Ash.Page.Offset, Ash.Page.Keyset] ->
+              results
+
+            loaded ->
+              loaded
+          end
+
+        results =
+          case cardinality do
+            :many ->
+              Enum.map(loaded, fn record ->
+                List.wrap(Map.get(record, field))
+              end)
+
+            :one ->
+              Enum.map(loaded, fn record ->
+                Map.get(record, field)
+              end)
+          end
+
+        {key, Map.new(Enum.zip(ids, results))}
+      end
     end
 
     defp run_batch(
-           {{:calc, _, _pid, calc, %{args: args, api_opts: api_opts}} = key, records},
+           {{:calc, _, _pid, calc,
+             %{resource: resource, args: args, api_opts: api_opts, span_context: span_context}} =
+              key, records},
            source
          ) do
-      {ids, records} = Enum.unzip(records)
+      tracer = AshGraphql.Api.Info.tracer(source.api)
 
-      results =
-        records
-        |> source.api.load!([{calc, args}], api_opts)
-        |> Enum.map(&Map.get(&1, calc))
+      if tracer && span_context do
+        tracer.set_span_context(span_context)
+      end
 
-      {key, Map.new(Enum.zip(ids, results))}
+      resource_short_name = Ash.Resource.Info.short_name(resource)
+
+      metadata = %{
+        api: source.api,
+        resource: resource,
+        resource_short_name: resource_short_name,
+        actor: api_opts[:actor],
+        tenant: api_opts[:tenant],
+        calculation: calc,
+        source: :graphql,
+        authorize?: AshGraphql.Api.Info.authorize?(source.api)
+      }
+
+      trace source.api,
+            resource,
+            :gql_calculation_batch,
+            "#{resource_short_name}.#{calc}.batch",
+            metadata do
+        {ids, records} = Enum.unzip(records)
+
+        results =
+          records
+          |> source.api.load!([{calc, args}], api_opts)
+          |> Enum.map(&Map.get(&1, calc))
+
+        {key, Map.new(Enum.zip(ids, results))}
+      end
     end
 
     defp tenant_from_records([%{__metadata__: %{tenant: tenant}}]) when not is_nil(tenant) do

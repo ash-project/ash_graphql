@@ -34,6 +34,7 @@ spark_locals_without_parens = [
   relay?: 1,
   root_level_errors?: 1,
   show_raised_errors?: 1,
+  tracer: 1,
   type: 1,
   type_name: 1,
   types: 1,
