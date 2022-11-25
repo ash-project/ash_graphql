@@ -677,7 +677,6 @@ defmodule AshGraphql.Graphql.Resolver do
                   actor: Map.get(context, :actor),
                   authorize?: AshGraphql.Api.Info.authorize?(api)
                 )
-                |> Ash.Changeset.set_arguments(arguments)
                 |> select_fields(resource, resolution, ["result"])
 
               {result, modify_args} =
@@ -796,7 +795,6 @@ defmodule AshGraphql.Graphql.Resolver do
                   actor: Map.get(context, :actor),
                   authorize?: AshGraphql.Api.Info.authorize?(api)
                 )
-                |> Ash.Changeset.set_arguments(arguments)
                 |> select_fields(resource, resolution, ["result"])
 
               {result, modify_args} =
