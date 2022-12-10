@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.2](https://github.com/ash-project/ash_graphql/compare/v0.22.1...v0.22.2) (2022-12-10)
+
+
+
+
+### Improvements:
+
+* set error on tracer when an exception is raised
+
 ## [v0.22.1](https://github.com/ash-project/ash_graphql/compare/v0.22.0...v0.22.1) (2022-11-29)
 
 
