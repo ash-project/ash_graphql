@@ -106,7 +106,7 @@ defmodule AshGraphql.Graphql.Resolver do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
       else
-        something_went_wrong(resolution, e)
+        something_went_wrong(resolution, e, api)
       end
   end
 
@@ -182,7 +182,7 @@ defmodule AshGraphql.Graphql.Resolver do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
       else
-        something_went_wrong(resolution, e)
+        something_went_wrong(resolution, e, api)
       end
   end
 
@@ -258,7 +258,7 @@ defmodule AshGraphql.Graphql.Resolver do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
       else
-        something_went_wrong(resolution, e)
+        something_went_wrong(resolution, e, api)
       end
   end
 
@@ -601,7 +601,7 @@ defmodule AshGraphql.Graphql.Resolver do
           )
         end
       else
-        something_went_wrong(resolution, e)
+        something_went_wrong(resolution, e, api)
       end
   end
 
@@ -726,7 +726,7 @@ defmodule AshGraphql.Graphql.Resolver do
           )
         end
       else
-        something_went_wrong(resolution, e)
+        something_went_wrong(resolution, e, api)
       end
   end
 
@@ -833,7 +833,7 @@ defmodule AshGraphql.Graphql.Resolver do
           )
         end
       else
-        something_went_wrong(resolution, e)
+        something_went_wrong(resolution, e, api)
       end
   end
 
@@ -849,7 +849,13 @@ defmodule AshGraphql.Graphql.Resolver do
     uuid
   end
 
-  defp something_went_wrong(resolution, e) do
+  defp something_went_wrong(resolution, e, api) do
+    tracer = AshGraphql.Api.Info.tracer(api)
+
+    if tracer do
+      tracer.set_error(Ash.Error.to_ash_error(e))
+    end
+
     uuid = log_exception(e)
 
     Absinthe.Resolution.put_result(
