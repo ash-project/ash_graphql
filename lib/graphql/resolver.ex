@@ -1461,9 +1461,19 @@ defmodule AshGraphql.Graphql.Resolver do
            "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
          )
 
-         %{
-           message: "Something went wrong. Unique error id: `#{uuid}`"
-         }
+         if AshGraphql.Api.Info.show_raised_errors?(api) do
+           %{
+             message: """
+             Raised error: #{uuid}
+
+             #{Exception.format(:error, error, stacktrace)}"
+             """
+           }
+         else
+           %{
+             message: "Something went wrong. Unique error id: `#{uuid}`"
+           }
+         end
        end
      end)}
   end
