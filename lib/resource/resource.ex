@@ -137,7 +137,7 @@ defmodule AshGraphql.Resource do
       ...
 
       managed_relationships do
-        managed_relationship :create_post, :comments
+        managed_relationship :create, :comments
       end
     end
     ```
