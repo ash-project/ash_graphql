@@ -2960,6 +2960,8 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.UtcDatetimeUsec, _, _),
     do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
 
+  defp get_specific_field_type(Ash.Type.NaiveDateTime, _, _), do: :naive_datetime
+
   defp get_specific_field_type(Ash.Type.UUID, _, _), do: :string
   defp get_specific_field_type(Ash.Type.Float, _, _), do: :float
 
