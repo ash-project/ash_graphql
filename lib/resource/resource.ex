@@ -2965,6 +2965,16 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.UUID, _, _), do: :string
   defp get_specific_field_type(Ash.Type.Float, _, _), do: :float
 
+  defp get_specific_field_type(type, _, _) do
+    raise """
+    Could not determine graphql field type for #{inspect(type)}
+
+    If this is a custom type, you can add `def graphql_type/1` to your type to define the graphql type.
+    If this is not your type, you will need to use `types` or `attribute_types` or `attribute_input_types`
+    to configure the type for any field using this type.
+    """
+  end
+
   defp raise_datetime_error do
     raise """
     No type configured for utc_datetimes!
