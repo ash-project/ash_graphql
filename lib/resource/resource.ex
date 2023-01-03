@@ -2932,7 +2932,7 @@ defmodule AshGraphql.Resource do
          %Ash.Resource.Attribute{constraints: constraints, name: name},
          resource
        )
-       when resource do
+       when not is_nil(resource) do
     if is_list(constraints[:one_of]) do
       atom_enum_type(resource, name)
     else
@@ -2941,7 +2941,11 @@ defmodule AshGraphql.Resource do
   end
 
   defp get_specific_field_type(Ash.Type.Boolean, _, _), do: :boolean
-  defp get_specific_field_type(Ash.Type.Atom, _, _), do: :string
+
+  defp get_specific_field_type(Ash.Type.Atom, _, _) do
+    :string
+  end
+
   defp get_specific_field_type(Ash.Type.CiString, _, _), do: :string
   defp get_specific_field_type(Ash.Type.Date, _, _), do: :date
   defp get_specific_field_type(Ash.Type.Decimal, _, _), do: :decimal

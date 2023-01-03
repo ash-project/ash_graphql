@@ -234,6 +234,7 @@ defmodule AshGraphql.Test.Post do
     attribute(:embed, AshGraphql.Test.Embed)
     attribute(:text1, :string)
     attribute(:text2, :string)
+    attribute(:visibility, :atom, constraints: [one_of: [:public, :private]])
 
     create_timestamp(:created_at, private?: false)
   end
