@@ -106,7 +106,7 @@ defmodule AshGraphql.Graphql.Resolver do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
       else
-        something_went_wrong(resolution, e, api)
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
   end
 
@@ -182,7 +182,7 @@ defmodule AshGraphql.Graphql.Resolver do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
       else
-        something_went_wrong(resolution, e, api)
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
   end
 
@@ -258,7 +258,7 @@ defmodule AshGraphql.Graphql.Resolver do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
         Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
       else
-        something_went_wrong(resolution, e, api)
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
   end
 
@@ -601,7 +601,7 @@ defmodule AshGraphql.Graphql.Resolver do
           )
         end
       else
-        something_went_wrong(resolution, e, api)
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
   end
 
@@ -726,7 +726,7 @@ defmodule AshGraphql.Graphql.Resolver do
           )
         end
       else
-        something_went_wrong(resolution, e, api)
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
   end
 
@@ -833,30 +833,30 @@ defmodule AshGraphql.Graphql.Resolver do
           )
         end
       else
-        something_went_wrong(resolution, e, api)
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
   end
 
-  defp log_exception(e) do
+  defp log_exception(e, stacktrace) do
     uuid = Ash.UUID.generate()
 
     Logger.error("""
     #{uuid}: Exception raised while resolving query.
 
-    #{Exception.message(e)}
+    #{Exception.format(:error, e, stacktrace)}
     """)
 
     uuid
   end
 
-  defp something_went_wrong(resolution, e, api) do
+  defp something_went_wrong(resolution, e, api, stacktrace) do
     tracer = AshGraphql.Api.Info.tracer(api)
 
     if tracer do
       tracer.set_error(Ash.Error.to_ash_error(e))
     end
 
-    uuid = log_exception(e)
+    uuid = log_exception(e, stacktrace)
 
     Absinthe.Resolution.put_result(
       resolution,
