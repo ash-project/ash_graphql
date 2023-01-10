@@ -1276,6 +1276,17 @@ defmodule AshGraphql.Resource do
 
     fields = check_for_conflicts!(fields, managed_relationship, resource)
 
+    if Enum.empty?(fields) do
+      raise """
+      Input object for managed relationship #{relationship.name} on #{inspect(relationship.source)}#{action.name} would have no fields.
+
+      This typically means that you are missing the `lookup_with_primary_key?` option or the `lookup_identities` option on the configured
+      managed_relationship DSL. For example, calls to `manage_relationship` that only look things up and accept no modifications
+      (like `type: :accept`), they will have no fields because we don't assume the primary key or specific identities should be included in the
+      input object.
+      """
+    end
+
     %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
       identifier: type,
       fields: fields,
