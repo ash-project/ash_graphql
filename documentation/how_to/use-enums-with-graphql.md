@@ -6,7 +6,9 @@ Enums are implemented automatically for any `atom` *attribute* (not arguments) w
 
 ```elixir
 # On the resource of type `:ticket`
-attribute :type, :atom, one_of: [:foo, :bar, :baz]
+attribute :type, :atom do
+  constraints one_of: [:foo, :bar, :baz]
+end
 ```
 
 This would produce an enum called `:ticket_type`/`TicketType`.
