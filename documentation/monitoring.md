@@ -1,6 +1,6 @@
 # Monitoring
 
-Please read {{link:ash:guide:Monitoring}} for more information. Here we simply cover the additional traces & telemetry events that we publish from this extension.
+Please read [the Ash monitoring guide](https://hexdocs.pm/ash/monitoring.html) for more information. Here we simply cover the additional traces & telemetry events that we publish from this extension.
 
 A tracer can be configured in the api. It will fallback to the global tracer configuration `config :ash, :tracer, Tracer`
 

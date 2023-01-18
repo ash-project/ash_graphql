@@ -84,8 +84,31 @@ defmodule AshGraphql.MixProject do
       source_ref: "v#{@version}",
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
+      spark: [
+        extensions: [
+          %{
+            module: AshGraphql.Resource,
+            name: "AshGraphql Resource",
+            target: "Ash.Resource",
+            type: "GraphQL Resource"
+          },
+          %{
+            module: AshGraphql.Api,
+            name: "AshGraphql Api",
+            target: "Ash.Api",
+            type: "GraphQL Api"
+          }
+        ]
+      ],
       extras: extras(),
-      groups_for_extras: groups_for_extras()
+      groups_for_extras: groups_for_extras(),
+      groups_for_modules: [
+        Introspection: [
+          AshGraphql.Resource.Info,
+          AshGraphql.Api.Info
+        ],
+        Internals: ~r/.*/
+      ]
     ]
   end
 
