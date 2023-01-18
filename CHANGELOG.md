@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.4](https://github.com/ash-project/ash_graphql/compare/v0.22.3...v0.22.4) (2023-01-18)
+
+
+
+
+### Bug Fixes:
+
+* properly generate enum for atom attributes w/ `one_of` constraint again
+
+### Improvements:
+
+* update ash and use new docs patterns
+
+* better error on empty input objects for managed relationships
+
+* log stacktraces on raised errors
+
+* better error message on no type match
+
+* support naive_datetime out of the box
+
 ## [v0.22.3](https://github.com/ash-project/ash_graphql/compare/v0.22.2...v0.22.3) (2022-12-13)
 
 
