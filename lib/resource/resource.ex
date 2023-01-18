@@ -2977,7 +2977,7 @@ defmodule AshGraphql.Resource do
 
   defp get_specific_field_type(Ash.Type.NaiveDateTime, _, _), do: :naive_datetime
 
-  defp get_specific_field_type(Ash.Type.UUID, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.UUID, _, _), do: :id
   defp get_specific_field_type(Ash.Type.Float, _, _), do: :float
 
   defp get_specific_field_type(type, _, _) do

@@ -336,7 +336,7 @@ defmodule AshGraphql.ReadTest do
 
     resp =
       """
-      query GetCompositePrimaryKeyNotEncoded($first: String!, $second: String!) {
+      query GetCompositePrimaryKeyNotEncoded($first: ID!, $second: ID!) {
         getCompositePrimaryKeyNotEncoded(first: $first, second: $second) {
           first
           second
