@@ -2,9 +2,9 @@ defmodule AshGraphql.UpdateTest do
   use ExUnit.Case, async: false
 
   setup do
-    Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
-
     on_exit(fn ->
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+
       try do
         AshGraphql.TestHelpers.stop_ets()
       rescue
