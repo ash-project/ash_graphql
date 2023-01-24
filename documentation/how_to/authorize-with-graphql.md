@@ -1,4 +1,4 @@
-# Authorize with Graphql
+# Authorize with GraphQL
 
 AshGraphql uses three special keys in the `absinthe` context:
 

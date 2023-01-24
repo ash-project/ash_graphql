@@ -1,4 +1,4 @@
-# Use Enums with Graphql
+# Use Enums with GraphQL
 
 ## Automatically created enums
 
