@@ -1,6 +1,6 @@
-# Use JSON with Graphql
+# Use JSON with GraphQL
 
-AshGraphql provides two json types that may be used. They are the same except for how the type is serialized in responses.
+AshGraphql provides two JSON types that may be used. They are the same except for how the type is serialized in responses.
 
 - `:json_string` - serializes the json to a string, e.g `"{\"foo\":1}"`
 - `:json` - leaves the json as an object, e.g `{foo: 1}`
