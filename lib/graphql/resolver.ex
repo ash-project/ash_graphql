@@ -1220,7 +1220,7 @@ defmodule AshGraphql.Graphql.Resolver do
     errors
     |> List.wrap()
     |> Enum.flat_map(fn
-      %Ash.Error.Invalid{errors: errors} ->
+      %class{errors: errors} when class in [Ash.Error.Invalid, Ash.Error.Forbidden] ->
         unwrap_errors(List.wrap(errors))
 
       errors ->
