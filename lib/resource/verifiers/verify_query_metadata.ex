@@ -16,7 +16,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyQueryMetadata do
         |> Map.get(:metadata, [])
         |> Enum.filter(&(&1.name in show_metadata))
 
-      if action && !Enum.empty?(metadata) && is_nil(query.type_name) do
+      if !Enum.empty?(metadata) && is_nil(query.type_name) do
         resource = Transformer.get_persisted(dsl, :module)
 
         raise Spark.Error.DslError,
