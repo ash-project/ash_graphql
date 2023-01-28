@@ -38,6 +38,29 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"postScore" => [%{"text" => "foo"}]}} = result
   end
 
+  test "metadata fields are rendered" do
+    AshGraphql.Test.User
+    |> Ash.Changeset.for_create(:create,
+      name: "My Name"
+    )
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query CurrentUserWithMetadata {
+        currentUserWithMetadata {
+          bar
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"currentUserWithMetadata" => %{"bar" => "bar"}}} = result
+  end
+
   test "a read with arguments works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true)

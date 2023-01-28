@@ -294,6 +294,10 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Transformers.ValidateCompatibleNames
   ]
 
+  @verifiers [
+    AshGraphql.Resource.Verifiers.VerifyQueryMetadata
+  ]
+
   @sections [@graphql]
 
   @moduledoc """
@@ -313,7 +317,7 @@ defmodule AshGraphql.Resource do
   <!--- ash-hq-hide-stop --> <!--- -->
   """
 
-  use Spark.Dsl.Extension, sections: @sections, transformers: @transformers
+  use Spark.Dsl.Extension, sections: @sections, transformers: @transformers, verifiers: @verifiers
 
   @deprecated "See `AshGraphql.Resource.Info.queries/1`"
   defdelegate queries(resource), to: AshGraphql.Resource.Info
@@ -866,7 +870,9 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp query_type(%{type: :list, relay?: relay?}, _resource, action, type) do
+  defp query_type(%{type: :list, relay?: relay?} = query, _resource, action, type) do
+    type = query.type_name || type
+
     if action.pagination do
       cond do
         relay? ->
@@ -890,6 +896,8 @@ defmodule AshGraphql.Resource do
   end
 
   defp query_type(query, _resource, _action, type) do
+    type = query.type_name || type
+
     maybe_wrap_non_null(type, not query.allow_nil?)
   end
 
@@ -1197,6 +1205,7 @@ defmodule AshGraphql.Resource do
   def type_definitions(resource, api, schema) do
     List.wrap(calculation_input(resource, schema)) ++
       List.wrap(type_definition(resource, api, schema)) ++
+      List.wrap(query_type_definitions(resource, api, schema)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
@@ -2474,6 +2483,42 @@ defmodule AshGraphql.Resource do
     type.identifier == :node
   end
 
+  def query_type_definitions(resource, api, schema) do
+    resource_type = AshGraphql.Resource.Info.type(resource)
+
+    resource
+    |> AshGraphql.Resource.Info.queries()
+    |> Enum.filter(&(&1.type_name && &1.type_name != resource_type))
+    |> Enum.map(fn query ->
+      relay? = Map.get(query, :relay?)
+
+      interfaces =
+        if relay? do
+          [:node]
+        else
+          []
+        end
+
+      is_type_of =
+        if relay? do
+          &AshGraphql.Resource.is_node_type/1
+        else
+          nil
+        end
+
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        description: Ash.Resource.Info.description(resource),
+        interfaces: interfaces,
+        fields: fields(resource, api, schema, query),
+        identifier: query.type_name,
+        module: schema,
+        name: Macro.camelize(to_string(query.type_name)),
+        __reference__: ref(__ENV__),
+        is_type_of: is_type_of
+      }
+    end)
+  end
+
   def type_definition(resource, api, schema) do
     if generate_object?(resource) do
       type = AshGraphql.Resource.Info.type(resource)
@@ -2510,12 +2555,46 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp fields(resource, api, schema) do
+  defp fields(resource, api, schema, query \\ nil) do
     attributes(resource, schema) ++
+      metadata(query, resource, schema) ++
       relationships(resource, api, schema) ++
       aggregates(resource, schema) ++
       calculations(resource, api, schema) ++
       keyset(resource, schema)
+  end
+
+  defp metadata(nil, _resource, _schema) do
+    []
+  end
+
+  defp metadata(query, resource, schema) do
+    action = Ash.Resource.Info.action(resource, query.action)
+    show_metadata = query.show_metadata || Enum.map(Map.get(action, :metadata, []), & &1.name)
+
+    action.metadata
+    |> Enum.filter(&(&1.name in show_metadata))
+    |> Enum.map(fn metadata ->
+      field_type =
+        case query.metadata_types[metadata.name] do
+          nil ->
+            metadata.type
+            |> field_type(metadata, resource)
+            |> maybe_wrap_non_null(not metadata.allow_nil?)
+
+          type ->
+            unwrap_literal_type(type)
+        end
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: metadata.description,
+        identifier: metadata.name,
+        module: schema,
+        name: to_string(query.metadata_names[metadata.name] || metadata.name),
+        type: field_type,
+        __reference__: ref(__ENV__)
+      }
+    end)
   end
 
   defp keyset(resource, schema) do

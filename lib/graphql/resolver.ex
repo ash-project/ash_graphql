@@ -95,7 +95,14 @@ defmodule AshGraphql.Graphql.Resolver do
 
         {result, _} ->
           resolution
-          |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+          |> Absinthe.Resolution.put_result(
+            to_resolution(
+              result
+              |> add_read_metadata(gql_query, Ash.Resource.Info.action(query.resource, action)),
+              context,
+              api
+            )
+          )
           |> add_root_errors(api, result)
           |> modify_resolution(modify, modify_args)
       end
@@ -113,7 +120,8 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve(
         %{arguments: args, context: context} = resolution,
         {api, resource,
-         %{name: query_name, type: :read_one, action: action, modify_resolution: modify}}
+         %{name: query_name, type: :read_one, action: action, modify_resolution: modify} =
+           gql_query}
       ) do
     metadata = %{
       api: api,
@@ -171,6 +179,9 @@ defmodule AshGraphql.Graphql.Resolver do
             {{:error, error}, [query, {:error, error}]}
         end
 
+      result =
+        add_read_metadata(result, gql_query, Ash.Resource.Info.action(query.resource, action))
+
       resolution
       |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
       |> add_root_errors(api, result)
@@ -195,7 +206,7 @@ defmodule AshGraphql.Graphql.Resolver do
            relay?: relay?,
            action: action,
            modify_resolution: modify
-         }}
+         } = gql_query}
       ) do
     metadata = %{
       api: api,
@@ -246,6 +257,9 @@ defmodule AshGraphql.Graphql.Resolver do
           {:error, error} ->
             {{:error, error}, [query, {:error, error}]}
         end
+
+      result =
+        add_read_metadata(result, gql_query, Ash.Resource.Info.action(query.resource, action))
 
       resolution
       |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
@@ -1185,6 +1199,32 @@ defmodule AshGraphql.Graphql.Resolver do
     else
       resolution
     end
+  end
+
+  defp add_read_metadata({:ok, result}, query, action) do
+    {:ok, add_read_metadata(result, query, action)}
+  end
+
+  defp add_read_metadata(nil, _, _), do: nil
+
+  defp add_read_metadata(result, query, action) when is_list(result) do
+    show_metadata = query.show_metadata || Enum.map(Map.get(action, :metadata, []), & &1.name)
+
+    Enum.map(result, fn record ->
+      do_add_read_metadata(record, show_metadata)
+    end)
+  end
+
+  defp add_read_metadata(result, query, action) do
+    show_metadata = query.show_metadata || Enum.map(Map.get(action, :metadata, []), & &1.name)
+
+    do_add_read_metadata(result, show_metadata)
+  end
+
+  defp do_add_read_metadata(record, show_metadata) do
+    Enum.reduce(show_metadata, record, fn key, record ->
+      Map.put(record, key, Map.get(record.__metadata__ || %{}, key))
+    end)
   end
 
   defp add_metadata(result, action_result, action) do
