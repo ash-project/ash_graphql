@@ -2,7 +2,7 @@
 
 ## Get familiar with Ash resources
 
-If you haven't already, read the getting started guide for Ash. This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/apis.
+If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html). This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/apis.
 
 ## Bring in the ash_graphql, and absinthe_plug dependencies
 
@@ -10,8 +10,8 @@ If you haven't already, read the getting started guide for Ash. This assumes tha
 def deps()
   [
     ...
-    {:ash_graphql, "~> x.x"}
-    {:absinthe_plug, "~> x.x"},
+    {:ash_graphql, "~> 0.22.4"},
+    {:absinthe_plug, "~> x.x"}
   ]
 end
 ```
@@ -20,8 +20,10 @@ Use `mix hex.info ash_graphql` and `mix hex.info absinthe_plug` to quickly find 
 
 ## Add the API Extension
 
+Add the following to your API module. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
+
 ```elixir
-defmodule MyApi do
+defmodule Helpdesk.Support do
   use Ash.Api, extensions: [
     AshGraphql.Api
   ]
@@ -29,34 +31,48 @@ defmodule MyApi do
   graphql do
     authorize? false # Defaults to `true`, use this to disable authorization for the entire API (you probably only want this while prototyping)
   end
+
+  ... 
 end
 ```
 
 ## Add graphql to your resources
 
+Some example queries/mutations are shown below. If no queries/mutations are added, nothing will show up in the GraphQL API, so be sure to set one up if you want to try it out.
+
 ```elixir
-defmodule Post do
+defmodule Helpdesk.Support.Ticket. do
   use Ash.Resource,
+    ...,
     extensions: [
       AshGraphql.Resource
     ]
 
   graphql do
-    type :post
+    type :ticket
 
     queries do
-      get :get_post, :read # <- create a field called `get_post` that uses the `read` read action to fetch a single post
-      read_one :current_user, :current_user # <- create a field called `current_user` that uses the `current_user` read action to fetch a single record
-      list :list_posts, :read # <- create a field called `list_posts` that uses the `read` read action to fetch a list of posts
+      # Examples
+
+      # create a field called `get_ticket` that uses the `read` read action to fetch a single ticke
+      get :get_ticket, :read 
+      # create a field called `most_important_ticket` that uses the `most_important` read action to fetch a single record
+      read_one :most_important_ticket, :most_important 
+
+      # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
+      list :list_tickets, :read 
     end
 
     mutations do
-      # And so on
-      create :create_post, :create
-      update :update_post, :update
-      destroy :destroy_post, :destroy
+      # Examples
+
+      create :create_ticket, :create
+      update :update_ticket, :update
+      destroy :destroy_ticket, :destroy
     end
   end
+
+  ...
 end
 ```
 
@@ -67,10 +83,10 @@ If you don't have an absinthe schema, you can create one just for ash.
 Define a `context/1` function, and call `AshGraphql.add_context/2` with the current context and your apis. Additionally, add the `Absinthe.Middleware.Dataloader` to your plugins, as shown below. If you're starting fresh, just copy the schema below and adjust the module name and api name.
 
 ```elixir
-defmodule MyApp.Schema do
+defmodule Helpdesk.Schema do
   use Absinthe.Schema
 
-  @apis [MyApp.Api]
+  @apis [Helpdesk.Support]
 
   use AshGraphql, apis: @apis
 
@@ -103,12 +119,12 @@ Then you can use a `Plug.Router` and [forward](https://hexdocs.pm/plug/Plug.Rout
 ```elixir
 forward "/gql",
   to: Absinthe.Plug,
-  init_opts: [schema: YourSchema]
+  init_opts: [schema: Helpdesk.Schema]
 
 forward "/playground",
   to: Absinthe.Plug.GraphiQL,
   init_opts: [
-    schema: YourSchema,
+    schema: Helpdesk.Schema,
     interface: :playground
   ]
 ```
@@ -121,11 +137,11 @@ You will also likely want to set up the "playground" for trying things out.
 
 ```elixir
 scope "/" do
-  forward "/gql", Absinthe.Plug, schema: YourSchema
+  forward "/gql", Absinthe.Plug, schema: Helpdesk.Schema
 
   forward "/playground",
           Absinthe.Plug.GraphiQL,
-          schema: YourSchema,
+          schema: Helpdesk.Schema,
           interface: :playground
 end
 ```
