@@ -22,6 +22,4 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 ash_graphql-*.tar
 
-.tool-versions
-
 .vscode/
