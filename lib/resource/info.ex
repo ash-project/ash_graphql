@@ -28,6 +28,16 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :type, nil)
   end
 
+  @doc "Wether or not to derive a filter input for the resource automatically"
+  def derive_filter?(resource) do
+    Extension.get_opt(resource, [:graphql], :derive_filter?, true)
+  end
+
+  @doc "Wether or not to derive a sort input for the resource automatically"
+  def derive_sort?(resource) do
+    Extension.get_opt(resource, [:graphql], :derive_sort?, true)
+  end
+
   @doc "Graphql type overrides for the resource"
   def attribute_types(resource) do
     Extension.get_opt(resource, [:graphql], :attribute_types, [])

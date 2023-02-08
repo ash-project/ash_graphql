@@ -222,6 +222,20 @@ defmodule AshGraphql.Resource do
         required: true,
         doc: "The type to use for this entity in the graphql schema"
       ],
+      derive_filter?: [
+        type: :boolean,
+        default: true,
+        doc: """
+        Set to false to disable the automatic generation of a filter input for read actions.
+        """
+      ],
+      derive_sort?: [
+        type: :boolean,
+        default: true,
+        doc: """
+        Set to false to disable the automatic generation of a sort input for read actions.
+        """
+      ],
       encode_primary_key?: [
         type: :boolean,
         default: true,
@@ -979,20 +993,24 @@ defmodule AshGraphql.Resource do
 
   defp args(:read_one, resource, action, schema, _) do
     args =
-      case resource_filter_fields(resource, schema) do
-        [] ->
-          []
+      if AshGraphql.Resource.Info.derive_filter?(resource) do
+        case resource_filter_fields(resource, schema) do
+          [] ->
+            []
 
-        _ ->
-          [
-            %Absinthe.Blueprint.Schema.InputValueDefinition{
-              name: "filter",
-              identifier: :filter,
-              type: resource_filter_type(resource),
-              description: "A filter to limit the results",
-              __reference__: ref(__ENV__)
-            }
-          ]
+          _ ->
+            [
+              %Absinthe.Blueprint.Schema.InputValueDefinition{
+                name: "filter",
+                identifier: :filter,
+                type: resource_filter_type(resource),
+                description: "A filter to limit the results",
+                __reference__: ref(__ENV__)
+              }
+            ]
+        end
+      else
+        []
       end
 
     args ++ read_args(resource, action, schema)
@@ -1000,40 +1018,48 @@ defmodule AshGraphql.Resource do
 
   defp args(:list, resource, action, schema, _) do
     args =
-      case resource_filter_fields(resource, schema) do
-        [] ->
-          []
+      if AshGraphql.Resource.Info.derive_filter?(resource) do
+        case resource_filter_fields(resource, schema) do
+          [] ->
+            []
 
-        _ ->
-          [
-            %Absinthe.Blueprint.Schema.InputValueDefinition{
-              name: "filter",
-              identifier: :filter,
-              type: resource_filter_type(resource),
-              description: "A filter to limit the results",
-              __reference__: ref(__ENV__)
-            }
-          ]
+          _ ->
+            [
+              %Absinthe.Blueprint.Schema.InputValueDefinition{
+                name: "filter",
+                identifier: :filter,
+                type: resource_filter_type(resource),
+                description: "A filter to limit the results",
+                __reference__: ref(__ENV__)
+              }
+            ]
+        end
+      else
+        []
       end
 
     args =
-      case sort_values(resource) do
-        [] ->
-          args
+      if AshGraphql.Resource.Info.derive_sort?(resource) do
+        case sort_values(resource) do
+          [] ->
+            args
 
-        _ ->
-          [
-            %Absinthe.Blueprint.Schema.InputValueDefinition{
-              name: "sort",
-              identifier: :sort,
-              type: %Absinthe.Blueprint.TypeReference.List{
-                of_type: resource_sort_type(resource)
-              },
-              description: "How to sort the records in the response",
-              __reference__: ref(__ENV__)
-            }
-            | args
-          ]
+          _ ->
+            [
+              %Absinthe.Blueprint.Schema.InputValueDefinition{
+                name: "sort",
+                identifier: :sort,
+                type: %Absinthe.Blueprint.TypeReference.List{
+                  of_type: resource_sort_type(resource)
+                },
+                description: "How to sort the records in the response",
+                __reference__: ref(__ENV__)
+              }
+              | args
+            ]
+        end
+      else
+        args
       end
 
     args ++ pagination_args(action) ++ read_args(resource, action, schema)
@@ -1822,7 +1848,7 @@ defmodule AshGraphql.Resource do
   defp constraints_to_item_constraints(_, attribute_or_aggregate), do: attribute_or_aggregate
 
   defp sort_input(resource, schema) do
-    if AshGraphql.Resource.Info.type(resource) do
+    if AshGraphql.Resource.Info.type(resource) && AshGraphql.Resource.Info.derive_sort?(resource) do
       case sort_values(resource) do
         [] ->
           nil
@@ -1898,18 +1924,22 @@ defmodule AshGraphql.Resource do
   end
 
   defp filter_input(resource, schema) do
-    case resource_filter_fields(resource, schema) do
-      [] ->
-        nil
+    if AshGraphql.Resource.Info.derive_filter?(resource) do
+      case resource_filter_fields(resource, schema) do
+        [] ->
+          nil
 
-      fields ->
-        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          identifier: resource_filter_type(resource),
-          module: schema,
-          name: resource |> resource_filter_type() |> to_string() |> Macro.camelize(),
-          fields: fields,
-          __reference__: ref(__ENV__)
-        }
+        fields ->
+          %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+            identifier: resource_filter_type(resource),
+            module: schema,
+            name: resource |> resource_filter_type() |> to_string() |> Macro.camelize(),
+            fields: fields,
+            __reference__: ref(__ENV__)
+          }
+      end
+    else
+      nil
     end
   end
 
@@ -2155,7 +2185,7 @@ defmodule AshGraphql.Resource do
           }
         end)
 
-      if only_auto? do
+      if only_auto? || !AshGraphql.Resource.Info.derive_sort?(resource) do
         atom_enums
       else
         sort_values = sort_values(resource)
