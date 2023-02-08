@@ -485,8 +485,13 @@ defmodule AshGraphql.Graphql.Resolver do
     }
   end
 
-  defp paginate(_resource, _action, %Ash.Page.Offset{results: results, count: count}, _) do
-    {:ok, %{results: results, count: count}}
+  defp paginate(
+         _resource,
+         _action,
+         %Ash.Page.Offset{results: results, count: count, more?: more?},
+         _
+       ) do
+    {:ok, %{results: results, count: count, more?: more?}}
   end
 
   defp paginate(resource, action, page, relay?) do
@@ -495,7 +500,7 @@ defmodule AshGraphql.Graphql.Resolver do
         paginate(
           resource,
           action,
-          %Ash.Page.Offset{results: page, count: Enum.count(page)},
+          %Ash.Page.Offset{results: page, count: Enum.count(page), more?: false},
           relay?
         )
 

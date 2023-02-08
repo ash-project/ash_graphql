@@ -2406,6 +2406,16 @@ defmodule AshGraphql.Resource do
                   of_type: type
                 }
               }
+            },
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: "Wether or not there is a next page",
+              identifier: :more?,
+              module: schema,
+              name: "has_next_page",
+              __reference__: ref(__ENV__),
+              type: %Absinthe.Blueprint.TypeReference.NonNull{
+                of_type: :boolean
+              }
             }
           ]
           |> add_count_to_page(schema, countable?),

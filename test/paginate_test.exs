@@ -98,6 +98,7 @@ defmodule AshGraphql.PaginateTest do
           results{
             text
           }
+          hasNextPage
         }
       }
       """
@@ -107,6 +108,7 @@ defmodule AshGraphql.PaginateTest do
                 data: %{
                   "paginatedPosts" => %{
                     "count" => 5,
+                    "hasNextPage" => false,
                     "results" => [
                       %{"text" => "a"},
                       %{"text" => "b"},
