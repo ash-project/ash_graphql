@@ -103,6 +103,9 @@ defmodule AshGraphql.MixProject do
       extras: extras(),
       groups_for_extras: groups_for_extras(),
       groups_for_modules: [
+        AshGraphql: [
+          AshGraphql
+        ],
         Introspection: [
           AshGraphql.Resource.Info,
           AshGraphql.Api.Info

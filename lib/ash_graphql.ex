@@ -1,6 +1,8 @@
 defmodule AshGraphql do
   @moduledoc """
   AshGraphql is a GraphQL extension for the Ash framework.
+
+  For more information, see the [getting started guide](/documentation/tutorials/getting-started-with-graphql.md)
   """
 
   defmacro mutation(do: block) do
