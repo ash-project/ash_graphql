@@ -288,10 +288,17 @@ defmodule AshGraphql do
   defp enum_type({:array, type}), do: enum_type(type)
 
   defp enum_type(type) do
-    if is_atom(type) && :erlang.function_exported(type, :values, 0) &&
+    if is_atom(type) && ensure_compiled?(type) && :erlang.function_exported(type, :values, 0) &&
          :erlang.function_exported(type, :graphql_type, 0) do
       type
     end
+  end
+
+  defp ensure_compiled?(type) do
+    Code.ensure_compiled!(type)
+  rescue
+    _ ->
+      false
   end
 
   defp embedded_resource({:array, type}), do: embedded_resource(type)
