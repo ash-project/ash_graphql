@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.6](https://github.com/ash-project/ash_graphql/compare/v0.22.5...v0.22.6) (2023-02-09)
+
+
+
+
+### Bug Fixes:
+
+* properly fetch all global enum types
+
+* properly delete environment on exit
+
+* map uuid action arguments to ID type (#52)
+
+### Improvements:
+
+* make filter & sort generation optional
+
+* add `more?` (as `has_next_page`) to pagination info
+
+* support metadata on read actions
+
+* unwrap forbidden errors, instead of reporting on the whole
+
 ## [v0.22.5](https://github.com/ash-project/ash_graphql/compare/v0.22.4...v0.22.5) (2023-02-09)
 
 
