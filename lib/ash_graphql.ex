@@ -73,6 +73,7 @@ defmodule AshGraphql do
         |> List.update_at(0, fn {api, resources, _} -> {api, resources, true} end)
 
       @ash_resources Enum.flat_map(apis, &elem(&1, 1))
+      ash_resources = @ash_resources
 
       schema = __MODULE__
       schema_env = __ENV__
@@ -113,7 +114,8 @@ defmodule AshGraphql do
                 apis = unquote(Enum.map(apis, &elem(&1, 0)))
                 embedded_types = AshGraphql.get_embedded_types(apis, unquote(schema))
 
-                global_enums = AshGraphql.global_enums(apis, unquote(schema), __ENV__)
+                global_enums =
+                  AshGraphql.global_enums(unquote(ash_resources), unquote(schema), __ENV__)
 
                 AshGraphql.Api.global_type_definitions(unquote(schema), __ENV__) ++
                   AshGraphql.Api.type_definitions(
@@ -158,9 +160,8 @@ defmodule AshGraphql do
     end
   end
 
-  def global_enums(apis, schema, env) do
-    apis
-    |> Enum.flat_map(&Ash.Api.Info.resources/1)
+  def global_enums(resources, schema, env) do
+    resources
     |> Enum.flat_map(&all_attributes_and_arguments/1)
     |> only_enum_types()
     |> Enum.uniq()
