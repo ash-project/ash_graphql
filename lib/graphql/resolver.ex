@@ -1206,6 +1206,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp add_read_metadata({:error, error}, _, _) do
+    {:error, error}
+  end
+
   defp add_read_metadata({:ok, result}, query, action) do
     {:ok, add_read_metadata(result, query, action)}
   end
