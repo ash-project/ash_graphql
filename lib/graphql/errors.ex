@@ -1,4 +1,7 @@
 defmodule AshGraphql.Errors do
+  @moduledoc """
+  Utilities for working with errors in custom resolvers.
+  """
   require Logger
 
   @doc """
