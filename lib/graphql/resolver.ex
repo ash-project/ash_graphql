@@ -1263,9 +1263,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp unwrap_errors([]), do: []
+  @doc false
+  def unwrap_errors([]), do: []
 
-  defp unwrap_errors(errors) do
+  def unwrap_errors(errors) do
     errors
     |> List.wrap()
     |> Enum.flat_map(fn
@@ -1278,45 +1279,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp to_errors(errors, context, api) do
-    errors
-    |> unwrap_errors()
-    |> Enum.map(fn error ->
-      if AshGraphql.Error.impl_for(error) do
-        error = AshGraphql.Error.to_error(error)
-
-        case AshGraphql.Api.Info.error_handler(api) do
-          nil ->
-            error
-
-          {m, f, a} ->
-            apply(m, f, [error, context | a])
-        end
-      else
-        uuid = Ash.UUID.generate()
-
-        if is_exception(error) do
-          case error do
-            %{stacktrace: %{stacktrace: stacktrace}} ->
-              Logger.warn(
-                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
-              )
-
-            error ->
-              Logger.warn(
-                "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error)}"
-              )
-          end
-        else
-          Logger.warn(
-            "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{inspect(error)}"
-          )
-        end
-
-        %{
-          message: "something went wrong. Unique error id: `#{uuid}`"
-        }
-      end
-    end)
+    AshGraphql.Errors.to_errors(errors, context, api)
   end
 
   def resolve_calculation(
