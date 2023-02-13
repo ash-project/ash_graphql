@@ -37,7 +37,7 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
 
           Available #{type} actions:
 
-          #{available_actions}
+          #{Enum.map_join(available_actions, ", ", & &1.name)}
           """
       end
     end)
