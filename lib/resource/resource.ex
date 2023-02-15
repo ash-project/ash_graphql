@@ -2109,7 +2109,7 @@ defmodule AshGraphql.Resource do
 
     {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
 
-    filterable?(Map.put(aggregate, :type, type), resource)
+    filterable?(%Ash.Resource.Attribute{name: aggregate.name, type: type}, resource)
   end
 
   defp filterable?(%{type: {:array, _}}, _), do: false
@@ -2252,7 +2252,11 @@ defmodule AshGraphql.Resource do
         names_to_field_types =
           Map.new(attribute.constraints[:types], fn {name, config} ->
             {name,
-             field_type(config[:type], String.to_atom("#{attribute.name}_#{name}"), resource)}
+             field_type(
+               config[:type],
+               %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+               resource
+             )}
           end)
 
         func_name = :"resolve_gql_union_#{type_name}"

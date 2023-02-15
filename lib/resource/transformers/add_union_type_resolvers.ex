@@ -11,7 +11,11 @@ defmodule AshGraphql.Resource.Transformers.AddUnionTypeResolvers do
     |> Enum.reduce(
       {:ok, dsl_state},
       fn attribute, {:ok, dsl_state} ->
-        type_name = AshGraphql.Resource.atom_enum_type(dsl_state, attribute.name)
+        type_name =
+          AshGraphql.Resource.atom_enum_type(
+            dsl_state,
+            attribute.name
+          )
 
         {:ok,
          Spark.Dsl.Transformer.eval(

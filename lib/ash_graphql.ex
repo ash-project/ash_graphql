@@ -197,23 +197,29 @@ defmodule AshGraphql do
   end
 
   @doc false
-  def all_attributes_and_arguments(resource) do
-    resource
-    |> Ash.Resource.Info.public_attributes()
-    |> Enum.concat(all_arguments(resource))
-    |> Enum.concat(Ash.Resource.Info.calculations(resource))
-    |> Enum.flat_map(fn %{type: type} = attr ->
-      if Ash.Type.embedded_type?(type) do
-        [
-          attr
-          | type
-            |> embedded_resource()
-            |> all_attributes_and_arguments()
-        ]
-      else
-        [attr]
-      end
-    end)
+  def all_attributes_and_arguments(resource, already_checked \\ []) do
+    if resource in already_checked do
+      []
+    else
+      already_checked = [resource | already_checked]
+
+      resource
+      |> Ash.Resource.Info.public_attributes()
+      |> Enum.concat(all_arguments(resource))
+      |> Enum.concat(Ash.Resource.Info.calculations(resource))
+      |> Enum.flat_map(fn %{type: type} = attr ->
+        if Ash.Type.embedded_type?(type) do
+          [
+            attr
+            | type
+              |> embedded_resource()
+              |> all_attributes_and_arguments(already_checked)
+          ]
+        else
+          [attr]
+        end
+      end)
+    end
   end
 
   defp only_enum_types(attributes) do
