@@ -2290,17 +2290,19 @@ defmodule AshGraphql.Resource do
           },
           %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
             module: schema,
-            name: "#{type_name}_input",
+            name: "#{type_name}_input" |> Macro.camelize(),
             identifier: :"#{type_name}_input",
+            __reference__: ref(env),
             fields:
               Enum.map(attribute.constraints[:types], fn {name, config} ->
                 %Absinthe.Blueprint.Schema.InputValueDefinition{
                   name: name |> to_string(),
                   identifier: name,
+                  __reference__: ref(env),
                   type:
                     field_type(
                       config[:type],
-                      %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+                      attribute,
                       resource,
                       true
                     )
@@ -2313,6 +2315,7 @@ defmodule AshGraphql.Resource do
               module: schema,
               name: "#{type_name}_#{name}" |> Macro.camelize(),
               identifier: :"#{type_name}_#{name}",
+              __reference__: ref(env),
               fields: [
                 %Absinthe.Blueprint.Schema.FieldDefinition{
                   identifier: :value,
