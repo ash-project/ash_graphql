@@ -112,7 +112,9 @@ defmodule AshGraphql do
             type_definitions =
               if unquote(first?) do
                 apis = unquote(Enum.map(apis, &elem(&1, 0)))
-                embedded_types = AshGraphql.get_embedded_types(apis, unquote(schema))
+
+                embedded_types =
+                  AshGraphql.get_embedded_types(unquote(ash_resources), unquote(schema))
 
                 global_enums =
                   AshGraphql.global_enums(unquote(ash_resources), unquote(schema), __ENV__)
@@ -212,7 +214,7 @@ defmodule AshGraphql do
           [
             attr
             | type
-              |> embedded_resource()
+              |> unwrap_type()
               |> all_attributes_and_arguments(already_checked)
           ]
         else
@@ -224,34 +226,74 @@ defmodule AshGraphql do
 
   defp only_enum_types(attributes) do
     Enum.flat_map(attributes, fn attribute ->
-      case enum_type(attribute.type) do
-        nil ->
-          []
+      case unwrap_type(attribute.type) do
+        Ash.Type.Union ->
+          Enum.flat_map(attribute.constraints[:types] || [], fn {_name, config} ->
+            case enum_type(config[:type]) do
+              nil ->
+                []
+
+              type ->
+                [type]
+            end
+          end)
 
         type ->
-          [type]
+          case enum_type(type) do
+            nil ->
+              []
+
+            type ->
+              [type]
+          end
       end
     end)
   end
 
-  def get_embedded_types(apis, schema) do
-    apis
-    |> Enum.flat_map(&Ash.Api.Info.resources/1)
+  # sobelow_skip ["DOS.BinToAtom"]
+  def get_embedded_types(all_resources, schema) do
+    all_resources
     |> Enum.flat_map(fn resource ->
       resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.concat(all_arguments(resource))
-      |> Enum.concat(Ash.Resource.Info.calculations(resource))
+      |> all_attributes_and_arguments()
       |> Enum.map(&{resource, &1})
     end)
-    |> Enum.filter(fn {_resource, attribute} ->
-      attribute.type
-      |> embedded_resource()
-      |> Ash.Type.embedded_type?()
-    end)
-    |> Enum.map(fn
+    |> Enum.flat_map(fn
       {source_resource, attribute} ->
-        {source_resource, attribute, embedded_resource(attribute.type)}
+        attribute_type = unwrap_type(attribute.type)
+
+        case attribute_type do
+          Ash.Type.Union ->
+            attribute.constraints[:types]
+            |> Kernel.||([])
+            |> Enum.flat_map(fn {name, config} ->
+              if Ash.Type.embedded_type?(config[:type]) do
+                [
+                  {source_resource,
+                   %{
+                     attribute
+                     | type: config[:type],
+                       constraints: config[:constraints],
+                       name: :"#{attribute.name}_#{name}"
+                   }}
+                ]
+              else
+                []
+              end
+            end)
+
+          other ->
+            if Ash.Type.embedded_type?(other) do
+              [{source_resource, attribute}]
+            else
+              []
+            end
+        end
+    end)
+    |> Enum.map(fn {source_resource, attribute} ->
+      type = unwrap_type(attribute.type)
+      Code.ensure_compiled!(type)
+      {source_resource, attribute, type}
     end)
     |> Enum.flat_map(fn {source_resource, attribute, embedded} ->
       [{source_resource, attribute, embedded}] ++ get_nested_embedded_types(embedded)
@@ -273,14 +315,7 @@ defmodule AshGraphql do
         ] ++
           AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
       else
-        [
-          AshGraphql.Resource.embedded_type_input(
-            source_resource,
-            attribute,
-            embedded_type,
-            schema
-          )
-        ] ++ AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
+        []
       end
     end)
     |> Enum.uniq_by(& &1.identifier)
@@ -316,15 +351,15 @@ defmodule AshGraphql do
       false
   end
 
-  defp embedded_resource({:array, type}), do: embedded_resource(type)
-  defp embedded_resource(type), do: type
+  defp unwrap_type({:array, type}), do: unwrap_type(type)
+  defp unwrap_type(type), do: type
 
   defp get_nested_embedded_types(embedded_type) do
     embedded_type
     |> Ash.Resource.Info.public_attributes()
     |> Enum.filter(&Ash.Type.embedded_type?(&1.type))
     |> Enum.map(fn attribute ->
-      {attribute, embedded_resource(attribute.type)}
+      {attribute, unwrap_type(attribute.type)}
     end)
     |> Enum.flat_map(fn {attribute, embedded} ->
       [{embedded_type, attribute, embedded}] ++ get_nested_embedded_types(embedded)
