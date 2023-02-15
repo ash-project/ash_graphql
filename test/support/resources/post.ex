@@ -236,6 +236,19 @@ defmodule AshGraphql.Test.Post do
     attribute(:text2, :string)
     attribute(:visibility, :atom, constraints: [one_of: [:public, :private]])
 
+    attribute(:simple_union, :union,
+      constraints: [
+        types: [
+          int: [
+            type: :integer
+          ],
+          string: [
+            type: :string
+          ]
+        ]
+      ]
+    )
+
     create_timestamp(:created_at, private?: false)
   end
 

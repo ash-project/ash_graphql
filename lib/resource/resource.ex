@@ -305,7 +305,8 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Transformers.RequirePkeyDelimiter,
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
-    AshGraphql.Resource.Transformers.ValidateCompatibleNames
+    AshGraphql.Resource.Transformers.ValidateCompatibleNames,
+    AshGraphql.Resource.Transformers.AddUnionTypeResolvers
   ]
 
   @verifiers [
@@ -1239,11 +1240,13 @@ defmodule AshGraphql.Resource do
       List.wrap(relay_page(resource, schema)) ++
       List.wrap(keyset_page_of(resource, schema)) ++
       enum_definitions(resource, schema, __ENV__) ++
+      union_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
   def no_graphql_types(resource, schema) do
     enum_definitions(resource, schema, __ENV__, true) ++
+      union_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
@@ -1671,12 +1674,14 @@ defmodule AshGraphql.Resource do
   defp filter_attribute_types(resource, schema) do
     resource
     |> Ash.Resource.Info.public_attributes()
+    |> Enum.filter(&filterable?(&1, resource))
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
 
   defp filter_aggregate_types(resource, schema) do
     resource
     |> Ash.Resource.Info.public_aggregates()
+    |> Enum.filter(&filterable?(&1, resource))
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
 
@@ -1949,7 +1954,7 @@ defmodule AshGraphql.Resource do
     |> Ash.Resource.Info.public_calculations()
     |> Enum.flat_map(fn %{calculation: {module, _}} = calculation ->
       Code.ensure_compiled(module)
-      filterable? = :erlang.function_exported(module, :expression, 2)
+      filterable? = filterable?(calculation, resource)
       field_type = calculation_type(calculation, resource)
 
       arguments = calculation_args(calculation, resource, schema)
@@ -2035,13 +2040,7 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.reject(fn
-      {:array, _} ->
-        true
-
-      attribute ->
-        Ash.Type.embedded_type?(attribute.type)
-    end)
+    |> Enum.filter(&filterable?(&1, resource))
     |> Enum.flat_map(fn attribute ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2061,6 +2060,7 @@ defmodule AshGraphql.Resource do
     if Ash.DataLayer.data_layer_can?(resource, :aggregate_filter) do
       resource
       |> Ash.Resource.Info.public_aggregates()
+      |> Enum.filter(&filterable?(&1, resource))
       |> Enum.flat_map(fn aggregate ->
         [
           %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2083,9 +2083,7 @@ defmodule AshGraphql.Resource do
     if Ash.DataLayer.data_layer_can?(resource, :expression_calculation) do
       resource
       |> Ash.Resource.Info.public_calculations()
-      |> Enum.filter(fn %{calculation: {module, _}} ->
-        :erlang.function_exported(module, :expression, 2)
-      end)
+      |> Enum.filter(&filterable?(&1, resource))
       |> Enum.map(fn calculation ->
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: calculation.name,
@@ -2099,6 +2097,34 @@ defmodule AshGraphql.Resource do
       []
     end
   end
+
+  defp filterable?(%Ash.Resource.Aggregate{} = aggregate, resource) do
+    field_type =
+      with field when not is_nil(field) <- aggregate.field,
+           related when not is_nil(related) <-
+             Ash.Resource.Info.related(resource, aggregate.relationship_path),
+           attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, aggregate.field) do
+        attr.type
+      end
+
+    {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
+
+    filterable?(Map.put(aggregate, :type, type), resource)
+  end
+
+  defp filterable?(%{type: {:array, _}}, _), do: false
+  defp filterable?(%{filterable?: false}, _), do: false
+  defp filterable?(%{type: Ash.Type.Union}, _), do: false
+
+  defp filterable?(%Ash.Resource.Calculation{type: type, calculation: {module, _opts}}, _) do
+    !Ash.Type.embedded_type?(type) && function_exported?(module, :expression, 2)
+  end
+
+  defp filterable?(%{type: type}, _) do
+    !Ash.Type.embedded_type?(type)
+  end
+
+  defp filterable?(_, _), do: false
 
   defp relationship_filter_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
@@ -2214,9 +2240,98 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp get_auto_enums(resource) do
+  # sobelow_skip ["RCE.CodeModule", "DOS.BinToAtom", "DOS.StringToAtom"]
+  def union_definitions(resource, schema, env) do
+    if AshGraphql.Resource.Info.type(resource) do
+      resource
+      |> get_auto_unions()
+      |> Enum.flat_map(fn attribute ->
+        # uses the same logic
+        type_name = atom_enum_type(resource, attribute.name)
+
+        names_to_field_types =
+          Map.new(attribute.constraints[:types], fn {name, config} ->
+            {name,
+             field_type(config[:type], String.to_atom("#{attribute.name}_#{name}"), resource)}
+          end)
+
+        func_name = :"resolve_gql_union_#{type_name}"
+
+        {func, _} =
+          Code.eval_quoted(
+            {:&, [],
+             [
+               {:/, [],
+                [
+                  {{:., [], [resource, func_name]}, [], []},
+                  2
+                ]}
+             ]},
+            []
+          )
+
+        [
+          %Absinthe.Blueprint.Schema.UnionTypeDefinition{
+            module: schema,
+            name: type_name |> to_string() |> Macro.camelize(),
+            resolve_type: func,
+            types:
+              Enum.map(attribute.constraints[:types], fn {name, _} ->
+                %Absinthe.Blueprint.TypeReference.Name{
+                  name: "#{type_name}_#{name}" |> Macro.camelize()
+                }
+              end),
+            identifier: type_name,
+            __reference__: ref(env)
+          },
+          %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+            module: schema,
+            name: "#{type_name}_input",
+            identifier: :"#{type_name}_input",
+            fields:
+              Enum.map(attribute.constraints[:types], fn {name, config} ->
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  name: name |> to_string(),
+                  identifier: name,
+                  type:
+                    field_type(
+                      config[:type],
+                      String.to_atom("#{attribute.name}_#{name}"),
+                      resource,
+                      true
+                    )
+                }
+              end)
+          }
+        ] ++
+          Enum.map(attribute.constraints[:types], fn {name, _} ->
+            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+              module: schema,
+              name: "#{type_name}_#{name}" |> Macro.camelize(),
+              identifier: :"#{type_name}_#{name}",
+              fields: [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  identifier: :value,
+                  module: schema,
+                  name: "value",
+                  __reference__: ref(env),
+                  type: %Absinthe.Blueprint.TypeReference.NonNull{
+                    of_type: names_to_field_types[name]
+                  }
+                }
+              ]
+            }
+          end)
+      end)
+    else
+      []
+    end
+  end
+
+  @doc false
+  def get_auto_enums(resource) do
     resource
-    |> Ash.Resource.Info.public_attributes()
+    |> AshGraphql.all_attributes_and_arguments()
     |> Enum.map(fn attribute ->
       unnest(attribute)
     end)
@@ -2229,65 +2344,25 @@ defmodule AshGraphql.Resource do
 
   defp unnest(other), do: other
 
+  @doc false
+  def get_auto_unions(resource) do
+    resource
+    |> AshGraphql.all_attributes_and_arguments()
+    |> Enum.map(fn attribute ->
+      unnest(attribute)
+    end)
+    |> Enum.filter(&(&1.type == Ash.Type.Union))
+  end
+
   defp sort_values(resource) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
-    attribute_sort_values =
-      resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.reject(fn
-        %{type: {:array, _}} ->
-          true
-
-        attribute ->
-          Ash.Type.embedded_type?(attribute.type)
-      end)
-      |> Enum.map(& &1.name)
-
-    aggregate_sort_values =
-      resource
-      |> Ash.Resource.Info.public_aggregates()
-      |> Enum.reject(fn aggregate ->
-        field_type =
-          with field when not is_nil(field) <- aggregate.field,
-               related when not is_nil(related) <-
-                 Ash.Resource.Info.related(resource, aggregate.relationship_path),
-               attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, aggregate.field) do
-            attr.type
-          end
-
-        case Ash.Query.Aggregate.kind_to_type(aggregate.kind, field_type) do
-          {:ok, {:array, _}} ->
-            true
-
-          {:ok, type} ->
-            Ash.Type.embedded_type?(type)
-
-          _ ->
-            true
-        end
-      end)
-      |> Enum.map(& &1.name)
-
-    calculation_sort_values =
-      resource
-      |> Ash.Resource.Info.public_calculations()
-      |> Enum.filter(fn %{calculation: {module, _}} ->
-        Code.ensure_compiled!(module)
-        function_exported?(module, :expression, 2)
-      end)
-      |> Enum.reject(fn
-        %{type: {:array, _}} ->
-          true
-
-        attribute ->
-          Ash.Type.embedded_type?(attribute.type)
-      end)
-      |> Enum.map(& &1.name)
-
-    attribute_sort_values
-    |> Enum.concat(aggregate_sort_values)
-    |> Enum.concat(calculation_sort_values)
+    resource
+    |> Ash.Resource.Info.public_attributes()
+    |> Enum.concat(Ash.Resource.Info.public_calculations(resource))
+    |> Enum.concat(Ash.Resource.Info.public_aggregates(resource))
+    |> Enum.filter(&filterable?(&1, resource))
+    |> Enum.map(& &1.name)
     |> Enum.uniq()
     |> Enum.map(fn name ->
       {field_names[name] || name, name}
@@ -3008,7 +3083,7 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.BinToAtom"]
   defp do_field_type(type, attribute, resource, input?) do
     if Ash.Type.builtin?(type) do
-      get_specific_field_type(type, attribute, resource)
+      get_specific_field_type(type, attribute, resource, input?)
     else
       if Spark.Dsl.is?(type, Ash.Resource) && !Ash.Type.embedded_type?(type) do
         if input? do
@@ -3060,7 +3135,8 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(
          Ash.Type.Atom,
          %Ash.Resource.Attribute{constraints: constraints, name: name},
-         resource
+         resource,
+         _input?
        )
        when not is_nil(resource) do
     if is_list(constraints[:one_of]) do
@@ -3070,36 +3146,54 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp get_specific_field_type(Ash.Type.Boolean, _, _), do: :boolean
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp get_specific_field_type(
+         Ash.Type.Union,
+         %Ash.Resource.Attribute{name: name},
+         resource,
+         input?
+       )
+       when not is_nil(resource) do
+    # same logic for naming a union currently
+    base_type_name = atom_enum_type(resource, name)
 
-  defp get_specific_field_type(Ash.Type.Atom, _, _) do
+    if input? do
+      :"#{base_type_name}_input"
+    else
+      base_type_name
+    end
+  end
+
+  defp get_specific_field_type(Ash.Type.Boolean, _, _, _), do: :boolean
+
+  defp get_specific_field_type(Ash.Type.Atom, _, _, _) do
     :string
   end
 
-  defp get_specific_field_type(Ash.Type.CiString, _, _), do: :string
-  defp get_specific_field_type(Ash.Type.Date, _, _), do: :date
-  defp get_specific_field_type(Ash.Type.Decimal, _, _), do: :decimal
-  defp get_specific_field_type(Ash.Type.Integer, _, _), do: :integer
-  defp get_specific_field_type(Ash.Type.DurationName, _, _), do: :duration_name
+  defp get_specific_field_type(Ash.Type.CiString, _, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.Date, _, _, _), do: :date
+  defp get_specific_field_type(Ash.Type.Decimal, _, _, _), do: :decimal
+  defp get_specific_field_type(Ash.Type.Integer, _, _, _), do: :integer
+  defp get_specific_field_type(Ash.Type.DurationName, _, _, _), do: :duration_name
 
-  defp get_specific_field_type(Ash.Type.Map, _, _),
+  defp get_specific_field_type(Ash.Type.Map, _, _, _),
     do: Application.get_env(:ash_graphql, :json_type) || :json_string
 
-  defp get_specific_field_type(Ash.Type.String, _, _), do: :string
-  defp get_specific_field_type(Ash.Type.Term, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.String, _, _, _), do: :string
+  defp get_specific_field_type(Ash.Type.Term, _, _, _), do: :string
 
-  defp get_specific_field_type(Ash.Type.UtcDatetime, _, _),
+  defp get_specific_field_type(Ash.Type.UtcDatetime, _, _, _),
     do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
 
-  defp get_specific_field_type(Ash.Type.UtcDatetimeUsec, _, _),
+  defp get_specific_field_type(Ash.Type.UtcDatetimeUsec, _, _, _),
     do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
 
-  defp get_specific_field_type(Ash.Type.NaiveDateTime, _, _), do: :naive_datetime
+  defp get_specific_field_type(Ash.Type.NaiveDateTime, _, _, _), do: :naive_datetime
 
-  defp get_specific_field_type(Ash.Type.UUID, _, _), do: :id
-  defp get_specific_field_type(Ash.Type.Float, _, _), do: :float
+  defp get_specific_field_type(Ash.Type.UUID, _, _, _), do: :id
+  defp get_specific_field_type(Ash.Type.Float, _, _, _), do: :float
 
-  defp get_specific_field_type(type, _, _) do
+  defp get_specific_field_type(type, _, _, _) do
     raise """
     Could not determine graphql field type for #{inspect(type)}
 
@@ -3131,7 +3225,8 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp atom_enum_type(resource, attribute_name) do
+  @doc false
+  def atom_enum_type(resource, attribute_name) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
     resource

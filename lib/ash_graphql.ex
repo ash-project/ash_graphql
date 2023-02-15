@@ -196,7 +196,8 @@ defmodule AshGraphql do
     |> Enum.uniq_by(& &1.identifier)
   end
 
-  defp all_attributes_and_arguments(resource) do
+  @doc false
+  def all_attributes_and_arguments(resource) do
     resource
     |> Ash.Resource.Info.public_attributes()
     |> Enum.concat(all_arguments(resource))
@@ -280,9 +281,17 @@ defmodule AshGraphql do
   end
 
   defp all_arguments(resource) do
-    resource
-    |> Ash.Resource.Info.actions()
-    |> Enum.flat_map(& &1.arguments)
+    action_arguments =
+      resource
+      |> Ash.Resource.Info.actions()
+      |> Enum.flat_map(& &1.arguments)
+
+    calculation_arguments =
+      resource
+      |> Ash.Resource.Info.public_calculations()
+      |> Enum.flat_map(& &1.arguments)
+
+    action_arguments ++ calculation_arguments
   end
 
   defp enum_type({:array, type}), do: enum_type(type)

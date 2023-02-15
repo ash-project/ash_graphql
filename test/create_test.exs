@@ -96,6 +96,56 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "a union type can be written to" do
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text1
+            simpleUnion {
+              ... on PostSimpleUnionString {
+                value
+              }
+              ... on PostSimpleUnionInt {
+                value
+              }
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text1" => "foo",
+            "simpleUnion" => %{
+              "int" => 10
+            }
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "simpleUnion" => %{
+                     "value" => 10
+                   }
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create can load a calculation without selecting the fields the calculation needs" do
     resp =
       """

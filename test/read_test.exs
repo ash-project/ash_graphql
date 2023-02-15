@@ -38,6 +38,46 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"postScore" => [%{"text" => "foo"}]}} = result
   end
 
+  test "union fields works correctly" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "foo", published: true, simple_union: 10)
+    |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", published: true, simple_union: "foo")
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query postLibrary {
+        postLibrary {
+          text
+          simpleUnion {
+            ... on PostSimpleUnionString {
+              value
+            }
+            ... on PostSimpleUnionInt {
+              value
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok,
+            %{
+              data: %{
+                "postLibrary" => [
+                  %{"simpleUnion" => %{"value" => value1}},
+                  %{"simpleUnion" => %{"value" => value2}}
+                ]
+              }
+            }} = resp
+
+    assert Enum.sort([10, "foo"]) == Enum.sort([value1, value2])
+  end
+
   test "metadata fields are rendered" do
     AshGraphql.Test.User
     |> Ash.Changeset.for_create(:create,
