@@ -2302,7 +2302,7 @@ defmodule AshGraphql.Resource do
                   type:
                     field_type(
                       config[:type],
-                      attribute,
+                      %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
                       resource,
                       true
                     )
