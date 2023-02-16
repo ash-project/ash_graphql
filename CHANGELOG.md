@@ -5,6 +5,35 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.7](https://github.com/ash-project/ash_graphql/compare/v0.22.6...v0.22.7) (2023-02-16)
+
+
+
+
+### Bug Fixes:
+
+* properly use the nested type name for union inputs
+
+* properly traverse all embedded/enum types
+
+* generate proper type name for union inputs
+
+* infinite recursion in filterability checking
+
+* pass down attribute for union type generation
+
+* bad error message on missing actions
+
+* don't try to get metadata out of an error
+
+* ensure types are compiled when checking for enum
+
+### Improvements:
+
+* support new union types in ash
+
+* add `AshGraphql.Errors.to_errors/3`
+
 ## [v0.22.6](https://github.com/ash-project/ash_graphql/compare/v0.22.5...v0.22.6) (2023-02-09)
 
 
