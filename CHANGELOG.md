@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.8](https://github.com/ash-project/ash_graphql/compare/v0.22.7...v0.22.8) (2023-02-17)
+
+
+
+
+### Improvements:
+
+* better tagged union handling
+
 ## [v0.22.7](https://github.com/ash-project/ash_graphql/compare/v0.22.6...v0.22.7) (2023-02-16)
 
 
