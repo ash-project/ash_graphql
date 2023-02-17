@@ -3100,7 +3100,7 @@ defmodule AshGraphql.Resource do
         AshGraphql.Resource.Info.type(type)
       else
         if Ash.Type.embedded_type?(type) do
-          if input? do
+          if input? && type(type) do
             :"#{AshGraphql.Resource.Info.type(resource)}_#{attribute.name}_input"
           else
             case type(type) do

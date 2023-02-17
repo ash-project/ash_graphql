@@ -314,9 +314,9 @@ defmodule AshGraphql.Graphql.Resolver do
         Enum.find(action_arguments, &(&1.name == key)) || Enum.find(attributes, &(&1.name == key))
 
       if argument do
-        %{type: type, name: name} = argument
+        %{type: type, name: name, constraints: constraints} = argument
 
-        case handle_argument(type, value, name) do
+        case handle_argument(type, constraints, value, name) do
           {:ok, value} ->
             {:cont, {:ok, Map.put(arguments, name, value)}}
 
@@ -329,15 +329,81 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp handle_argument(type, value, name) do
-    if union_type?(type) do
-      handle_union_type(value, name)
-    else
-      {:ok, value}
+  defp handle_argument({:array, type}, constraints, value, name) when is_list(value) do
+    value
+    |> Enum.reduce_while({:ok, []}, fn value, {:ok, acc} ->
+      case handle_argument(type, constraints[:items], value, name) do
+        {:ok, value} ->
+          {:cont, {:ok, [value | acc]}}
+
+        {:error, error} ->
+          {:halt, {:error, error}}
+      end
+    end)
+    |> case do
+      {:ok, value} -> {:ok, Enum.reverse(value)}
+      {:error, error} -> {:error, error}
     end
   end
 
-  defp handle_union_type(value, name) do
+  defp handle_argument(Ash.Type.Union, constraints, value, name) do
+    handle_union_type(value, constraints, name)
+  end
+
+  defp handle_argument(type, constraints, value, name) do
+    if Ash.Type.embedded_type?(type) and is_map(value) do
+      create_action =
+        if constraints[:create_action] do
+          Ash.Resource.Info.action(type, constraints[:create_action]) ||
+            Ash.Resource.Info.primary_action(type, :create)
+        else
+          Ash.Resource.Info.primary_action(type, :create)
+        end
+
+      update_action =
+        if constraints[:update_action] do
+          Ash.Resource.Info.action(type, constraints[:update_action]) ||
+            Ash.Resource.Info.primary_action(type, :update)
+        else
+          Ash.Resource.Info.primary_action(type, :update)
+        end
+
+      attributes = Ash.Resource.Info.public_attributes(type)
+
+      fields =
+        cond do
+          create_action && update_action ->
+            create_action.arguments ++ update_action.arguments ++ attributes
+
+          update_action ->
+            update_action.arguments ++ attributes
+
+          create_action ->
+            create_action.arguments ++ attributes
+
+          true ->
+            attributes
+        end
+
+      {:ok,
+       Map.new(value, fn {key, value} ->
+         field =
+           Enum.find(fields, fn field ->
+             field.name == key
+           end)
+
+         if field do
+           {key, handle_argument(field.type, field.constraints, value, "#{name}.#{key}")}
+         else
+           {key, value}
+         end
+       end)}
+    end
+
+    {:ok, value}
+  end
+
+  defp handle_union_type(value, constraints, name) do
     value
     |> Enum.reject(fn {_key, value} ->
       is_nil(value)
@@ -346,8 +412,14 @@ defmodule AshGraphql.Graphql.Resolver do
       [] ->
         {:ok, nil}
 
-      [{_key, value}] ->
-        {:ok, value}
+      [{key, value}] ->
+        config = constraints[:types][key]
+
+        if config[:tag] && is_map(value) do
+          {:ok, Map.put_new(value, config[:tag], config[:tag_value])}
+        else
+          {:ok, value}
+        end
 
       key_vals ->
         keys = Enum.map_join(key_vals, ", ", fn {key, _} -> to_string(key) end)
@@ -356,10 +428,6 @@ defmodule AshGraphql.Graphql.Resolver do
          %{message: "Only one key can be specified, but got #{keys}", fields: ["#{name}"]}}
     end
   end
-
-  defp union_type?({:array, type}), do: union_type?(type)
-  defp union_type?(Ash.Type.Union), do: true
-  defp union_type?(_), do: false
 
   def validate_resolve_opts(resolution, pagination, opts, args) do
     with page_opts <-

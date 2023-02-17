@@ -249,6 +249,23 @@ defmodule AshGraphql.Test.Post do
       ]
     )
 
+    attribute(:embed_union, :union,
+      constraints: [
+        types: [
+          foo: [
+            type: Foo,
+            tag: :type,
+            tag_value: :foo
+          ],
+          bar: [
+            type: Bar,
+            tag: :type,
+            tag_value: :bar
+          ]
+        ]
+      ]
+    )
+
     create_timestamp(:created_at, private?: false)
   end
 

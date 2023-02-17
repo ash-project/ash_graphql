@@ -146,6 +146,64 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "an embedded union type can be written to" do
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text1
+            embedUnion {
+              ... on PostEmbedUnionFoo {
+                value {
+                  foo
+                }
+              }
+              ... on PostEmbedUnionBar {
+                value {
+                  bar
+                }
+              }
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text1" => "foo",
+            "embedUnion" => %{
+              "foo" => %{
+                "foo" => "10"
+              }
+            }
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "embedUnion" => %{
+                     "value" => %{
+                       "foo" => "10"
+                     }
+                   }
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create can load a calculation without selecting the fields the calculation needs" do
     resp =
       """
