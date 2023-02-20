@@ -2,7 +2,7 @@
 
 ## GraphQL Request and Response
 
-Following where we left off from [Getting Started with GraphQL](/docs/guides/ash_graphql/latest/tutorials/getting-started-with-graphql), we'll explore what the GraphQL
+Following where we left off from [Getting Started with GraphQL](/documentation/tutorials/getting-started-with-graphql.md), we'll explore what the GraphQL
 requests and responses look like for different queries defined with the AshGraphql DSL.
 
 ```elixir
@@ -123,9 +123,9 @@ Consider `list :list_tickets, :read` and the `actions` section:
   end
 ```
 
-The second argument to `list :list_tickets, :read` is the action that will be called when the query is
-run. In the current example, the action is `:read`, which is the generic Read action. We will need 
-to create a custom action in order to define query parameters for the `list_tickets` query.
+The second argument to `list :list_tickets, :read` is the action that will be called when the query is run.
+In the current example, the action is `:read`, which is the generic Read action.
+Let's create a custom action in order to define query parameters for the `list_tickets` query.
 
 We'll call this action `:query_tickets`:
 
@@ -173,5 +173,5 @@ query($representative_id: ID) {
 If you haven't already, please turn on the documentation tag for AshGraphql. Tags can be controlled
 at the top of the left navigation menu, under "Including Libraries:".
 
-- [Getting Started With GraphQL](/docs/guides/ash_graphql/latest/tutorials/getting-started-with-graphql)
-- [AshGraphql API](/docs/dsl/ash_graphql/latest/ashgraphql-api)
+- [Getting Started With GraphQL](/documentation/tutorials/getting-started-with-graphql.md)
+- `AshGraphql.Api`
