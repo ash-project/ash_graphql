@@ -5,6 +5,9 @@ defmodule AshGraphql.Graphql.Resolver do
   require Logger
   import AshGraphql.TraceHelpers
 
+  def resolve(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
+
   def resolve(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
