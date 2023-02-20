@@ -48,7 +48,7 @@ query($id: ID!) {
 }
 ```
 
-And the response might look like this:
+And the response would look similar to this:
 
 ```json
 {
@@ -89,7 +89,7 @@ query {
 }
 ```
 
-And the response might look something like this:
+And the response would look similar to this:
 
 ```json
 {
