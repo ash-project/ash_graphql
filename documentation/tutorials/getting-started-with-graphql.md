@@ -149,3 +149,16 @@ end
 If you started with `mix new ...` instead of `mix phx.new ...` and you want to
 still use phoenix, the fastest path that way is typically to just create a new
 phoenix application and copy your resources/config over.
+
+## What's next?
+
+Topics:
+- [GraphQL Generation](/documentation/topics/graphql-generation.md)
+
+How Tos:
+- [Authorize With GraphQL](/documentation/how_to/authorize-with-graphql.md)
+- [Handle Errors](/documentation/how_to/handle-errors.md)
+- [Use Enums with GraphQL](/documentation/how_to/use-enums-with-graphql.md)
+- [Use JSON with GraphQL](/documentation/how_to/use-json-with-graphql.md)
+
+[Monitoring](/documentation/monitoring.md)
