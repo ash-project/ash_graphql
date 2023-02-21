@@ -2338,11 +2338,12 @@ defmodule AshGraphql.Resource do
   @doc false
   def get_auto_enums(resource) do
     resource
-    |> AshGraphql.all_attributes_and_arguments()
+    |> AshGraphql.all_attributes_and_arguments([], false)
     |> Enum.map(fn attribute ->
       unnest(attribute)
     end)
     |> Enum.filter(&(&1.type == Ash.Type.Atom))
+    |> Enum.uniq_by(&{&1.name, &1.type})
   end
 
   defp unnest(%{type: {:array, type}, constraints: constraints} = attribute) do

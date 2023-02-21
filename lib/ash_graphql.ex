@@ -199,7 +199,7 @@ defmodule AshGraphql do
   end
 
   @doc false
-  def all_attributes_and_arguments(resource, already_checked \\ []) do
+  def all_attributes_and_arguments(resource, already_checked \\ [], nested? \\ true) do
     if resource in already_checked do
       []
     else
@@ -210,12 +210,12 @@ defmodule AshGraphql do
       |> Enum.concat(all_arguments(resource))
       |> Enum.concat(Ash.Resource.Info.calculations(resource))
       |> Enum.flat_map(fn %{type: type} = attr ->
-        if Ash.Type.embedded_type?(type) do
+        if Ash.Type.embedded_type?(type) && nested? do
           [
             attr
             | type
               |> unwrap_type()
-              |> all_attributes_and_arguments(already_checked)
+              |> all_attributes_and_arguments(already_checked, nested?)
           ]
         else
           [attr]
