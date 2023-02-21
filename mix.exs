@@ -110,6 +110,9 @@ defmodule AshGraphql.MixProject do
           AshGraphql.Resource.Info,
           AshGraphql.Api.Info
         ],
+        Miscellaneous: [
+          AshGraphql.Resource.Helpers
+        ],
         Internals: ~r/.*/
       ]
     ]
