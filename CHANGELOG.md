@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.10](https://github.com/ash-project/ash_graphql/compare/v0.22.9...v0.22.10) (2023-02-21)
+
+
+
+
+### Bug Fixes:
+
+* don't traverse nested types for auto enums
+
 ## [v0.22.9](https://github.com/ash-project/ash_graphql/compare/v0.22.8...v0.22.9) (2023-02-20)
 
 
