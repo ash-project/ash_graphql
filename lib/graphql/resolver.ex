@@ -1465,6 +1465,9 @@ defmodule AshGraphql.Graphql.Resolver do
     AshGraphql.Errors.to_errors(errors, context, api)
   end
 
+  def resolve_calculation(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
+
   def resolve_calculation(
         %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
         {api, resource, calculation}
@@ -1490,6 +1493,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
     do_dataloader(resolution, loader, api, batch_key, opts, parent)
   end
+
+  def resolve_assoc(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
 
   def resolve_assoc(
         %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
@@ -1529,12 +1535,18 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  def resolve_id(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
+
   def resolve_id(
         %{source: parent} = resolution,
         {_resource, field}
       ) do
     Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent, field)})
   end
+
+  def resolve_keyset(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
 
   def resolve_keyset(
         %{source: parent} = resolution,
@@ -1543,6 +1555,9 @@ defmodule AshGraphql.Graphql.Resolver do
     parent.__metadata__
     Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent.__metadata__, :keyset)})
   end
+
+  def resolve_composite_id(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
 
   def resolve_composite_id(
         %{source: parent} = resolution,
