@@ -391,7 +391,7 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def queries(api, resource, schema, as_mutations? \\ false) do
+  def queries(api, resource, action_middleware, schema, as_mutations? \\ false) do
     type = AshGraphql.Resource.Info.type(resource)
 
     if type do
@@ -406,9 +406,11 @@ defmodule AshGraphql.Resource do
         %Absinthe.Blueprint.Schema.FieldDefinition{
           arguments: args(query.type, resource, query_action, schema, query.identity),
           identifier: query.name,
-          middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
-          ],
+          middleware:
+            action_middleware ++
+              [
+                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+              ],
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(query.name),
@@ -423,7 +425,7 @@ defmodule AshGraphql.Resource do
 
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
-  def mutations(api, resource, schema) do
+  def mutations(api, resource, action_middleware, schema) do
     resource
     |> mutations()
     |> Enum.map(fn
@@ -433,14 +435,16 @@ defmodule AshGraphql.Resource do
             raise "No such action #{mutation.action} for #{inspect(resource)}"
 
         if action.soft? do
-          update_mutation(resource, schema, mutation, schema, api)
+          update_mutation(resource, schema, mutation, schema, action_middleware, api)
         else
           %Absinthe.Blueprint.Schema.FieldDefinition{
             arguments: mutation_args(mutation, resource, schema),
             identifier: mutation.name,
-            middleware: [
-              {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
-            ],
+            middleware:
+              action_middleware ++
+                [
+                  {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+                ],
             module: schema,
             name: to_string(mutation.name),
             type: String.to_atom("#{mutation.name}_result"),
@@ -478,9 +482,11 @@ defmodule AshGraphql.Resource do
         %Absinthe.Blueprint.Schema.FieldDefinition{
           arguments: args,
           identifier: mutation.name,
-          middleware: [
-            {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
-          ],
+          middleware:
+            action_middleware ++
+              [
+                {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+              ],
           module: schema,
           name: to_string(mutation.name),
           type: String.to_atom("#{mutation.name}_result"),
@@ -488,13 +494,13 @@ defmodule AshGraphql.Resource do
         }
 
       mutation ->
-        update_mutation(resource, schema, mutation, schema, api)
+        update_mutation(resource, schema, mutation, schema, action_middleware, api)
     end)
-    |> Enum.concat(queries(api, resource, schema, true))
+    |> Enum.concat(queries(api, resource, action_middleware, schema, true))
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp update_mutation(resource, schema, mutation, schema, api) do
+  defp update_mutation(resource, schema, mutation, schema, action_middleware, api) do
     action =
       Ash.Resource.Info.action(resource, mutation.action) ||
         raise "No such action #{mutation.action} for #{inspect(resource)}"
@@ -526,9 +532,11 @@ defmodule AshGraphql.Resource do
     %Absinthe.Blueprint.Schema.FieldDefinition{
       arguments: args,
       identifier: mutation.name,
-      middleware: [
-        {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
-      ],
+      middleware:
+        action_middleware ++
+          [
+            {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+          ],
       module: schema,
       name: to_string(mutation.name),
       type: String.to_atom("#{mutation.name}_result"),

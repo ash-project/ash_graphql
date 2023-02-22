@@ -32,7 +32,12 @@ defmodule AshGraphql do
   end
 
   defmacro __using__(opts) do
-    quote bind_quoted: [apis: opts[:apis], api: opts[:api]], generated: true do
+    quote bind_quoted: [
+            apis: opts[:apis],
+            api: opts[:api],
+            action_middleware: opts[:action_middleware] || []
+          ],
+          generated: true do
       require Ash.Api.Info
 
       import Absinthe.Schema,
@@ -94,17 +99,18 @@ defmodule AshGraphql do
           @dialyzer {:nowarn_function, {:run, 2}}
           def run(blueprint, _opts) do
             api = unquote(api)
+            action_middleware = unquote(action_middleware)
 
             blueprint_with_queries =
               api
-              |> AshGraphql.Api.queries(unquote(resources), __MODULE__)
+              |> AshGraphql.Api.queries(unquote(resources), action_middleware, __MODULE__)
               |> Enum.reduce(blueprint, fn query, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootQueryType", query)
               end)
 
             blueprint_with_mutations =
               api
-              |> AshGraphql.Api.mutations(unquote(resources), __MODULE__)
+              |> AshGraphql.Api.mutations(unquote(resources), action_middleware, __MODULE__)
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
               end)

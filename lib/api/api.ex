@@ -85,17 +85,17 @@ defmodule AshGraphql.Api do
   defdelegate debug?(api), to: AshGraphql.Api.Info
 
   @doc false
-  def queries(api, resources, schema) do
-    Enum.flat_map(resources, &AshGraphql.Resource.queries(api, &1, schema))
+  def queries(api, resources, action_middleware, schema) do
+    Enum.flat_map(resources, &AshGraphql.Resource.queries(api, &1, action_middleware, schema))
   end
 
   @doc false
-  def mutations(api, resources, schema) do
+  def mutations(api, resources, action_middleware, schema) do
     resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
     end)
-    |> Enum.flat_map(&AshGraphql.Resource.mutations(api, &1, schema))
+    |> Enum.flat_map(&AshGraphql.Resource.mutations(api, &1, action_middleware, schema))
   end
 
   @doc false
