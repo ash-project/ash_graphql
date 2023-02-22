@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.11](https://github.com/ash-project/ash_graphql/compare/v0.22.10...v0.22.11) (2023-02-22)
+
+
+
+
+### Bug Fixes:
+
+* never resolve an already resolved field
+
+* don't run mutations when they've been resolved
+
+### Improvements:
+
+* add action_middleware option
+
 ## [v0.22.10](https://github.com/ash-project/ash_graphql/compare/v0.22.9...v0.22.10) (2023-02-21)
 
 
