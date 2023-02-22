@@ -544,11 +544,12 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp mutation_args(%{identity: false}, _resource, _schema) do
-    []
+  defp mutation_args(%{identity: false} = mutation, resource, schema) do
+    mutation_read_args(mutation, resource, schema)
   end
 
-  defp mutation_args(%{identity: identity}, resource, _schema) when not is_nil(identity) do
+  defp mutation_args(%{identity: identity} = mutation, resource, schema)
+       when not is_nil(identity) do
     resource
     |> Ash.Resource.Info.identities()
     |> Enum.find(&(&1.name == identity))
@@ -566,9 +567,10 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
     end)
+    |> Enum.concat(mutation_read_args(mutation, resource, schema))
   end
 
-  defp mutation_args(_, _, schema) do
+  defp mutation_args(mutation, resource, schema) do
     [
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         identifier: :id,
@@ -578,7 +580,39 @@ defmodule AshGraphql.Resource do
         type: :id,
         __reference__: ref(__ENV__)
       }
+      | mutation_read_args(mutation, resource, schema)
     ]
+  end
+
+  defp mutation_read_args(%{read_action: read_action}, resource, schema) do
+    read_action =
+      cond do
+        is_nil(read_action) ->
+          Ash.Resource.Info.primary_action!(resource, :read)
+
+        is_atom(read_action) ->
+          Ash.Resource.Info.action(resource, read_action)
+
+        true ->
+          read_action
+      end
+
+    read_action.arguments
+    |> Enum.reject(& &1.private?)
+    |> Enum.map(fn argument ->
+      type =
+        argument.type
+        |> field_type(argument, resource, true)
+        |> maybe_wrap_non_null(argument_required?(argument))
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: argument.name,
+        module: schema,
+        name: to_string(argument.name),
+        type: type,
+        __reference__: ref(__ENV__)
+      }
+    end)
   end
 
   @doc false

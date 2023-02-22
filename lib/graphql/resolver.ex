@@ -301,11 +301,17 @@ defmodule AshGraphql.Graphql.Resolver do
       end
   end
 
+  defp handle_arguments(_resource, nil, argument_values) do
+    {:ok, argument_values}
+  end
+
+  defp handle_arguments(resource, action, argument_values) when is_atom(action) do
+    action = Ash.Resource.Info.action(resource, action)
+    handle_arguments(resource, action, argument_values)
+  end
+
   defp handle_arguments(resource, action, argument_values) do
-    action_arguments =
-      resource
-      |> Ash.Resource.Info.action(action)
-      |> Map.get(:arguments)
+    action_arguments = action.arguments
 
     attributes =
       resource
@@ -803,8 +809,15 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     input = arguments[:input] || %{}
 
-    case handle_arguments(resource, action, input) do
-      {:ok, input} ->
+    args_result =
+      with {:ok, input} <- handle_arguments(resource, action, input),
+           {:ok, read_action_input} <-
+             handle_arguments(Map.delete(arguments, :input), read_action, input) do
+        {:ok, input, read_action_input}
+      end
+
+    case args_result do
+      {:ok, input, read_action_input} ->
         metadata = %{
           api: api,
           resource: resource,
@@ -830,7 +843,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.do_filter(filter)
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-              |> set_query_arguments(action, arguments)
+              |> set_query_arguments(action, read_action_input)
               |> api.read_one!(
                 action: read_action,
                 verbose?: AshGraphql.Api.Info.debug?(api),
@@ -936,8 +949,15 @@ defmodule AshGraphql.Graphql.Resolver do
       ) do
     input = arguments[:input] || %{}
 
-    case handle_arguments(resource, action, input) do
-      {:ok, input} ->
+    args_result =
+      with {:ok, input} <- handle_arguments(resource, action, input),
+           {:ok, read_action_input} <-
+             handle_arguments(Map.delete(arguments, :input), read_action, input) do
+        {:ok, input, read_action_input}
+      end
+
+    case args_result do
+      {:ok, input, read_action_input} ->
         metadata = %{
           api: api,
           resource: resource,
@@ -963,7 +983,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.do_filter(filter)
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
-              |> set_query_arguments(action, arguments)
+              |> set_query_arguments(action, read_action_input)
               |> api.read_one!(
                 action: read_action,
                 verbose?: AshGraphql.Api.Info.debug?(api),
