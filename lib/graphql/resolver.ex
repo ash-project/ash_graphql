@@ -678,6 +678,9 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  def mutate(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
+
   def mutate(
         %{arguments: arguments, context: context} = resolution,
         {api, resource,
