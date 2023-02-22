@@ -844,21 +844,21 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
               |> set_query_arguments(action, read_action_input)
-              |> api.read_one!(
+              |> api.read_one(
                 action: read_action,
                 verbose?: AshGraphql.Api.Info.debug?(api),
                 actor: Map.get(context, :actor),
                 authorize?: AshGraphql.Api.Info.authorize?(api)
               )
               |> case do
-                nil ->
+                {:ok, nil} ->
                   result = not_found(filter, resource, context, api)
 
                   resolution
                   |> Absinthe.Resolution.put_result(result)
                   |> add_root_errors(api, result)
 
-                initial ->
+                {:ok, initial} ->
                   opts = [
                     actor: Map.get(context, :actor),
                     action: action,
@@ -897,6 +897,12 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
                   |> add_root_errors(api, modify_args)
                   |> modify_resolution(modify, modify_args)
+
+                {:error, error} ->
+                  Absinthe.Resolution.put_result(
+                    resolution,
+                    to_resolution({:error, error}, context, api)
+                  )
               end
 
             {:error, error} ->
@@ -984,21 +990,21 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
               |> set_query_arguments(action, read_action_input)
-              |> api.read_one!(
+              |> api.read_one(
                 action: read_action,
                 verbose?: AshGraphql.Api.Info.debug?(api),
                 actor: Map.get(context, :actor),
                 authorize?: AshGraphql.Api.Info.authorize?(api)
               )
               |> case do
-                nil ->
+                {:ok, nil} ->
                   result = not_found(filter, resource, context, api)
 
                   resolution
                   |> Absinthe.Resolution.put_result(result)
                   |> add_root_errors(api, result)
 
-                initial ->
+                {:ok, initial} ->
                   opts = destroy_opts(api, context, action)
 
                   changeset =
@@ -1021,6 +1027,12 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
                   |> add_root_errors(api, result)
                   |> modify_resolution(modify, modify_args)
+
+                {:error, error} ->
+                  Absinthe.Resolution.put_result(
+                    resolution,
+                    to_resolution({:error, error}, context, api)
+                  )
               end
 
             {:error, error} ->
