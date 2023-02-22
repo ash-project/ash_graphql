@@ -812,7 +812,7 @@ defmodule AshGraphql.Graphql.Resolver do
     args_result =
       with {:ok, input} <- handle_arguments(resource, action, input),
            {:ok, read_action_input} <-
-             handle_arguments(Map.delete(arguments, :input), read_action, input) do
+             handle_arguments(resource, read_action, Map.delete(arguments, :input)) do
         {:ok, input, read_action_input}
       end
 
@@ -952,7 +952,7 @@ defmodule AshGraphql.Graphql.Resolver do
     args_result =
       with {:ok, input} <- handle_arguments(resource, action, input),
            {:ok, read_action_input} <-
-             handle_arguments(Map.delete(arguments, :input), read_action, input) do
+             handle_arguments(resource, read_action, Map.delete(arguments, :input)) do
         {:ok, input, read_action_input}
       end
 
