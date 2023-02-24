@@ -87,6 +87,7 @@ defmodule AshGraphql.Test.Post do
       managed_relationship :with_comments, :comments
 
       managed_relationship :with_comments_and_tags, :comments,
+        lookup_with_primary_key?: true,
         type_name: :create_post_comment_with_tag
 
       managed_relationship :with_comments_and_tags, :tags,
