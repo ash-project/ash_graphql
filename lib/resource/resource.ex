@@ -2872,14 +2872,16 @@ defmodule AshGraphql.Resource do
         attribute = Ash.Resource.Info.attribute(resource, field)
         field_type = maybe_wrap_non_null(:id, require?)
 
-        [%Absinthe.Blueprint.Schema.FieldDefinition{
-          description: attribute.description,
-          identifier: field,
-          module: schema,
-          name: to_string(attribute.name),
-          type: field_type,
-          __reference__: ref(__ENV__)
-        }]
+        [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: attribute.description,
+            identifier: field,
+            module: schema,
+            name: to_string(attribute.name),
+            type: field_type,
+            __reference__: ref(__ENV__)
+          }
+        ]
 
       fields ->
         for field <- fields do
