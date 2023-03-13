@@ -217,6 +217,8 @@ defmodule AshGraphql do
       |> Enum.concat(Ash.Resource.Info.calculations(resource))
       |> Enum.flat_map(fn %{type: type} = attr ->
         if Ash.Type.embedded_type?(type) && nested? do
+          type = Ash.Type.NewType.subtype_of(type)
+
           [
             attr
             | type
@@ -230,8 +232,24 @@ defmodule AshGraphql do
     end
   end
 
+  def get_embed(type) do
+    if Ash.Type.NewType.new_type?(type) do
+      Ash.Type.NewType.subtype_of(type)
+    else
+      type
+    end
+  end
+
   defp only_enum_types(attributes) do
     Enum.flat_map(attributes, fn attribute ->
+      attribute = %{
+        type:
+          attribute.type
+          |> unwrap_type()
+          |> Ash.Type.NewType.subtype_of(),
+        constraints: Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+      }
+
       case unwrap_type(attribute.type) do
         Ash.Type.Union ->
           Enum.flat_map(attribute.constraints[:types] || [], fn {_name, config} ->
@@ -266,6 +284,15 @@ defmodule AshGraphql do
     end)
     |> Enum.flat_map(fn
       {source_resource, attribute} ->
+        attribute = %{
+          attribute
+          | type:
+              attribute.type
+              |> unwrap_type()
+              |> Ash.Type.NewType.subtype_of(),
+            constraints: Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+        }
+
         attribute_type = unwrap_type(attribute.type)
 
         case attribute_type do
@@ -344,8 +371,8 @@ defmodule AshGraphql do
   defp enum_type({:array, type}), do: enum_type(type)
 
   defp enum_type(type) do
-    if is_atom(type) && ensure_compiled?(type) && :erlang.function_exported(type, :values, 0) &&
-         :erlang.function_exported(type, :graphql_type, 0) do
+    if is_atom(type) && ensure_compiled?(type) && function_exported?(type, :values, 0) &&
+         (function_exported?(type, :graphql_type, 0) || function_exported?(type, :graphql_type, 1)) do
       type
     end
   end

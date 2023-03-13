@@ -204,6 +204,65 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "an embedded union new type can be written to" do
+    resp =
+      """
+      mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+        simpleCreatePost(input: $input) {
+          result{
+            text1
+            embedUnionNewType {
+              ... on FooBarFoo {
+                value {
+                  foo
+                }
+              }
+              ... on FooBarBar {
+                value {
+                  bar
+                }
+              }
+            }
+          }
+          errors{
+            message
+            fields
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text1" => "foo",
+            "embedUnionNewType" => %{
+              "foo" => %{
+                "foo" => "10"
+              }
+            }
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "embedUnionNewType" => %{
+                     "value" => %{
+                       "foo" => "10"
+                     }
+                   }
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create can load a calculation without selecting the fields the calculation needs" do
     resp =
       """
@@ -651,6 +710,115 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "createPost" => %{
                  "result" => %{"text" => "foobar", "statusEnum" => "OPEN"}
+               }
+             }
+           } = result
+  end
+
+  test "enum newtypes can be written to" do
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            text
+            enumNewType
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "confirmation" => "foobar",
+            "enumNewType" => "BIZ"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPost" => %{
+                 "result" => %{"text" => "foobar", "enumNewType" => "BIZ"}
+               }
+             }
+           } = result
+  end
+
+  test "string newtypes can be written to" do
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            stringNewType
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "stringNewType" => "hello world"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPost" => %{
+                 "result" => %{"stringNewType" => "hello world"}
+               }
+             }
+           } = result
+  end
+
+  test "string newtypes use their new constraints" do
+    resp =
+      """
+      mutation CreatePost($input: CreatePostInput) {
+        createPost(input: $input) {
+          result{
+            stringNewType
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "stringNewType" => "goodbye world"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPost" => %{
+                 "result" => nil,
+                 "errors" => [%{"message" => "must match the pattern ~r/hello/"}]
                }
              }
            } = result

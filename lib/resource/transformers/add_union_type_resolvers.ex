@@ -8,15 +8,26 @@ defmodule AshGraphql.Resource.Transformers.AddUnionTypeResolvers do
   def transform(dsl_state) do
     dsl_state
     |> AshGraphql.Resource.get_auto_unions()
+    |> Enum.map(fn attribute ->
+      if Ash.Type.NewType.new_type?(attribute.type) do
+        cond do
+          function_exported?(attribute.type, :graphql_type, 0) ->
+            attribute.type.graphql_type()
+
+          function_exported?(attribute.type, :graphql_type, 1) ->
+            attribute.type.graphql_type(attribute.constraints)
+
+          true ->
+            AshGraphql.Resource.atom_enum_type(dsl_state, attribute.name)
+        end
+      else
+        AshGraphql.Resource.atom_enum_type(dsl_state, attribute.name)
+      end
+    end)
+    |> Enum.uniq()
     |> Enum.reduce(
       {:ok, dsl_state},
-      fn attribute, {:ok, dsl_state} ->
-        type_name =
-          AshGraphql.Resource.atom_enum_type(
-            dsl_state,
-            attribute.name
-          )
-
+      fn type_name, {:ok, dsl_state} ->
         {:ok,
          Spark.Dsl.Transformer.eval(
            dsl_state,

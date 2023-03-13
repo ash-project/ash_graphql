@@ -360,56 +360,66 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp handle_argument(type, constraints, value, name) do
-    if Ash.Type.embedded_type?(type) and is_map(value) do
-      create_action =
-        if constraints[:create_action] do
-          Ash.Resource.Info.action(type, constraints[:create_action]) ||
+    cond do
+      Ash.Type.NewType.new_type?(type) ->
+        handle_argument(
+          Ash.Type.NewType.subtype_of(type),
+          Ash.Type.NewType.constraints(type, constraints),
+          value,
+          name
+        )
+
+      Ash.Type.embedded_type?(type) and is_map(value) ->
+        create_action =
+          if constraints[:create_action] do
+            Ash.Resource.Info.action(type, constraints[:create_action]) ||
+              Ash.Resource.Info.primary_action(type, :create)
+          else
             Ash.Resource.Info.primary_action(type, :create)
-        else
-          Ash.Resource.Info.primary_action(type, :create)
-        end
+          end
 
-      update_action =
-        if constraints[:update_action] do
-          Ash.Resource.Info.action(type, constraints[:update_action]) ||
+        update_action =
+          if constraints[:update_action] do
+            Ash.Resource.Info.action(type, constraints[:update_action]) ||
+              Ash.Resource.Info.primary_action(type, :update)
+          else
             Ash.Resource.Info.primary_action(type, :update)
-        else
-          Ash.Resource.Info.primary_action(type, :update)
-        end
+          end
 
-      attributes = Ash.Resource.Info.public_attributes(type)
+        attributes = Ash.Resource.Info.public_attributes(type)
 
-      fields =
-        cond do
-          create_action && update_action ->
-            create_action.arguments ++ update_action.arguments ++ attributes
+        fields =
+          cond do
+            create_action && update_action ->
+              create_action.arguments ++ update_action.arguments ++ attributes
 
-          update_action ->
-            update_action.arguments ++ attributes
+            update_action ->
+              update_action.arguments ++ attributes
 
-          create_action ->
-            create_action.arguments ++ attributes
+            create_action ->
+              create_action.arguments ++ attributes
 
-          true ->
-            attributes
-        end
+            true ->
+              attributes
+          end
 
-      {:ok,
-       Map.new(value, fn {key, value} ->
-         field =
-           Enum.find(fields, fn field ->
-             field.name == key
-           end)
+        {:ok,
+         Map.new(value, fn {key, value} ->
+           field =
+             Enum.find(fields, fn field ->
+               field.name == key
+             end)
 
-         if field do
-           {key, handle_argument(field.type, field.constraints, value, "#{name}.#{key}")}
-         else
-           {key, value}
-         end
-       end)}
+           if field do
+             {key, handle_argument(field.type, field.constraints, value, "#{name}.#{key}")}
+           else
+             {key, value}
+           end
+         end)}
+
+      true ->
+        {:ok, value}
     end
-
-    {:ok, value}
   end
 
   defp handle_union_type(value, constraints, name) do

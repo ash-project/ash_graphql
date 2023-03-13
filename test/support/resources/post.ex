@@ -267,6 +267,10 @@ defmodule AshGraphql.Test.Post do
       ]
     )
 
+    attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType)
+    attribute(:enum_new_type, AshGraphql.Types.EnumNewType)
+    attribute(:string_new_type, AshGraphql.Types.StringNewType)
+
     create_timestamp(:created_at, private?: false)
   end
 
