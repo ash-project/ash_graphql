@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.12](https://github.com/ash-project/ash_graphql/compare/v0.22.11...v0.22.12) (2023-03-13)
+
+
+
+
+### Bug Fixes:
+
+* Typo in name causing Error (#60)
+
+* always return a list from pkey_fields (#59)
+
+* don't raise on errors reading underlying record
+
+* typo on `handle_arguments`
+
+### Improvements:
+
+* add support for `Ash.Type.NewType`
+
+* build inputs for the underlying get action
+
 ## [v0.22.11](https://github.com/ash-project/ash_graphql/compare/v0.22.10...v0.22.11) (2023-02-22)
 
 
