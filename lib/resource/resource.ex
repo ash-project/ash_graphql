@@ -2244,23 +2244,25 @@ defmodule AshGraphql.Resource do
           constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
 
           type_name =
-            if Ash.Type.NewType.new_type?(attribute.type) do
-              cond do
-                function_exported?(attribute.type, :graphql_type, 0) ->
-                  attribute.type.graphql_type()
+            if constraints[:one_of] do
+              if Ash.Type.NewType.new_type?(attribute.type) do
+                cond do
+                  function_exported?(attribute.type, :graphql_type, 0) ->
+                    attribute.type.graphql_type()
 
-                function_exported?(attribute.type, :graphql_type, 1) ->
-                  attribute.type.graphql_type(attribute.constraints)
+                  function_exported?(attribute.type, :graphql_type, 1) ->
+                    attribute.type.graphql_type(attribute.constraints)
 
-                true ->
-                  atom_enum_type(resource, attribute.name)
+                  true ->
+                    atom_enum_type(resource, attribute.name)
+                end
+              else
+                atom_enum_type(resource, attribute.name)
               end
-            else
-              atom_enum_type(resource, attribute.name)
             end
 
           additional_type_name =
-            if Ash.Type.NewType.new_type?(attribute.type) do
+            if constraints[:one_of] && Ash.Type.NewType.new_type?(attribute.type) do
               cond do
                 function_exported?(attribute.type, :graphql_input_type, 0) ->
                   attribute.type.graphql_input_type()
