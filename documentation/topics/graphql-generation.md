@@ -172,7 +172,9 @@ query($representative_id: ID) {
 
 ## Mutations and Enums
 
-Let's say you have a Resource that defaults an enum-like attribute:
+Now, let's look at how to create a ticket by using a GraphQL mutation.
+
+Let's say you have a Resource that defines an enum-like attribute:
 
 ```elixir
 defmodule Helpdesk.Support.Ticket do
@@ -191,7 +193,6 @@ defmodule Helpdesk.Support.Ticket do
   end
 
   actions do
-    # Add a set of simple actions. You'll customize these later.
     defaults [:create, :read, :update, :destroy]
   end
 
