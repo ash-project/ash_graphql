@@ -1,12 +1,12 @@
 # GraphQL Query Generation
 
-## GraphQL Request and Response
+## Fetch Data by ID
 
 Following where we left off from [Getting Started with GraphQL](/documentation/tutorials/getting-started-with-graphql.md), we'll explore what the GraphQL
 requests and responses look like for different queries defined with the AshGraphql DSL.
 
 ```elixir
-defmodule Helpdesk.Support.Ticket. do
+defmodule Helpdesk.Support.Ticket do
   use Ash.Resource,
     ...,
     extensions: [
@@ -41,7 +41,7 @@ For the `get_ticket` query defined above, the corresponding GraphQL would look l
 
 ```graphql
 query($id: ID!) {
-  get_ticket(id: $id) {
+  getTicket(id: $id) {
     id
     subject
   }
@@ -53,7 +53,7 @@ And the response would look similar to this:
 ```json
 {
   "data": {
-    "get_ticket": {
+    "getTicket": {
       "id": "",
       "subject": ""
     }
@@ -82,7 +82,7 @@ The request would look something like this:
 
 ```graphql
 query {
-  list_tickets {
+  listTickets {
     id
     subject
   }
@@ -94,7 +94,7 @@ And the response would look similar to this:
 ```json
 {
   "data": {
-    "list_tickets": [
+    "listTickets": [
       {
         "id": "",
         "subject": ""
@@ -104,7 +104,9 @@ And the response would look similar to this:
 }
 ```
 
-Now, let's say we want to add query parameters to `list_tickets`. How do we do that?
+## Filter Data With Arguments
+
+Now, let's say we want to add query parameters to `listTickets`. How do we do that?
 Consider `list :list_tickets, :read` and the `actions` section:
 
 ```elixir
@@ -125,7 +127,7 @@ Consider `list :list_tickets, :read` and the `actions` section:
 
 The second argument to `list :list_tickets, :read` is the action that will be called when the query is run.
 In the current example, the action is `:read`, which is the generic Read action.
-Let's create a custom action in order to define query parameters for the `list_tickets` query.
+Let's create a custom action in order to define query parameters for the `listTickets` query.
 
 We'll call this action `:query_tickets`:
 
@@ -167,6 +169,109 @@ query($representative_id: ID) {
   }
 }
 ```
+
+## Mutations and Enums
+
+Now, let's look at how to create a ticket by using a GraphQL mutation.
+
+Let's say you have a Resource that defines an enum-like attribute:
+
+```elixir
+defmodule Helpdesk.Support.Ticket do
+  use Ash.Resource,
+    ...,
+    extensions: [
+      AshGraphql.Resource
+    ]
+
+
+  attributes do
+    uuid_primary_key :id
+    attribute :subject, :string
+    attribute :status, :atom, constraints: [one_of: [:open, :closed]]
+  end
+
+  actions do
+    defaults [:create, :read, :update, :destroy]
+  end
+
+  graphql do
+    type :ticket
+
+    queries do
+      get :get_ticket, :read 
+    end
+    
+    mutations do
+      create :create_ticket, :create
+    end
+  end
+end
+```
+
+Above, the following changes have been added:
+
+1. In the `attributes` section, the `:status` attribute has been added.
+2. In the `actions` section, the `:create` action has been added.
+3. The `:create_ticket` mutation has been defined in the new `graphql.mutations` section.
+
+The `:status` attribute is an enum that is constrained to the values `[:open, :closed]`.
+When used in conjunction with AshGraphql, a GraphQL enum type called `TicketStatus` will be generated for this attribute.
+The possible GraphQL values for `TicketStatus` are `OPEN` and `CLOSED`.
+See [Use Enums with GraphQL](/documentation/guides/use-enums-with-graphql.md) for more information.
+
+We can now create a ticket with the `createTicket` mutation:
+
+```graphql
+mutation($input: CreateTicketInput!) {
+  createTicket(input: $input) {
+    result {
+      id
+      subject
+      status
+    }
+  }
+}
+```
+
+Notice that the resulting ticket data is wrapped in a `result` object.
+
+If we were to run this mutation in a test, it would look something like this:
+
+```elixir
+input = %{
+  subject: "My Ticket",
+  status: "OPEN"
+}
+
+resp_body =
+  post(conn, "/api/graphql", %{
+    query: query,
+    variables: %{input: input}
+  })
+  |> json_response(200)
+```
+
+Notice that the `status` attribute is set to `"OPEN"` and not `"open"`. It is important that the value of the `status` be uppercase.
+This is required by GraphQL enums. AshGraphql will automatically convert the value to the correct case.
+
+The response will look something like this:
+  
+  ```json
+  {
+    "data": {
+      "createTicket": {
+        "result": {
+          "id": "b771e433-0979-4d07-a280-4d12373849aa",
+          "subject": "My Ticket",
+          "status": "OPEN"
+        }
+      }
+    }
+  }
+  ```
+
+Again, AshGraphql will automatically convert the `status` value from `:open` to `"OPEN"`.
 
 ## More GraphQL Docs
 
