@@ -1,6 +1,6 @@
 # GraphQL Query Generation
 
-## GraphQL Request and Response
+## Fetch Data by ID
 
 Following where we left off from [Getting Started with GraphQL](/documentation/tutorials/getting-started-with-graphql.md), we'll explore what the GraphQL
 requests and responses look like for different queries defined with the AshGraphql DSL.
@@ -41,7 +41,7 @@ For the `get_ticket` query defined above, the corresponding GraphQL would look l
 
 ```graphql
 query($id: ID!) {
-  get_ticket(id: $id) {
+  getTicket(id: $id) {
     id
     subject
   }
@@ -53,7 +53,7 @@ And the response would look similar to this:
 ```json
 {
   "data": {
-    "get_ticket": {
+    "getTicket": {
       "id": "",
       "subject": ""
     }
@@ -82,7 +82,7 @@ The request would look something like this:
 
 ```graphql
 query {
-  list_tickets {
+  listTickets {
     id
     subject
   }
@@ -94,7 +94,7 @@ And the response would look similar to this:
 ```json
 {
   "data": {
-    "list_tickets": [
+    "listTickets": [
       {
         "id": "",
         "subject": ""
@@ -104,7 +104,9 @@ And the response would look similar to this:
 }
 ```
 
-Now, let's say we want to add query parameters to `list_tickets`. How do we do that?
+## Filter Data With Arguments
+
+Now, let's say we want to add query parameters to `listTickets`. How do we do that?
 Consider `list :list_tickets, :read` and the `actions` section:
 
 ```elixir
@@ -125,7 +127,7 @@ Consider `list :list_tickets, :read` and the `actions` section:
 
 The second argument to `list :list_tickets, :read` is the action that will be called when the query is run.
 In the current example, the action is `:read`, which is the generic Read action.
-Let's create a custom action in order to define query parameters for the `list_tickets` query.
+Let's create a custom action in order to define query parameters for the `listTickets` query.
 
 We'll call this action `:query_tickets`:
 
