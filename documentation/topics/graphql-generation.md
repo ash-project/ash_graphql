@@ -6,7 +6,7 @@ Following where we left off from [Getting Started with GraphQL](/documentation/t
 requests and responses look like for different queries defined with the AshGraphql DSL.
 
 ```elixir
-defmodule Helpdesk.Support.Ticket. do
+defmodule Helpdesk.Support.Ticket do
   use Ash.Resource,
     ...,
     extensions: [
@@ -169,6 +169,123 @@ query($representative_id: ID) {
   }
 }
 ```
+
+## Mutations and Enums
+
+Let's say you have a Resource that defaults an enum-like attribute:
+
+```elixir
+defmodule Helpdesk.Support.Ticket do
+  use Ash.Resource,
+    ...,
+    extensions: [
+      AshGraphql.Resource
+    ]
+
+  alias Helpdesk.Support.TicketStatus
+
+  attributes do
+    uuid_primary_key :id
+    attribute :subject, :string
+    attribute :status, TicketStatus
+  end
+
+  actions do
+    # Add a set of simple actions. You'll customize these later.
+    defaults [:create, :read, :update, :destroy]
+  end
+
+  graphql do
+    type :ticket
+
+    queries do
+      get :get_ticket, :read 
+    end
+    
+    mutations do
+      create :create_ticket, :create
+    end
+  end
+end
+```
+
+Above, the following changes have been added:
+
+1. In the `attributes` section, the `:status` attribute has been added. This is an enum whose type
+   is defined in `TicketStatus`. We'll look at that module in a moment.
+2. In the `actions` section, the `:create` action has been added.
+3. The `:create_ticket` mutation has been defined in the `graphql` section.
+
+Here's the `TicketStatus` module:
+
+```elixir
+defmodule Helpdesk.Support.TicketStatus do
+  use Ash.Type.Enum,
+    values: [:open, :closed]
+
+  def graphql_type, do: :ticket_status
+end
+```
+
+`TicketStatus` defines the Ash enum type and the corresponding GraphQL enum type. Without AshGraphql,
+the ticket `:status` attribute could be defined more simply as:
+  
+```elixir
+attribute :status, one_of: [:open, :closed]
+```
+
+We can now create a ticket with the `createTicket` mutation:
+
+```graphql
+mutation($input: CreateTicketInput!) {
+  createTicket(input: $input) {
+    result {
+      id
+      subject
+      status
+    }
+  }
+}
+```
+
+Notice that the resulting ticket data is wrapped in a `result` object.
+
+If we were to run this mutation in a test, it would look something like this:
+
+```elixir
+input = %{
+  subject: "My Ticket",
+  status: "OPEN"
+}
+
+resp_body =
+  post(conn, "/api/graphql", %{
+    query: query,
+    variables: %{input: input}
+  })
+  |> json_response(200)
+```
+
+Notice that the `status` attribute is set to `"OPEN"` and not `"open"`. It is important that the value of the `status` be uppercase.
+This is required by GraphQL enums. AshGraphql will automatically convert the value to the correct case.
+
+The response will look something like this:
+  
+  ```json
+  {
+    "data": {
+      "createTicket": {
+        "result": {
+          "id": "b771e433-0979-4d07-a280-4d12373849aa",
+          "subject": "My Ticket",
+          "status": "OPEN"
+        }
+      }
+    }
+  }
+  ```
+
+Again, AshGraphql will automatically convert the `status` value from `:open` to `"OPEN"`.
 
 ## More GraphQL Docs
 
