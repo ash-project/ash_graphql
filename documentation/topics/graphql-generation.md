@@ -184,12 +184,11 @@ defmodule Helpdesk.Support.Ticket do
       AshGraphql.Resource
     ]
 
-  alias Helpdesk.Support.TicketStatus
 
   attributes do
     uuid_primary_key :id
     attribute :subject, :string
-    attribute :status, TicketStatus
+    attribute :status, :atom, constraints: [one_of: [:open, :closed]]
   end
 
   actions do
@@ -212,28 +211,14 @@ end
 
 Above, the following changes have been added:
 
-1. In the `attributes` section, the `:status` attribute has been added. This is an enum whose type
-   is defined in `TicketStatus`. We'll look at that module in a moment.
+1. In the `attributes` section, the `:status` attribute has been added.
 2. In the `actions` section, the `:create` action has been added.
-3. The `:create_ticket` mutation has been defined in the `graphql` section.
+3. The `:create_ticket` mutation has been defined in the new `graphql.mutations` section.
 
-Here's the `TicketStatus` module:
-
-```elixir
-defmodule Helpdesk.Support.TicketStatus do
-  use Ash.Type.Enum,
-    values: [:open, :closed]
-
-  def graphql_type, do: :ticket_status
-end
-```
-
-`TicketStatus` defines the Ash enum type and the corresponding GraphQL enum type. Without AshGraphql,
-the ticket `:status` attribute could be defined more simply as:
-  
-```elixir
-attribute :status, one_of: [:open, :closed]
-```
+The `:status` attribute is an enum that is constrained to the values `[:open, :closed]`.
+When used in conjunction with AshGraphql, a GraphQL enum type called `TicketStatus` will be generated for this attribute.
+The possible GraphQL values for `TicketStatus` are `OPEN` and `CLOSED`.
+See [Use Enums with GraphQL](/documentation/guides/use-enums-with-graphql.md) for more information.
 
 We can now create a ticket with the `createTicket` mutation:
 
