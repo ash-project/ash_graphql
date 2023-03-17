@@ -231,13 +231,19 @@ defmodule AshGraphql.Dataloader do
         tenant = opts[:tenant] || tenant_from_records(records)
         empty = source_resource |> struct |> Map.fetch!(field)
         records = records |> Enum.map(&Map.put(&1, field, empty))
+        relationship = Ash.Resource.Info.relationship(source_resource, field)
 
-        cardinality = Ash.Resource.Info.relationship(source_resource, field).cardinality
+        cardinality = relationship.cardinality
 
         query =
           query
           |> Ash.Query.new()
           |> Ash.Query.set_tenant(tenant)
+          |> Ash.Query.for_read(
+            relationship.read_action ||
+              Ash.Resource.Info.primary_action!(relationship.destination, :read).name,
+            opts[:args]
+          )
 
         loaded = source.api.load!(records, [{field, query}], api_opts || [])
 

@@ -1135,6 +1135,10 @@ defmodule AshGraphql.Resource do
       ]
   end
 
+  defp args(:one_related, resource, action, schema, _identity) do
+    read_args(resource, action, schema)
+  end
+
   defp read_args(resource, action, schema) do
     action.arguments
     |> Enum.reject(& &1.private?)
@@ -3012,21 +3016,34 @@ defmodule AshGraphql.Resource do
           |> AshGraphql.Resource.Info.type()
           |> maybe_wrap_non_null(!relationship.allow_nil?)
 
+        read_action =
+          if relationship.read_action do
+            Ash.Resource.Info.action(relationship.destination, relationship.read_action)
+          else
+            Ash.Resource.Info.primary_action!(relationship.destination, :read)
+          end
+
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
           module: schema,
           name: to_string(name),
+          arguments: args(:one_related, relationship.destination, read_action, schema),
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
           ],
-          arguments: [],
           type: type,
           __reference__: ref(__ENV__)
         }
 
       %{cardinality: :many} = relationship ->
         name = field_names[relationship.name] || relationship.name
-        read_action = Ash.Resource.Info.primary_action!(relationship.destination, :read)
+
+        read_action =
+          if relationship.read_action do
+            Ash.Resource.Info.action(relationship.destination, relationship.read_action)
+          else
+            Ash.Resource.Info.primary_action!(relationship.destination, :read)
+          end
 
         type = AshGraphql.Resource.Info.type(relationship.destination)
 

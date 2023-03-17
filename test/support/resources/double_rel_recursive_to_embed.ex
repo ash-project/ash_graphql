@@ -7,6 +7,10 @@ defmodule AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed do
 
   alias AshGraphql.Test.DoubleRelRecursive
 
+  actions do
+    defaults([:read, :create, :update, :destroy])
+  end
+
   attributes do
     uuid_primary_key(:id)
 

@@ -252,7 +252,7 @@ defmodule AshGraphql.Graphql.Resolver do
           ]
 
           pagination = Ash.Resource.Info.action(resource, action).pagination
-          query = load_filter_and_sort_requirements(resource, args)
+          query = apply_load_arguments(args, Ash.Query.new(resource))
 
           {result, modify_args} =
             with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
@@ -1182,38 +1182,6 @@ defmodule AshGraphql.Graphql.Resolver do
      }}
   end
 
-  defp load_filter_and_sort_requirements(resource, args) do
-    query =
-      case Map.fetch(args, :filter) do
-        {:ok, filter} ->
-          Ash.Query.do_filter(resource, massage_filter(resource, filter))
-
-        _ ->
-          Ash.Query.new(resource)
-      end
-
-    case Map.fetch(args, :sort) do
-      {:ok, sort} ->
-        keyword_sort =
-          Enum.map(sort, fn %{order: order, field: field} = input ->
-            case Ash.Resource.Info.calculation(resource, field) do
-              %{arguments: [_ | _]} ->
-                input_name = String.to_existing_atom("#{field}_input")
-
-                {field, {order, input[input_name] || %{}}}
-
-              _ ->
-                {field, order}
-            end
-          end)
-
-        Ash.Query.sort(query, keyword_sort)
-
-      _ ->
-        query
-    end
-  end
-
   defp massage_filter(_resource, nil), do: nil
 
   defp massage_filter(resource, filter) when is_map(filter) do
@@ -1549,10 +1517,8 @@ defmodule AshGraphql.Graphql.Resolver do
       verbose?: AshGraphql.Api.Info.debug?(api)
     ]
 
-    query = load_filter_and_sort_requirements(relationship.destination, args)
-
     args
-    |> apply_load_arguments(query)
+    |> apply_load_arguments(Ash.Query.new(relationship.destination))
     |> select_fields(relationship.destination, resolution)
     |> load_fields(relationship.destination, api, resolution)
     |> case do
@@ -1664,20 +1630,27 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Query.offset(query, offset)
 
       {:filter, value}, query ->
-        decode_and_filter(query, value)
+        Ash.Query.do_filter(query, massage_filter(query.resource, value))
 
       {:sort, value}, query ->
         keyword_sort =
-          Enum.map(value, fn %{order: order, field: field} ->
-            {field, order}
+          Enum.map(value, fn %{order: order, field: field} = input ->
+            case Ash.Resource.Info.calculation(query.resource, field) do
+              %{arguments: [_ | _]} ->
+                input_name = String.to_existing_atom("#{field}_input")
+
+                {field, {order, input[input_name] || %{}}}
+
+              _ ->
+                {field, order}
+            end
           end)
 
         Ash.Query.sort(query, keyword_sort)
-    end)
-  end
 
-  defp decode_and_filter(query, value) do
-    Ash.Query.do_filter(query, value)
+      _, query ->
+        query
+    end)
   end
 
   defp to_resolution({:ok, value}, _context, _api), do: {:ok, value}
