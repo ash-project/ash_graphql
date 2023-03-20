@@ -117,6 +117,8 @@ adding plug to your application.
 Then you can use a `Plug.Router` and [forward](https://hexdocs.pm/plug/Plug.Router.html#forward/2) to your plugs similar to how it is done for phoenix:
 
 ```elixir
+plug AshGraphql.Plug
+
 forward "/gql",
   to: Absinthe.Plug,
   init_opts: [schema: Helpdesk.Schema]
@@ -136,7 +138,13 @@ You will simply want to add some code to your router, like so.
 You will also likely want to set up the "playground" for trying things out.
 
 ```elixir
+pipeline :graphql do
+  plug AshGraphql.Plug
+end
+
 scope "/" do
+  pipe_through [:graphql]
+
   forward "/gql", Absinthe.Plug, schema: Helpdesk.Schema
 
   forward "/playground",
