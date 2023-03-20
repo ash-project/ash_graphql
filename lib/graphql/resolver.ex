@@ -449,25 +449,29 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def validate_resolve_opts(resolution, pagination, opts, args) do
-    with page_opts <-
-           args
-           |> Map.take([:limit, :offset, :first, :after, :before, :last])
-           |> Enum.reject(fn {_, val} -> is_nil(val) end),
-         {:ok, page_opts} <- validate_offset_opts(page_opts, pagination),
-         {:ok, page_opts} <- validate_keyset_opts(page_opts, pagination) do
-      field_names = resolution |> fields([]) |> names_only()
+    if pagination && (pagination.offset? || pagination.keyset?) do
+      with page_opts <-
+             args
+             |> Map.take([:limit, :offset, :first, :after, :before, :last])
+             |> Enum.reject(fn {_, val} -> is_nil(val) end),
+           {:ok, page_opts} <- validate_offset_opts(page_opts, pagination),
+           {:ok, page_opts} <- validate_keyset_opts(page_opts, pagination) do
+        field_names = resolution |> fields([]) |> names_only()
 
-      page =
-        if Enum.any?(field_names, &(&1 == :count)) do
-          Keyword.put(page_opts, :count, true)
-        else
-          page_opts
-        end
+        page =
+          if Enum.any?(field_names, &(&1 == :count)) do
+            Keyword.put(page_opts, :count, true)
+          else
+            page_opts
+          end
 
-      {:ok, Keyword.put(opts, :page, page)}
+        {:ok, Keyword.put(opts, :page, page)}
+      else
+        error ->
+          error
+      end
     else
-      error ->
-        error
+      {:ok, opts}
     end
   end
 
