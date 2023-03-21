@@ -403,19 +403,25 @@ defmodule AshGraphql.Graphql.Resolver do
               attributes
           end
 
-        {:ok,
-         Map.new(value, fn {key, value} ->
-           field =
-             Enum.find(fields, fn field ->
-               field.name == key
-             end)
+        value
+        |> Enum.reduce_while({:ok, %{}}, fn {key, value}, {:ok, acc} ->
+          field =
+            Enum.find(fields, fn field ->
+              field.name == key
+            end)
 
-           if field do
-             {key, handle_argument(field.type, field.constraints, value, "#{name}.#{key}")}
-           else
-             {key, value}
-           end
-         end)}
+          if field do
+            case handle_argument(field.type, field.constraints, value, "#{name}.#{key}") do
+              {:ok, value} ->
+                {:cont, {:ok, Map.put(acc, key, value)}}
+
+              {:error, error} ->
+                {:halt, {:error, error}}
+            end
+          else
+            {:cont, {:ok, Map.put(acc, key, value)}}
+          end
+        end)
 
       true ->
         {:ok, value}
