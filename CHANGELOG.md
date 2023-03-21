@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.22.13](https://github.com/ash-project/ash_graphql/compare/v0.22.12...v0.22.13) (2023-03-21)
+
+
+
+
+### Bug Fixes:
+
+* properly handle nested argument casting
+
+* only specify `page` option if actions upports it
+
+* properly filter enum types
+
+### Improvements:
+
+* supply arguments to relationships on loading
+
 ## [v0.22.12](https://github.com/ash-project/ash_graphql/compare/v0.22.11...v0.22.12) (2023-03-13)
 
 
