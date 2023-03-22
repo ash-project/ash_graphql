@@ -3,6 +3,8 @@ import Config
 config :ash, :utc_datetime_type, :datetime
 config :ash, :disable_async?, true
 
+config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,

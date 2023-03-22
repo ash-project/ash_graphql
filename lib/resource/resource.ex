@@ -912,13 +912,60 @@ defmodule AshGraphql.Resource do
   defp wrap_arrays(_, type, _), do: type
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp default_managed_type_name(resource, action, argument) do
-    String.to_atom(
-      to_string(action.type) <>
-        "_" <>
-        to_string(AshGraphql.Resource.Info.type(resource)) <>
-        "_" <> to_string(argument.name) <> "_input"
+  type_name_template =
+    Application.compile_env(
+      :ash_graphql,
+      :default_managed_relationship_type_name_template,
+      :action_type
     )
+
+  case type_name_template do
+    :action_type ->
+      defp default_managed_type_name(resource, action, argument) do
+        type_name =
+          String.to_atom(
+            to_string(action.type) <>
+              "_" <>
+              to_string(AshGraphql.Resource.Info.type(resource)) <>
+              "_" <> to_string(argument.name) <> "_input"
+          )
+
+        IO.warn("""
+        #{inspect(resource)}:
+
+        Type Name Error in `managed_relationship :#{action.name}, #{argument.name}`.
+
+        Type names for managed_relationships have been updated, but for backwards compatibility must
+        be explicitly opted into. These type names are better because the old ones are based off of the
+        action type, not the action name, and therefore could produce clashes in their type names.
+
+        To resolve this warning, do the following things:
+
+        1) If you want to keep the current type name, set an explicit type name for this and any other
+           affected `managed_relationship`. Here is an example of the specific `managed_relationship` with the fix
+           applied:
+
+           managed_relationship :#{action.name}, #{argument.name} do
+             type_name :#{type_name} # <- add this line
+           end
+
+        2) Once you have done the above (or skipped it because you don't care about the type names),
+           you can set the following configuration:
+
+
+           config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
+        """)
+
+        type_name
+      end
+
+    :action_name ->
+      defp default_managed_type_name(_resource, action, argument) do
+        String.to_atom(
+          to_string(action.name) <>
+            "_" <> to_string(argument.name) <> "_input"
+        )
+      end
   end
 
   defp find_manage_change(argument, action, managed_relationships) do
