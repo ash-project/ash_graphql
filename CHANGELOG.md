@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.23.1](https://github.com/ash-project/ash_graphql/compare/v0.23.0...v0.23.1) (2023-03-22)
+
+
+
+
+### Improvements:
+
+* add tests & improve behavior of update managed relationships
+
+* include primary key when managed relationship can update
+
+* don't add types for resources w/o a GQL type
+
 ## [v0.23.0](https://github.com/ash-project/ash_graphql/compare/v0.22.13...v0.23.0) (2023-03-22)
 
 
