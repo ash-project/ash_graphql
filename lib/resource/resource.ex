@@ -1721,9 +1721,8 @@ defmodule AshGraphql.Resource do
     resource = relationship.destination
     could_lookup? = ManagedRelationshipHelpers.could_lookup?(opts)
     could_match? = ManagedRelationshipHelpers.could_update?(opts)
-    needs_pkey? = opts[:on_no_match] == :match
 
-    if could_lookup? || (could_match? && needs_pkey?) do
+    if could_lookup? || could_match? do
       pkey_fields =
         if managed_relationship.lookup_with_primary_key? do
           resource
