@@ -1724,7 +1724,7 @@ defmodule AshGraphql.Resource do
 
     if could_lookup? || could_match? do
       pkey_fields =
-        if managed_relationship.lookup_with_primary_key? do
+        if managed_relationship.lookup_with_primary_key? || could_match? do
           resource
           |> pkey_fields(schema, false)
           |> Enum.map(fn field ->
@@ -1736,6 +1736,13 @@ defmodule AshGraphql.Resource do
 
       resource
       |> Ash.Resource.Info.identities()
+      |> then(fn identities ->
+        if could_lookup? do
+          identities
+        else
+          []
+        end
+      end)
       |> Enum.filter(fn identity ->
         is_nil(managed_relationship.lookup_identities) ||
           identity.name in managed_relationship.lookup_identities

@@ -43,6 +43,98 @@ defmodule AshGraphql.UpdateTest do
              resp
   end
 
+  test "an update with a managed relationship works" do
+    resp =
+      """
+      mutation CreatePostWithComments($input: CreatePostWithCommentsInput) {
+        createPostWithComments(input: $input) {
+          result{
+            id
+            text
+            comments(sort:{field:TEXT}){
+              id
+              text
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "comments" => [
+              %{"text" => "foobar"},
+              %{"text" => "barfoo"}
+            ]
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithComments" => %{
+                 "result" => %{
+                   "id" => post_id,
+                   "text" => "foobar",
+                   "comments" => [
+                     %{"id" => comment_id, "text" => "barfoo"},
+                     %{"text" => "foobar"}
+                   ]
+                 }
+               }
+             }
+           } = result
+
+    resp =
+      """
+      mutation UpdatePostWithComments($id: ID!, $input: UpdatePostWithCommentsInput) {
+        updatePostWithComments(id: $id, input: $input) {
+          result{
+            comments(sort:{field:TEXT}){
+              id
+              text
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post_id,
+          "input" => %{
+            "comments" => [
+              %{"text" => "barfoonew", "id" => comment_id}
+            ]
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "updatePostWithComments" => %{
+                 "result" => %{
+                   "comments" => [%{"id" => ^comment_id, "text" => "barfoonew"}]
+                 }
+               }
+             }
+           } = result
+  end
+
   test "an update with a configured read action and no identity works" do
     post =
       AshGraphql.Test.Api.create!(

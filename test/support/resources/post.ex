@@ -85,6 +85,7 @@ defmodule AshGraphql.Test.Post do
 
     managed_relationships do
       managed_relationship :with_comments, :comments
+      managed_relationship :update_with_comments, :comments, lookup_with_primary_key?: true
 
       managed_relationship :with_comments_and_tags, :comments,
         lookup_with_primary_key?: true,
@@ -106,6 +107,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_comments_and_tags, :with_comments_and_tags
 
       update :update_post, :update
+      update :update_post_with_comments, :update_with_comments
       update :update_post_confirm, :update_confirm
       update :update_best_post, :update, read_action: :best_post, identity: false
 
@@ -203,6 +205,12 @@ defmodule AshGraphql.Test.Post do
     end
 
     update :update, primary?: true
+
+    update :update_with_comments do
+      argument(:comments, {:array, :map})
+
+      change(manage_relationship(:comments, type: :direct_control))
+    end
 
     update :update_confirm do
       argument(:confirmation, :string)
