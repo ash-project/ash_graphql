@@ -911,7 +911,6 @@ defmodule AshGraphql.Resource do
 
   defp wrap_arrays(_, type, _), do: type
 
-  # sobelow_skip ["DOS.StringToAtom"]
   type_name_template =
     Application.compile_env(
       :ash_graphql,
@@ -921,6 +920,7 @@ defmodule AshGraphql.Resource do
 
   case type_name_template do
     :action_type ->
+      # sobelow_skip ["DOS.StringToAtom"]
       defp default_managed_type_name(resource, action, argument) do
         type_name =
           String.to_atom(
@@ -960,6 +960,7 @@ defmodule AshGraphql.Resource do
       end
 
     :action_name ->
+      # sobelow_skip ["DOS.StringToAtom"]
       defp default_managed_type_name(_resource, action, argument) do
         String.to_atom(
           to_string(action.name) <>
