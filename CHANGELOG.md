@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.23.0](https://github.com/ash-project/ash_graphql/compare/v0.22.13...v0.23.0) (2023-03-22)
+
+
+
+
+### Features:
+
+* change type name generation for managed relationships.
+
 ## [v0.22.13](https://github.com/ash-project/ash_graphql/compare/v0.22.12...v0.22.13) (2023-03-21)
 
 
