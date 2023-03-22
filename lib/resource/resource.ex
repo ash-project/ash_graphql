@@ -3053,7 +3053,8 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
-      Resource in Spark.extensions(relationship.destination) && relationship.name in relationships
+      Resource in Spark.extensions(relationship.destination) && relationship.name in relationships &&
+        AshGraphql.Resource.Info.type(relationship.destination)
     end)
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->

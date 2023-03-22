@@ -18,6 +18,16 @@ end
 
 Use `mix hex.info ash_graphql` and `mix hex.info absinthe_plug` to quickly find the latest versions.
 
+## Add some backwards compatibility configuration
+
+in `config/config.exs`
+
+```elixir
+config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
+```
+
+This won't be necessary after the next major release, where this new configuration will be the default.
+
 ## Add the API Extension
 
 Add the following to your API module. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
