@@ -2523,7 +2523,7 @@ defmodule AshGraphql.Resource do
     |> AshGraphql.all_attributes_and_arguments([], false)
     |> Enum.map(&unnest/1)
     |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Atom))
-    |> Enum.uniq_by(&{&1.name, &1.type})
+    |> Enum.uniq_by(& &1.name)
   end
 
   defp unnest(%{type: {:array, type}, constraints: constraints} = attribute) do
