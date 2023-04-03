@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.23.2](https://github.com/ash-project/ash_graphql/compare/v0.23.1...v0.23.2) (2023-04-03)
+
+
+
+
+### Bug Fixes:
+
+* unique enum types by name
+
+### Improvements:
+
+* Add missing definition for `Ash.Type.Time` type (#64)
+
 ## [v0.23.1](https://github.com/ash-project/ash_graphql/compare/v0.23.0...v0.23.1) (2023-03-22)
 
 
