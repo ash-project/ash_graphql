@@ -4,6 +4,7 @@ defmodule AshGraphql.Graphql.Resolver do
   require Ash.Query
   require Logger
   import AshGraphql.TraceHelpers
+  import AshGraphql.ContextHelpers
 
   def resolve(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
@@ -50,7 +51,7 @@ defmodule AshGraphql.Graphql.Resolver do
             resource
             |> Ash.Query.new()
             |> Ash.Query.set_tenant(Map.get(context, :tenant))
-            |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+            |> Ash.Query.set_context(get_context(context))
             |> set_query_arguments(action, arguments)
             |> select_fields(resource, resolution)
 
@@ -81,7 +82,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   resource
                   |> Ash.Query.new()
                   |> Ash.Query.set_tenant(Map.get(context, :tenant))
-                  |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+                  |> Ash.Query.set_context(get_context(context))
                   |> set_query_arguments(action, arguments)
                   |> select_fields(resource, resolution)
                   |> load_fields(resource, api, resolution)
@@ -172,7 +173,7 @@ defmodule AshGraphql.Graphql.Resolver do
           query =
             query
             |> Ash.Query.set_tenant(Map.get(context, :tenant))
-            |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+            |> Ash.Query.set_context(get_context(context))
             |> set_query_arguments(action, args)
             |> select_fields(resource, resolution)
 
@@ -260,7 +261,7 @@ defmodule AshGraphql.Graphql.Resolver do
                  initial_query <-
                    query
                    |> Ash.Query.set_tenant(Map.get(context, :tenant))
-                   |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+                   |> Ash.Query.set_context(get_context(context))
                    |> set_query_arguments(action, args)
                    |> select_fields(resource, resolution, result_fields),
                  {:ok, query} <-
@@ -761,7 +762,7 @@ defmodule AshGraphql.Graphql.Resolver do
             resource
             |> Ash.Changeset.new()
             |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-            |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+            |> Ash.Changeset.set_context(get_context(context))
             |> Ash.Changeset.for_create(action, input,
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Api.Info.authorize?(api)
@@ -862,7 +863,7 @@ defmodule AshGraphql.Graphql.Resolver do
               resource
               |> Ash.Query.do_filter(filter)
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
-              |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+              |> Ash.Query.set_context(get_context(context))
               |> set_query_arguments(action, read_action_input)
               |> api.read_one(
                 action: read_action,
@@ -892,7 +893,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     initial
                     |> Ash.Changeset.new()
                     |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-                    |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+                    |> Ash.Changeset.set_context(get_context(context))
                     |> Ash.Changeset.for_update(action, input,
                       actor: Map.get(context, :actor),
                       authorize?: AshGraphql.Api.Info.authorize?(api)
@@ -1008,7 +1009,7 @@ defmodule AshGraphql.Graphql.Resolver do
               resource
               |> Ash.Query.do_filter(filter)
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
-              |> Ash.Query.set_context(Map.get(context, :ash_context) || %{})
+              |> Ash.Query.set_context(get_context(context))
               |> set_query_arguments(action, read_action_input)
               |> api.read_one(
                 action: read_action,
@@ -1031,7 +1032,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     initial
                     |> Ash.Changeset.new()
                     |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-                    |> Ash.Changeset.set_context(Map.get(context, :ash_context) || %{})
+                    |> Ash.Changeset.set_context(get_context(context))
                     |> Ash.Changeset.for_destroy(action, input,
                       actor: Map.get(context, :actor),
                       authorize?: AshGraphql.Api.Info.authorize?(api)
