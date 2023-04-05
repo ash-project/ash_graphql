@@ -16,13 +16,14 @@ defmodule AshGraphql.Plug do
   def call(conn, _opts) do
     actor = PlugHelpers.get_actor(conn)
     tenant = PlugHelpers.get_tenant(conn)
+    context = PlugHelpers.get_context(conn)
 
     absinthe = Map.get(conn.private, :absinthe, %{})
 
     context =
       absinthe
       |> Map.get(:context, %{})
-      |> Map.merge(%{actor: actor, tenant: tenant})
+      |> Map.merge(%{actor: actor, tenant: tenant, context: context})
 
     absinthe = Map.put(absinthe, :context, context)
     Conn.put_private(conn, :absinthe, absinthe)
