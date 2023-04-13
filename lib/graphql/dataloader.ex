@@ -235,17 +235,24 @@ defmodule AshGraphql.Dataloader do
 
         cardinality = relationship.cardinality
 
-        query =
-          query
-          |> Ash.Query.new()
-          |> Ash.Query.set_tenant(tenant)
-          |> Ash.Query.for_read(
-            relationship.read_action ||
-              Ash.Resource.Info.primary_action!(relationship.destination, :read).name,
-            opts[:args]
-          )
+        loads =
+          if Map.has_key?(relationship, :manual) && relationship.manual do
+            field
+          else
+            query =
+              query
+              |> Ash.Query.new()
+              |> Ash.Query.set_tenant(tenant)
+              |> Ash.Query.for_read(
+                relationship.read_action ||
+                  Ash.Resource.Info.primary_action!(relationship.destination, :read).name,
+                opts[:args]
+              )
 
-        loaded = source.api.load!(records, [{field, query}], api_opts || [])
+            {field, query}
+          end
+
+        loaded = source.api.load!(records, [loads], api_opts || [])
 
         loaded =
           case loaded do
