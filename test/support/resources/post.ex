@@ -58,6 +58,35 @@ defmodule AfterActionRaiseResourceError do
   end
 end
 
+defmodule RelatedPosts do
+  @moduledoc false
+  use Ash.Resource.ManualRelationship
+  require Ash.Query
+
+  def load(posts, _opts, %{api: api}) do
+    posts = api.load!(posts, :tags)
+
+    {
+      :ok,
+      posts
+      |> Enum.map(fn post ->
+        tag_ids =
+          post.tags
+          |> Enum.map(& &1.id)
+
+        other_posts =
+          AshGraphql.Test.Post
+          |> Ash.Query.filter(tags.id in ^tag_ids)
+          |> Ash.Query.filter(id != ^post.id)
+          |> api.read!()
+
+        {post.id, other_posts}
+      end)
+      |> Map.new()
+    }
+  end
+end
+
 defmodule AshGraphql.Test.Post do
   @moduledoc false
 
@@ -317,5 +346,9 @@ defmodule AshGraphql.Test.Post do
       source_attribute_on_join_resource: :post_id,
       destination_attribute_on_join_resource: :tag_id
     )
+
+    has_many :related_posts, AshGraphql.Test.Post do
+      manual(RelatedPosts)
+    end
   end
 end

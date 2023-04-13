@@ -613,4 +613,57 @@ defmodule AshGraphql.ReadTest do
                variables: %{"id" => post.id}
              )
   end
+
+  test "manual relationships can be read" do
+    tag =
+      AshGraphql.Test.Tag
+      |> Ash.Changeset.for_create(
+        :create,
+        name: "My Tag"
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    post_1 =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> Ash.Changeset.manage_relationship(
+        :tags,
+        [tag],
+        on_no_match: {:create, :create_action},
+        on_lookup: :relate
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", published: true)
+    |> Ash.Changeset.manage_relationship(
+      :tags,
+      [tag],
+      on_no_match: {:create, :create_action},
+      on_lookup: :relate
+    )
+    |> AshGraphql.Test.Api.create!()
+
+    doc = """
+    query ($id: ID!) {
+      getPost(id: $id) {
+        text
+        relatedPosts {
+          text
+        }
+      }
+    }
+    """
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{
+                  "relatedPosts" => [%{"text" => "bar"}],
+                  "text" => "foo"
+                }
+              }
+            }} ==
+             Absinthe.run(doc, AshGraphql.Test.Schema, variables: %{"id" => post_1.id})
+  end
 end
