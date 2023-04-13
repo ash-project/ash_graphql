@@ -59,6 +59,7 @@ defmodule AfterActionRaiseResourceError do
 end
 
 defmodule RelatedPosts do
+  @moduledoc false
   use Ash.Resource.ManualRelationship
   require Ash.Query
 
