@@ -3371,7 +3371,7 @@ defmodule AshGraphql.Resource do
 
   defp get_specific_field_type(
          Ash.Type.Atom,
-         %Ash.Resource.Attribute{constraints: constraints, name: name},
+         %{constraints: constraints, name: name},
          resource,
          _input?
        )
@@ -3386,7 +3386,7 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.BinToAtom"]
   defp get_specific_field_type(
          Ash.Type.Union,
-         %Ash.Resource.Attribute{name: name},
+         %{name: name},
          resource,
          input?
        )
