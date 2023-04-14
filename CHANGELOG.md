@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.23.3](https://github.com/ash-project/ash_graphql/compare/v0.23.2...v0.23.3) (2023-04-14)
+
+
+
+
+### Bug Fixes:
+
+* handle certain types in calculations
+
+### Improvements:
+
+* support manual relationships (#66)
+
+* thread context from `PlugHelpers.get_context` through to `Query` and `Changeset` (#62)
+
 ## [v0.23.2](https://github.com/ash-project/ash_graphql/compare/v0.23.1...v0.23.2) (2023-04-03)
 
 
