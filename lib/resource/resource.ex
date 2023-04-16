@@ -977,9 +977,11 @@ defmodule AshGraphql.Resource do
 
     :action_name ->
       # sobelow_skip ["DOS.StringToAtom"]
-      defp default_managed_type_name(_resource, action, argument) do
+      defp default_managed_type_name(resource, action, argument) do
         String.to_atom(
-          to_string(action.name) <>
+          to_string(AshGraphql.Resource.Info.type(resource)) <>
+            "_" <>
+            to_string(action.name) <>
             "_" <> to_string(argument.name) <> "_input"
         )
       end
