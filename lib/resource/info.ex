@@ -23,6 +23,47 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_entities(resource, [:graphql, :managed_relationships]) || []
   end
 
+  def managed_relationships_auto?(resource) do
+    Extension.get_opt(resource, [:graphql, :managed_relationships], :auto?, false)
+  end
+
+  @doc "The managed_relationshi configuration for a given action/argument"
+  def managed_relationship(resource, action, argument) do
+    resource
+    |> Extension.get_entities([:graphql, :managed_relationships])
+    |> List.wrap()
+    |> Enum.find(fn managed_relationship ->
+      managed_relationship.argument == argument.name and
+        managed_relationship.action == action.name
+    end)
+    |> then(fn managed_relationship ->
+      if managed_relationships_auto?(resource) do
+        managed_relationship || default_managed_relationship(action, argument)
+      else
+        managed_relationship
+      end
+    end)
+  end
+
+  defp default_managed_relationship(action, argument) do
+    if Enum.any?(Map.get(action, :changes, []), fn
+         %{change: {Ash.Resource.Change.ManageRelationship, opts}} ->
+           opts[:argument] == argument.name
+
+         _ ->
+           nil
+       end) do
+      %AshGraphql.Resource.ManagedRelationship{
+        argument: argument.name,
+        action: action,
+        types: [],
+        type_name: nil,
+        lookup_with_primary_key?: true,
+        lookup_identities: []
+      }
+    end
+  end
+
   @doc "The graphql type of the resource"
   def type(resource) do
     Extension.get_opt(resource, [:graphql], :type, nil)

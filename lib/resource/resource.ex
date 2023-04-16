@@ -166,6 +166,13 @@ defmodule AshGraphql.Resource do
       end
       """
     ],
+    schema: [
+      auto?: [
+        type: :boolean,
+        doc:
+          "Automatically derive types for all arguments that have a `manage_relationship` call change."
+      ]
+    ],
     entities: [
       @managed_relationship
     ]
@@ -809,12 +816,6 @@ defmodule AshGraphql.Resource do
   end
 
   defp mutation_fields(resource, schema, action, type) do
-    managed_relationships =
-      Enum.filter(
-        AshGraphql.Resource.Info.managed_relationships(resource),
-        &(&1.action == action.name)
-      )
-
     field_names = AshGraphql.Resource.Info.field_names(resource)
     argument_names = AshGraphql.Resource.Info.argument_names(resource)
 
@@ -859,7 +860,7 @@ defmodule AshGraphql.Resource do
       |> Enum.map(fn argument ->
         name = argument_names[action.name][argument.name] || argument.name
 
-        case find_manage_change(argument, action, managed_relationships) do
+        case find_manage_change(argument, action, resource) do
           nil ->
             type =
               argument.type
@@ -875,24 +876,39 @@ defmodule AshGraphql.Resource do
             }
 
           _manage_opts ->
-            managed = Enum.find(managed_relationships, &(&1.argument == argument.name))
+            managed = AshGraphql.Resource.Info.managed_relationship(resource, action, argument)
 
-            type =
-              if managed.type_name do
-                managed.type_name
-              else
-                default_managed_type_name(resource, action, argument)
-              end
+            if managed do
+              type =
+                if managed.type_name do
+                  managed.type_name
+                else
+                  default_managed_type_name(resource, action, argument)
+                end
 
-            type = wrap_arrays(argument.type, type, argument.constraints)
+              type = wrap_arrays(argument.type, type, argument.constraints)
 
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              identifier: argument.name,
-              module: schema,
-              name: to_string(name),
-              type: maybe_wrap_non_null(type, argument_required?(argument)),
-              __reference__: ref(__ENV__)
-            }
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                identifier: argument.name,
+                module: schema,
+                name: to_string(name),
+                type: maybe_wrap_non_null(type, argument_required?(argument)),
+                __reference__: ref(__ENV__)
+              }
+            else
+              type =
+                argument.type
+                |> field_type(argument, resource, true)
+                |> maybe_wrap_non_null(argument_required?(argument))
+
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                identifier: name,
+                module: schema,
+                name: to_string(name),
+                type: type,
+                __reference__: ref(__ENV__)
+              }
+            end
         end
       end)
 
@@ -969,8 +985,8 @@ defmodule AshGraphql.Resource do
       end
   end
 
-  defp find_manage_change(argument, action, managed_relationships) do
-    if argument.name in Enum.map(managed_relationships, & &1.argument) do
+  defp find_manage_change(argument, action, resource) do
+    if AshGraphql.Resource.Info.managed_relationship(resource, action, argument) do
       Enum.find_value(action.changes, fn
         %{change: {Ash.Resource.Change.ManageRelationship, opts}} ->
           opts[:argument] == argument.name && opts
@@ -1355,18 +1371,19 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.actions()
     |> Enum.flat_map(fn action ->
-      resource
-      |> AshGraphql.Resource.Info.managed_relationships()
-      |> Enum.filter(&(&1.action == action.name))
-      |> Enum.map(fn managed_relationship ->
-        argument =
-          Enum.find(action.arguments, &(&1.name == managed_relationship.argument)) ||
-            raise """
-            No such argument #{managed_relationship.argument}, in `managed_relationship`
-            """
+      action.arguments
+      |> Enum.flat_map(fn argument ->
+        case AshGraphql.Resource.Info.managed_relationship(resource, action, argument) do
+          nil ->
+            []
 
+          managed_relationship ->
+            [{managed_relationship, argument, action}]
+        end
+      end)
+      |> Enum.map(fn {managed_relationship, argument, action} ->
         opts =
-          find_manage_change(argument, action, [managed_relationship]) ||
+          find_manage_change(argument, action, resource) ||
             raise """
             There is no corresponding `change manage_change(...)` for the given argument and action
             combination.

@@ -5,6 +5,7 @@ spark_locals_without_parens = [
   attribute_input_types: 1,
   attribute_types: 1,
   authorize?: 1,
+  auto?: 1,
   create: 2,
   create: 3,
   debug?: 1,
