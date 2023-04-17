@@ -4,15 +4,16 @@ defmodule AshGraphql.Test.ConstrainedMap do
     subtype_of: :map,
     constraints: [
       fields: [
-        foo: [
+        foo_bar: [
           type: :string,
           allow_nil?: false
         ],
-        bar: [
+        baz: [
           type: :integer
         ]
       ]
     ]
 
   def graphql_type, do: :constrained_map
+  def graphql_input_type, do: :constrained_map_input
 end

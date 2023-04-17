@@ -2390,20 +2390,16 @@ defmodule AshGraphql.Resource do
           end
 
         input_type_name =
-          if constraints[:fields] do
-            if Ash.Type.NewType.new_type?(attribute.type) do
-              cond do
-                function_exported?(attribute.type, :graphql_input_type, 0) ->
-                  attribute.type.graphql_input_type()
+          if constraints[:fields] && Ash.Type.NewType.new_type?(attribute.type) do
+            cond do
+              function_exported?(attribute.type, :graphql_input_type, 0) ->
+                attribute.type.graphql_input_type()
 
-                function_exported?(attribute.type, :graphql_input_type, 1) ->
-                  attribute.type.graphql_input_type(attribute.constraints)
+              function_exported?(attribute.type, :graphql_input_type, 1) ->
+                attribute.type.graphql_input_type(attribute.constraints)
 
-                true ->
-                  map_type(resource, attribute.name, _input? = true)
-              end
-            else
-              map_type(resource, attribute.name, _input? = true)
+              true ->
+                map_type(resource, attribute.name, _input? = true)
             end
           else
             nil
@@ -2423,7 +2419,7 @@ defmodule AshGraphql.Resource do
                   module: schema,
                   identifier: name,
                   __reference__: AshGraphql.Resource.ref(env),
-                  name: Macro.camelize(to_string(name)),
+                  name: to_string(name),
                   type: do_field_type(constraints[:type], nil, nil, false)
                 }
               end),
@@ -2446,7 +2442,7 @@ defmodule AshGraphql.Resource do
                     module: schema,
                     identifier: name,
                     __reference__: AshGraphql.Resource.ref(env),
-                    name: Macro.camelize(to_string(name)),
+                    name: to_string(name),
                     type: do_field_type(constraints[:type], nil, nil, false)
                   }
                 end),
@@ -3632,10 +3628,12 @@ defmodule AshGraphql.Resource do
 
   defp get_specific_field_type(
          Ash.Type.Map,
-         %{constraints: constraints, name: name},
+         %{constraints: constraints, name: name} = attribute,
          resource,
          input?
        ) do
+    IO.inspect(binding())
+
     if is_list(constraints[:fields]) do
       map_type(resource, name, input?)
     else

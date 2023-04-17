@@ -87,18 +87,60 @@ defmodule AshGraphql.AttributeTest do
   end
 
   @tag :wip
-  test "map attribute with field constraints uses objects for inputs" do
+  test "map attribute with field constraints get their own type" do
     {:ok, %{data: data}} =
       """
       query {
         __type(name: "MapTypes") {
           fields {
             name
-            description
-            args {
+            type {
+              kind
               name
-              description
+              ofType {
+                kind
+                name
+              }
             }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    fields = data["__type"]["fields"]
+
+    attributes_field =
+      fields
+      |> Enum.find(fn field -> field["name"] == "attributes" end)
+
+    values_field =
+      fields
+      |> Enum.find(fn field -> field["name"] == "values" end)
+
+    assert attributes_field == %{
+             "name" => "attributes",
+             "type" => %{
+               "kind" => "NON_NULL",
+               "name" => nil,
+               "ofType" => %{"kind" => "OBJECT", "name" => "MapTypesAttributes"}
+             }
+           }
+
+    assert values_field == %{
+             "name" => "values",
+             "type" => %{"kind" => "OBJECT", "name" => "ConstrainedMap", "ofType" => nil}
+           }
+  end
+
+  @tag :wip
+  test "map attribute with field constraints use input objects for inputs" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "MapTypesAttributesInput") {
+          inputFields {
+            name
             type {
               kind
               name
@@ -113,5 +155,19 @@ defmodule AshGraphql.AttributeTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
       |> IO.inspect()
+
+    foo_field =
+      data["__type"]["inputFields"]
+      |> Enum.find(fn field -> field["name"] == "foo" end)
+
+    assert foo_field["type"]["kind"] == "SCALAR"
+    assert foo_field["type"]["name"] == "String"
+
+    bar_field =
+      data["__type"]["inputFields"]
+      |> Enum.find(fn field -> field["name"] == "bar" end)
+
+    assert bar_field["type"]["kind"] == "SCALAR"
+    assert bar_field["type"]["name"] == "Int"
   end
 end

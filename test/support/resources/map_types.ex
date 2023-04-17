@@ -29,7 +29,7 @@ defmodule AshGraphql.Test.MapTypes do
     defaults([:create, :read, :update, :destroy])
 
     update :inline do
-      argument :values, :map do
+      argument :inline_values, :map do
         constraints(
           fields: [
             foo: [
@@ -44,7 +44,7 @@ defmodule AshGraphql.Test.MapTypes do
     end
 
     update :module do
-      argument(:values, AshGraphql.Test.ConstrainedMap)
+      argument :module_values, AshGraphql.Test.ConstrainedMap
     end
   end
 
