@@ -449,7 +449,8 @@ defmodule AshGraphql do
             schema
           )
         ] ++
-          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
+          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__) ++
+          AshGraphql.Resource.map_definitions(embedded_type, schema, __ENV__)
       else
         []
       end

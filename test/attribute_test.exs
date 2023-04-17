@@ -85,4 +85,33 @@ defmodule AshGraphql.AttributeTest do
 
     assert visibility_field["type"]["kind"] == "ENUM"
   end
+
+  @tag :wip
+  test "map attribute with field constraints uses objects for inputs" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "MapTypes") {
+          fields {
+            name
+            description
+            args {
+              name
+              description
+            }
+            type {
+              kind
+              name
+              ofType {
+                kind
+                name
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+      |> IO.inspect()
+  end
 end

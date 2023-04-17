@@ -1378,13 +1378,15 @@ defmodule AshGraphql.Resource do
       List.wrap(page_of(resource, schema)) ++
       List.wrap(relay_page(resource, schema)) ++
       List.wrap(keyset_page_of(resource, schema)) ++
+      map_definitions(resource, schema, __ENV__) ++
       enum_definitions(resource, schema, __ENV__) ++
       union_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
   def no_graphql_types(resource, schema) do
-    enum_definitions(resource, schema, __ENV__, true) ++
+    map_definitions(resource, schema, __ENV__, true) ++
+      enum_definitions(resource, schema, __ENV__, true) ++
       union_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
@@ -2356,6 +2358,77 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(type) <> "_sort_field")
   end
 
+  def map_definitions(resource, schema, env, only_auto? \\ false) do
+    constrained_maps =
+      resource
+      |> get_auto_maps()
+      |> Enum.flat_map(fn attribute ->
+        constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+
+        IO.inspect(attribute: attribute, constraints: constraints)
+
+        type_name =
+          if constraints[:fields] do
+            if Ash.Type.NewType.new_type?(attribute.type) do
+              cond do
+                function_exported?(attribute.type, :graphql_type, 0) ->
+                  attribute.type.graphql_type()
+
+                function_exported?(attribute.type, :graphql_type, 1) ->
+                  attribute.type.graphql_type(attribute.constraints)
+
+                true ->
+                  map_type(resource, attribute.name)
+              end
+            else
+              map_type(resource, attribute.name)
+            end
+          else
+            nil
+          end
+
+        additional_type_name =
+          if constraints[:fields] && Ash.Type.NewType.new_type?(attribute.type) do
+            cond do
+              function_exported?(attribute.type, :graphql_input_type, 0) ->
+                attribute.type.graphql_input_type()
+
+              function_exported?(attribute.type, :graphql_input_type, 1) ->
+                attribute.type.graphql_input_type(attribute.constraints)
+
+              true ->
+                map_type(resource, attribute.name)
+            end
+          else
+            nil
+          end
+
+        [
+          type_name,
+          additional_type_name
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.map(fn type_name ->
+          %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+            module: schema,
+            name: type_name |> to_string() |> Macro.camelize(),
+            fields:
+              Enum.map(constraints[:fields], fn {name, constraints} ->
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  module: schema,
+                  identifier: name,
+                  __reference__: AshGraphql.Resource.ref(env),
+                  name: Macro.camelize(to_string(name)),
+                  type: do_field_type(constraints[:type], nil, nil, false)
+                }
+              end),
+            identifier: type_name,
+            __reference__: ref(__ENV__)
+          }
+        end)
+      end)
+  end
+
   def enum_definitions(resource, schema, env, only_auto? \\ false) do
     resource = Ash.Type.NewType.subtype_of(resource)
 
@@ -2507,78 +2580,76 @@ defmodule AshGraphql.Resource do
         []
       )
 
-    input_definitions = [
-      %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-        module: schema,
-        name: input_type_name |> to_string() |> Macro.camelize(),
-        identifier: String.to_atom(to_string(input_type_name)),
-        __reference__: ref(env),
-        fields:
-          Enum.map(constraints[:types], fn {name, config} ->
-            %Absinthe.Blueprint.Schema.InputValueDefinition{
-              name: name |> to_string(),
-              identifier: name,
+        constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+
+        [
+          %Absinthe.Blueprint.Schema.UnionTypeDefinition{
+            module: schema,
+            name: type_name |> to_string() |> Macro.camelize(),
+            resolve_type: func,
+            types:
+              Enum.map(constraints[:types], fn {name, _} ->
+                %Absinthe.Blueprint.TypeReference.Name{
+                  name: "#{type_name}_#{name}" |> Macro.camelize()
+                }
+              end),
+            identifier: type_name,
+            __reference__: ref(env)
+          },
+          %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+            module: schema,
+            name: input_type_name |> to_string() |> Macro.camelize(),
+            identifier: String.to_atom(input_type_name),
+            __reference__: ref(env),
+            fields:
+              Enum.map(constraints[:types], fn {name, config} ->
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  name: name |> to_string(),
+                  identifier: name,
+                  __reference__: ref(env),
+                  type:
+                    field_type(
+                      config[:type],
+                      %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+                      resource,
+                      true
+                    )
+                }
+              end)
+          }
+        ] ++
+          Enum.map(constraints[:types], fn {name, _} ->
+            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+              module: schema,
+              name: "#{type_name}_#{name}" |> Macro.camelize(),
+              identifier: :"#{type_name}_#{name}",
               __reference__: ref(env),
-              type:
-                field_type(
-                  config[:type],
-                  %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
-                  resource,
-                  true
-                )
+              fields: [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  identifier: :value,
+                  module: schema,
+                  name: "value",
+                  __reference__: ref(env),
+                  type: %Absinthe.Blueprint.TypeReference.NonNull{
+                    of_type: names_to_field_types[name]
+                  }
+                }
+              ]
             }
           end)
-      }
-    ]
-
-    object_type_definitions =
-      constraints[:types]
-      |> Enum.reject(fn name ->
-        name in grapqhl_unnested_unions
       end)
-      |> Enum.map(fn {name, _} ->
-        %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-          module: schema,
-          name: "#{type_name}_#{name}" |> Macro.camelize(),
-          identifier: :"#{type_name}_#{name}",
-          __reference__: ref(env),
-          fields: [
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              identifier: :value,
-              module: schema,
-              name: "value",
-              __reference__: ref(env),
-              type: %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: names_to_field_types[name]
-              }
-            }
-          ]
-        }
-      end)
+    else
+      []
+    end
+  end
 
-    [
-      %Absinthe.Blueprint.Schema.UnionTypeDefinition{
-        module: schema,
-        name: type_name |> to_string() |> Macro.camelize(),
-        resolve_type: func,
-        types:
-          Enum.map(constraints[:types], fn {name, _config} ->
-            if name in grapqhl_unnested_unions do
-              %Absinthe.Blueprint.TypeReference.Name{
-                name: to_string(names_to_field_types[name]) |> Macro.camelize()
-              }
-            else
-              %Absinthe.Blueprint.TypeReference.Name{
-                name: "#{type_name}_#{name}" |> Macro.camelize()
-              }
-            end
-          end),
-        identifier: type_name,
-        __reference__: ref(env)
-      }
-    ] ++
-      input_definitions ++
-      object_type_definitions
+  @doc false
+  def get_auto_maps(resource) do
+    resource
+    |> AshGraphql.all_attributes_and_arguments([], false)
+    |> Enum.map(&unnest/1)
+    |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map))
+    |> Enum.uniq_by(& &1.name)
   end
 
   @doc false
@@ -3591,6 +3662,19 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
   def atom_enum_type(resource, attribute_name) do
+    field_names = AshGraphql.Resource.Info.field_names(resource)
+
+    resource
+    |> AshGraphql.Resource.Info.type()
+    |> to_string()
+    |> Kernel.<>("_")
+    |> Kernel.<>(to_string(field_names[attribute_name] || attribute_name))
+    |> String.to_atom()
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  @doc false
+  def map_type(resource, attribute_name) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
     resource
