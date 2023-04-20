@@ -2475,6 +2475,37 @@ defmodule AshGraphql.Resource do
 
         constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
 
+        input_definitions =
+          case attribute do
+            %Ash.Resource.Attribute{} ->
+              [
+                %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+                  module: schema,
+                  name: input_type_name |> to_string() |> Macro.camelize(),
+                  identifier: String.to_atom(input_type_name),
+                  __reference__: ref(env),
+                  fields:
+                    Enum.map(constraints[:types], fn {name, config} ->
+                      %Absinthe.Blueprint.Schema.InputValueDefinition{
+                        name: name |> to_string(),
+                        identifier: name,
+                        __reference__: ref(env),
+                        type:
+                          field_type(
+                            config[:type],
+                            %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+                            resource,
+                            true
+                          )
+                      }
+                    end)
+                }
+              ]
+
+            _ ->
+              []
+          end
+
         [
           %Absinthe.Blueprint.Schema.UnionTypeDefinition{
             module: schema,
@@ -2488,29 +2519,9 @@ defmodule AshGraphql.Resource do
               end),
             identifier: type_name,
             __reference__: ref(env)
-          },
-          %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-            module: schema,
-            name: input_type_name |> to_string() |> Macro.camelize(),
-            identifier: String.to_atom(input_type_name),
-            __reference__: ref(env),
-            fields:
-              Enum.map(constraints[:types], fn {name, config} ->
-                %Absinthe.Blueprint.Schema.InputValueDefinition{
-                  name: name |> to_string(),
-                  identifier: name,
-                  __reference__: ref(env),
-                  type:
-                    field_type(
-                      config[:type],
-                      %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
-                      resource,
-                      true
-                    )
-                }
-              end)
           }
         ] ++
+          input_definitions ++
           Enum.map(constraints[:types], fn {name, _} ->
             %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
               module: schema,
@@ -3317,9 +3328,10 @@ defmodule AshGraphql.Resource do
       if Spark.Dsl.is?(type, Ash.Resource) && !Ash.Type.embedded_type?(type) do
         if input? do
           raise "Cannot construct an input type for #{inspect(type)}"
+        else
+          AshGraphql.Resource.Info.type(type) || Application.get_env(:ash_graphql, :json_type) ||
+            :json_string
         end
-
-        AshGraphql.Resource.Info.type(type)
       else
         if Ash.Type.embedded_type?(type) do
           if input? && type(type) do
