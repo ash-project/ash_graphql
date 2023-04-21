@@ -1564,6 +1564,42 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent, field)})
   end
 
+  def resolve_union(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
+
+  def resolve_union(
+        %{source: parent} = resolution,
+        {name, field_type, field, resource, unnested_types}
+      ) do
+    result =
+      case Map.get(parent, name) do
+        %Ash.Union{type: type, value: value} = union ->
+          constraints = Ash.Type.NewType.constraints(field_type, field.constraints)
+
+          if type in unnested_types do
+            if value do
+              # TODO: requiring this only be done for
+              # map types then?
+              type =
+                AshGraphql.Resource.field_type(
+                  constraints[:types][type][:type],
+                  field,
+                  resource
+                )
+
+              Map.put(value, :__union_type__, type)
+            end
+          else
+            union
+          end
+
+        other ->
+          other
+      end
+
+    Absinthe.Resolution.put_result(resolution, {:ok, result})
+  end
+
   def resolve_keyset(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
 
@@ -1571,7 +1607,6 @@ defmodule AshGraphql.Graphql.Resolver do
         %{source: parent} = resolution,
         _field
       ) do
-    parent.__metadata__
     Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent.__metadata__, :keyset)})
   end
 

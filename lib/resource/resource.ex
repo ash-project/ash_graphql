@@ -2246,8 +2246,19 @@ defmodule AshGraphql.Resource do
     !Ash.Type.embedded_type?(type) && function_exported?(module, :expression, 2)
   end
 
-  defp filterable?(%{type: type}, _) do
-    !Ash.Type.embedded_type?(type)
+  defp filterable?(%{type: type} = attribute, resource) do
+    if Ash.Type.NewType.new_type?(type) do
+      filterable?(
+        %{
+          attribute
+          | constraints: Ash.Type.NewType.constraints(type, attribute.constraints),
+            type: Ash.Type.NewType.subtype_of(type)
+        },
+        resource
+      )
+    else
+      !Ash.Type.embedded_type?(type)
+    end
   end
 
   defp filterable?(_, _), do: false
@@ -2414,137 +2425,125 @@ defmodule AshGraphql.Resource do
       resource
       |> get_auto_unions()
       |> Enum.flat_map(fn attribute ->
-        type_name =
-          if Ash.Type.NewType.new_type?(attribute.type) do
-            cond do
-              function_exported?(attribute.type, :graphql_type, 0) ->
-                attribute.type.graphql_type()
+        type_name = atom_enum_type(resource, attribute.name)
+        input_type_name = "#{atom_enum_type(resource, attribute.name)}_input"
 
-              function_exported?(attribute.type, :graphql_type, 1) ->
-                attribute.type.graphql_type(attribute.constraints)
-
-              true ->
-                atom_enum_type(resource, attribute.name)
-            end
-          else
-            atom_enum_type(resource, attribute.name)
-          end
-
-        input_type_name =
-          if Ash.Type.NewType.new_type?(attribute.type) do
-            cond do
-              function_exported?(attribute.name, :graphql_input_type, 0) ->
-                attribute.type.graphql_input_type()
-
-              function_exported?(attribute.name, :graphql_input_type, 1) ->
-                attribute.type.graphql_input_type(attribute.constraints)
-
-              true ->
-                "#{atom_enum_type(resource, attribute.name)}_input"
-            end
-          else
-            "#{atom_enum_type(resource, attribute.name)}_input"
-          end
-
-        constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
-
-        names_to_field_types =
-          Map.new(constraints[:types] || %{}, fn {name, config} ->
-            {name,
-             field_type(
-               config[:type],
-               %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
-               resource
-             )}
-          end)
-
-        func_name = :"resolve_gql_union_#{type_name}"
-
-        {func, _} =
-          Code.eval_quoted(
-            {:&, [],
-             [
-               {:/, [],
-                [
-                  {{:., [], [resource, func_name]}, [], []},
-                  2
-                ]}
-             ]},
-            []
-          )
-
-        constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
-
-        input_definitions =
-          case attribute do
-            %Ash.Resource.Attribute{} ->
-              [
-                %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-                  module: schema,
-                  name: input_type_name |> to_string() |> Macro.camelize(),
-                  identifier: String.to_atom(input_type_name),
-                  __reference__: ref(env),
-                  fields:
-                    Enum.map(constraints[:types], fn {name, config} ->
-                      %Absinthe.Blueprint.Schema.InputValueDefinition{
-                        name: name |> to_string(),
-                        identifier: name,
-                        __reference__: ref(env),
-                        type:
-                          field_type(
-                            config[:type],
-                            %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
-                            resource,
-                            true
-                          )
-                      }
-                    end)
-                }
-              ]
-
-            _ ->
-              []
-          end
-
-        [
-          %Absinthe.Blueprint.Schema.UnionTypeDefinition{
-            module: schema,
-            name: type_name |> to_string() |> Macro.camelize(),
-            resolve_type: func,
-            types:
-              Enum.map(constraints[:types], fn {name, _} ->
-                %Absinthe.Blueprint.TypeReference.Name{
-                  name: "#{type_name}_#{name}" |> Macro.camelize()
-                }
-              end),
-            identifier: type_name,
-            __reference__: ref(env)
-          }
-        ] ++
-          input_definitions ++
-          Enum.map(constraints[:types], fn {name, _} ->
-            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-              module: schema,
-              name: "#{type_name}_#{name}" |> Macro.camelize(),
-              identifier: :"#{type_name}_#{name}",
-              __reference__: ref(env),
-              fields: [
-                %Absinthe.Blueprint.Schema.FieldDefinition{
-                  identifier: :value,
-                  module: schema,
-                  name: "value",
-                  __reference__: ref(env),
-                  type: %Absinthe.Blueprint.TypeReference.NonNull{
-                    of_type: names_to_field_types[name]
-                  }
-                }
-              ]
-            }
-          end)
+        union_type_definitions(resource, attribute, type_name, schema, env, input_type_name)
       end)
     else
       []
     end
+  end
+
+  @doc false
+  # sobelow_skip ["RCE.CodeModule", "DOS.BinToAtom", "DOS.StringToAtom"]
+  def union_type_definitions(resource, attribute, type_name, schema, env, input_type_name) do
+    grapqhl_unnested_unions =
+      if function_exported?(attribute.type, :graphql_unnested_unions, 1) do
+        attribute.type.graphql_unnested_unions(attribute.constraints)
+      else
+        []
+      end
+
+    constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+
+    names_to_field_types =
+      Map.new(constraints[:types] || %{}, fn {name, config} ->
+        {name,
+         field_type(
+           config[:type],
+           %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+           resource
+         )}
+      end)
+
+    func_name = :"resolve_gql_union_#{type_name}"
+
+    {func, _} =
+      Code.eval_quoted(
+        {:&, [],
+         [
+           {:/, [],
+            [
+              {{:., [], [resource, func_name]}, [], []},
+              2
+            ]}
+         ]},
+        []
+      )
+
+    input_definitions = [
+      %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+        module: schema,
+        name: input_type_name |> to_string() |> Macro.camelize(),
+        identifier: String.to_atom(to_string(input_type_name)),
+        __reference__: ref(env),
+        fields:
+          Enum.map(constraints[:types], fn {name, config} ->
+            %Absinthe.Blueprint.Schema.InputValueDefinition{
+              name: name |> to_string(),
+              identifier: name,
+              __reference__: ref(env),
+              type:
+                field_type(
+                  config[:type],
+                  %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+                  resource,
+                  true
+                )
+            }
+          end)
+      }
+    ]
+
+    object_type_definitions =
+      constraints[:types]
+      |> Enum.reject(fn name ->
+        name in grapqhl_unnested_unions
+      end)
+      |> Enum.map(fn {name, _} ->
+        %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+          module: schema,
+          name: "#{type_name}_#{name}" |> Macro.camelize(),
+          identifier: :"#{type_name}_#{name}",
+          __reference__: ref(env),
+          fields: [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              identifier: :value,
+              module: schema,
+              name: "value",
+              __reference__: ref(env),
+              type: %Absinthe.Blueprint.TypeReference.NonNull{
+                of_type: names_to_field_types[name]
+              }
+            }
+          ]
+        }
+      end)
+
+    [
+      %Absinthe.Blueprint.Schema.UnionTypeDefinition{
+        module: schema,
+        name: type_name |> to_string() |> Macro.camelize(),
+        resolve_type: func,
+        types:
+          Enum.map(constraints[:types], fn {name, _config} ->
+            if name in grapqhl_unnested_unions do
+              %Absinthe.Blueprint.TypeReference.Name{
+                name: to_string(names_to_field_types[name]) |> Macro.camelize()
+              }
+            else
+              %Absinthe.Blueprint.TypeReference.Name{
+                name: "#{type_name}_#{name}" |> Macro.camelize()
+              }
+            end
+          end),
+        identifier: type_name,
+        __reference__: ref(env)
+      }
+    ] ++
+      input_definitions ++
+      object_type_definitions
   end
 
   @doc false
@@ -2569,7 +2568,19 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn attribute ->
       unnest(attribute)
     end)
+    |> Enum.reject(fn attribute ->
+      function_exported?(attribute.type, :graphql_type, 0) ||
+        function_exported?(attribute.type, :graphql_type, 1)
+    end)
     |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Union))
+  end
+
+  @doc false
+  def global_unions(resource) do
+    resource
+    |> AshGraphql.all_attributes_and_arguments()
+    |> AshGraphql.only_union_types()
+    |> Enum.uniq_by(&elem(&1, 0))
   end
 
   defp sort_values(resource) do
@@ -2982,6 +2993,14 @@ defmodule AshGraphql.Resource do
           description: attribute.description,
           identifier: attribute.name,
           module: schema,
+          middleware:
+            middleware_for_field(
+              resource,
+              attribute,
+              attribute.name,
+              attribute.type,
+              attribute.constraints
+            ),
           name: to_string(name),
           type: field_type,
           __reference__: ref(__ENV__)
@@ -3163,33 +3182,50 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn aggregate ->
       name = field_names[aggregate.name] || aggregate.name
 
-      field_type =
+      {field_type, constraints} =
         with field when not is_nil(field) <- aggregate.field,
              related when not is_nil(related) <-
                Ash.Resource.Info.related(resource, aggregate.relationship_path),
              attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, aggregate.field) do
-          attr.type
+          {attr.type, attr.constraints}
+        else
+          _ ->
+            {nil, []}
         end
 
-      {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
+      {:ok, agg_type} = Aggregate.kind_to_type(aggregate.kind, field_type)
 
       type =
         if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) do
-          field_type(type, aggregate, resource)
+          field_type(agg_type, aggregate, resource)
         else
           %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(type, aggregate, resource)
+            of_type: field_type(agg_type, aggregate, resource)
           }
         end
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: aggregate.name,
         module: schema,
+        middleware:
+          middleware_for_field(resource, aggregate, aggregate.name, agg_type, constraints),
         name: to_string(name),
         type: type,
         __reference__: ref(__ENV__)
       }
     end)
+  end
+
+  defp middleware_for_field(resource, field, name, type, constraints) do
+    if Ash.Type.NewType.new_type?(type) && Ash.Type.NewType.subtype_of(Ash.Type.Union) &&
+         function_exported?(type, :graphql_unnested_unions, 1) do
+      unnested_types = type.graphql_unnested_unions(constraints)
+
+      {{AshGraphql.Graphql.Resolver, :resolve_union},
+       {name, type, field, resource, unnested_types}}
+    else
+      []
+    end
   end
 
   defp calculations(resource, api, schema) do
@@ -3327,7 +3363,7 @@ defmodule AshGraphql.Resource do
     else
       if Spark.Dsl.is?(type, Ash.Resource) && !Ash.Type.embedded_type?(type) do
         if input? do
-          raise "Cannot construct an input type for #{inspect(type)}"
+          Application.get_env(:ash_graphql, :json_type) || :json_string
         else
           AshGraphql.Resource.Info.type(type) || Application.get_env(:ash_graphql, :json_type) ||
             :json_string
@@ -3371,6 +3407,16 @@ defmodule AshGraphql.Resource do
 
               function_exported?(type, function, 0) ->
                 apply(type, function, [])
+
+              input? && Ash.Type.NewType.new_type?(type) &&
+                Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
+                  (function_exported?(type, :graphql_type, 0) ||
+                     function_exported?(type, :graphql_type, 1)) ->
+                if function_exported?(type, :graphql_type, 0) do
+                  :"#{type.graphql_type()}_input"
+                else
+                  :"#{type.graphql_type(Map.get(attribute, :constraints, []))}_input"
+                end
 
               true ->
                 if Ash.Type.NewType.new_type?(type) do

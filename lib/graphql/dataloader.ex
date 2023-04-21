@@ -312,10 +312,39 @@ defmodule AshGraphql.Dataloader do
             metadata do
         {ids, records} = Enum.unzip(records)
 
+        calculation = Ash.Resource.Info.calculation(resource, calc)
+
         results =
           records
           |> source.api.load!([{calc, args}], api_opts)
           |> Enum.map(&Map.get(&1, calc))
+
+        results =
+          if Ash.Type.NewType.new_type?(calculation.type) &&
+               Ash.Type.NewType.subtype_of(Ash.Type.Union) &&
+               function_exported?(calculation.type, :graphql_unnested_unions, 1) do
+            unnested_types = calculation.type.graphql_unnested_unions(calculation.constraints)
+            constraints = Ash.Type.NewType.constraints(calculation.type, calculation.constraints)
+
+            Enum.map(results, fn %Ash.Union{type: type, value: value} = result ->
+              if type in unnested_types do
+                if value do
+                  type =
+                    AshGraphql.Resource.field_type(
+                      constraints[:types][type][:type],
+                      calculation,
+                      resource
+                    )
+
+                  Map.put(value, :__union_type__, type)
+                end
+              else
+                result
+              end
+            end)
+          else
+            results
+          end
 
         {key, Map.new(Enum.zip(ids, results))}
       end

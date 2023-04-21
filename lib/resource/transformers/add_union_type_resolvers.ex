@@ -8,6 +8,7 @@ defmodule AshGraphql.Resource.Transformers.AddUnionTypeResolvers do
   def transform(dsl_state) do
     dsl_state
     |> AshGraphql.Resource.get_auto_unions()
+    |> Enum.concat(dsl_state |> AshGraphql.Resource.global_unions() |> Enum.map(&elem(&1, 1)))
     |> Enum.map(fn attribute ->
       if Ash.Type.NewType.new_type?(attribute.type) do
         cond do
@@ -37,6 +38,10 @@ defmodule AshGraphql.Resource.Transformers.AddUnionTypeResolvers do
              def unquote(:"resolve_gql_union_#{type_name}")(%Ash.Union{type: type}, _) do
                # sobelow_skip ["DOS.BinToAtom"]
                :"#{unquote(type_name)}_#{type}"
+             end
+
+             def unquote(:"resolve_gql_union_#{type_name}")(value, _) do
+               value.__union_type__
              end
            end
          )}
