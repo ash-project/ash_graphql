@@ -421,6 +421,7 @@ defmodule AshGraphql.Resource do
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(query.name),
+          description: Ash.Resource.Info.action(resource, query.action).description,
           type: query_type(query, resource, query_action, type),
           __reference__: ref(__ENV__)
         }
@@ -454,6 +455,7 @@ defmodule AshGraphql.Resource do
                 ],
             module: schema,
             name: to_string(mutation.name),
+            description: Ash.Resource.Info.action(resource, mutation.action).description,
             type: String.to_atom("#{mutation.name}_result"),
             __reference__: ref(__ENV__)
           }
@@ -496,6 +498,7 @@ defmodule AshGraphql.Resource do
               ],
           module: schema,
           name: to_string(mutation.name),
+          description: Ash.Resource.Info.action(resource, mutation.action).description,
           type: String.to_atom("#{mutation.name}_result"),
           __reference__: ref(__ENV__)
         }
@@ -546,6 +549,7 @@ defmodule AshGraphql.Resource do
           ],
       module: schema,
       name: to_string(mutation.name),
+      description: Ash.Resource.Info.action(resource, mutation.action).description,
       type: String.to_atom("#{mutation.name}_result"),
       __reference__: ref(__ENV__)
     }
@@ -616,6 +620,7 @@ defmodule AshGraphql.Resource do
         identifier: argument.name,
         module: schema,
         name: to_string(argument.name),
+        description: argument.description,
         type: type,
         __reference__: ref(__ENV__)
       }
@@ -871,6 +876,7 @@ defmodule AshGraphql.Resource do
               identifier: name,
               module: schema,
               name: to_string(name),
+              description: argument.description,
               type: type,
               __reference__: ref(__ENV__)
             }
@@ -892,6 +898,7 @@ defmodule AshGraphql.Resource do
                 identifier: argument.name,
                 module: schema,
                 name: to_string(name),
+                description: argument.description,
                 type: maybe_wrap_non_null(type, argument_required?(argument)),
                 __reference__: ref(__ENV__)
               }
@@ -905,6 +912,7 @@ defmodule AshGraphql.Resource do
                 identifier: name,
                 module: schema,
                 name: to_string(name),
+                description: Map.get(argument, :description, ""),
                 type: type,
                 __reference__: ref(__ENV__)
               }
@@ -1218,6 +1226,7 @@ defmodule AshGraphql.Resource do
         identifier: argument.name,
         module: schema,
         name: to_string(argument.name),
+        description: argument.description,
         type: type,
         __reference__: ref(__ENV__)
       }
@@ -2173,6 +2182,7 @@ defmodule AshGraphql.Resource do
           identifier: attribute.name,
           module: schema,
           name: to_string(field_names[attribute.name] || attribute.name),
+          description: attribute.description,
           type: attribute_filter_field_type(resource, attribute),
           __reference__: ref(__ENV__)
         }
@@ -2193,6 +2203,7 @@ defmodule AshGraphql.Resource do
             identifier: aggregate.name,
             module: schema,
             name: to_string(field_names[aggregate.name] || aggregate.name),
+            description: aggregate.description,
             type: attribute_filter_field_type(resource, aggregate),
             __reference__: ref(__ENV__)
           }
@@ -2215,6 +2226,7 @@ defmodule AshGraphql.Resource do
           identifier: calculation.name,
           module: schema,
           name: to_string(field_names[calculation.name] || calculation.name),
+          description: calculation.description,
           type: calculation_filter_field_type(resource, calculation),
           __reference__: ref(__ENV__)
         }
@@ -2278,6 +2290,7 @@ defmodule AshGraphql.Resource do
         identifier: relationship.name,
         module: schema,
         name: to_string(field_names[relationship.name] || relationship.name),
+        description: relationship.description,
         type: resource_filter_type(relationship.destination),
         __reference__: ref(__ENV__)
       }
@@ -2742,7 +2755,7 @@ defmodule AshGraphql.Resource do
               }
             },
             %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "Wether or not there is a next page",
+              description: "Whether or not there is a next page",
               identifier: :more?,
               module: schema,
               name: "has_next_page",
@@ -3131,6 +3144,7 @@ defmodule AshGraphql.Resource do
           identifier: relationship.name,
           module: schema,
           name: to_string(name),
+          description: relationship.description,
           arguments: args(:one_related, relationship.destination, read_action, schema),
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
@@ -3163,6 +3177,7 @@ defmodule AshGraphql.Resource do
           identifier: relationship.name,
           module: schema,
           name: to_string(name),
+          description: relationship.description,
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {api, relationship}}
@@ -3210,6 +3225,7 @@ defmodule AshGraphql.Resource do
         middleware:
           middleware_for_field(resource, aggregate, aggregate.name, agg_type, constraints),
         name: to_string(name),
+        description: aggregate.description,
         type: type,
         __reference__: ref(__ENV__)
       }
@@ -3248,6 +3264,7 @@ defmodule AshGraphql.Resource do
           {{AshGraphql.Graphql.Resolver, :resolve_calculation}, {api, resource, calculation}}
         ],
         name: to_string(name),
+        description: calculation.description,
         type: field_type,
         __reference__: ref(__ENV__)
       }
@@ -3272,6 +3289,8 @@ defmodule AshGraphql.Resource do
         identifier: argument.name,
         module: schema,
         name: to_string(argument.name),
+        # Will be replaced with `argument.description`.
+        description: Map.get(argument, :description),
         type: type,
         __reference__: ref(__ENV__)
       }
