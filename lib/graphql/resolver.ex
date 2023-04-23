@@ -1578,8 +1578,6 @@ defmodule AshGraphql.Graphql.Resolver do
 
           if type in unnested_types do
             if value do
-              # TODO: requiring this only be done for
-              # map types then?
               type =
                 AshGraphql.Resource.field_type(
                   constraints[:types][type][:type],
