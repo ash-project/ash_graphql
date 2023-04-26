@@ -86,7 +86,6 @@ defmodule AshGraphql.AttributeTest do
     assert visibility_field["type"]["kind"] == "ENUM"
   end
 
-  @tag :wip
   test "map attribute with field constraints get their own type" do
     {:ok, %{data: data}} =
       """
@@ -133,7 +132,6 @@ defmodule AshGraphql.AttributeTest do
            }
   end
 
-  @tag :wip
   test "map attribute with field constraints use input objects for inputs" do
     {:ok, %{data: data}} =
       """
@@ -168,5 +166,113 @@ defmodule AshGraphql.AttributeTest do
 
     assert bar_field["type"]["kind"] == "SCALAR"
     assert bar_field["type"]["name"] == "Int"
+  end
+
+  test "map arguments with constraints create an input object" do
+    assert {:ok,
+            %{
+              data: %{
+                "__type" => %{
+                  "inputFields" => [
+                    %{
+                      "name" => "attributes",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "MapTypesAttributesInput",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "inlineValues",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "MapTypesInlineValuesInput",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "values",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "ConstrainedMapInput",
+                        "ofType" => nil
+                      }
+                    }
+                  ]
+                }
+              }
+            }} =
+             """
+             query {
+               __type(name: "InlineUpdateMapTypesInput") {
+                 inputFields {
+                   name
+                   type {
+                     kind
+                     name
+                     ofType {
+                       kind
+                       name
+                     }
+                   }
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+  end
+
+  test "map subtypes with constraints used as arguments use the subtype input object" do
+    assert {:ok,
+            %{
+              data: %{
+                "__type" => %{
+                  "inputFields" => [
+                    %{
+                      "name" => "attributes",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "MapTypesAttributesInput",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "moduleValues",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "ConstrainedMapInput",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "values",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "ConstrainedMapInput",
+                        "ofType" => nil
+                      }
+                    }
+                  ]
+                }
+              }
+            }} =
+             """
+             query {
+               __type(name: "ModuleUpdateMapTypesInput") {
+                 inputFields {
+                   name
+                   type {
+                     kind
+                     name
+                     ofType {
+                       kind
+                       name
+                     }
+                   }
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
   end
 end
