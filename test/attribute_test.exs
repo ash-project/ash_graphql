@@ -154,7 +154,6 @@ defmodule AshGraphql.AttributeTest do
       }
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
-      |> IO.inspect()
 
     foo_field =
       data["__type"]["inputFields"]

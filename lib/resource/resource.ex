@@ -2367,8 +2367,6 @@ defmodule AshGraphql.Resource do
       |> Enum.flat_map(fn attribute ->
         constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
 
-        IO.inspect(attribute: attribute, constraints: constraints)
-
         type_name =
           if constraints[:fields] do
             if Ash.Type.NewType.new_type?(attribute.type) do
@@ -2390,16 +2388,20 @@ defmodule AshGraphql.Resource do
           end
 
         input_type_name =
-          if constraints[:fields] && Ash.Type.NewType.new_type?(attribute.type) do
-            cond do
-              function_exported?(attribute.type, :graphql_input_type, 0) ->
-                attribute.type.graphql_input_type()
+          if constraints[:fields] do
+            if Ash.Type.NewType.new_type?(attribute.type) do
+              cond do
+                function_exported?(attribute.type, :graphql_input_type, 0) ->
+                  attribute.type.graphql_input_type()
 
-              function_exported?(attribute.type, :graphql_input_type, 1) ->
-                attribute.type.graphql_input_type(attribute.constraints)
+                function_exported?(attribute.type, :graphql_input_type, 1) ->
+                  attribute.type.graphql_input_type(attribute.constraints)
 
-              true ->
-                map_type(resource, attribute.name, _input? = true)
+                true ->
+                  map_type(resource, attribute.name, _input? = true)
+              end
+            else
+              map_type(resource, attribute.name, _input? = true)
             end
           else
             nil
@@ -2678,7 +2680,6 @@ defmodule AshGraphql.Resource do
     |> Enum.map(&unnest/1)
     |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map))
     |> Enum.uniq_by(& &1.name)
-    |> Enum.map(&IO.inspect/1)
   end
 
   @doc false
@@ -3632,8 +3633,6 @@ defmodule AshGraphql.Resource do
          resource,
          input?
        ) do
-    IO.inspect(binding())
-
     if is_list(constraints[:fields]) do
       map_type(resource, name, input?)
     else
