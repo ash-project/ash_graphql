@@ -211,6 +211,44 @@ defmodule AshGraphql do
     |> Enum.uniq_by(& &1.identifier)
   end
 
+  def global_unions(resources, schema, env) do
+    resources
+    |> Enum.flat_map(fn resource ->
+      resource
+      |> AshGraphql.Resource.global_unions()
+      |> Enum.flat_map(fn {type, attribute} ->
+        type_name =
+          if function_exported?(type, :graphql_type, 0) do
+            type.graphql_type()
+          else
+            type.graphql_type(attribute.constraints)
+          end
+
+        input_type_name =
+          cond do
+            function_exported?(type, :graphql_input_type, 0) ->
+              type.graphql_input_type()
+
+            function_exported?(type, :graphql_input_type, 1) ->
+              type.graphql_input_type(attribute.constraints)
+
+            true ->
+              "#{type_name}_input"
+          end
+
+        AshGraphql.Resource.union_type_definitions(
+          resource,
+          attribute,
+          type_name,
+          schema,
+          env,
+          input_type_name
+        )
+      end)
+    end)
+    |> Enum.uniq_by(& &1.identifier)
+  end
+
   @doc false
   def all_attributes_and_arguments(resource, already_checked \\ [], nested? \\ true) do
     if resource in already_checked do
@@ -248,6 +286,53 @@ defmodule AshGraphql do
     end
   end
 
+  @doc false
+  def only_union_types(attributes) do
+    Enum.flat_map(attributes, fn attribute ->
+      this_union_type =
+        case union_type(attribute.type) do
+          nil ->
+            nil
+
+          type ->
+            {type, attribute}
+        end
+
+      attribute = %{
+        type:
+          attribute.type
+          |> unwrap_type()
+          |> Ash.Type.NewType.subtype_of(),
+        constraints: Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+      }
+
+      case unwrap_type(attribute.type) do
+        Ash.Type.Union ->
+          attribute.constraints[:types]
+          |> Kernel.||([])
+          |> Enum.flat_map(fn {_name, config} ->
+            case union_type(config[:type]) do
+              nil ->
+                []
+
+              type ->
+                [{type, attribute}]
+            end
+          end)
+
+        type ->
+          case union_type(type) do
+            nil ->
+              []
+
+            type ->
+              [{type, attribute}]
+          end
+      end
+      |> Enum.concat(List.wrap(this_union_type))
+    end)
+  end
+
   defp only_enum_types(attributes) do
     Enum.flat_map(attributes, fn attribute ->
       attribute = %{
@@ -280,6 +365,19 @@ defmodule AshGraphql do
           end
       end
     end)
+  end
+
+  defp union_type({:array, type}) do
+    union_type(type)
+  end
+
+  defp union_type(type) do
+    if Ash.Type.NewType.new_type?(type) &&
+         Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
+         (function_exported?(type, :graphql_type, 0) ||
+            function_exported?(type, :graphql_type, 1)) do
+      type
+    end
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
