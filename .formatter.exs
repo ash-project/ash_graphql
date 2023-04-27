@@ -17,6 +17,7 @@ spark_locals_without_parens = [
   encode_primary_key?: 1,
   error_handler: 1,
   field_names: 1,
+  filterable_fields: 1,
   generate_object?: 1,
   get: 2,
   get: 3,
