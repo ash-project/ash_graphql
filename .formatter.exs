@@ -20,6 +20,7 @@ spark_locals_without_parens = [
   generate_object?: 1,
   get: 2,
   get: 3,
+  hide_fields: 1,
   identity: 1,
   keyset_field: 1,
   list: 2,

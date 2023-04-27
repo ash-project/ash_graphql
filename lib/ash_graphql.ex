@@ -272,6 +272,7 @@ defmodule AshGraphql do
         end
       end)
     end
+    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
   end
 
   def get_embed(type) do

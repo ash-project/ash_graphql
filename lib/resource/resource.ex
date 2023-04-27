@@ -259,6 +259,10 @@ defmodule AshGraphql.Resource do
         type: :keyword_list,
         doc: "A keyword list of name overrides for attributes."
       ],
+      hide_fields: [
+        type: {:list, :atom},
+        doc: "A list of attributes to hide from the api"
+      ],
       argument_names: [
         type: :keyword_list,
         doc:
@@ -831,7 +835,8 @@ defmodule AshGraphql.Resource do
         resource
         |> Ash.Resource.Info.public_attributes()
         |> Enum.filter(fn attribute ->
-          (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable?
+          AshGraphql.Resource.Info.show_field?(resource, attribute.name) &&
+            (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable?
         end)
         |> Enum.map(fn attribute ->
           allow_nil? =
@@ -1809,14 +1814,18 @@ defmodule AshGraphql.Resource do
   defp filter_attribute_types(resource, schema) do
     resource
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.filter(&filterable?(&1, resource))
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+    )
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
 
   defp filter_aggregate_types(resource, schema) do
     resource
     |> Ash.Resource.Info.public_aggregates()
-    |> Enum.filter(&filterable?(&1, resource))
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+    )
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
 
@@ -2031,6 +2040,7 @@ defmodule AshGraphql.Resource do
     calcs =
       resource
       |> Ash.Resource.Info.public_calculations()
+      |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
       |> Enum.reject(fn
         %{type: {:array, _}} ->
           true
@@ -2175,7 +2185,9 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.filter(&filterable?(&1, resource))
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+    )
     |> Enum.flat_map(fn attribute ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2196,7 +2208,9 @@ defmodule AshGraphql.Resource do
     if Ash.DataLayer.data_layer_can?(resource, :aggregate_filter) do
       resource
       |> Ash.Resource.Info.public_aggregates()
-      |> Enum.filter(&filterable?(&1, resource))
+      |> Enum.filter(
+        &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+      )
       |> Enum.flat_map(fn aggregate ->
         [
           %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2220,7 +2234,9 @@ defmodule AshGraphql.Resource do
     if Ash.DataLayer.data_layer_can?(resource, :expression_calculation) do
       resource
       |> Ash.Resource.Info.public_calculations()
-      |> Enum.filter(&filterable?(&1, resource))
+      |> Enum.filter(
+        &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+      )
       |> Enum.map(fn calculation ->
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: calculation.name,
@@ -2283,7 +2299,9 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
-      Resource in Spark.extensions(relationship.destination) && relationship.name in relationships
+      AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
+        Resource in Spark.extensions(relationship.destination) &&
+        relationship.name in relationships
     end)
     |> Enum.map(fn relationship ->
       %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2603,7 +2621,9 @@ defmodule AshGraphql.Resource do
     |> Ash.Resource.Info.public_attributes()
     |> Enum.concat(Ash.Resource.Info.public_calculations(resource))
     |> Enum.concat(Ash.Resource.Info.public_aggregates(resource))
-    |> Enum.filter(&filterable?(&1, resource))
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+    )
     |> Enum.map(& &1.name)
     |> Enum.uniq()
     |> Enum.map(fn name ->
@@ -2994,6 +3014,7 @@ defmodule AshGraphql.Resource do
 
     attributes =
       attributes
+      |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
       |> Enum.map(fn attribute ->
         field_type =
           attribute.type
@@ -3121,7 +3142,9 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(fn relationship ->
-      Resource in Spark.extensions(relationship.destination) && relationship.name in relationships &&
+      AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
+        Resource in Spark.extensions(relationship.destination) &&
+        relationship.name in relationships &&
         AshGraphql.Resource.Info.type(relationship.destination)
     end)
     |> Enum.map(fn
@@ -3194,6 +3217,7 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_aggregates()
+    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
     |> Enum.map(fn aggregate ->
       name = field_names[aggregate.name] || aggregate.name
 
@@ -3249,6 +3273,7 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_calculations()
+    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
     |> Enum.map(fn calculation ->
       name = field_names[calculation.name] || calculation.name
       field_type = calculation_type(calculation, resource)

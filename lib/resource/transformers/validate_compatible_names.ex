@@ -16,6 +16,7 @@ defmodule AshGraphql.Resource.Transformers.ValidateCompatibleNames do
     |> Enum.concat(Ash.Resource.Info.public_aggregates(dsl))
     |> Enum.concat(Ash.Resource.Info.public_calculations(dsl))
     |> Enum.concat(Ash.Resource.Info.public_relationships(dsl))
+    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
     |> Enum.each(fn field ->
       name = field_names[field.name] || field.name
 
