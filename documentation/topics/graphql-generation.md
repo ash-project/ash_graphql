@@ -244,8 +244,20 @@ mutation($input: CreateTicketInput!) {
 **Note**
 
 - The resulting ticket data is wrapped in AshGraphql's `result` object.
-- Validation errors are wrapped in an `errors` object, also specified in the query.
-  AshGraphql does this instead of exposing errors in GraphQL's standard `errors` array.
+- Validation errors are wrapped in a list of error objects under `errors`, also specified in the query.
+  AshGraphql does this by default instead of exposing errors in GraphQL's standard `errors` array.
+  This behavior can be changed by setting `root_level_errors? true` in the `graphql` section
+  of your Ash API module:
+
+  ```elixir
+  defmodule Helpdesk.Support do
+    use Ash.Api, extensions: [AshGraphql.Api]
+
+    graphql do
+      root_level_errors? true
+    end
+  end
+  ```
 
 If we were to run this mutation in a test, it would look something like this:
 
