@@ -303,6 +303,12 @@ defmodule AshGraphql.Resource do
         doc:
           "Whether or not to create the GraphQL object, this allows you to manually create the GraphQL object.",
         default: true
+      ],
+      filterable_fields: [
+        type: {:list, :atom},
+        required: false,
+        doc:
+          "A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created."
       ]
     ],
     sections: [
@@ -2180,14 +2186,17 @@ defmodule AshGraphql.Resource do
       aggregate_filter_fields(resource, schema) ++ calculation_filter_fields(resource, schema)
   end
 
+  defp filterable_and_shown_field?(resource, field) do
+    AshGraphql.Resource.Info.show_field?(resource, field.name) &&
+      AshGraphql.Resource.Info.filterable_field?(resource, field.name)
+  end
+
   defp attribute_filter_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
     resource
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.filter(
-      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
-    )
+    |> Enum.filter(&(filterable_and_shown_field?(resource, &1) && filterable?(&1, resource)))
     |> Enum.flat_map(fn attribute ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2208,9 +2217,7 @@ defmodule AshGraphql.Resource do
     if Ash.DataLayer.data_layer_can?(resource, :aggregate_filter) do
       resource
       |> Ash.Resource.Info.public_aggregates()
-      |> Enum.filter(
-        &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
-      )
+      |> Enum.filter(&(filterable_and_shown_field?(resource, &1) && filterable?(&1, resource)))
       |> Enum.flat_map(fn aggregate ->
         [
           %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2234,9 +2241,7 @@ defmodule AshGraphql.Resource do
     if Ash.DataLayer.data_layer_can?(resource, :expression_calculation) do
       resource
       |> Ash.Resource.Info.public_calculations()
-      |> Enum.filter(
-        &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
-      )
+      |> Enum.filter(&(filterable_and_shown_field?(resource, &1) && filterable?(&1, resource)))
       |> Enum.map(fn calculation ->
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: calculation.name,
@@ -2298,11 +2303,10 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_relationships()
-    |> Enum.filter(fn relationship ->
-      AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
-        Resource in Spark.extensions(relationship.destination) &&
-        relationship.name in relationships
-    end)
+    |> Enum.filter(
+      &(filterable_and_shown_field?(resource, &1) &&
+          Resource in Spark.extensions(&1.destination) && &1.name in relationships)
+    )
     |> Enum.map(fn relationship ->
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: relationship.name,

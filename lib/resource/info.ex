@@ -129,4 +129,16 @@ defmodule AshGraphql.Resource.Info do
   def generate_object?(resource) do
     Extension.get_opt(resource, [:graphql], :generate_object?, nil)
   end
+
+  @doc "Fields that may be filtered on"
+  def filterable_fields(resource) do
+    Extension.get_opt(resource, [:graphql], :filterable_fields, nil)
+  end
+
+  @doc "May the specified field be filtered on?"
+  def filterable_field?(resource, field) do
+    filterable_fields = AshGraphql.Resource.Info.filterable_fields(resource)
+
+    is_nil(filterable_fields) or field.name in filterable_fields
+  end
 end
