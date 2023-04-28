@@ -230,11 +230,22 @@ mutation($input: CreateTicketInput!) {
       subject
       status
     }
+    errors {
+      code
+      fields
+      message
+      shortMessage
+      vars
+    }
   }
 }
 ```
 
-Notice that the resulting ticket data is wrapped in a `result` object.
+**Note**
+
+- The resulting ticket data is wrapped in AshGraphql's `result` object.
+- Validation errors are wrapped in an `errors` object, also specified in the query.
+  AshGraphql does this instead of exposing errors in GraphQL's standard `errors` array.
 
 If we were to run this mutation in a test, it would look something like this:
 
