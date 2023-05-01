@@ -326,21 +326,27 @@ defmodule AshGraphql.Dataloader do
             unnested_types = calculation.type.graphql_unnested_unions(calculation.constraints)
             constraints = Ash.Type.NewType.constraints(calculation.type, calculation.constraints)
 
-            Enum.map(results, fn %Ash.Union{type: type, value: value} = result ->
-              if type in unnested_types do
-                if value do
-                  type =
-                    AshGraphql.Resource.field_type(
-                      constraints[:types][type][:type],
-                      calculation,
-                      resource
-                    )
+            IO.inspect(results)
 
-                  Map.put(value, :__union_type__, type)
+            Enum.map(results, fn
+              nil ->
+                nil
+
+              %Ash.Union{type: type, value: value} = result ->
+                if type in unnested_types do
+                  if value do
+                    type =
+                      AshGraphql.Resource.field_type(
+                        constraints[:types][type][:type],
+                        calculation,
+                        resource
+                      )
+
+                    Map.put(value, :__union_type__, type)
+                  end
+                else
+                  result
                 end
-              else
-                result
-              end
             end)
           else
             results
