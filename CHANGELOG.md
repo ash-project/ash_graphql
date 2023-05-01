@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.24.0](https://github.com/ash-project/ash_graphql/compare/v0.23.3...v0.24.0) (2023-05-01)
+
+
+
+
+### Features:
+
+* add `filterable_fields` to limit generated filters (#69)
+
+### Bug Fixes:
+
+* include resource name in managed_relationship types
+
+### Improvements:
+
+* handle `nil` values in union types
+
+* support hiding fields
+
+* pass `description` through to Absinthe in more cases (#63)
+
+* better union type handling
+
+* don't define union input types for calcs/aggregates
+
+* add `auto? true` option for `managed_relationships`
+
 ## [v0.23.3](https://github.com/ash-project/ash_graphql/compare/v0.23.2...v0.23.3) (2023-04-14)
 
 
