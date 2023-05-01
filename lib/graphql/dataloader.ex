@@ -326,8 +326,6 @@ defmodule AshGraphql.Dataloader do
             unnested_types = calculation.type.graphql_unnested_unions(calculation.constraints)
             constraints = Ash.Type.NewType.constraints(calculation.type, calculation.constraints)
 
-            IO.inspect(results)
-
             Enum.map(results, fn
               nil ->
                 nil
