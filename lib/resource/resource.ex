@@ -3011,7 +3011,7 @@ defmodule AshGraphql.Resource do
       if AshGraphql.Resource.Info.encode_primary_key?(resource) do
         resource
         |> Ash.Resource.Info.public_attributes()
-        |> Enum.reject(& &1.primary_key?)
+        |> Enum.reject(&(&1.name == :id))
       else
         Ash.Resource.Info.public_attributes(resource)
       end
