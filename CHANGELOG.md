@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.24.1](https://github.com/ash-project/ash_graphql/compare/v0.24.0...v0.24.1) (2023-05-08)
+
+
+
+
+### Bug Fixes:
+
+* don't hide fields not called `:id`
+
 ## [v0.24.0](https://github.com/ash-project/ash_graphql/compare/v0.23.3...v0.24.0) (2023-05-01)
 
 
