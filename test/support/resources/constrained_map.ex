@@ -10,6 +10,16 @@ defmodule AshGraphql.Test.ConstrainedMap do
         ],
         baz: [
           type: :integer
+        ],
+        bam: [
+          type: :map,
+          constraints: [
+            fields: [
+              qux: [
+                type: :string
+              ]
+            ]
+          ]
         ]
       ]
     ]

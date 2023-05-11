@@ -2410,53 +2410,135 @@ defmodule AshGraphql.Resource do
         [
           type_name
         ]
-        |> Enum.filter(& &1)
-        |> Enum.map(fn type_name ->
-          %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-            module: schema,
-            name: type_name |> to_string() |> Macro.camelize(),
-            fields:
-              Enum.map(constraints[:fields], fn {name, constraints} ->
-                %Absinthe.Blueprint.Schema.FieldDefinition{
-                  module: schema,
-                  identifier: name,
-                  __reference__: AshGraphql.Resource.ref(env),
-                  name: to_string(name),
-                  type: do_field_type(constraints[:type], nil, nil, false)
-                }
-              end),
-            identifier: type_name,
-            __reference__: ref(__ENV__)
-          }
-        end)
+        |> define_map_types(constraints, schema, env)
         |> Enum.concat(
           [
             input_type_name
           ]
-          |> Enum.filter(& &1)
-          |> Enum.map(fn type_name ->
-            %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-              module: schema,
-              name: type_name |> to_string() |> Macro.camelize(),
-              fields:
-                Enum.map(constraints[:fields], fn {name, constraints} ->
-                  %Absinthe.Blueprint.Schema.InputValueDefinition{
-                    module: schema,
-                    identifier: name,
-                    __reference__: AshGraphql.Resource.ref(env),
-                    name: to_string(name),
-                    type: do_field_type(constraints[:type], nil, nil, false)
-                  }
-                end),
-              identifier: type_name,
-              __reference__: ref(__ENV__)
-            }
-          end)
+          |> define_input_map_types(constraints, schema, env)
         )
       end)
     else
       []
     end
+  end
+
+  defp define_map_types(type_names, constraints, schema, env) do
+    type_names
+    |> Enum.filter(& &1)
+    |> Enum.flat_map(fn type_name ->
+      {types, fields} =
+        Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
+          case {attribute[:type], attribute[:constraints]} do
+            {:map, constraints} when not is_nil(constraints) ->
+              nested_type_name =
+                String.to_atom("#{Atom.to_string(type_name)}_#{Atom.to_string(name)}")
+
+              {
+                define_map_types(
+                  [nested_type_name],
+                  constraints,
+                  schema,
+                  env
+                ) ++ types,
+                [
+                  %Absinthe.Blueprint.Schema.FieldDefinition{
+                    module: schema,
+                    identifier: name,
+                    __reference__: AshGraphql.Resource.ref(env),
+                    name: to_string(name),
+                    type: nested_type_name
+                  }
+                  | fields
+                ]
+              }
+
+            _ ->
+              {types,
+               [
+                 %Absinthe.Blueprint.Schema.FieldDefinition{
+                   module: schema,
+                   identifier: name,
+                   __reference__: AshGraphql.Resource.ref(env),
+                   name: to_string(name),
+                   type: do_field_type(attribute[:type], nil, nil, false)
+                 }
+                 | fields
+               ]}
+          end
+        end)
+
+      [
+        %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+          module: schema,
+          name: type_name |> to_string() |> Macro.camelize(),
+          fields: fields,
+          identifier: type_name,
+          __reference__: ref(__ENV__)
+        }
+        | types
+      ]
+    end)
+  end
+
+  defp define_input_map_types(input_type_names, constraints, schema, env) do
+    input_type_names
+    |> Enum.filter(& &1)
+    |> Enum.flat_map(fn type_name ->
+      {types, fields} =
+        Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
+          case {attribute[:type], attribute[:constraints]} do
+            {:map, constraints} when not is_nil(constraints) ->
+              nested_type_name =
+                String.to_atom(
+                  "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"
+                )
+
+              {
+                define_input_map_types(
+                  [nested_type_name],
+                  constraints,
+                  schema,
+                  env
+                ) ++ types,
+                [
+                  %Absinthe.Blueprint.Schema.InputValueDefinition{
+                    module: schema,
+                    identifier: name,
+                    __reference__: AshGraphql.Resource.ref(env),
+                    name: to_string(name),
+                    type: nested_type_name
+                  }
+                  | fields
+                ]
+              }
+
+            _ ->
+              {types,
+               [
+                 %Absinthe.Blueprint.Schema.InputValueDefinition{
+                   module: schema,
+                   identifier: name,
+                   __reference__: AshGraphql.Resource.ref(env),
+                   name: to_string(name),
+                   type: do_field_type(attribute[:type], nil, nil, false)
+                 }
+                 | fields
+               ]}
+          end
+        end)
+
+      [
+        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          module: schema,
+          name: type_name |> to_string() |> Macro.camelize(),
+          fields: fields,
+          identifier: type_name,
+          __reference__: ref(__ENV__)
+        }
+        | types
+      ]
+    end)
   end
 
   def enum_definitions(resource, schema, env, only_auto? \\ false) do
@@ -3651,6 +3733,9 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  defp get_specific_field_type(Ash.Type.Map, _, _, _),
+    do: Application.get_env(:ash_graphql, :json_type) || :json_string
+
   defp get_specific_field_type(Ash.Type.Boolean, _, _, _), do: :boolean
 
   defp get_specific_field_type(Ash.Type.Atom, _, _, _) do
@@ -3679,6 +3764,8 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.Float, _, _, _), do: :float
 
   defp get_specific_field_type(type, attribute, resource, _) do
+    dbg()
+
     raise """
     Could not determine graphql field type for #{inspect(type)} on #{inspect(resource)}.#{attribute.name}
 

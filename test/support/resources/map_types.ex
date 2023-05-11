@@ -44,7 +44,7 @@ defmodule AshGraphql.Test.MapTypes do
     end
 
     update :module do
-      argument :module_values, AshGraphql.Test.ConstrainedMap
+      argument(:module_values, AshGraphql.Test.ConstrainedMap)
     end
   end
 

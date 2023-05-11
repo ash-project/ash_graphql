@@ -222,6 +222,96 @@ defmodule AshGraphql.AttributeTest do
              |> Absinthe.run(AshGraphql.Test.Schema)
   end
 
+  test "nested maps with constraints create types for nested maps" do
+    assert {:ok,
+            %{
+              data: %{
+                "__type" => %{
+                  "fields" => [
+                    %{
+                      "name" => "bam",
+                      "type" => %{
+                        "kind" => "OBJECT",
+                        "name" => "ConstrainedMapBam",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "baz",
+                      "type" => %{"kind" => "SCALAR", "name" => "Int", "ofType" => nil}
+                    },
+                    %{
+                      "name" => "fooBar",
+                      "type" => %{"kind" => "SCALAR", "name" => "String", "ofType" => nil}
+                    }
+                  ]
+                }
+              }
+            }} =
+             """
+             query {
+               __type(name: "ConstrainedMap") {
+                 fields {
+                   name
+                   type {
+                     kind
+                     name
+                     ofType {
+                       kind
+                       name
+                     }
+                   }
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok,
+            %{
+              data: %{
+                "__type" => %{
+                  "inputFields" => [
+                    %{
+                      "name" => "bam",
+                      "type" => %{
+                        "kind" => "INPUT_OBJECT",
+                        "name" => "ConstrainedMapBamInput",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "baz",
+                      "type" => %{"kind" => "SCALAR", "name" => "Int", "ofType" => nil}
+                    },
+                    %{
+                      "name" => "fooBar",
+                      "type" => %{"kind" => "SCALAR", "name" => "String", "ofType" => nil}
+                    }
+                  ]
+                }
+              }
+            }} =
+             """
+             query {
+               __type(name: "ConstrainedMapInput") {
+                 inputFields {
+                   name
+                   type {
+                     kind
+                     name
+                     ofType {
+                       kind
+                       name
+                     }
+                   }
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+  end
+
   test "map subtypes with constraints used as arguments use the subtype input object" do
     assert {:ok,
             %{
