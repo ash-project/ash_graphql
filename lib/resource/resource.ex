@@ -2425,8 +2425,6 @@ defmodule AshGraphql.Resource do
     type_names
     |> Enum.filter(& &1)
     |> Enum.flat_map(fn type_name ->
-      dbg()
-
       {types, fields} =
         Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
           case {attribute[:type], attribute[:constraints]} do
@@ -3764,8 +3762,6 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.Float, _, _, _), do: :float
 
   defp get_specific_field_type(type, attribute, resource, _) do
-    dbg()
-
     raise """
     Could not determine graphql field type for #{inspect(type)} on #{inspect(resource)}.#{attribute.name}
 
