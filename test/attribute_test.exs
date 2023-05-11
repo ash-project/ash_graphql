@@ -166,6 +166,13 @@ defmodule AshGraphql.AttributeTest do
 
     assert bar_field["type"]["kind"] == "SCALAR"
     assert bar_field["type"]["name"] == "Int"
+
+    baz_field =
+      data["__type"]["inputFields"]
+      |> Enum.find(fn field -> field["name"] == "baz" end)
+
+    assert baz_field["type"]["kind"] == "SCALAR"
+    assert baz_field["type"]["name"] == "JsonString"
   end
 
   test "map arguments with constraints create an input object" do
@@ -187,6 +194,14 @@ defmodule AshGraphql.AttributeTest do
                       "type" => %{
                         "kind" => "INPUT_OBJECT",
                         "name" => "MapTypesInlineValuesInput",
+                        "ofType" => nil
+                      }
+                    },
+                    %{
+                      "name" => "jsonMap",
+                      "type" => %{
+                        "kind" => "SCALAR",
+                        "name" => "JsonString",
                         "ofType" => nil
                       }
                     },
@@ -325,6 +340,10 @@ defmodule AshGraphql.AttributeTest do
                         "name" => "MapTypesAttributesInput",
                         "ofType" => nil
                       }
+                    },
+                    %{
+                      "name" => "jsonMap",
+                      "type" => %{"kind" => "SCALAR", "name" => "JsonString", "ofType" => nil}
                     },
                     %{
                       "name" => "moduleValues",

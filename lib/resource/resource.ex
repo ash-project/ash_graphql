@@ -2359,8 +2359,6 @@ defmodule AshGraphql.Resource do
   end
 
   def map_definitions(resource, schema, env) do
-    resource = Ash.Type.NewType.subtype_of(resource)
-
     if AshGraphql.Resource.Info.type(resource) do
       resource
       |> get_auto_maps()
@@ -2427,10 +2425,12 @@ defmodule AshGraphql.Resource do
     type_names
     |> Enum.filter(& &1)
     |> Enum.flat_map(fn type_name ->
+      dbg()
+
       {types, fields} =
         Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
           case {attribute[:type], attribute[:constraints]} do
-            {:map, constraints} when not is_nil(constraints) ->
+            {:map, constraints} when not is_nil(constraints) and constraints != [] ->
               nested_type_name =
                 String.to_atom("#{Atom.to_string(type_name)}_#{Atom.to_string(name)}")
 
@@ -2488,7 +2488,7 @@ defmodule AshGraphql.Resource do
       {types, fields} =
         Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
           case {attribute[:type], attribute[:constraints]} do
-            {:map, constraints} when not is_nil(constraints) ->
+            {:map, constraints} when not is_nil(constraints) and constraints != [] ->
               nested_type_name =
                 String.to_atom(
                   "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"

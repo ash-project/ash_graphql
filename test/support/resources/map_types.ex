@@ -14,12 +14,17 @@ defmodule AshGraphql.Test.MapTypes do
           ],
           bar: [
             type: :integer
+          ],
+          baz: [
+            type: :map
           ]
         ]
       )
 
       allow_nil? false
     end
+
+    attribute :json_map, :map
 
     attribute :values, AshGraphql.Test.ConstrainedMap do
     end
