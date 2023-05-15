@@ -128,17 +128,20 @@ defmodule AshGraphql do
                 global_unions =
                   AshGraphql.global_unions(unquote(ash_resources), unquote(schema), __ENV__)
 
-                AshGraphql.Api.global_type_definitions(unquote(schema), __ENV__) ++
-                  AshGraphql.Api.type_definitions(
-                    api,
-                    unquote(resources),
-                    unquote(schema),
-                    __ENV__,
-                    true
-                  ) ++
-                  global_enums ++
-                  global_unions ++
-                  embedded_types
+                Enum.uniq_by(
+                  AshGraphql.Api.global_type_definitions(unquote(schema), __ENV__) ++
+                    AshGraphql.Api.type_definitions(
+                      api,
+                      unquote(resources),
+                      unquote(schema),
+                      __ENV__,
+                      true
+                    ) ++
+                    global_enums ++
+                    global_unions ++
+                    embedded_types,
+                  & &1.identifier
+                )
               else
                 AshGraphql.Api.type_definitions(
                   api,
@@ -399,6 +402,13 @@ defmodule AshGraphql do
         attribute_type = unwrap_type(attribute.type)
 
         case attribute_type do
+          Ash.Type.Map ->
+            if attribute.constraints[:fields] do
+              {source_resource, attribute}
+            end
+
+            []
+
           Ash.Type.Union ->
             attribute.constraints[:types]
             |> Kernel.||([])
@@ -449,7 +459,8 @@ defmodule AshGraphql do
             schema
           )
         ] ++
-          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
+          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__) ++
+          AshGraphql.Resource.map_definitions(embedded_type, schema, __ENV__)
       else
         []
       end

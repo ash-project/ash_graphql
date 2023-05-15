@@ -8,6 +8,7 @@ defmodule AshGraphql.Test.Registry do
     entry(AshGraphql.Test.CompositePrimaryKeyNotEncoded)
     entry(AshGraphql.Test.DoubleRelRecursive)
     entry(AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed)
+    entry(AshGraphql.Test.MapTypes)
     entry(AshGraphql.Test.MultitenantTag)
     entry(AshGraphql.Test.MultitenantPostTag)
     entry(AshGraphql.Test.NonIdPrimaryKey)
