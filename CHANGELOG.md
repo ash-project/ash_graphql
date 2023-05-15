@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.0](https://github.com/ash-project/ash_graphql/compare/v0.24.1...v0.25.0) (2023-05-15)
+
+
+
+
+### Features:
+
+* create types for maps with constraints (#68)
+
 ## [v0.24.1](https://github.com/ash-project/ash_graphql/compare/v0.24.0...v0.24.1) (2023-05-08)
 
 
