@@ -2421,6 +2421,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp define_map_types(type_names, constraints, schema, env) do
     type_names
     |> Enum.filter(& &1)
@@ -2479,6 +2480,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp define_input_map_types(input_type_names, constraints, schema, env) do
     input_type_names
     |> Enum.filter(& &1)
@@ -3806,7 +3808,7 @@ defmodule AshGraphql.Resource do
     |> String.to_atom()
   end
 
-  # sobelow_skip ["DOS.StringToAtom"]
+  # sobelow_skip ["DOS.StringToAtom", "DOS.BinToAtom"]
   @doc false
   def map_type(resource, attribute_name, input? \\ false) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
