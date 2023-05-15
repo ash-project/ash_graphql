@@ -1,4 +1,5 @@
 defmodule AshGraphql.Test.MapTypes do
+  @moduledoc false
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
