@@ -3695,7 +3695,7 @@ defmodule AshGraphql.Resource do
          _input?
        )
        when not is_nil(resource) do
-    if is_list(constraints[:one_of]) do
+    if is_list(constraints[:one_of]) && AshGraphql.Resource.Info.type(resource) do
       atom_enum_type(resource, name)
     else
       :string
