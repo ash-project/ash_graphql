@@ -3460,8 +3460,8 @@ defmodule AshGraphql.Resource do
          function_exported?(type, :graphql_unnested_unions, 1) do
       unnested_types = type.graphql_unnested_unions(constraints)
 
-      {{AshGraphql.Graphql.Resolver, :resolve_union},
-       {name, type, field, resource, unnested_types}}
+      [{AshGraphql.Graphql.Resolver, :resolve_union},
+       {name, type, field, resource, unnested_types}]
     else
       []
     end
