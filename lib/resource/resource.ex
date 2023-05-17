@@ -289,8 +289,9 @@ defmodule AshGraphql.Resource do
       ],
       primary_key_delimiter: [
         type: :string,
+        default: "-",
         doc:
-          "If a composite primary key exists, this must be set to determine the `id` field value"
+          "If a composite primary key exists, this can be set to determine delimiter used in the `id` field value."
       ],
       depth_limit: [
         type: :integer,

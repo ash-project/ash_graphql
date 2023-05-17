@@ -122,7 +122,7 @@ defmodule AshGraphql.Resource.Info do
 
   @doc "The delimiter for a resource with a composite primary key"
   def primary_key_delimiter(resource) do
-    Extension.get_opt(resource, [:graphql], :primary_key_delimiter, nil)
+    Extension.get_opt(resource, [:graphql], :primary_key_delimiter, "-")
   end
 
   @doc "Wether or not an object should be generated, or if one with the type name for this resource should be used."
