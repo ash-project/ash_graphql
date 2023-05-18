@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.2](https://github.com/ash-project/ash_graphql/compare/v0.25.1...v0.25.2) (2023-05-18)
+
+
+
+
+### Bug Fixes:
+
+* choose a better default delimiter
+
 ## [v0.25.1](https://github.com/ash-project/ash_graphql/compare/v0.25.0...v0.25.1) (2023-05-18)
 
 
