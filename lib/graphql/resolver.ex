@@ -326,7 +326,7 @@ defmodule AshGraphql.Graphql.Resolver do
       if argument do
         %{type: type, name: name, constraints: constraints} = argument
 
-        case handle_argument(type, constraints, value, name) do
+        case handle_argument(resource, action, type, constraints, value, name) do
           {:ok, value} ->
             {:cont, {:ok, Map.put(arguments, name, value)}}
 
@@ -339,10 +339,11 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp handle_argument({:array, type}, constraints, value, name) when is_list(value) do
+  defp handle_argument(resource, action, {:array, type}, constraints, value, name)
+       when is_list(value) do
     value
     |> Enum.reduce_while({:ok, []}, fn value, {:ok, acc} ->
-      case handle_argument(type, constraints[:items], value, name) do
+      case handle_argument(resource, action, type, constraints[:items], value, name) do
         {:ok, value} ->
           {:cont, {:ok, [value | acc]}}
 
@@ -356,14 +357,99 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp handle_argument(Ash.Type.Union, constraints, value, name) do
+  defp handle_argument(_resource, _action, Ash.Type.Union, constraints, value, name) do
     handle_union_type(value, constraints, name)
   end
 
-  defp handle_argument(type, constraints, value, name) do
+  defp handle_argument(resource, action, type, constraints, value, name) do
     cond do
+      AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name}) &&
+          is_map(value) ->
+        managed_relationship =
+          AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name})
+
+        opts = AshGraphql.Resource.find_manage_change(%{name: name}, action, resource)
+
+        relationship =
+          Ash.Resource.Info.relationship(resource, opts[:relationship]) ||
+            raise """
+            No relationship found when building managed relationship input: #{opts[:relationship]}
+            """
+
+        manage_opts_schema =
+          if opts[:opts][:type] do
+            defaults = Ash.Changeset.manage_relationship_opts(opts[:opts][:type])
+
+            Enum.reduce(defaults, Ash.Changeset.manage_relationship_schema(), fn {key, value},
+                                                                                 manage_opts ->
+              Spark.OptionsHelpers.set_default!(manage_opts, key, value)
+            end)
+          else
+            Ash.Changeset.manage_relationship_schema()
+          end
+
+        manage_opts = Spark.OptionsHelpers.validate!(opts[:opts], manage_opts_schema)
+
+        fields =
+          manage_opts
+          |> AshGraphql.Resource.manage_fields(
+            managed_relationship,
+            relationship,
+            __MODULE__
+          )
+          |> Enum.reject(fn
+            {_, :__primary_key, _} ->
+              true
+
+            {_, {:identity, _}, _} ->
+              true
+
+            _ ->
+              false
+          end)
+          |> Map.new(fn {_, _, %{identifier: identifier}} = field ->
+            {identifier, field}
+          end)
+
+        Enum.reduce_while(value, {:ok, %{}}, fn {key, value}, {:ok, acc} ->
+          field_name =
+            resource
+            |> AshGraphql.Resource.Info.field_names()
+            |> Enum.map(fn {l, r} -> {r, l} end)
+            |> Keyword.get(key, key)
+
+          case Map.get(fields, field_name) do
+            nil ->
+              {:cont, {:ok, Map.put(acc, key, value)}}
+
+            {resource, action, _} ->
+              action = Ash.Resource.Info.action(resource, action)
+              attributes = Ash.Resource.Info.public_attributes(resource)
+
+              argument =
+                Enum.find(action.arguments, &(&1.name == field_name)) ||
+                  Enum.find(attributes, &(&1.name == field_name))
+
+              if argument do
+                %{type: type, name: name, constraints: constraints} = argument
+
+                case handle_argument(resource, action, type, constraints, value, name) do
+                  {:ok, value} ->
+                    {:cont, {:ok, Map.put(acc, key, value)}}
+
+                  {:error, error} ->
+                    {:halt, {:error, error}}
+                end
+              else
+                {:cont, {:ok, Map.put(acc, key, value)}}
+              end
+          end
+        end)
+
       Ash.Type.NewType.new_type?(type) ->
         handle_argument(
+          resource,
+          action,
           Ash.Type.NewType.subtype_of(type),
           Ash.Type.NewType.constraints(type, constraints),
           value,
@@ -412,7 +498,14 @@ defmodule AshGraphql.Graphql.Resolver do
             end)
 
           if field do
-            case handle_argument(field.type, field.constraints, value, "#{name}.#{key}") do
+            case handle_argument(
+                   resource,
+                   action,
+                   field.type,
+                   field.constraints,
+                   value,
+                   "#{name}.#{key}"
+                 ) do
               {:ok, value} ->
                 {:cont, {:ok, Map.put(acc, key, value)}}
 

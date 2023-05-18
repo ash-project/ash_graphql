@@ -1007,7 +1007,8 @@ defmodule AshGraphql.Resource do
       end
   end
 
-  defp find_manage_change(argument, action, resource) do
+  @doc false
+  def find_manage_change(argument, action, resource) do
     if AshGraphql.Resource.Info.managed_relationship(resource, action, argument) do
       Enum.find_value(action.changes, fn
         %{change: {Ash.Resource.Change.ManageRelationship, opts}} ->
@@ -1447,11 +1448,7 @@ defmodule AshGraphql.Resource do
 
     manage_opts = Spark.OptionsHelpers.validate!(opts[:opts], manage_opts_schema)
 
-    fields =
-      on_match_fields(manage_opts, relationship, schema) ++
-        on_no_match_fields(manage_opts, relationship, schema) ++
-        on_lookup_fields(manage_opts, relationship, schema) ++
-        manage_pkey_fields(manage_opts, managed_relationship, relationship, schema)
+    fields = manage_fields(manage_opts, managed_relationship, relationship, schema)
 
     type = managed_relationship.type_name || default_managed_type_name(resource, action, argument)
 
@@ -1475,6 +1472,14 @@ defmodule AshGraphql.Resource do
       name: type |> to_string() |> Macro.camelize(),
       __reference__: ref(__ENV__)
     }
+  end
+
+  @doc false
+  def manage_fields(manage_opts, managed_relationship, relationship, schema) do
+    on_match_fields(manage_opts, relationship, schema) ++
+      on_no_match_fields(manage_opts, relationship, schema) ++
+      on_lookup_fields(manage_opts, relationship, schema) ++
+      manage_pkey_fields(manage_opts, managed_relationship, relationship, schema)
   end
 
   defp check_for_conflicts!(fields, managed_relationship, resource) do
@@ -3460,8 +3465,10 @@ defmodule AshGraphql.Resource do
          function_exported?(type, :graphql_unnested_unions, 1) do
       unnested_types = type.graphql_unnested_unions(constraints)
 
-      [{AshGraphql.Graphql.Resolver, :resolve_union},
-       {name, type, field, resource, unnested_types}]
+      [
+        {AshGraphql.Graphql.Resolver, :resolve_union},
+        {name, type, field, resource, unnested_types}
+      ]
     else
       []
     end

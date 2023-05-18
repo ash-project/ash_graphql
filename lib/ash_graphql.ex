@@ -250,9 +250,18 @@ defmodule AshGraphql do
   end
 
   @doc false
-  def all_attributes_and_arguments(resource, already_checked \\ [], nested? \\ true) do
+  def all_attributes_and_arguments(
+        resource,
+        already_checked \\ [],
+        nested? \\ true,
+        return_new_checked? \\ false
+      ) do
     if resource in already_checked do
-      []
+      if return_new_checked? do
+        {[], already_checked}
+      else
+        []
+      end
     else
       already_checked = [resource | already_checked]
 
@@ -260,22 +269,64 @@ defmodule AshGraphql do
       |> Ash.Resource.Info.public_attributes()
       |> Enum.concat(all_arguments(resource))
       |> Enum.concat(Ash.Resource.Info.calculations(resource))
-      |> Enum.flat_map(fn %{type: type} = attr ->
-        if Ash.Type.embedded_type?(type) && nested? do
-          type = Ash.Type.NewType.subtype_of(type)
-
-          [
-            attr
-            | type
-              |> unwrap_type()
-              |> all_attributes_and_arguments(already_checked, nested?)
-          ]
+      |> Enum.reduce({[], already_checked}, fn %{type: type} = attr, {acc, already_checked} ->
+        if nested? do
+          constraints = Map.get(attr, :constraints, [])
+          {nested, already_checked} = nested_attrs(type, constraints, already_checked)
+          {[attr | nested] ++ acc, already_checked}
         else
-          [attr]
+          {[attr | acc], already_checked}
+        end
+      end)
+      |> then(fn {attrs, checked} ->
+        attrs = Enum.filter(attrs, &AshGraphql.Resource.Info.show_field?(resource, &1.name))
+
+        if return_new_checked? do
+          {attrs, checked}
+        else
+          attrs
         end
       end)
     end
-    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
+  end
+
+  defp nested_attrs(Ash.Type.Union, constraints, already_checked) do
+    Enum.reduce(
+      constraints[:types] || [],
+      {[], already_checked},
+      fn {_, config}, {attrs, already_checked} ->
+        case config[:type] do
+          {:array, type} ->
+            {new, already_checked} =
+              nested_attrs(type, config[:constraints][:items] || [], already_checked)
+
+            {attrs ++ new, already_checked}
+
+          type ->
+            {new, already_checked} =
+              nested_attrs(type, config[:constraints] || [], already_checked)
+
+            {attrs ++ new, already_checked}
+        end
+      end
+    )
+  end
+
+  defp nested_attrs(type, constraints, already_checked) do
+    cond do
+      Ash.Type.embedded_type?(type) ->
+        type
+        |> unwrap_type()
+        |> all_attributes_and_arguments(already_checked, true, true)
+
+      Ash.Type.NewType.new_type?(type) ->
+        constraints = Ash.Type.NewType.constraints(type, constraints)
+        type = Ash.Type.NewType.subtype_of(type)
+        nested_attrs(type, constraints, already_checked)
+
+      true ->
+        {[], already_checked}
+    end
   end
 
   def get_embed(type) do
