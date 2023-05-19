@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.3](https://github.com/ash-project/ash_graphql/compare/v0.25.2...v0.25.3) (2023-05-19)
+
+
+
+
+### Bug Fixes:
+
+* properly thread read action arguments through on updates
+
 ## [v0.25.2](https://github.com/ash-project/ash_graphql/compare/v0.25.1...v0.25.2) (2023-05-18)
 
 
