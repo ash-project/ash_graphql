@@ -168,6 +168,40 @@ defmodule AshGraphql.UpdateTest do
              resp
   end
 
+  test "an update with a configured read action and no identity works with an argument the same name as an attribute" do
+    post =
+      AshGraphql.Test.Api.create!(
+        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
+      )
+
+    resp =
+      """
+      mutation UpdateBestPostArg($best: Boolean!, $input: UpdateBestPostArgInput) {
+        updateBestPostArg(best: $best, input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "best" => true,
+          "input" => %{
+            "text" => "barbuz"
+          }
+        }
+      )
+
+    assert {:ok,
+            %{
+              data: %{"updateBestPostArg" => %{"errors" => [], "result" => %{"text" => "barbuz"}}}
+            }} = resp
+  end
+
   test "arguments are threaded properly" do
     post =
       AshGraphql.Test.Api.create!(

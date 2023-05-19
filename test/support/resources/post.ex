@@ -94,6 +94,8 @@ defmodule AshGraphql.Test.Post do
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
+  require Ash.Query
+
   graphql do
     type :post
 
@@ -139,6 +141,7 @@ defmodule AshGraphql.Test.Post do
       update :update_post_with_comments, :update_with_comments
       update :update_post_confirm, :update_confirm
       update :update_best_post, :update, read_action: :best_post, identity: false
+      update :update_best_post_arg, :update, read_action: :best_post_arg, identity: false
 
       destroy :archive_post, :archive
       destroy :delete_post, :destroy
@@ -231,6 +234,14 @@ defmodule AshGraphql.Test.Post do
 
     read :best_post do
       filter(expr(best == true))
+    end
+
+    read :best_post_arg do
+      argument(:best, :boolean, allow_nil?: false)
+
+      prepare(fn query, _ ->
+        Ash.Query.filter(query, best == ^query.arguments.best)
+      end)
     end
 
     update :update, primary?: true

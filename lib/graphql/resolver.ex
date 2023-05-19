@@ -957,7 +957,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.do_filter(filter)
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(get_context(context))
-              |> set_query_arguments(action, read_action_input)
+              |> set_query_arguments(read_action, read_action_input)
               |> api.read_one(
                 action: read_action,
                 verbose?: AshGraphql.Api.Info.debug?(api),
