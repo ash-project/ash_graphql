@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.4](https://github.com/ash-project/ash_graphql/compare/v0.25.3...v0.25.4) (2023-05-22)
+
+
+
+
+### Bug Fixes:
+
+* properly use primary read as default read_action
+
 ## [v0.25.3](https://github.com/ash-project/ash_graphql/compare/v0.25.2...v0.25.3) (2023-05-19)
 
 
