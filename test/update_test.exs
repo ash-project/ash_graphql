@@ -169,10 +169,9 @@ defmodule AshGraphql.UpdateTest do
   end
 
   test "an update with a configured read action and no identity works with an argument the same name as an attribute" do
-    post =
-      AshGraphql.Test.Api.create!(
-        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
-      )
+    AshGraphql.Test.Api.create!(
+      Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
+    )
 
     resp =
       """

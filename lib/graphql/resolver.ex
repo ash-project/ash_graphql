@@ -921,6 +921,7 @@ defmodule AshGraphql.Graphql.Resolver do
            modify_resolution: modify
          }}
       ) do
+    read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
     input = arguments[:input] || %{}
 
     args_result =
@@ -1067,6 +1068,7 @@ defmodule AshGraphql.Graphql.Resolver do
            modify_resolution: modify
          }}
       ) do
+    read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
     input = arguments[:input] || %{}
 
     args_result =
@@ -1434,7 +1436,12 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp set_query_arguments(query, action, arg_values) do
-    action = Ash.Resource.Info.action(query.resource, action)
+    action =
+      if is_atom(action) do
+        Ash.Resource.Info.action(query.resource, action)
+      else
+        action
+      end
 
     action.arguments
     |> Enum.reject(& &1.private?)
