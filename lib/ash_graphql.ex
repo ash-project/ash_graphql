@@ -196,11 +196,18 @@ defmodule AshGraphql do
         name: name,
         values:
           Enum.map(type.values(), fn value ->
+            name =
+              if function_exported?(type, :graphql_rename_value, 1) do
+                type.graphql_rename_value(value)
+              else
+                value
+              end
+
             %Absinthe.Blueprint.Schema.EnumValueDefinition{
               module: schema,
               identifier: value,
               __reference__: AshGraphql.Resource.ref(env),
-              name: String.upcase(to_string(value)),
+              name: String.upcase(to_string(name)),
               value: value
             }
           end),

@@ -29,6 +29,12 @@ defmodule AshPostgres.Test.Types.Status do
   use Ash.Type.Enum, values: [:open, :closed]
 
   def graphql_type, do: :ticket_status
+
+  # Optionally, remap the names used in GraphQL, for instance if you have a value like `:"10"`
+  # that value is not compatible with GraphQL
+
+  def graphql_rename_value(:"10"), do: :ten
+  def graphql_rename_value(value), do: value
 end
 
 ```
@@ -47,7 +53,7 @@ end
 ```
 
 ```elixir
-# Your cusotm Ash Type
+# Your custom Ash Type
 defmodule AshGraphql.Test.Status do
   use Ash.Type
 
