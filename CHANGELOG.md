@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.5](https://github.com/ash-project/ash_graphql/compare/v0.25.4...v0.25.5) (2023-05-23)
+
+
+
+
+### Improvements:
+
+* `graphql_rename_value/1` for enums
+
 ## [v0.25.4](https://github.com/ash-project/ash_graphql/compare/v0.25.3...v0.25.4) (2023-05-22)
 
 
