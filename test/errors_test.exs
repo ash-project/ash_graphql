@@ -40,7 +40,7 @@ defmodule AshGraphql.ErrorsTest do
 
     assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
 
-    assert message =~ "Confirmation did not match value"
+    assert message =~ "confirmation did not match value"
   end
 
   test "raised errors are by default not shown" do

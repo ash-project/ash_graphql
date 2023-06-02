@@ -238,7 +238,7 @@ defmodule AshGraphql.UpdateTest do
              }
            } = result
 
-    assert message =~ "Confirmation did not match value"
+    assert message =~ "confirmation did not match value"
   end
 
   test "root level error" do
@@ -278,6 +278,6 @@ defmodule AshGraphql.UpdateTest do
 
     assert %{errors: [%{message: message}]} = result
 
-    assert message =~ "Confirmation did not match value"
+    assert message =~ "confirmation did not match value"
   end
 end

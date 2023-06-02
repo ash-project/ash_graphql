@@ -550,7 +550,7 @@ defmodule AshGraphql.CreateTest do
     assert %{data: %{"createPost" => %{"result" => nil, "errors" => [%{"message" => message}]}}} =
              result
 
-    assert message =~ "Confirmation did not match value"
+    assert message =~ "confirmation did not match value"
   end
 
   defmodule ErrorHandler do
@@ -630,7 +630,7 @@ defmodule AshGraphql.CreateTest do
 
     assert %{errors: [%{message: message}]} = result
 
-    assert message =~ "Confirmation did not match value"
+    assert message =~ "confirmation did not match value"
   end
 
   test "custom input types are used" do
