@@ -246,7 +246,8 @@ defmodule AshGraphql.Dataloader do
               |> Ash.Query.for_read(
                 relationship.read_action ||
                   Ash.Resource.Info.primary_action!(relationship.destination, :read).name,
-                opts[:args]
+                opts[:args],
+                api_opts
               )
 
             {field, query}
