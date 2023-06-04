@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.6](https://github.com/ash-project/ash_graphql/compare/v0.25.5...v0.25.6) (2023-06-04)
+
+
+
+
+### Improvements:
+
+* set actor when building loaded read query
+
 ## [v0.25.5](https://github.com/ash-project/ash_graphql/compare/v0.25.4...v0.25.5) (2023-05-23)
 
 
