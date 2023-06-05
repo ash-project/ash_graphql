@@ -58,24 +58,20 @@ defmodule AshGraphql.Graphql.Resolver do
           {result, modify_args} =
             case filter do
               {:ok, filter} ->
-                query
-                |> Ash.Query.do_filter(filter)
-                |> load_fields(resource, api, resolution)
-                |> case do
-                  {:ok, query} ->
-                    result =
-                      query
-                      |> Ash.Query.for_read(action, %{},
-                        actor: opts[:actor],
-                        authorize?: AshGraphql.Api.Info.authorize?(api)
-                      )
-                      |> api.read_one(opts)
+                query =
+                  query
+                  |> Ash.Query.do_filter(filter)
+                  |> load_fields(resource, resolution)
 
-                    {result, [query, result]}
+                result =
+                  query
+                  |> Ash.Query.for_read(action, %{},
+                    actor: opts[:actor],
+                    authorize?: AshGraphql.Api.Info.authorize?(api)
+                  )
+                  |> api.read_one(opts)
 
-                  {:error, error} ->
-                    {{:error, error}, [query, {:error, error}]}
-                end
+                {result, [query, result]}
 
               {:error, error} ->
                 query =
@@ -85,7 +81,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Ash.Query.set_context(get_context(context))
                   |> set_query_arguments(action, arguments)
                   |> select_fields(resource, resolution)
-                  |> load_fields(resource, api, resolution)
+                  |> load_fields(resource, resolution)
 
                 {{:error, error}, [query, {:error, error}]}
             end
@@ -176,31 +172,27 @@ defmodule AshGraphql.Graphql.Resolver do
             |> Ash.Query.set_context(get_context(context))
             |> set_query_arguments(action, args)
             |> select_fields(resource, resolution)
-
-          {result, modify_args} =
-            case load_fields(query, resource, api, resolution) do
-              {:ok, query} ->
-                result =
-                  query
-                  |> Ash.Query.for_read(action, %{},
-                    actor: opts[:actor],
-                    authorize?: AshGraphql.Api.Info.authorize?(api)
-                  )
-                  |> api.read_one(opts)
-
-                {result, [query, result]}
-
-              {:error, error} ->
-                {{:error, error}, [query, {:error, error}]}
-            end
+            |> load_fields(resource, resolution)
 
           result =
-            add_read_metadata(result, gql_query, Ash.Resource.Info.action(query.resource, action))
+            query
+            |> Ash.Query.for_read(action, %{},
+              actor: opts[:actor],
+              authorize?: AshGraphql.Api.Info.authorize?(api)
+            )
+            |> api.read_one(opts)
+
+          result =
+            add_read_metadata(
+              result,
+              gql_query,
+              Ash.Resource.Info.action(query.resource, action)
+            )
 
           resolution
           |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
           |> add_root_errors(api, result)
-          |> modify_resolution(modify, modify_args)
+          |> modify_resolution(modify, [query, args])
         end
 
       {:error, error} ->
@@ -264,8 +256,8 @@ defmodule AshGraphql.Graphql.Resolver do
                    |> Ash.Query.set_context(get_context(context))
                    |> set_query_arguments(action, args)
                    |> select_fields(resource, resolution, result_fields),
-                 {:ok, query} <-
-                   load_fields(initial_query, resource, api, resolution, result_fields),
+                 query <-
+                   load_fields(initial_query, resource, resolution, result_fields),
                  {:ok, page} <-
                    query
                    |> Ash.Query.for_read(action, %{},
@@ -838,10 +830,7 @@ defmodule AshGraphql.Graphql.Resolver do
             actor: Map.get(context, :actor),
             action: action,
             verbose?: AshGraphql.Api.Info.debug?(api),
-            upsert?: upsert?,
-            after_action: fn _changeset, result ->
-              load_fields(result, resource, api, resolution, ["result"])
-            end
+            upsert?: upsert?
           ]
 
           opts =
@@ -861,6 +850,7 @@ defmodule AshGraphql.Graphql.Resolver do
               authorize?: AshGraphql.Api.Info.authorize?(api)
             )
             |> select_fields(resource, resolution, ["result"])
+            |> load_fields(resource, resolution, ["result"])
 
           {result, modify_args} =
             changeset
@@ -977,10 +967,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   opts = [
                     actor: Map.get(context, :actor),
                     action: action,
-                    verbose?: AshGraphql.Api.Info.debug?(api),
-                    after_action: fn _changeset, result ->
-                      load_fields(result, resource, api, resolution, ["result"])
-                    end
+                    verbose?: AshGraphql.Api.Info.debug?(api)
                   ]
 
                   changeset =
@@ -993,6 +980,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       authorize?: AshGraphql.Api.Info.authorize?(api)
                     )
                     |> select_fields(resource, resolution, ["result"])
+                    |> load_fields(resource, resolution, ["result"])
 
                   {result, modify_args} =
                     changeset
@@ -1333,7 +1321,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp load_fields(query_or_record, resource, api, resolution, nested \\ []) do
+  defp load_fields(query_or_changeset, resource, resolution, nested \\ []) do
     fields =
       case resolution do
         %Absinthe.Resolution{} ->
@@ -1370,12 +1358,12 @@ defmodule AshGraphql.Graphql.Resolver do
       end
     end)
     |> then(fn load ->
-      case query_or_record do
+      case query_or_changeset do
         %Ash.Query{} = query ->
-          {:ok, Ash.Query.load(query, load)}
+          Ash.Query.load(query, load)
 
-        record ->
-          api.load(record, load)
+        %Ash.Changeset{} = changeset ->
+          Ash.Changeset.load(changeset, load)
       end
     end)
   end
@@ -1639,30 +1627,26 @@ defmodule AshGraphql.Graphql.Resolver do
       verbose?: AshGraphql.Api.Info.debug?(api)
     ]
 
-    args
-    |> apply_load_arguments(Ash.Query.new(relationship.destination))
-    |> select_fields(relationship.destination, resolution)
-    |> load_fields(relationship.destination, api, resolution)
-    |> case do
-      {:ok, related_query} ->
-        tracer = AshGraphql.Api.Info.tracer(api)
+    related_query =
+      args
+      |> apply_load_arguments(Ash.Query.new(relationship.destination))
+      |> select_fields(relationship.destination, resolution)
+      |> load_fields(relationship.destination, resolution)
 
-        opts = [
-          query: related_query,
-          api_opts: api_opts,
-          type: :relationship,
-          args: args,
-          resource: relationship.source,
-          tenant: Map.get(context, :tenant),
-          span_context: tracer && tracer.get_span_context()
-        ]
+    tracer = AshGraphql.Api.Info.tracer(api)
 
-        batch_key = {relationship.name, opts}
-        do_dataloader(resolution, loader, api, batch_key, args, parent)
+    opts = [
+      query: related_query,
+      api_opts: api_opts,
+      type: :relationship,
+      args: args,
+      resource: relationship.source,
+      tenant: Map.get(context, :tenant),
+      span_context: tracer && tracer.get_span_context()
+    ]
 
-      {:error, error} ->
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
-    end
+    batch_key = {relationship.name, opts}
+    do_dataloader(resolution, loader, api, batch_key, args, parent)
   end
 
   def resolve_id(%Absinthe.Resolution{state: :resolved} = resolution, _),
