@@ -124,7 +124,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Forbidden.Policy do
       message: message,
       short_message: "forbidden",
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
+      code: "forbidden",
       fields: []
     }
   end
