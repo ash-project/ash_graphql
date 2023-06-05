@@ -1334,30 +1334,50 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp load_fields(query_or_record, resource, api, resolution, nested \\ []) do
-    fields = fields(resolution, nested)
+    fields =
+      case resolution do
+        %Absinthe.Resolution{} ->
+          fields(resolution, nested)
+
+        %Absinthe.Blueprint.Document.Field{selections: selections} ->
+          selections
+      end
 
     fields
-    |> Enum.map(fn selection ->
-      aggregate = Ash.Resource.Info.aggregate(resource, selection.schema_node.identifier)
+    |> Enum.flat_map(fn selection ->
+      cond do
+        aggregate = Ash.Resource.Info.aggregate(resource, selection.schema_node.identifier) ->
+          [aggregate.name]
 
-      if aggregate do
-        aggregate.name
+        calculation = Ash.Resource.Info.calculation(resource, selection.schema_node.identifier) ->
+          arguments =
+            selection.arguments
+            |> Map.new(fn argument ->
+              {argument.schema_node.identifier, argument.input_value.data}
+            end)
+            |> then(fn args ->
+              if selection.alias do
+                Map.put(args, :as, {:__ash_graphql_calculation__, selection.alias})
+              else
+                args
+              end
+            end)
+
+          [{calculation.name, arguments}]
+
+        true ->
+          []
       end
     end)
-    |> Enum.filter(& &1)
-    |> case do
-      [] ->
-        {:ok, query_or_record}
+    |> then(fn load ->
+      case query_or_record do
+        %Ash.Query{} = query ->
+          {:ok, Ash.Query.load(query, load)}
 
-      loading ->
-        case query_or_record do
-          %Ash.Query{} = query ->
-            {:ok, Ash.Query.load(query, loading)}
-
-          record ->
-            api.load(record, loading)
-        end
-    end
+        record ->
+          api.load(record, load)
+      end
+    end)
   end
 
   defp select_fields(query_or_changeset, resource, resolution, nested \\ []) do
@@ -1394,7 +1414,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp fields(resolution, []) do
+  defp fields(%Absinthe.Resolution{} = resolution, []) do
     resolution
     |> Absinthe.Resolution.project()
   end
@@ -1590,29 +1610,20 @@ defmodule AshGraphql.Graphql.Resolver do
     do: resolution
 
   def resolve_calculation(
-        %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
-        {api, resource, calculation}
+        %Absinthe.Resolution{
+          source: parent,
+          context: context
+        } = resolution,
+        {api, _resource, calculation}
       ) do
-    api_opts = [
-      actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.Info.authorize?(api),
-      verbose?: AshGraphql.Api.Info.debug?(api)
-    ]
+    result =
+      if resolution.definition.alias do
+        Map.get(parent.calculations, {:__ash_graphql_calculation__, resolution.definition.alias})
+      else
+        Map.get(parent, calculation.name)
+      end
 
-    tracer = AshGraphql.Api.Info.tracer(api)
-
-    opts = [
-      api_opts: api_opts,
-      type: :calculation,
-      resource: resource,
-      args: args,
-      tenant: Map.get(context, :tenant),
-      span_context: tracer && tracer.get_span_context()
-    ]
-
-    batch_key = {calculation.name, opts}
-
-    do_dataloader(resolution, loader, api, batch_key, opts, parent)
+    Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, api))
   end
 
   def resolve_assoc(%Absinthe.Resolution{state: :resolved} = resolution, _),
