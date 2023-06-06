@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.7](https://github.com/ash-project/ash_graphql/compare/v0.25.6...v0.25.7) (2023-06-06)
+
+
+
+
+### Bug Fixes:
+
+* ensure forbidden errors always use `forbidden` code
+
+### Improvements:
+
+* use `Ash.Changeset.load`
+
+* load calculations using `Ash.Query.load`
+
 ## [v0.25.6](https://github.com/ash-project/ash_graphql/compare/v0.25.5...v0.25.6) (2023-06-04)
 
 
