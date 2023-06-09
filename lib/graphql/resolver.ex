@@ -1387,7 +1387,8 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp load_fields(query_or_changeset, load_opts, resource, resolution, path, nested \\ []) do
+  @doc false
+  def load_fields(query_or_changeset, load_opts, resource, resolution, path, nested \\ []) do
     {fields, path} = nested_fields_and_path(resolution, path, nested)
 
     fields
