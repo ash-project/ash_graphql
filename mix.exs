@@ -140,10 +140,9 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 2.9 and >= 2.9.20")},
+      {:ash, ash_version("~> 2.9 and >= 2.9.22")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
-      {:dataloader, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.12.0", only: [:dev, :test]},

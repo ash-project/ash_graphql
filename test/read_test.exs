@@ -666,4 +666,214 @@ defmodule AshGraphql.ReadTest do
             }} ==
              Absinthe.run(doc, AshGraphql.Test.Schema, variables: %{"id" => post_1.id})
   end
+
+  describe "loading through types" do
+    test "loading through an embed works" do
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(embed_foo: %{type: "foo", foo: "fred"}, published: true)
+      |> AshGraphql.Test.Api.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary {
+            embedFoo{
+              alwaysTrue
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "embedFoo" => %{
+                       "alwaysTrue" => true
+                     }
+                   }
+                 ]
+               }
+             } = result
+    end
+
+    test "loading through a union works" do
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(text: "a", embed_union: %{type: :foo, foo: "fred"}, published: true)
+      |> AshGraphql.Test.Api.create!()
+
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(text: "b", embed_union: %{type: :bar, bar: "george"}, published: true)
+      |> AshGraphql.Test.Api.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            embedUnion{
+              ...on PostEmbedUnionFoo {
+                value {
+                  alwaysNil
+                }
+              }
+              ...on PostEmbedUnionBar {
+                value {
+                  alwaysFalse
+                }
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "embedUnion" => %{
+                       "value" => %{
+                         "alwaysNil" => nil
+                       }
+                     }
+                   },
+                   %{
+                     "embedUnion" => %{
+                       "value" => %{
+                         "alwaysFalse" => false
+                       }
+                     }
+                   }
+                 ]
+               }
+             } = result
+    end
+
+    test "loading through an unnested union works" do
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(
+        text: "a",
+        embed_union_unnested: %{type: :foo, foo: "fred"},
+        published: true
+      )
+      |> AshGraphql.Test.Api.create!()
+
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(
+        text: "b",
+        embed_union_unnested: %{type: :bar, bar: "george"},
+        published: true
+      )
+      |> AshGraphql.Test.Api.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysNil
+              }
+              ...on BarEmbed {
+                alwaysFalse
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "embedUnionUnnested" => %{
+                       "alwaysNil" => nil
+                     }
+                   },
+                   %{
+                     "embedUnionUnnested" => %{
+                       "alwaysFalse" => false
+                     }
+                   }
+                 ]
+               }
+             } = result
+    end
+
+    test "loading through an unnested union with aliases works" do
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(
+        text: "a",
+        embed_union_unnested: %{type: :foo, foo: "fred"},
+        published: true
+      )
+      |> AshGraphql.Test.Api.create!()
+
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(
+        text: "b",
+        embed_union_unnested: %{type: :bar, bar: "george"},
+        published: true
+      )
+      |> AshGraphql.Test.Api.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            foo: embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysNil
+              }
+              ...on BarEmbed {
+                alwaysFalse
+              }
+            }
+            bar: embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysTrue
+              }
+              ...on BarEmbed {
+                alwaysTrue
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+        data: %{
+          "postLibrary" => [
+            %{
+              "bar" => %{"alwaysTrue" => true},
+              "foo" => %{"alwaysNil" => nil}
+            },
+            %{
+              "bar" => %{"alwaysTrue" => true},
+              "foo" => %{"alwaysFalse" => false}
+            }
+          ]
+        }
+      }
+    end
+  end
 end

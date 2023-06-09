@@ -571,28 +571,8 @@ defmodule AshGraphql do
     end)
   end
 
-  def add_context(ctx, apis, options \\ []) do
-    options = Keyword.put(options, :get_policy, :tuples)
-    empty_dataloader = Dataloader.new(options)
-
-    dataloader =
-      apis
-      |> List.wrap()
-      |> Enum.map(fn
-        {api, _registry} ->
-          api
-
-        api ->
-          api
-      end)
-      |> Enum.reduce(empty_dataloader, fn api, dataloader ->
-        Dataloader.add_source(
-          dataloader,
-          api,
-          AshGraphql.Dataloader.new(api)
-        )
-      end)
-
-    Map.put(ctx, :loader, dataloader)
+  @deprecated "add_context is no longer necessary"
+  def add_context(ctx, _apis, _options \\ []) do
+    ctx
   end
 end

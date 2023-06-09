@@ -59,7 +59,7 @@ defmodule AshGraphql.Test.User do
 
   policies do
     policy action_type(:create) do
-      actor_attribute_equals(:name, "My Name")
+      authorize_if(changing_attributes(name: [to: "My Name"]))
     end
 
     policy action_type(:read) do

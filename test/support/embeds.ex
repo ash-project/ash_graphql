@@ -20,6 +20,11 @@ defmodule Foo do
       allow_nil? false
     end
   end
+
+  calculations do
+    calculate(:always_true, :boolean, expr(true))
+    calculate(:always_nil, :boolean, expr(nil))
+  end
 end
 
 defmodule Bar do
@@ -43,5 +48,10 @@ defmodule Bar do
     attribute :bar, :string do
       allow_nil? false
     end
+  end
+
+  calculations do
+    calculate(:always_true, :boolean, expr(true))
+    calculate(:always_false, :boolean, expr(false))
   end
 end

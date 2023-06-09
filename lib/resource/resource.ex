@@ -1863,7 +1863,8 @@ defmodule AshGraphql.Resource do
     aggregate_type
   end
 
-  defp filter_type(attribute_or_aggregate, resource, schema) do
+  @doc false
+  def filter_type(attribute_or_aggregate, resource, schema) do
     type = attribute_or_aggregate_type(attribute_or_aggregate, resource)
 
     array_type? = match?({:array, _}, type)
@@ -1981,7 +1982,7 @@ defmodule AshGraphql.Resource do
       end
     end
   rescue
-    _ ->
+    _e ->
       []
   end
 
@@ -2678,7 +2679,7 @@ defmodule AshGraphql.Resource do
         {name,
          field_type(
            config[:type],
-           %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
+           %{attribute | name: nested_union_type_name(attribute, name)},
            resource
          )}
       end)
@@ -2724,7 +2725,7 @@ defmodule AshGraphql.Resource do
 
     object_type_definitions =
       constraints[:types]
-      |> Enum.reject(fn name ->
+      |> Enum.reject(fn {name, _} ->
         name in grapqhl_unnested_unions
       end)
       |> Enum.map(fn {name, _} ->
@@ -2770,6 +2771,18 @@ defmodule AshGraphql.Resource do
     ] ++
       input_definitions ++
       object_type_definitions
+  end
+
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+  def nested_union_type_name(attribute, name, existing_only? \\ false) do
+    str = "#{attribute.name}_#{name}"
+
+    if existing_only? do
+      String.to_existing_atom(str)
+    else
+      String.to_atom(str)
+    end
   end
 
   @doc false
@@ -3461,16 +3474,19 @@ defmodule AshGraphql.Resource do
   end
 
   defp middleware_for_field(resource, field, name, type, constraints) do
-    if Ash.Type.NewType.new_type?(type) && Ash.Type.NewType.subtype_of(Ash.Type.Union) &&
+    if Ash.Type.NewType.new_type?(type) &&
+         Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
          function_exported?(type, :graphql_unnested_unions, 1) do
       unnested_types = type.graphql_unnested_unions(constraints)
 
       [
-        {AshGraphql.Graphql.Resolver, :resolve_union},
-        {name, type, field, resource, unnested_types}
+        {{AshGraphql.Graphql.Resolver, :resolve_union},
+         {name, type, field, resource, unnested_types}}
       ]
     else
-      []
+      [
+        {{AshGraphql.Graphql.Resolver, :resolve_attribute}, name}
+      ]
     end
   end
 
@@ -3528,6 +3544,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  @doc false
   def field_type(type, field, resource, input? \\ false) do
     case field do
       %Ash.Resource.Attribute{name: name} ->

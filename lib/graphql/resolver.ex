@@ -61,7 +61,17 @@ defmodule AshGraphql.Graphql.Resolver do
                 query =
                   query
                   |> Ash.Query.do_filter(filter)
-                  |> load_fields(resource, resolution)
+                  |> load_fields(
+                    [
+                      api: api,
+                      tenant: Map.get(context, :tenant),
+                      authorize?: AshGraphql.Api.Info.authorize?(api),
+                      actor: Map.get(context, :actor)
+                    ],
+                    resource,
+                    resolution,
+                    []
+                  )
 
                 result =
                   query
@@ -81,7 +91,17 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Ash.Query.set_context(get_context(context))
                   |> set_query_arguments(action, arguments)
                   |> select_fields(resource, resolution)
-                  |> load_fields(resource, resolution)
+                  |> load_fields(
+                    [
+                      api: api,
+                      tenant: Map.get(context, :tenant),
+                      authorize?: AshGraphql.Api.Info.authorize?(api),
+                      actor: Map.get(context, :actor)
+                    ],
+                    resource,
+                    resolution,
+                    []
+                  )
 
                 {{:error, error}, [query, {:error, error}]}
             end
@@ -172,7 +192,17 @@ defmodule AshGraphql.Graphql.Resolver do
             |> Ash.Query.set_context(get_context(context))
             |> set_query_arguments(action, args)
             |> select_fields(resource, resolution)
-            |> load_fields(resource, resolution)
+            |> load_fields(
+              [
+                api: api,
+                tenant: Map.get(context, :tenant),
+                authorize?: AshGraphql.Api.Info.authorize?(api),
+                actor: Map.get(context, :actor)
+              ],
+              resource,
+              resolution,
+              []
+            )
 
           result =
             query
@@ -257,7 +287,19 @@ defmodule AshGraphql.Graphql.Resolver do
                    |> set_query_arguments(action, args)
                    |> select_fields(resource, resolution, result_fields),
                  query <-
-                   load_fields(initial_query, resource, resolution, result_fields),
+                   load_fields(
+                     initial_query,
+                     [
+                       api: api,
+                       tenant: Map.get(context, :tenant),
+                       authorize?: AshGraphql.Api.Info.authorize?(api),
+                       actor: Map.get(context, :actor)
+                     ],
+                     resource,
+                     resolution,
+                     [],
+                     result_fields
+                   ),
                  {:ok, page} <-
                    query
                    |> Ash.Query.for_read(action, %{},
@@ -850,7 +892,18 @@ defmodule AshGraphql.Graphql.Resolver do
               authorize?: AshGraphql.Api.Info.authorize?(api)
             )
             |> select_fields(resource, resolution, ["result"])
-            |> load_fields(resource, resolution, ["result"])
+            |> load_fields(
+              [
+                api: api,
+                tenant: Map.get(context, :tenant),
+                authorize?: AshGraphql.Api.Info.authorize?(api),
+                actor: Map.get(context, :actor)
+              ],
+              resource,
+              resolution,
+              [],
+              ["result"]
+            )
 
           {result, modify_args} =
             changeset
@@ -980,7 +1033,18 @@ defmodule AshGraphql.Graphql.Resolver do
                       authorize?: AshGraphql.Api.Info.authorize?(api)
                     )
                     |> select_fields(resource, resolution, ["result"])
-                    |> load_fields(resource, resolution, ["result"])
+                    |> load_fields(
+                      [
+                        api: api,
+                        tenant: Map.get(context, :tenant),
+                        authorize?: AshGraphql.Api.Info.authorize?(api),
+                        actor: Map.get(context, :actor)
+                      ],
+                      resource,
+                      resolution,
+                      [],
+                      ["result"]
+                    )
 
                   {result, modify_args} =
                     changeset
@@ -1181,7 +1245,9 @@ defmodule AshGraphql.Graphql.Resolver do
     Logger.error("""
     #{uuid}: Exception raised while resolving query.
 
-    #{Exception.format(:error, e, stacktrace)}
+    #{String.slice(Exception.format(:error, e), 0, 2000)}
+
+    #{Exception.format_stacktrace(stacktrace)}
     """)
 
     uuid
@@ -1321,18 +1387,78 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp load_fields(query_or_changeset, resource, resolution, nested \\ []) do
-    fields =
-      case resolution do
-        %Absinthe.Resolution{} ->
-          fields(resolution, nested)
-
-        %Absinthe.Blueprint.Document.Field{selections: selections} ->
-          selections
-      end
+  defp load_fields(query_or_changeset, load_opts, resource, resolution, path, nested \\ []) do
+    {fields, path} = nested_fields_and_path(resolution, path, nested)
 
     fields
-    |> Enum.flat_map(fn selection ->
+    |> resource_loads(resource, resolution, load_opts, path)
+    |> then(fn load ->
+      case query_or_changeset do
+        %Ash.Query{} = query ->
+          Ash.Query.load(query, load)
+
+        %Ash.Changeset{} = changeset ->
+          Ash.Changeset.load(changeset, load)
+      end
+    end)
+  end
+
+  defp nested_fields_and_path(resolution, path, []) do
+    base = List.last(path) || resolution
+
+    selections =
+      case base do
+        %Absinthe.Resolution{} ->
+          Absinthe.Resolution.project(resolution)
+
+        %Absinthe.Blueprint.Document.Field{selections: selections} ->
+          {fields, _} =
+            selections
+            |> Absinthe.Resolution.Projector.project(
+              Absinthe.Schema.lookup_type(resolution.schema, base.schema_node.type),
+              path,
+              %{},
+              resolution
+            )
+
+          fields
+      end
+
+    {selections, path}
+  end
+
+  defp nested_fields_and_path(resolution, path, [nested | rest]) do
+    base = List.last(path) || resolution
+
+    selections =
+      case base do
+        %Absinthe.Resolution{} ->
+          Absinthe.Resolution.project(resolution)
+
+        %Absinthe.Blueprint.Document.Field{selections: selections} ->
+          {fields, _} =
+            selections
+            |> Absinthe.Resolution.Projector.project(
+              Absinthe.Schema.lookup_type(resolution.schema, base.schema_node.type),
+              path,
+              %{},
+              resolution
+            )
+
+          fields
+      end
+
+    selection = Enum.find(selections, &(&1.name == nested))
+
+    if selection do
+      nested_fields_and_path(resolution, path ++ [selection], rest)
+    else
+      {[], path}
+    end
+  end
+
+  defp resource_loads(fields, resource, resolution, load_opts, path) do
+    Enum.flat_map(fields, fn selection ->
       cond do
         aggregate = Ash.Resource.Info.aggregate(resource, selection.schema_node.identifier) ->
           [aggregate.name]
@@ -1351,21 +1477,381 @@ defmodule AshGraphql.Graphql.Resolver do
               end
             end)
 
-          [{calculation.name, arguments}]
+          if Ash.Type.can_load?(calculation.type) do
+            loads =
+              type_loads(
+                selection.selections,
+                calculation.type,
+                calculation.constraints,
+                load_opts,
+                resource,
+                calculation.name,
+                resolution,
+                resolution.path ++ [selection],
+                selection,
+                AshGraphql.Resource.Info.type(resource)
+              )
+
+            case loads do
+              [] ->
+                [{calculation.name, arguments}]
+
+              loads ->
+                [{calculation.name, {arguments, loads}}]
+            end
+          else
+            [{calculation.name, arguments}]
+          end
+
+        attribute = Ash.Resource.Info.attribute(resource, selection.schema_node.identifier) ->
+          if Ash.Type.can_load?(attribute.type) do
+            loads =
+              type_loads(
+                selection.selections,
+                attribute.type,
+                attribute.constraints,
+                load_opts,
+                resource,
+                attribute.name,
+                resolution,
+                resolution.path ++ [selection],
+                selection,
+                AshGraphql.Resource.Info.type(resource)
+              )
+
+            case loads do
+              [] ->
+                if selection.alias do
+                  {:ok, calc} =
+                    Ash.Query.Calculation.new(
+                      {:__ash_graphql_attribute__, selection.alias},
+                      Ash.Resource.Calculation.LoadAttribute,
+                      Keyword.put(load_opts, :attribute, attribute.name),
+                      {attribute.type, attribute.constraints}
+                    )
+
+                  [
+                    calc
+                  ]
+                else
+                  [attribute.name]
+                end
+
+              loads ->
+                if selection.alias do
+                  {:ok, calc} =
+                    Ash.Query.Calculation.new(
+                      {:__ash_graphql_attribute__, selection.alias},
+                      Ash.Resource.Calculation.LoadAttribute,
+                      Keyword.merge(load_opts, load: loads, attribute: attribute.name),
+                      {attribute.type, attribute.constraints}
+                    )
+
+                  [
+                    calc
+                  ]
+                else
+                  [{attribute.name, loads}]
+                end
+            end
+          else
+            [attribute.name]
+          end
+
+        relationship = Ash.Resource.Info.relationship(resource, selection.schema_node.identifier) ->
+          related_query =
+            selection.arguments
+            |> Map.new(fn argument ->
+              {argument.schema_node.identifier, argument.input_value.data}
+            end)
+            |> apply_load_arguments(Ash.Query.new(relationship.destination))
+            |> select_fields(relationship.destination, selection)
+            |> load_fields(load_opts, relationship.destination, resolution, path ++ [selection])
+
+          if selection.alias do
+            {type, constraints} =
+              case relationship.cardinality do
+                :many ->
+                  {{:array, :struct}, items: [instance_of: relationship.destination]}
+
+                :one ->
+                  {:struct, instance_of: relationship.destination}
+              end
+
+            {:ok, calc} =
+              Ash.Query.Calculation.new(
+                {:__ash_graphql_relationship__, selection.alias},
+                Ash.Resource.Calculation.LoadRelationship,
+                Keyword.merge(load_opts, relationship: relationship.name, query: related_query),
+                {type, constraints}
+              )
+
+            [
+              calc
+            ]
+          else
+            [{relationship.name, related_query}]
+          end
 
         true ->
           []
       end
     end)
-    |> then(fn load ->
-      case query_or_changeset do
-        %Ash.Query{} = query ->
-          Ash.Query.load(query, load)
+  end
 
-        %Ash.Changeset{} = changeset ->
-          Ash.Changeset.load(changeset, load)
-      end
-    end)
+  defp type_loads(
+         selections,
+         type,
+         constraints,
+         load_opts,
+         resource,
+         field_name,
+         resolution,
+         path,
+         selection,
+         parent_type_name,
+         original_type \\ nil
+       )
+
+  defp type_loads(
+         selections,
+         {:array, type},
+         constraints,
+         load_opts,
+         resource,
+         field_name,
+         resolution,
+         path,
+         selection,
+         parent_type_name,
+         original_type
+       ) do
+    type_loads(
+      selections,
+      type,
+      constraints[:items] || [],
+      load_opts,
+      resource,
+      field_name,
+      resolution,
+      path,
+      selection,
+      parent_type_name,
+      original_type
+    )
+  end
+
+  defp type_loads(
+         selections,
+         type,
+         constraints,
+         load_opts,
+         resource,
+         field_name,
+         resolution,
+         path,
+         selection,
+         parent_type_name,
+         original_type
+       ) do
+    cond do
+      Ash.Type.NewType.new_type?(type) ->
+        subtype_constraints = Ash.Type.NewType.constraints(type, constraints)
+        subtype_of = Ash.Type.NewType.subtype_of(type)
+
+        type_loads(
+          selections,
+          subtype_of,
+          subtype_constraints,
+          load_opts,
+          resource,
+          field_name,
+          resolution,
+          path,
+          selection,
+          parent_type_name,
+          {type, constraints}
+        )
+
+      Ash.Type.embedded_type?(type) || Ash.Resource.Info.resource?(type) ->
+        selections
+        |> resource_loads(type, resolution, load_opts, path)
+
+      type == Ash.Type.Union ->
+        {global_selections, fragments} =
+          Enum.split_with(selections, fn
+            %Absinthe.Blueprint.Document.Field{} ->
+              true
+
+            _ ->
+              false
+          end)
+
+        loads =
+          case global_selections do
+            [] ->
+              []
+
+            global_selections ->
+              first_type_config =
+                constraints[:types]
+                |> Enum.at(0)
+                |> elem(1)
+
+              first_type = first_type_config[:type]
+              first_constraints = first_type_config[:constraints]
+
+              type_loads(
+                global_selections,
+                first_type,
+                first_constraints,
+                load_opts,
+                resource,
+                field_name,
+                resolution,
+                path,
+                selection,
+                parent_type_name
+              )
+          end
+
+        {graphql_unnested_unions, configured_type_name} =
+          case original_type do
+            {type, constraints} ->
+              configured_type_name =
+                cond do
+                  function_exported?(type, :graphql_type, 0) ->
+                    type.graphql_type()
+
+                  function_exported?(type, :graphql_type, 1) ->
+                    type.graphql_type(constraints)
+
+                  true ->
+                    nil
+                end
+
+              unnested_unions =
+                if function_exported?(type, :graphql_unnested_unions, 1) do
+                  type.graphql_unnested_unions(constraints)
+                else
+                  []
+                end
+
+              {unnested_unions, configured_type_name}
+
+            _ ->
+              {[], nil}
+          end
+
+        constraints[:types]
+        |> Enum.filter(fn {_, config} ->
+          Ash.Type.can_load?(config[:type])
+        end)
+        |> Enum.reduce(loads, fn {type_name, config}, acc ->
+          {gql_type_name, nested?} =
+            if type_name in graphql_unnested_unions do
+              {AshGraphql.Resource.field_type(
+                 config[:type],
+                 %Ash.Resource.Attribute{
+                   name:
+                     configured_type_name ||
+                       AshGraphql.Resource.atom_enum_type(resource, field_name),
+                   type: config[:type],
+                   constraints: config[:constraints]
+                 },
+                 resource
+               ), false}
+            else
+              {AshGraphql.Resource.nested_union_type_name(
+                 %{name: configured_type_name || "#{parent_type_name}_#{field_name}"},
+                 type_name,
+                 true
+               ), true}
+            end
+
+          gql_type = Absinthe.Schema.lookup_type(resolution.schema, gql_type_name)
+
+          if !gql_type do
+            raise Ash.Error.Framework.AssumptionFailed,
+              message: "Could not find a corresponding graphql type for #{inspect(gql_type_name)}"
+          end
+
+          if nested? do
+            {fields, _} =
+              fragments
+              |> Absinthe.Resolution.Projector.project(
+                gql_type,
+                path,
+                %{},
+                resolution
+              )
+
+            if selection = Enum.find(fields, &(&1.schema_node.identifier == :value)) do
+              new_path = path ++ [selection]
+
+              value_type =
+                Absinthe.Schema.lookup_type(resolution.schema, selection.schema_node.type)
+
+              {fields, _} =
+                Absinthe.Resolution.Projector.project(
+                  selection.selections,
+                  value_type,
+                  path ++ [selection],
+                  %{},
+                  resolution
+                )
+
+              Keyword.put(
+                acc,
+                type_name,
+                type_loads(
+                  fields,
+                  config[:type],
+                  config[:constraints],
+                  load_opts,
+                  resource,
+                  gql_type_name,
+                  resolution,
+                  new_path,
+                  selection,
+                  gql_type_name
+                )
+              )
+            else
+              acc
+            end
+          else
+            {fields, _} =
+              Absinthe.Resolution.Projector.project(
+                fragments,
+                gql_type,
+                path,
+                %{},
+                resolution
+              )
+
+            Keyword.put(
+              acc,
+              type_name,
+              type_loads(
+                fields,
+                config[:type],
+                config[:constraints],
+                load_opts,
+                resource,
+                gql_type_name,
+                resolution,
+                path,
+                selection,
+                gql_type_name
+              )
+            )
+          end
+        end)
+
+      true ->
+        []
+    end
   end
 
   defp select_fields(query_or_changeset, resource, resolution, nested \\ []) do
@@ -1408,23 +1894,29 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp fields(resolution, names) do
-    project =
-      resolution
-      |> Absinthe.Resolution.project()
+    {project, cache} =
+      case resolution do
+        %Absinthe.Blueprint.Document.Field{selections: selections} ->
+          {selections, %{}}
 
-    Enum.reduce(names, {project, resolution.fields_cache}, fn name, {fields, cache} ->
+        resolution ->
+          {resolution
+           |> Absinthe.Resolution.project(), resolution.fields_cache}
+      end
+
+    Enum.reduce(names, {project, cache}, fn name, {fields, cache} ->
       case fields |> Enum.find(&(&1.name == name)) do
         nil ->
           {fields, cache}
 
-        path ->
-          type = Absinthe.Schema.lookup_type(resolution.schema, path.schema_node.type)
+        selection ->
+          type = Absinthe.Schema.lookup_type(resolution.schema, selection.schema_node.type)
 
-          path
+          selection
           |> Map.get(:selections)
           |> Absinthe.Resolution.Projector.project(
             type,
-            resolution.path ++ [path],
+            resolution.path ++ [selection],
             cache,
             resolution
           )
@@ -1602,13 +2094,27 @@ defmodule AshGraphql.Graphql.Resolver do
           source: parent,
           context: context
         } = resolution,
-        {api, _resource, calculation}
+        {api, resource, calculation}
       ) do
     result =
       if resolution.definition.alias do
         Map.get(parent.calculations, {:__ash_graphql_calculation__, resolution.definition.alias})
       else
         Map.get(parent, calculation.name)
+      end
+
+    result =
+      if Ash.Type.NewType.new_type?(calculation.type) &&
+           Ash.Type.NewType.subtype_of(calculation.type) == Ash.Type.Union &&
+           function_exported?(calculation.type, :graphql_unnested_unions, 1) do
+        unnested_types = calculation.type.graphql_unnested_unions(calculation.constraints)
+
+        resolve_union_result(
+          result,
+          {calculation.name, calculation.type, calculation, resource, unnested_types}
+        )
+      else
+        result
       end
 
     Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, api))
@@ -1618,35 +2124,17 @@ defmodule AshGraphql.Graphql.Resolver do
     do: resolution
 
   def resolve_assoc(
-        %{source: parent, arguments: args, context: %{loader: loader} = context} = resolution,
-        {api, relationship}
+        %{source: parent} = resolution,
+        {_api, relationship}
       ) do
-    api_opts = [
-      actor: Map.get(context, :actor),
-      authorize?: AshGraphql.Api.Info.authorize?(api),
-      verbose?: AshGraphql.Api.Info.debug?(api)
-    ]
+    value =
+      if resolution.definition.alias do
+        Map.get(parent.calculations, {:__ash_graphql_relationship__, resolution.definition.alias})
+      else
+        Map.get(parent, relationship.name)
+      end
 
-    related_query =
-      args
-      |> apply_load_arguments(Ash.Query.new(relationship.destination))
-      |> select_fields(relationship.destination, resolution)
-      |> load_fields(relationship.destination, resolution)
-
-    tracer = AshGraphql.Api.Info.tracer(api)
-
-    opts = [
-      query: related_query,
-      api_opts: api_opts,
-      type: :relationship,
-      args: args,
-      resource: relationship.source,
-      tenant: Map.get(context, :tenant),
-      span_context: tracer && tracer.get_span_context()
-    ]
-
-    batch_key = {relationship.name, opts}
-    do_dataloader(resolution, loader, api, batch_key, args, parent)
+    Absinthe.Resolution.put_result(resolution, {:ok, value})
   end
 
   def resolve_id(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -1664,33 +2152,57 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_union(
         %{source: parent} = resolution,
-        {name, field_type, field, resource, unnested_types}
+        {name, _field_type, _field, _resource, _unnested_types} = data
       ) do
-    result =
-      case Map.get(parent, name) do
-        %Ash.Union{type: type, value: value} = union ->
-          constraints = Ash.Type.NewType.constraints(field_type, field.constraints)
-
-          if type in unnested_types do
-            if value do
-              type =
-                AshGraphql.Resource.field_type(
-                  constraints[:types][type][:type],
-                  field,
-                  resource
-                )
-
-              Map.put(value, :__union_type__, type)
-            end
-          else
-            union
-          end
-
-        other ->
-          other
+    value =
+      if resolution.definition.alias do
+        Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
+      else
+        Map.get(parent, name)
       end
 
+    result = resolve_union_result(value, data)
+
     Absinthe.Resolution.put_result(resolution, {:ok, result})
+  end
+
+  def resolve_attribute(%{source: parent} = resolution, name) do
+    value =
+      if resolution.definition.alias do
+        Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
+      else
+        Map.get(parent, name)
+      end
+
+    Absinthe.Resolution.put_result(resolution, {:ok, value})
+  end
+
+  defp resolve_union_result(
+         value,
+         {_name, field_type, field, resource, unnested_types}
+       ) do
+    case value do
+      %Ash.Union{type: type, value: value} = union ->
+        constraints = Ash.Type.NewType.constraints(field_type, field.constraints)
+
+        if type in unnested_types do
+          if value do
+            type =
+              AshGraphql.Resource.field_type(
+                constraints[:types][type][:type],
+                field,
+                resource
+              )
+
+            Map.put(value, :__union_type__, type)
+          end
+        else
+          union
+        end
+
+      other ->
+        other
+    end
   end
 
   def resolve_keyset(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -1734,30 +2246,6 @@ defmodule AshGraphql.Graphql.Resolver do
         _
       ) do
     child_complexity + 1
-  end
-
-  def fetch_dataloader(loader, api, batch_key, context, parent) do
-    to_resolution(Dataloader.get(loader, api, batch_key, parent), context, api)
-  end
-
-  defp do_dataloader(
-         resolution,
-         loader,
-         api,
-         batch_key,
-         _args,
-         parent
-       ) do
-    loader = Dataloader.load(loader, api, batch_key, parent)
-
-    fun = fn loader ->
-      fetch_dataloader(loader, api, batch_key, resolution.context, parent)
-    end
-
-    Absinthe.Resolution.put_result(
-      resolution,
-      {:middleware, Absinthe.Middleware.Dataloader, {loader, fun}}
-    )
   end
 
   defp apply_load_arguments(arguments, query) do

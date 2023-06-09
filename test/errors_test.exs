@@ -254,11 +254,7 @@ defmodule AshGraphql.ErrorsTest do
 
              assert %{
                       data: %{
-                        "getPost" => %{
-                          "published" => true,
-                          "text" => "foo",
-                          "multitenantTags" => nil
-                        }
+                        "getPost" => nil
                       },
                       errors: [%{message: message}]
                     } = result

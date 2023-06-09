@@ -298,6 +298,8 @@ defmodule AshGraphql.Test.Post do
       ]
     )
 
+    attribute(:embed_foo, Foo)
+
     attribute(:embed_union, :union,
       constraints: [
         types: [
@@ -316,6 +318,7 @@ defmodule AshGraphql.Test.Post do
     )
 
     attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType)
+    attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested)
     attribute(:enum_new_type, AshGraphql.Types.EnumNewType)
     attribute(:string_new_type, AshGraphql.Types.StringNewType)
 
@@ -360,6 +363,7 @@ defmodule AshGraphql.Test.Post do
 
     has_many :related_posts, AshGraphql.Test.Post do
       manual(RelatedPosts)
+      no_attributes?(true)
     end
   end
 end
