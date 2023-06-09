@@ -70,7 +70,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     ],
                     resource,
                     resolution,
-                    []
+                    resolution.path
                   )
 
                 result =
@@ -100,7 +100,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     ],
                     resource,
                     resolution,
-                    []
+                    resolution.path
                   )
 
                 {{:error, error}, [query, {:error, error}]}
@@ -201,7 +201,7 @@ defmodule AshGraphql.Graphql.Resolver do
               ],
               resource,
               resolution,
-              []
+              resolution.path
             )
 
           result =
@@ -297,7 +297,7 @@ defmodule AshGraphql.Graphql.Resolver do
                      ],
                      resource,
                      resolution,
-                     [],
+                     resolution.path,
                      result_fields
                    ),
                  {:ok, page} <-
@@ -901,7 +901,7 @@ defmodule AshGraphql.Graphql.Resolver do
               ],
               resource,
               resolution,
-              [],
+              resolution.path,
               ["result"]
             )
 
@@ -1042,7 +1042,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       ],
                       resource,
                       resolution,
-                      [],
+                      resolution.path,
                       ["result"]
                     )
 
@@ -1404,7 +1404,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp nested_fields_and_path(resolution, path, []) do
-    base = List.last(path) || resolution
+    base = Enum.at(path, 0) || resolution
 
     selections =
       case base do
@@ -1428,7 +1428,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp nested_fields_and_path(resolution, path, [nested | rest]) do
-    base = List.last(path) || resolution
+    base = Enum.at(path, 0) || resolution
 
     selections =
       case base do
@@ -1451,7 +1451,7 @@ defmodule AshGraphql.Graphql.Resolver do
     selection = Enum.find(selections, &(&1.name == nested))
 
     if selection do
-      nested_fields_and_path(resolution, path ++ [selection], rest)
+      nested_fields_and_path(resolution, [selection | path], rest)
     else
       {[], path}
     end
@@ -1487,7 +1487,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 resource,
                 calculation.name,
                 resolution,
-                resolution.path ++ [selection],
+                [selection | path],
                 selection,
                 AshGraphql.Resource.Info.type(resource)
               )
@@ -1514,7 +1514,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 resource,
                 attribute.name,
                 resolution,
-                resolution.path ++ [selection],
+                [selection | path],
                 selection,
                 AshGraphql.Resource.Info.type(resource)
               )
@@ -1566,7 +1566,7 @@ defmodule AshGraphql.Graphql.Resolver do
             end)
             |> apply_load_arguments(Ash.Query.new(relationship.destination))
             |> select_fields(relationship.destination, selection)
-            |> load_fields(load_opts, relationship.destination, resolution, path ++ [selection])
+            |> load_fields(load_opts, relationship.destination, resolution, [selection | path])
 
           if selection.alias do
             {type, constraints} =
@@ -1610,7 +1610,8 @@ defmodule AshGraphql.Graphql.Resolver do
          path,
          selection,
          parent_type_name,
-         original_type \\ nil
+         original_type \\ nil,
+         already_expanded? \\ false
        )
 
   defp type_loads(
@@ -1624,7 +1625,8 @@ defmodule AshGraphql.Graphql.Resolver do
          path,
          selection,
          parent_type_name,
-         original_type
+         original_type,
+         already_expanded?
        ) do
     type_loads(
       selections,
@@ -1637,7 +1639,8 @@ defmodule AshGraphql.Graphql.Resolver do
       path,
       selection,
       parent_type_name,
-      original_type
+      original_type,
+      already_expanded?
     )
   end
 
@@ -1652,7 +1655,8 @@ defmodule AshGraphql.Graphql.Resolver do
          path,
          selection,
          parent_type_name,
-         original_type
+         original_type,
+         already_expanded?
        ) do
     cond do
       Ash.Type.NewType.new_type?(type) ->
@@ -1670,11 +1674,31 @@ defmodule AshGraphql.Graphql.Resolver do
           path,
           selection,
           parent_type_name,
-          {type, constraints}
+          {type, constraints},
+          already_expanded?
         )
 
       Ash.Type.embedded_type?(type) || Ash.Resource.Info.resource?(type) ->
-        selections
+        fields =
+          if already_expanded? do
+            selections
+          else
+            value_type =
+              Absinthe.Schema.lookup_type(resolution.schema, selection.schema_node.type)
+
+            {fields, _} =
+              Absinthe.Resolution.Projector.project(
+                selections,
+                value_type,
+                path,
+                %{},
+                resolution
+              )
+
+            fields
+          end
+
+        fields
         |> resource_loads(type, resolution, load_opts, path)
 
       type == Ash.Type.Union ->
@@ -1711,7 +1735,8 @@ defmodule AshGraphql.Graphql.Resolver do
                 resolution,
                 path,
                 selection,
-                parent_type_name
+                parent_type_name,
+                original_type
               )
           end
 
@@ -1778,8 +1803,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
           if nested? do
             {fields, _} =
-              fragments
-              |> Absinthe.Resolution.Projector.project(
+              Absinthe.Resolution.Projector.project(
+                fragments,
                 gql_type,
                 path,
                 %{},
@@ -1787,34 +1812,21 @@ defmodule AshGraphql.Graphql.Resolver do
               )
 
             if selection = Enum.find(fields, &(&1.schema_node.identifier == :value)) do
-              new_path = path ++ [selection]
-
-              value_type =
-                Absinthe.Schema.lookup_type(resolution.schema, selection.schema_node.type)
-
-              {fields, _} =
-                Absinthe.Resolution.Projector.project(
-                  selection.selections,
-                  value_type,
-                  path ++ [selection],
-                  %{},
-                  resolution
-                )
-
               Keyword.put(
                 acc,
                 type_name,
                 type_loads(
-                  fields,
+                  selection.selections,
                   config[:type],
                   config[:constraints],
                   load_opts,
                   resource,
                   gql_type_name,
                   resolution,
-                  new_path,
+                  [selection | path],
                   selection,
-                  gql_type_name
+                  gql_type_name,
+                  original_type
                 )
               )
             else
@@ -1843,7 +1855,9 @@ defmodule AshGraphql.Graphql.Resolver do
                 resolution,
                 path,
                 selection,
-                gql_type_name
+                gql_type_name,
+                original_type,
+                true
               )
             )
           end
@@ -1854,7 +1868,8 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp select_fields(query_or_changeset, resource, resolution, nested \\ []) do
+  @doc false
+  def select_fields(query_or_changeset, resource, resolution, nested \\ []) do
     subfields =
       resolution
       |> fields(nested)
@@ -1916,7 +1931,7 @@ defmodule AshGraphql.Graphql.Resolver do
           |> Map.get(:selections)
           |> Absinthe.Resolution.Projector.project(
             type,
-            resolution.path ++ [selection],
+            [selection | resolution.path],
             cache,
             resolution
           )
@@ -1935,7 +1950,8 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp set_query_arguments(query, action, arg_values) do
+  @doc false
+  def set_query_arguments(query, action, arg_values) do
     action =
       if is_atom(action) do
         Ash.Resource.Info.action(query.resource, action)

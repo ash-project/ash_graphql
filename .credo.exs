@@ -117,7 +117,7 @@
         #
         {Credo.Check.Refactor.CondStatements, []},
         {Credo.Check.Refactor.CyclomaticComplexity, false},
-        {Credo.Check.Refactor.FunctionArity, [max_arity: 11]},
+        {Credo.Check.Refactor.FunctionArity, [max_arity: 12]},
         {Credo.Check.Refactor.LongQuoteBlocks, []},
         {Credo.Check.Refactor.MapInto, false},
         {Credo.Check.Refactor.MatchInCondition, []},
