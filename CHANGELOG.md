@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.8](https://github.com/ash-project/ash_graphql/compare/v0.25.7...v0.25.8) (2023-06-10)
+
+
+
+
+### Bug Fixes:
+
+* fixes for resolvers
+
+### Improvements:
+
+* finalize `Subscription.query_for_subscription` args
+
+* revamp data loading to be a single load statement
+
 ## [v0.25.7](https://github.com/ash-project/ash_graphql/compare/v0.25.6...v0.25.7) (2023-06-06)
 
 
