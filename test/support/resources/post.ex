@@ -321,6 +321,10 @@ defmodule AshGraphql.Test.Post do
     attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested)
     attribute(:enum_new_type, AshGraphql.Types.EnumNewType)
     attribute(:string_new_type, AshGraphql.Types.StringNewType)
+    attribute :required_string, :string do
+      allow_nil? false
+      default "test"
+    end
 
     create_timestamp(:created_at, private?: false)
   end
@@ -335,6 +339,10 @@ defmodule AshGraphql.Test.Post do
         default(" ")
       end
     end
+  end
+
+  aggregates do
+    count :comment_count, :comments
   end
 
   relationships do
