@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.10](https://github.com/ash-project/ash_graphql/compare/v0.25.9...v0.25.10) (2023-06-12)
+
+
+
+
+### Improvements:
+
+* use new `can_load?/2`
+
 ## [v0.25.9](https://github.com/ash-project/ash_graphql/compare/v0.25.8...v0.25.9) (2023-06-12)
 
 
