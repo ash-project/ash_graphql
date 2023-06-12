@@ -3485,7 +3485,7 @@ defmodule AshGraphql.Resource do
       ]
     else
       [
-        {{AshGraphql.Graphql.Resolver, :resolve_attribute}, name}
+        {{AshGraphql.Graphql.Resolver, :resolve_attribute}, {name, type, constraints}}
       ]
     end
   end

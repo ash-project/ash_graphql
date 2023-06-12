@@ -211,7 +211,6 @@ defmodule AliasTest do
       AshGraphql.Test.User
       |> Ash.Changeset.for_create(:create, name: "test")
       |> AshGraphql.Test.Api.create!()
-      |> IO.inspect()
 
     post =
       AshGraphql.Test.Post
@@ -219,7 +218,7 @@ defmodule AliasTest do
         text: "foo",
         published: true,
         score: 9.8,
-        auhtor_id: author.id
+        author_id: author.id
       )
       |> AshGraphql.Test.Api.create!()
 
@@ -247,7 +246,7 @@ defmodule AliasTest do
 
     assert %{
              data: %{
-               "getPost" => %{"author" => %{"name" => ^name}}
+               "getPost" => %{"writer" => %{"name" => ^name}}
              }
            } = result
   end

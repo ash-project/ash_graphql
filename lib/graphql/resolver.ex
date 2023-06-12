@@ -2183,9 +2183,9 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, {:ok, result})
   end
 
-  def resolve_attribute(%{source: parent} = resolution, name) do
+  def resolve_attribute(%{source: parent} = resolution, {name, type, _constraints}) do
     value =
-      if resolution.definition.alias do
+      if resolution.definition.alias && Ash.Type.can_load?(type) do
         Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
       else
         Map.get(parent, name)
