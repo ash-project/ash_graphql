@@ -1478,7 +1478,7 @@ defmodule AshGraphql.Graphql.Resolver do
               end
             end)
 
-          if Ash.Type.can_load?(calculation.type) do
+          if Ash.Type.can_load?(calculation.type, calculation.constraints) do
             loads =
               type_loads(
                 selection.selections,
@@ -1505,7 +1505,7 @@ defmodule AshGraphql.Graphql.Resolver do
           end
 
         attribute = Ash.Resource.Info.attribute(resource, selection.schema_node.identifier) ->
-          if Ash.Type.can_load?(attribute.type) do
+          if Ash.Type.can_load?(attribute.type, attribute.constraints) do
             loads =
               type_loads(
                 selection.selections,
@@ -1771,7 +1771,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
         constraints[:types]
         |> Enum.filter(fn {_, config} ->
-          Ash.Type.can_load?(config[:type])
+          Ash.Type.can_load?(config[:type], config[:constraints])
         end)
         |> Enum.reduce(loads, fn {type_name, config}, acc ->
           {gql_type_name, nested?} =
@@ -2183,9 +2183,9 @@ defmodule AshGraphql.Graphql.Resolver do
     Absinthe.Resolution.put_result(resolution, {:ok, result})
   end
 
-  def resolve_attribute(%{source: parent} = resolution, {name, type, _constraints}) do
+  def resolve_attribute(%{source: parent} = resolution, {name, type, constraints}) do
     value =
-      if resolution.definition.alias && Ash.Type.can_load?(type) do
+      if resolution.definition.alias && Ash.Type.can_load?(type, constraints) do
         Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
       else
         Map.get(parent, name)
