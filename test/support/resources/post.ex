@@ -317,6 +317,7 @@ defmodule AshGraphql.Test.Post do
       ]
     )
 
+    attribute(:embed_union_new_type_list, {:array, AshGraphql.Types.EmbedUnionNewTypeUnnested})
     attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType)
     attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested)
     attribute(:enum_new_type, AshGraphql.Types.EnumNewType)

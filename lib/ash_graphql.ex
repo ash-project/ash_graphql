@@ -347,48 +347,59 @@ defmodule AshGraphql do
   @doc false
   def only_union_types(attributes) do
     Enum.flat_map(attributes, fn attribute ->
-      this_union_type =
-        case union_type(attribute.type) do
-          nil ->
-            nil
+      attribute
+      |> only_union_type()
+      |> List.wrap()
+    end)
+  end
 
-          type ->
-            {type, attribute}
-        end
+  defp only_union_type(%{type: {:array, type}, constraints: constraints} = attribute) do
+    only_union_type(%{attribute | type: type, constraints: constraints[:items] || []})
+  end
 
-      attribute = %{
-        type:
+  defp only_union_type(attribute) do
+    this_union_type =
+      case union_type(attribute.type) do
+        nil ->
+          nil
+
+        type ->
+          {type, attribute}
+      end
+
+    attribute = %{
+      attribute
+      | type:
           attribute.type
           |> unwrap_type()
           |> Ash.Type.NewType.subtype_of(),
         constraints: Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
-      }
+    }
 
-      case unwrap_type(attribute.type) do
-        Ash.Type.Union ->
-          attribute.constraints[:types]
-          |> Kernel.||([])
-          |> Enum.flat_map(fn {_name, config} ->
-            case union_type(config[:type]) do
-              nil ->
-                []
-
-              type ->
-                [{type, attribute}]
-            end
-          end)
-
-        type ->
-          case union_type(type) do
+    case unwrap_type(attribute.type) do
+      Ash.Type.Union ->
+        attribute.constraints[:types]
+        |> Kernel.||([])
+        |> Enum.flat_map(fn {_name, config} ->
+          case union_type(config[:type]) do
             nil ->
               []
 
             type ->
               [{type, attribute}]
           end
-      end
-      |> Enum.concat(List.wrap(this_union_type))
-    end)
+        end)
+
+      type ->
+        case union_type(type) do
+          nil ->
+            []
+
+          type ->
+            [{type, attribute}]
+        end
+    end
+    |> Enum.concat(List.wrap(this_union_type))
   end
 
   defp only_enum_types(attributes) do
