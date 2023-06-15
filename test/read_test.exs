@@ -938,7 +938,6 @@ defmodule AshGraphql.ReadTest do
              } = resp
     end
 
-    @tag :wip
     test "loading relationships through an unnested union with aliases works" do
       user =
         AshGraphql.Test.User

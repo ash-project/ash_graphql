@@ -349,7 +349,6 @@ defmodule AshGraphql.Test.Post do
     calculate(:post_comments, {:array, UnionRelation}, fn records, _ ->
       records =
         records
-        |> IO.inspect(label: "records")
         |> List.wrap()
 
       record_ids = Enum.map(records, & &1.id)
@@ -374,7 +373,6 @@ defmodule AshGraphql.Test.Post do
 
       {:ok,
        record_ids |> Enum.map(fn record_id -> Map.get(items, record_id) |> Enum.filter(& &1) end)}
-      |> IO.inspect(label: "calc result")
     end)
   end
 
