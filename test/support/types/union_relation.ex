@@ -26,6 +26,5 @@ defmodule UnionRelation do
 
   def graphql_type(_), do: :post_comments
 
-  # You'll want this likely
   def graphql_unnested_unions(_), do: Keyword.keys(@types)
 end
