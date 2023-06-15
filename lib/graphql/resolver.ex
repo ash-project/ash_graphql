@@ -2120,11 +2120,15 @@ defmodule AshGraphql.Graphql.Resolver do
         Map.get(parent, calculation.name)
       end
 
+    {type, constraints} = unwrap_type_and_constraints(calculation.type, calculation.constraints)
+
     result =
-      if Ash.Type.NewType.new_type?(calculation.type) &&
-           Ash.Type.NewType.subtype_of(calculation.type) == Ash.Type.Union &&
-           function_exported?(calculation.type, :graphql_unnested_unions, 1) do
-        unnested_types = calculation.type.graphql_unnested_unions(calculation.constraints)
+      if Ash.Type.NewType.new_type?(type) &&
+           Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
+           function_exported?(type, :graphql_unnested_unions, 1) do
+        unnested_types = type.graphql_unnested_unions(calculation.constraints)
+
+        calculation = %{calculation | type: type, constraints: constraints}
 
         resolve_union_result(
           result,
@@ -2136,6 +2140,11 @@ defmodule AshGraphql.Graphql.Resolver do
 
     Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, api))
   end
+
+  defp unwrap_type_and_constraints({:array, type}, constraints),
+    do: unwrap_type_and_constraints(type, constraints[:items] || [])
+
+  defp unwrap_type_and_constraints(other, constraints), do: {other, constraints}
 
   def resolve_assoc(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
@@ -2192,6 +2201,10 @@ defmodule AshGraphql.Graphql.Resolver do
       end
 
     Absinthe.Resolution.put_result(resolution, {:ok, value})
+  end
+
+  defp resolve_union_result(value, data) when is_list(value) do
+    Enum.map(value, &resolve_union_result(&1, data))
   end
 
   defp resolve_union_result(

@@ -346,33 +346,18 @@ defmodule AshGraphql.Test.Post do
       end
     end
 
-    calculate(:post_comments, {:array, UnionRelation}, fn records, _ ->
-      records =
-        records
-        |> List.wrap()
-
-      record_ids = Enum.map(records, & &1.id)
-
-      items =
+    calculate(:post_comments, {:array, UnionRelation}, fn record, _ ->
+      # This is very inefficient, do not copy this pattern into your own app!!!
+      values =
         [
-          SponsoredComment,
-          Comment
+          SponsoredComment |> AshGraphql.Test.Api.read!(),
+          Comment |> AshGraphql.Test.Api.read!()
         ]
-        |> Stream.flat_map(fn resource ->
-          resource
-          |> AshGraphql.Test.Api.read!()
-        end)
-        |> Enum.group_by(& &1.post_id)
-        |> Enum.into(%{}, fn {post_id, items} ->
-          {
-            post_id,
-            items
-            |> Enum.map(&%Ash.Union{type: UnionRelation.struct_to_name(&1), value: &1})
-          }
-        end)
+        |> List.flatten()
+        |> Stream.filter(&(&1.post_id == record.id))
+        |> Enum.map(&%Ash.Union{type: UnionRelation.struct_to_name(&1), value: &1})
 
-      {:ok,
-       record_ids |> Enum.map(fn record_id -> Map.get(items, record_id) |> Enum.filter(& &1) end)}
+      {:ok, values}
     end)
   end
 

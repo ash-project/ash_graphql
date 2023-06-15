@@ -1,5 +1,6 @@
 defmodule UnionRelation do
-  alias AshGraphql.Test.{SponsoredComment, Comment}
+  @moduledoc false
+  alias AshGraphql.Test.{Comment, SponsoredComment}
 
   @types [
     comment: [

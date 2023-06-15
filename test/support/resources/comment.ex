@@ -41,6 +41,9 @@ defmodule AshGraphql.Test.Comment do
 
   relationships do
     belongs_to(:post, AshGraphql.Test.Post)
-    belongs_to(:author, AshGraphql.Test.User)
+
+    belongs_to :author, AshGraphql.Test.User do
+      attribute_writable?(true)
+    end
   end
 end

@@ -935,7 +935,7 @@ defmodule AshGraphql.ReadTest do
                    }
                  ]
                }
-             } = resp
+             } = result
     end
 
     test "loading relationships through an unnested union with aliases works" do
@@ -963,12 +963,14 @@ defmodule AshGraphql.ReadTest do
           postLibrary(sort: {field: TEXT}) {
             postComments {
               ...on Comment {
+                __typename
                 text
                 author {
                  name
                 }
               }
               ...on SponsoredComment {
+                __typename
                 text
                 post {
                   id
@@ -979,8 +981,8 @@ defmodule AshGraphql.ReadTest do
               ...on Comment {
                 __typename
                 text
-                post {
-                  id
+                author {
+                 name
                 }
               }
               ...on SponsoredComment {
@@ -1008,32 +1010,32 @@ defmodule AshGraphql.ReadTest do
                    %{
                      "postComments" => [
                        %{
-                         "__typename" => "Comment",
-                         "text" => "comment",
-                         "author" => %{"name" => "fred"}
-                       },
-                       %{
                          "__typename" => "SponsoredComment",
                          "text" => "sponsored",
                          "post" => %{"id" => ^post_id}
+                       },
+                       %{
+                         "__typename" => "Comment",
+                         "text" => "comment",
+                         "author" => %{"name" => "fred"}
                        }
                      ],
                      "bar" => [
                        %{
-                         "__typename" => "Comment",
-                         "text" => "comment",
-                         "author" => %{"name" => "fred"}
-                       },
-                       %{
                          "__typename" => "SponsoredComment",
                          "text" => "sponsored",
                          "post" => %{"id" => ^post_id}
+                       },
+                       %{
+                         "__typename" => "Comment",
+                         "text" => "comment",
+                         "author" => %{"name" => "fred"}
                        }
                      ]
                    }
                  ]
                }
-             } = resp
+             } = result
     end
   end
 end
