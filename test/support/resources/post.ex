@@ -89,6 +89,8 @@ end
 
 defmodule AshGraphql.Test.Post do
   @moduledoc false
+  alias AshGraphql.Test.Comment
+  alias AshGraphql.Test.SponsoredComment
 
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
@@ -181,8 +183,10 @@ defmodule AshGraphql.Test.Post do
 
     create :with_comments do
       argument(:comments, {:array, :map})
+      argument(:sponsored_comments, {:array, :map})
 
       change(manage_relationship(:comments, type: :direct_control))
+      change(manage_relationship(:sponsored_comments, type: :direct_control))
     end
 
     create :with_comments_and_tags do
@@ -341,6 +345,35 @@ defmodule AshGraphql.Test.Post do
         default(" ")
       end
     end
+
+    calculate(:post_comments, {:array, UnionRelation}, fn records, _ ->
+      records =
+        records
+        |> List.wrap()
+
+      record_ids = Enum.map(records, & &1.id)
+
+      items =
+        [
+          SponsoredComment,
+          Comment
+        ]
+        |> Stream.flat_map(fn resource ->
+          resource
+          |> AshGraphql.Test.Api.read!()
+        end)
+        |> Enum.group_by(& &1.post_id)
+        |> Enum.into(%{}, fn {post_id, items} ->
+          {
+            post_id,
+            items
+            |> Enum.map(&%Ash.Union{type: UnionRelation.struct_to_name(&1), value: &1})
+          }
+        end)
+
+      {:ok,
+       record_ids |> Enum.map(fn record_id -> Map.get(items, record_id) |> Enum.filter(& &1) end)}
+    end)
   end
 
   aggregates do
@@ -351,6 +384,7 @@ defmodule AshGraphql.Test.Post do
     belongs_to(:author, AshGraphql.Test.User)
 
     has_many(:comments, AshGraphql.Test.Comment)
+    has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated)
 
     many_to_many(:tags, AshGraphql.Test.Tag,

@@ -1,4 +1,4 @@
-defmodule AshGraphql.Test.Comment do
+defmodule AshGraphql.Test.SponsoredComment do
   @moduledoc false
 
   use Ash.Resource,
@@ -6,14 +6,14 @@ defmodule AshGraphql.Test.Comment do
     extensions: [AshGraphql.Resource]
 
   graphql do
-    type :comment
+    type :sponsored_comment
 
     queries do
-      get :get_comment, :read
+      get :get_sponsored_comment, :read
     end
 
     mutations do
-      create :create_comment, :create
+      create :create_sponsored_comment, :create
     end
   end
 
@@ -35,12 +35,11 @@ defmodule AshGraphql.Test.Comment do
 
     attribute :type, :atom do
       writable?(false)
-      default(:comment)
+      default(:sponsored)
     end
   end
 
   relationships do
     belongs_to(:post, AshGraphql.Test.Post)
-    belongs_to(:author, AshGraphql.Test.User)
   end
 end

@@ -923,19 +923,117 @@ defmodule AshGraphql.ReadTest do
       refute Map.has_key?(result, :errors)
 
       assert %{
-        data: %{
-          "postLibrary" => [
-            %{
-              "bar" => %{"alwaysTrue" => true},
-              "foo" => %{"alwaysNil" => nil}
-            },
-            %{
-              "bar" => %{"alwaysTrue" => true},
-              "foo" => %{"alwaysFalse" => false}
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "bar" => %{"alwaysTrue" => true},
+                     "foo" => %{"alwaysNil" => nil}
+                   },
+                   %{
+                     "bar" => %{"alwaysTrue" => true},
+                     "foo" => %{"alwaysFalse" => false}
+                   }
+                 ]
+               }
+             } = resp
+    end
+
+    test "loading relationships through an unnested union with aliases works" do
+      user =
+        AshGraphql.Test.User
+        |> Ash.Changeset.for_create(:create, %{name: "fred"})
+        |> AshGraphql.Test.Api.create!()
+
+      post =
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(
+          :with_comments,
+          %{
+            text: "a",
+            comments: [%{text: "comment", author_id: user.id}],
+            sponsored_comments: [%{text: "sponsored"}],
+            published: true
+          }
+        )
+        |> AshGraphql.Test.Api.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            postComments {
+              ...on Comment {
+                text
+                author {
+                 name
+                }
+              }
+              ...on SponsoredComment {
+                text
+                post {
+                  id
+                }
+              }
             }
-          ]
+            bar: postComments {
+              ...on Comment {
+                __typename
+                text
+                post {
+                  id
+                }
+              }
+              ...on SponsoredComment {
+                __typename
+                text
+                post {
+                  id
+                }
+              }
+            }
+          }
         }
-      }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      post_id = post.id
+
+      assert %{
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "postComments" => [
+                       %{
+                         "__typename" => "Comment",
+                         "text" => "comment",
+                         "author" => %{"name" => "fred"}
+                       },
+                       %{
+                         "__typename" => "SponsoredComment",
+                         "text" => "sponsored",
+                         "post" => %{"id" => ^post_id}
+                       }
+                     ],
+                     "bar" => [
+                       %{
+                         "__typename" => "Comment",
+                         "text" => "comment",
+                         "author" => %{"name" => "fred"}
+                       },
+                       %{
+                         "__typename" => "SponsoredComment",
+                         "text" => "sponsored",
+                         "post" => %{"id" => ^post_id}
+                       }
+                     ]
+                   }
+                 ]
+               }
+             } = resp
     end
   end
 end
