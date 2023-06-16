@@ -947,15 +947,25 @@ defmodule AshGraphql.ReadTest do
       post =
         AshGraphql.Test.Post
         |> Ash.Changeset.for_create(
-          :with_comments,
+          :create,
           %{
+            author_id: user.id,
             text: "a",
-            comments: [%{text: "comment", author_id: user.id}],
-            sponsored_comments: [%{text: "sponsored"}],
             published: true
           }
         )
         |> AshGraphql.Test.Api.create!()
+
+      post =
+        post
+        |> Ash.Changeset.for_update(
+          :update_with_comments,
+          %{
+            comments: [%{text: "comment", author_id: user.id}],
+            sponsored_comments: [%{text: "sponsored"}]
+          }
+        )
+        |> AshGraphql.Test.Api.update!()
 
       resp =
         """

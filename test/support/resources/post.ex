@@ -252,8 +252,10 @@ defmodule AshGraphql.Test.Post do
 
     update :update_with_comments do
       argument(:comments, {:array, :map})
+      argument(:sponsored_comments, {:array, :map})
 
       change(manage_relationship(:comments, type: :direct_control))
+      change(manage_relationship(:sponsored_comments, type: :direct_control))
     end
 
     update :update_confirm do
