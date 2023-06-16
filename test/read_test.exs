@@ -1017,8 +1017,6 @@ defmodule AshGraphql.ReadTest do
 
       assert {:ok, result} = resp
 
-      IO.inspect(resp, label: "response")
-
       refute Map.has_key?(result, :errors)
 
       post_id = post.id
@@ -1031,7 +1029,7 @@ defmodule AshGraphql.ReadTest do
                        %{
                          "__typename" => "SponsoredComment",
                          "text" => "sponsored",
-                         "post" => %{"id" => ^post_id}
+                         "p" => %{"id" => ^post_id, "user" => %{"name" => "fred"}}
                        },
                        %{
                          "__typename" => "Comment",
