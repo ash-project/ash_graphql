@@ -53,6 +53,10 @@ defmodule AshGraphql.Test.User do
     attribute(:name, :string)
   end
 
+  relationships do
+    has_many(:posts, AshGraphql.Test.Post, destination_attribute: :author_id)
+  end
+
   calculations do
     calculate(:name_twice, :string, expr(name <> " " <> name))
   end

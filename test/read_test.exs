@@ -938,6 +938,7 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
 
+    @tag :wip
     test "loading relationships through an unnested union with aliases works" do
       user =
         AshGraphql.Test.User
@@ -947,15 +948,25 @@ defmodule AshGraphql.ReadTest do
       post =
         AshGraphql.Test.Post
         |> Ash.Changeset.for_create(
-          :with_comments,
+          :create,
           %{
+            author_id: user.id,
             text: "a",
-            comments: [%{text: "comment", author_id: user.id}],
-            sponsored_comments: [%{text: "sponsored"}],
             published: true
           }
         )
         |> AshGraphql.Test.Api.create!()
+
+      post =
+        post
+        |> Ash.Changeset.for_update(
+          :update_with_comments,
+          %{
+            comments: [%{text: "comment", author_id: user.id}],
+            sponsored_comments: [%{text: "sponsored"}]
+          }
+        )
+        |> AshGraphql.Test.Api.update!()
 
       resp =
         """
@@ -972,8 +983,14 @@ defmodule AshGraphql.ReadTest do
               ...on SponsoredComment {
                 __typename
                 text
-                post {
+                p: post {
                   id
+                  user: author {
+                    name
+                    posts {
+                      id
+                    }
+                  }
                 }
               }
             }
@@ -1012,7 +1029,7 @@ defmodule AshGraphql.ReadTest do
                        %{
                          "__typename" => "SponsoredComment",
                          "text" => "sponsored",
-                         "post" => %{"id" => ^post_id}
+                         "p" => %{"id" => ^post_id, "user" => %{"name" => "fred"}}
                        },
                        %{
                          "__typename" => "Comment",
