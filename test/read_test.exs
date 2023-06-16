@@ -938,6 +938,7 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
 
+    @tag :wip
     test "loading relationships through an unnested union with aliases works" do
       user =
         AshGraphql.Test.User
@@ -982,8 +983,14 @@ defmodule AshGraphql.ReadTest do
               ...on SponsoredComment {
                 __typename
                 text
-                post {
+                p: post {
                   id
+                  user: author {
+                    name
+                    posts {
+                      id
+                    }
+                  }
                 }
               }
             }
@@ -1009,6 +1016,8 @@ defmodule AshGraphql.ReadTest do
         |> Absinthe.run(AshGraphql.Test.Schema)
 
       assert {:ok, result} = resp
+
+      IO.inspect(resp, label: "response")
 
       refute Map.has_key?(result, :errors)
 
