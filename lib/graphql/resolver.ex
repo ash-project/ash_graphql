@@ -164,69 +164,61 @@ defmodule AshGraphql.Graphql.Resolver do
       authorize?: AshGraphql.Api.Info.authorize?(api)
     }
 
-    case handle_arguments(resource, action, args) do
-      {:ok, args} ->
-        trace api,
-              resource,
-              :gql_query,
-              query_name,
-              metadata do
-          opts = [
-            actor: Map.get(context, :actor),
-            action: action,
-            verbose?: AshGraphql.Api.Info.debug?(api)
-          ]
+    with {:ok, args} <- handle_arguments(resource, action, args),
+         {:ok, query} <- read_one_query(resource, args) do
+      trace api,
+            resource,
+            :gql_query,
+            query_name,
+            metadata do
+        opts = [
+          actor: Map.get(context, :actor),
+          action: action,
+          verbose?: AshGraphql.Api.Info.debug?(api)
+        ]
 
-          query =
-            case Map.fetch(args, :filter) do
-              {:ok, filter} when filter != %{} ->
-                Ash.Query.do_filter(resource, filter)
+        query =
+          query
+          |> Ash.Query.set_tenant(Map.get(context, :tenant))
+          |> Ash.Query.set_context(get_context(context))
+          |> set_query_arguments(action, args)
+          |> select_fields(resource, resolution)
+          |> load_fields(
+            [
+              api: api,
+              tenant: Map.get(context, :tenant),
+              authorize?: AshGraphql.Api.Info.authorize?(api),
+              actor: Map.get(context, :actor)
+            ],
+            resource,
+            resolution,
+            resolution.path
+          )
 
-              _ ->
-                Ash.Query.new(resource)
-            end
+        result =
+          query
+          |> Ash.Query.for_read(action, %{},
+            actor: opts[:actor],
+            authorize?: AshGraphql.Api.Info.authorize?(api)
+          )
+          |> api.read_one(opts)
 
-          query =
-            query
-            |> Ash.Query.set_tenant(Map.get(context, :tenant))
-            |> Ash.Query.set_context(get_context(context))
-            |> set_query_arguments(action, args)
-            |> select_fields(resource, resolution)
-            |> load_fields(
-              [
-                api: api,
-                tenant: Map.get(context, :tenant),
-                authorize?: AshGraphql.Api.Info.authorize?(api),
-                actor: Map.get(context, :actor)
-              ],
-              resource,
-              resolution,
-              resolution.path
-            )
+        result =
+          add_read_metadata(
+            result,
+            gql_query,
+            Ash.Resource.Info.action(query.resource, action)
+          )
 
-          result =
-            query
-            |> Ash.Query.for_read(action, %{},
-              actor: opts[:actor],
-              authorize?: AshGraphql.Api.Info.authorize?(api)
-            )
-            |> api.read_one(opts)
-
-          result =
-            add_read_metadata(
-              result,
-              gql_query,
-              Ash.Resource.Info.action(query.resource, action)
-            )
-
-          resolution
-          |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-          |> add_root_errors(api, result)
-          |> modify_resolution(modify, [query, args])
-        end
-
+        resolution
+        |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
+        |> add_root_errors(api, result)
+        |> modify_resolution(modify, [query, args])
+      end
+    else
       {:error, error} ->
-        {:error, error}
+        resolution
+        |> Absinthe.Resolution.put_result(to_resolution({:error, error}, context, api))
     end
   rescue
     e ->
@@ -334,6 +326,22 @@ defmodule AshGraphql.Graphql.Resolver do
       else
         something_went_wrong(resolution, e, api, __STACKTRACE__)
       end
+  end
+
+  defp read_one_query(resource, args) do
+    case Map.fetch(args, :filter) do
+      {:ok, filter} when filter != %{} ->
+        case Ash.Filter.parse_input(resource, filter) do
+          {:ok, parsed} ->
+            {:ok, Ash.Query.do_filter(resource, parsed)}
+
+          {:error, error} ->
+            {:error, error}
+        end
+
+      _ ->
+        {:ok, Ash.Query.new(resource)}
+    end
   end
 
   defp handle_arguments(_resource, nil, argument_values) do
