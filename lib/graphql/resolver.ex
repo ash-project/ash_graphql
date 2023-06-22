@@ -2347,7 +2347,7 @@ defmodule AshGraphql.Graphql.Resolver do
                nil
            end
 
-         Logger.warn(
+         Logger.warning(
            "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
          )
 
