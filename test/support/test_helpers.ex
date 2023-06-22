@@ -8,7 +8,10 @@ defmodule AshGraphql.TestHelpers do
         Ash.DataLayer.Ets.stop(resource)
       rescue
         error ->
-          Logger.warn("Error while stopping storage for #{inspect(resource)}: #{inspect(error)}")
+          Logger.warning(
+            "Error while stopping storage for #{inspect(resource)}: #{inspect(error)}"
+          )
+
           :ok
       end
     end

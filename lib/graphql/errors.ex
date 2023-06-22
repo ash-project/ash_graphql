@@ -27,17 +27,17 @@ defmodule AshGraphql.Errors do
         if is_exception(error) do
           case error do
             %{stacktrace: %{stacktrace: stacktrace}} ->
-              Logger.warn(
+              Logger.warning(
                 "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
               )
 
             error ->
-              Logger.warn(
+              Logger.warning(
                 "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error)}"
               )
           end
         else
-          Logger.warn(
+          Logger.warning(
             "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{inspect(error)}"
           )
         end
