@@ -2128,25 +2128,35 @@ defmodule AshGraphql.Graphql.Resolver do
         Map.get(parent, calculation.name)
       end
 
-    {type, constraints} = unwrap_type_and_constraints(calculation.type, calculation.constraints)
-
-    result =
-      if Ash.Type.NewType.new_type?(type) &&
-           Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
-           function_exported?(type, :graphql_unnested_unions, 1) do
-        unnested_types = type.graphql_unnested_unions(calculation.constraints)
-
-        calculation = %{calculation | type: type, constraints: constraints}
-
-        resolve_union_result(
-          result,
-          {calculation.name, calculation.type, calculation, resource, unnested_types}
+    case result do
+      %struct{} when struct == Ash.ForbiddenField ->
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, Ash.Error.Forbidden.exception([])}, context, api)
         )
-      else
-        result
-      end
 
-    Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, api))
+      result ->
+        {type, constraints} =
+          unwrap_type_and_constraints(calculation.type, calculation.constraints)
+
+        result =
+          if Ash.Type.NewType.new_type?(type) &&
+               Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
+               function_exported?(type, :graphql_unnested_unions, 1) do
+            unnested_types = type.graphql_unnested_unions(calculation.constraints)
+
+            calculation = %{calculation | type: type, constraints: constraints}
+
+            resolve_union_result(
+              result,
+              {calculation.name, calculation.type, calculation, resource, unnested_types, api}
+            )
+          else
+            result
+          end
+
+        Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, api))
+    end
   end
 
   defp unwrap_type_and_constraints({:array, type}, constraints),
@@ -2185,8 +2195,8 @@ defmodule AshGraphql.Graphql.Resolver do
     do: resolution
 
   def resolve_union(
-        %{source: parent} = resolution,
-        {name, _field_type, _field, _resource, _unnested_types} = data
+        %{source: parent, context: context} = resolution,
+        {name, _field_type, _field, _resource, _unnested_types, api} = data
       ) do
     value =
       if resolution.definition.alias do
@@ -2195,12 +2205,24 @@ defmodule AshGraphql.Graphql.Resolver do
         Map.get(parent, name)
       end
 
-    result = resolve_union_result(value, data)
+    case value do
+      %struct{} when struct == Ash.ForbiddenField ->
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, Ash.Error.Forbidden.exception([])}, context, api)
+        )
 
-    Absinthe.Resolution.put_result(resolution, {:ok, result})
+      value ->
+        result = resolve_union_result(value, data)
+
+        Absinthe.Resolution.put_result(resolution, {:ok, result})
+    end
   end
 
-  def resolve_attribute(%{source: parent} = resolution, {name, type, constraints}) do
+  def resolve_attribute(
+        %{source: parent, context: context} = resolution,
+        {name, type, constraints, api}
+      ) do
     value =
       if resolution.definition.alias && Ash.Type.can_load?(type, constraints) do
         Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
@@ -2208,7 +2230,16 @@ defmodule AshGraphql.Graphql.Resolver do
         Map.get(parent, name)
       end
 
-    Absinthe.Resolution.put_result(resolution, {:ok, value})
+    case value do
+      %struct{} when struct == Ash.ForbiddenField ->
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, Ash.Error.Forbidden.exception([])}, context, api)
+        )
+
+      value ->
+        Absinthe.Resolution.put_result(resolution, {:ok, value})
+    end
   end
 
   defp resolve_union_result(value, data) when is_list(value) do
@@ -2217,7 +2248,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp resolve_union_result(
          value,
-         {_name, field_type, field, resource, unnested_types}
+         {_name, field_type, field, resource, unnested_types, _api}
        ) do
     case value do
       %Ash.Union{type: type, value: value} = union ->

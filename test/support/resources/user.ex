@@ -51,6 +51,7 @@ defmodule AshGraphql.Test.User do
     uuid_primary_key(:id)
 
     attribute(:name, :string)
+    attribute(:secret, :string)
   end
 
   relationships do
@@ -67,6 +68,16 @@ defmodule AshGraphql.Test.User do
     end
 
     policy action_type(:read) do
+      authorize_if(always())
+    end
+  end
+
+  field_policies do
+    field_policy :secret do
+      forbid_if(always())
+    end
+
+    field_policy :* do
       authorize_if(always())
     end
   end

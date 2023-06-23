@@ -101,6 +101,29 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"currentUserWithMetadata" => %{"bar" => "bar"}}} = result
   end
 
+  test "forbidden fields show errors" do
+    AshGraphql.Test.User
+    |> Ash.Changeset.for_create(:create,
+      name: "My Name"
+    )
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query CurrentUserWithMetadata {
+        currentUserWithMetadata {
+          bar
+          secret
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, _result} = resp
+
+    assert %{errors: [], data: %{"currentUserWithMetadata" => nil}}
+  end
+
   test "a read with arguments works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true)
@@ -171,6 +194,48 @@ defmodule AshGraphql.ReadTest do
           comments{
             text
           }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postLibrary" => [%{"text" => "foo", "comments" => [%{"text" => "stuff"}]}]}} =
+             result
+  end
+
+  test "reading relationships works with fragments, without selecting the id field" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          text
+          id
+          ...PostFragment
+        }
+      }
+
+      fragment PostFragment on Post {
+        comments{
+          id
+          text
         }
       }
       """

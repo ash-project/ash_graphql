@@ -3154,10 +3154,10 @@ defmodule AshGraphql.Resource do
   end
 
   defp fields(resource, api, schema, query \\ nil) do
-    attributes(resource, schema) ++
+    attributes(resource, api, schema) ++
       metadata(query, resource, schema) ++
       relationships(resource, api, schema) ++
-      aggregates(resource, schema) ++
+      aggregates(resource, api, schema) ++
       calculations(resource, api, schema) ++
       keyset(resource, schema)
   end
@@ -3217,7 +3217,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp attributes(resource, schema) do
+  defp attributes(resource, api, schema) do
     attribute_names = AshGraphql.Resource.Info.field_names(resource)
 
     attributes =
@@ -3250,7 +3250,8 @@ defmodule AshGraphql.Resource do
               attribute,
               attribute.name,
               attribute.type,
-              attribute.constraints
+              attribute.constraints,
+              api
             ),
           name: to_string(name),
           type: field_type,
@@ -3429,7 +3430,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp aggregates(resource, schema) do
+  defp aggregates(resource, api, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
     resource
@@ -3464,7 +3465,7 @@ defmodule AshGraphql.Resource do
         identifier: aggregate.name,
         module: schema,
         middleware:
-          middleware_for_field(resource, aggregate, aggregate.name, agg_type, constraints),
+          middleware_for_field(resource, aggregate, aggregate.name, agg_type, constraints, api),
         name: to_string(name),
         description: aggregate.description,
         type: type,
@@ -3473,7 +3474,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp middleware_for_field(resource, field, name, type, constraints) do
+  defp middleware_for_field(resource, field, name, type, constraints, api) do
     if Ash.Type.NewType.new_type?(type) &&
          Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
          function_exported?(type, :graphql_unnested_unions, 1) do
@@ -3481,11 +3482,11 @@ defmodule AshGraphql.Resource do
 
       [
         {{AshGraphql.Graphql.Resolver, :resolve_union},
-         {name, type, field, resource, unnested_types}}
+         {name, type, field, resource, unnested_types, api}}
       ]
     else
       [
-        {{AshGraphql.Graphql.Resolver, :resolve_attribute}, {name, type, constraints}}
+        {{AshGraphql.Graphql.Resolver, :resolve_attribute}, {name, type, constraints, api}}
       ]
     end
   end
