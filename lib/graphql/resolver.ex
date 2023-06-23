@@ -1574,7 +1574,11 @@ defmodule AshGraphql.Graphql.Resolver do
               {argument.schema_node.identifier, argument.input_value.data}
             end)
             |> apply_load_arguments(Ash.Query.new(relationship.destination))
-            |> select_fields(relationship.destination, selection)
+            |> select_fields(
+              relationship.destination,
+              resolution,
+              Enum.map(Enum.reverse([selection | path]), & &1.name)
+            )
             |> load_fields(load_opts, relationship.destination, resolution, [selection | path])
 
           if selection.alias do
@@ -1885,7 +1889,7 @@ defmodule AshGraphql.Graphql.Resolver do
       |> names_only()
       |> Enum.map(&field_or_relationship(resource, &1))
       |> Enum.filter(& &1)
-      |> names_only()
+      |> Enum.map(& &1.name)
 
     case query_or_changeset do
       %Ash.Query{} = query ->
@@ -1917,16 +1921,12 @@ defmodule AshGraphql.Graphql.Resolver do
     |> Absinthe.Resolution.project()
   end
 
-  defp fields(resolution, names) do
-    {project, cache} =
-      case resolution do
-        %Absinthe.Blueprint.Document.Field{selections: selections} ->
-          {selections, %{}}
+  defp fields(%Absinthe.Resolution{} = resolution, names) do
+    project =
+      resolution
+      |> Absinthe.Resolution.project()
 
-        resolution ->
-          {resolution
-           |> Absinthe.Resolution.project(), resolution.fields_cache}
-      end
+    cache = resolution.fields_cache
 
     Enum.reduce(names, {project, cache}, fn name, {fields, cache} ->
       case fields |> Enum.find(&(&1.name == name)) do
@@ -1950,13 +1950,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp names_only(fields) do
-    Enum.map(fields, fn
-      %{schema_node: %{identifier: identifier}} ->
-        identifier
-
-      %{name: name} ->
-        name
-    end)
+    Enum.map(fields, & &1.schema_node.identifier)
   end
 
   @doc false

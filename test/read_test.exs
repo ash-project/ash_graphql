@@ -124,6 +124,73 @@ defmodule AshGraphql.ReadTest do
     assert %{errors: [], data: %{"currentUserWithMetadata" => nil}}
   end
 
+  test "loading relationships with fragment works" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create, %{name: "fred"})
+      |> AshGraphql.Test.Api.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          author_id: user.id,
+          text: "a",
+          published: true
+        }
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    post
+    |> Ash.Changeset.for_update(
+      :update_with_comments,
+      %{
+        comments: [%{text: "comment", author_id: user.id}]
+      }
+    )
+    |> AshGraphql.Test.Api.update!()
+
+    resp =
+      """
+      query postLibrary {
+        postLibrary(sort: {field: TEXT}) {
+          id
+          comments {
+            ...User
+          }
+        }
+      }
+
+      fragment User on Comment {
+        id
+        author {
+          name
+        }
+      }
+
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "postLibrary" => [
+                 %{
+                   "comments" => [
+                     %{
+                       "author" => %{"name" => "fred"}
+                     }
+                   ]
+                 }
+               ]
+             }
+           } = result
+  end
+
   test "a read with arguments works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true)
