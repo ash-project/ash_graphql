@@ -553,12 +553,17 @@ defmodule AshGraphql do
   end
 
   defp used_in_gql?(resource, %{name: name}) do
-    mutations = AshGraphql.Resource.Info.mutations(resource)
-    queries = AshGraphql.Resource.Info.queries(resource)
+    if Ash.Resource.Info.embedded?(resource) do
+      # We should actually check if any resource refers to this action for this
+      true
+    else
+      mutations = AshGraphql.Resource.Info.mutations(resource)
+      queries = AshGraphql.Resource.Info.queries(resource)
 
-    Enum.any?(mutations, fn mutation ->
-      mutation.action == name || Map.get(mutation, :read_action) == name
-    end) || Enum.any?(queries, &(&1.action == name))
+      Enum.any?(mutations, fn mutation ->
+        mutation.action == name || Map.get(mutation, :read_action) == name
+      end) || Enum.any?(queries, &(&1.action == name))
+    end
   end
 
   defp enum_type({:array, type}), do: enum_type(type)
