@@ -541,6 +541,7 @@ defmodule AshGraphql do
     action_arguments =
       resource
       |> Ash.Resource.Info.actions()
+      |> Enum.filter(&used_in_gql?(resource, &1))
       |> Enum.flat_map(& &1.arguments)
 
     calculation_arguments =
@@ -549,6 +550,15 @@ defmodule AshGraphql do
       |> Enum.flat_map(& &1.arguments)
 
     action_arguments ++ calculation_arguments
+  end
+
+  defp used_in_gql?(resource, %{name: name}) do
+    mutations = AshGraphql.Resource.Info.mutations(resource)
+    queries = AshGraphql.Resource.Info.queries(resource)
+
+    Enum.any?(mutations, fn mutation ->
+      mutation.action == name || Map.get(mutation, :read_action) == name
+    end) || Enum.any?(queries, &(&1.action == name))
   end
 
   defp enum_type({:array, type}), do: enum_type(type)
