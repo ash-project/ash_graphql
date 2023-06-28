@@ -368,7 +368,9 @@ defmodule AshGraphql.Test.Post do
   end
 
   relationships do
-    belongs_to(:author, AshGraphql.Test.User)
+    belongs_to(:author, AshGraphql.Test.User) do
+      attribute_writable?(true)
+    end
 
     has_many(:comments, AshGraphql.Test.Comment)
     has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment)

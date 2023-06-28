@@ -1137,7 +1137,7 @@ defmodule AshGraphql.ReadTest do
                  "getPost" => %{
                    "postComments" => [
                      %{},
-                     %{"__typename" => "Comment", "post" => %{"author" => %{"name" => "barney"}}}
+                     %{"__typename" => "Comment", "post" => %{"author" => %{"name" => "fred"}}}
                    ]
                  }
                }
