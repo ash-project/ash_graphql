@@ -1070,7 +1070,80 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
 
-    @tag :wip
+    test "loading relationships through a union with fragments works" do
+      user1 =
+        AshGraphql.Test.User
+        |> Ash.Changeset.for_create(:create, %{name: "fred"})
+        |> AshGraphql.Test.Api.create!()
+
+      user2 =
+        AshGraphql.Test.User
+        |> Ash.Changeset.for_create(:create, %{name: "barney"})
+        |> AshGraphql.Test.Api.create!()
+
+      post1 =
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            author_id: user1.id,
+            text: "a",
+            published: true
+          }
+        )
+        |> AshGraphql.Test.Api.create!()
+
+      post1 =
+        post1
+        |> Ash.Changeset.for_update(
+          :update_with_comments,
+          %{
+            comments: [%{text: "comment", author_id: user2.id}],
+            sponsored_comments: [%{text: "sponsored"}]
+          }
+        )
+        |> AshGraphql.Test.Api.update!()
+
+      resp =
+        """
+        query postLibrary {
+          getPost(id: "#{post1.id}") {
+            postComments {
+              ...on Comment {
+                __typename
+                post {
+                  ...Author
+                }
+              }
+            }
+          }
+        }
+
+        fragment Author on Post {
+          author {
+            name
+          }
+        }
+
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "getPost" => %{
+                   "postComments" => [
+                     %{},
+                     %{"__typename" => "Comment", "post" => %{"author" => %{"name" => "barney"}}}
+                   ]
+                 }
+               }
+             } = result
+    end
+
     test "loading relationships through an unnested union with aliases works" do
       user =
         AshGraphql.Test.User
