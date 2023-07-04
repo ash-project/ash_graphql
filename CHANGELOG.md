@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.11](https://github.com/ash-project/ash_graphql/compare/v0.25.10...v0.25.11) (2023-07-04)
+
+
+
+
+### Bug Fixes:
+
+* only include types for actions being used by ash_graphql
+
+* handle detection of fields nested in aliases
+
+* fix Logger deprecations for elixir 1.15 (#79)
+
+* properly resolve arrays of unions from calculations
+
+* account for lists of newtype unions
+
+### Improvements:
+
+* support ForbiddenField
+
+* use `parse_input` for filters
+
 ## [v0.25.10](https://github.com/ash-project/ash_graphql/compare/v0.25.9...v0.25.10) (2023-06-12)
 
 
