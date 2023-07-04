@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.12](https://github.com/ash-project/ash_graphql/compare/v0.25.11...v0.25.12) (2023-07-04)
+
+
+
+
+### Bug Fixes:
+
+* {:array, UnionType} issues resolving embedded types (#82)
+
+### Improvements:
+
+* update ash
+
 ## [v0.25.11](https://github.com/ash-project/ash_graphql/compare/v0.25.10...v0.25.11) (2023-07-04)
 
 
