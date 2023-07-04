@@ -459,18 +459,24 @@ defmodule AshGraphql do
     end)
     |> Enum.flat_map(fn
       {source_resource, attribute} ->
+        {type, constraints} =
+          case attribute.type do
+            {:array, type} ->
+              {type, attribute.constraints[:items] || []}
+
+            type ->
+              {type, attribute.constraints}
+          end
+
         attribute = %{
           attribute
           | type:
-              attribute.type
-              |> unwrap_type()
+              type
               |> Ash.Type.NewType.subtype_of(),
-            constraints: Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+            constraints: Ash.Type.NewType.constraints(type, constraints)
         }
 
-        attribute_type = unwrap_type(attribute.type)
-
-        case attribute_type do
+        case attribute.type do
           Ash.Type.Map ->
             if attribute.constraints[:fields] do
               {source_resource, attribute}
