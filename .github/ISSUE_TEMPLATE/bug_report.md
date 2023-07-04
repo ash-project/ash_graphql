@@ -5,7 +5,7 @@ title: ''
 labels: bug, needs review
 assignees: ''
 
--https://hexdocs.pm/ash_json_api--
+-https://hexdocs.pm/ash_graphql--
 
 **Describe the bug**
 A clear and concise description of what the bug is.
