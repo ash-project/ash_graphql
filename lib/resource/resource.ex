@@ -3474,6 +3474,10 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  defp middleware_for_field(resource, field, name, {:array, type}, constraints, api) do
+    middleware_for_field(resource, field, name, type, constraints, api)
+  end
+
   defp middleware_for_field(resource, field, name, type, constraints, api) do
     if Ash.Type.NewType.new_type?(type) &&
          Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
