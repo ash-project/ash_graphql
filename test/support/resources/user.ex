@@ -51,7 +51,11 @@ defmodule AshGraphql.Test.User do
     uuid_primary_key(:id)
 
     attribute(:name, :string)
-    attribute(:secret, :string)
+
+    attribute(:secret, :string) do
+      allow_nil? false
+      default("super secret")
+    end
   end
 
   relationships do

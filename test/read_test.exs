@@ -102,11 +102,12 @@ defmodule AshGraphql.ReadTest do
   end
 
   test "forbidden fields show errors" do
-    AshGraphql.Test.User
-    |> Ash.Changeset.for_create(:create,
-      name: "My Name"
-    )
-    |> AshGraphql.Test.Api.create!()
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> AshGraphql.Test.Api.create!()
 
     resp =
       """
@@ -117,11 +118,14 @@ defmodule AshGraphql.ReadTest do
         }
       }
       """
-      |> Absinthe.run(AshGraphql.Test.Schema)
+      |> Absinthe.run(AshGraphql.Test.Schema, context: %{actor: user})
 
-    assert {:ok, _result} = resp
+    assert {:ok, result} = resp
 
-    assert %{errors: [], data: %{"currentUserWithMetadata" => nil}}
+    assert %{
+             data: %{"currentUserWithMetadata" => nil},
+             errors: [%{"code" => "forbidden"}]
+           } == result
   end
 
   test "loading relationships with fragment works" do
