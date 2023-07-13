@@ -124,8 +124,8 @@ defmodule AshGraphql.ReadTest do
 
     assert %{
              data: %{"currentUserWithMetadata" => nil},
-             errors: [%{"code" => "forbidden"}]
-           } == result
+             errors: [%{code: "forbidden_field"}]
+           } = result
   end
 
   test "loading relationships with fragment works" do

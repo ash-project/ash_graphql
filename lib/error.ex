@@ -129,3 +129,15 @@ defimpl AshGraphql.Error, for: Ash.Error.Forbidden.Policy do
     }
   end
 end
+
+defimpl AshGraphql.Error, for: Ash.Error.Forbidden.ForbiddenField do
+  def to_error(_error) do
+    %{
+      message: "forbidden field",
+      short_message: "forbidden field",
+      vars: %{},
+      code: "forbidden_field",
+      fields: []
+    }
+  end
+end

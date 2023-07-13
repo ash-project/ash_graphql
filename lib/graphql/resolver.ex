@@ -2126,7 +2126,15 @@ defmodule AshGraphql.Graphql.Resolver do
       %struct{} when struct == Ash.ForbiddenField ->
         Absinthe.Resolution.put_result(
           resolution,
-          to_resolution({:error, Ash.Error.Forbidden.exception([])}, context, api)
+          to_resolution(
+            {:error,
+             Ash.Error.Forbidden.ForbiddenField.exception(
+               resource: resource,
+               field: resolution.definition.name
+             )},
+            context,
+            api
+          )
         )
 
       result ->
@@ -2190,7 +2198,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_union(
         %{source: parent, context: context} = resolution,
-        {name, _field_type, _field, _resource, _unnested_types, api} = data
+        {name, _field_type, _field, resource, _unnested_types, api} = data
       ) do
     value =
       if resolution.definition.alias do
@@ -2203,7 +2211,15 @@ defmodule AshGraphql.Graphql.Resolver do
       %struct{} when struct == Ash.ForbiddenField ->
         Absinthe.Resolution.put_result(
           resolution,
-          to_resolution({:error, Ash.Error.Forbidden.exception([])}, context, api)
+          to_resolution(
+            {:error,
+             Ash.Error.Forbidden.ForbiddenField.exception(
+               resource: resource,
+               field: resolution.definition.name
+             )},
+            context,
+            api
+          )
         )
 
       value ->
@@ -2214,7 +2230,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve_attribute(
-        %{source: parent, context: context} = resolution,
+        %{source: %resource{} = parent, context: context} = resolution,
         {name, type, constraints, api}
       ) do
     value =
@@ -2228,7 +2244,15 @@ defmodule AshGraphql.Graphql.Resolver do
       %struct{} when struct == Ash.ForbiddenField ->
         Absinthe.Resolution.put_result(
           resolution,
-          to_resolution({:error, Ash.Error.Forbidden.exception([])}, context, api)
+          to_resolution(
+            {:error,
+             Ash.Error.Forbidden.ForbiddenField.exception(
+               resource: resource,
+               field: resolution.definition.name
+             )},
+            context,
+            api
+          )
         )
 
       value ->
