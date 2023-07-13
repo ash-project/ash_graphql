@@ -3,6 +3,7 @@ import Config
 config :ash, :utc_datetime_type, :datetime
 config :ash, :disable_async?, true
 config :ash, :validate_api_resource_inclusion?, false
+config :ash, :validate_api_config_inclusion?, false
 
 config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
 
