@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.13](https://github.com/ash-project/ash_graphql/compare/v0.25.12...v0.25.13) (2023-07-13)
+
+
+
+
+### Bug Fixes:
+
+* properly display forbidden field errors
+
 ## [v0.25.12](https://github.com/ash-project/ash_graphql/compare/v0.25.11...v0.25.12) (2023-07-04)
 
 
