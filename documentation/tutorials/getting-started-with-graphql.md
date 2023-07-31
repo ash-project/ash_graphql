@@ -4,19 +4,16 @@
 
 If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html). This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/apis.
 
-## Bring in the ash_graphql, and absinthe_plug dependencies
+## Bring in the ash_graphql dependency
 
 ```elixir
 def deps()
   [
     ...
-    {:ash_graphql, "~> 0.25.13"},
-    {:absinthe_plug, "~> x.x"}
+    {:ash_graphql, "~> 0.25.13"}
   ]
 end
 ```
-
-Use `mix hex.info ash_graphql` and `mix hex.info absinthe_plug` to quickly find the latest versions.
 
 ## Add some backwards compatibility configuration
 
