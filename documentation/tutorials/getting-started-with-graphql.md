@@ -10,7 +10,7 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 def deps()
   [
     ...
-    {:ash_graphql, "~> 0.22.4"},
+    {:ash_graphql, "~> 0.25.13"},
     {:absinthe_plug, "~> x.x"}
   ]
 end
