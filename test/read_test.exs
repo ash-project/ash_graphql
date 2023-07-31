@@ -226,7 +226,11 @@ defmodule AshGraphql.ReadTest do
 
   test "a read with custom set types works" do
     AshGraphql.Test.Post
-    |> Ash.Changeset.for_create(:create, text: "foo", integer_as_string_in_api: 1, published: true)
+    |> Ash.Changeset.for_create(:create,
+      text: "foo",
+      integer_as_string_in_api: 1,
+      published: true
+    )
     |> AshGraphql.Test.Api.create!()
 
     resp =

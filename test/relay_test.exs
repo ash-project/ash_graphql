@@ -439,7 +439,9 @@ defmodule AshGraphql.RelayTest do
                   }
                 }
               }} =
-               Absinthe.run(page2, AshGraphql.Test.Schema, variables: %{"before" => start_cursor1})
+               Absinthe.run(page2, AshGraphql.Test.Schema,
+                 variables: %{"before" => start_cursor1}
+               )
     end
 
     test "last with middle cursor" do
