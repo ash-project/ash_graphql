@@ -297,6 +297,10 @@ defmodule AshGraphql do
     end
   end
 
+  defp nested_attrs({:array, type}, constraints, already_checked) do
+    nested_attrs(type, constraints[:items] || [], already_checked)
+  end
+
   defp nested_attrs(Ash.Type.Union, constraints, already_checked) do
     Enum.reduce(
       constraints[:types] || [],
