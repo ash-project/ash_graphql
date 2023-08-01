@@ -2314,6 +2314,7 @@ defmodule AshGraphql.Resource do
     |> Ash.Resource.Info.public_relationships()
     |> Enum.filter(
       &(filterable_and_shown_field?(resource, &1) &&
+          AshGraphql.Resource.Info.derive_filter?(&1.destination) &&
           Resource in Spark.extensions(&1.destination) && &1.name in relationships)
     )
     |> Enum.map(fn relationship ->
