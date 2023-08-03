@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.25.14](https://github.com/ash-project/ash_graphql/compare/v0.25.13...v0.25.14) (2023-08-01)
+
+
+
+
+### Bug Fixes:
+
+* recurse through array types for union checking
+
+* don't add filter input for non-filterable resources
+
+* array unions: for arrays of embedded types unions when graphql_unnested_unions is used, without it they return empty values (#87)
+
 ## [v0.25.13](https://github.com/ash-project/ash_graphql/compare/v0.25.12...v0.25.13) (2023-07-13)
 
 

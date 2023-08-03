@@ -1568,12 +1568,24 @@ defmodule AshGraphql.Graphql.Resolver do
           end
 
         relationship = Ash.Resource.Info.relationship(resource, selection.schema_node.identifier) ->
-          related_query =
-            selection.arguments
-            |> Map.new(fn argument ->
+          read_action =
+            case relationship.read_action do
+              nil ->
+                Ash.Resource.Info.primary_action!(relationship.destination, :read)
+
+              read_action ->
+                Ash.Resource.Info.action(relationship.destination, read_action)
+            end
+
+          args =
+            Map.new(selection.arguments, fn argument ->
               {argument.schema_node.identifier, argument.input_value.data}
             end)
+
+          related_query =
+            args
             |> apply_load_arguments(Ash.Query.new(relationship.destination))
+            |> set_query_arguments(read_action, args)
             |> select_fields(
               relationship.destination,
               resolution,
