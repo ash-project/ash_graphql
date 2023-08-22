@@ -2456,7 +2456,7 @@ defmodule AshGraphql.Resource do
                     name: to_string(name),
                     type:
                       if Keyword.get(
-                           constraints || [],
+                           attribute,
                            :allow_nil?,
                            true
                          ) do
@@ -2471,7 +2471,7 @@ defmodule AshGraphql.Resource do
                 ]
               }
 
-            {type, constraints} ->
+            {type, _} ->
               {types,
                [
                  %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2481,7 +2481,7 @@ defmodule AshGraphql.Resource do
                    name: to_string(name),
                    type:
                      if Keyword.get(
-                          constraints || [],
+                          attribute,
                           :allow_nil?,
                           true
                         ) do
@@ -2538,7 +2538,7 @@ defmodule AshGraphql.Resource do
                     __reference__: AshGraphql.Resource.ref(env),
                     name: to_string(name),
                     type:
-                      if Keyword.get(constraints || [], :allow_nil?, true) do
+                      if Keyword.get(attribute, :allow_nil?, true) do
                         nested_type_name
                       else
                         %Absinthe.Blueprint.TypeReference.NonNull{
@@ -2550,7 +2550,7 @@ defmodule AshGraphql.Resource do
                 ]
               }
 
-            {type, constraints} ->
+            {type, _} ->
               {types,
                [
                  %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -2559,7 +2559,7 @@ defmodule AshGraphql.Resource do
                    __reference__: AshGraphql.Resource.ref(env),
                    name: to_string(name),
                    type:
-                     if Keyword.get(constraints || [], :allow_nil?, true) do
+                     if Keyword.get(attribute, :allow_nil?, true) do
                        do_field_type(type, nil, nil, false)
                      else
                        %Absinthe.Blueprint.TypeReference.NonNull{

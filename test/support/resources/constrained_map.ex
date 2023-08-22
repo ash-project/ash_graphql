@@ -6,9 +6,7 @@ defmodule AshGraphql.Test.ConstrainedMap do
       fields: [
         foo_bar: [
           type: :string,
-          constraints: [
-            allow_nil?: false
-          ]
+          allow_nil?: false
         ],
         baz: [
           type: :integer
