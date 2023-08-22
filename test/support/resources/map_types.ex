@@ -11,7 +11,8 @@ defmodule AshGraphql.Test.MapTypes do
       constraints(
         fields: [
           foo: [
-            type: :string
+            type: :string,
+            allow_nil?: false
           ],
           bar: [
             type: :integer
@@ -39,7 +40,8 @@ defmodule AshGraphql.Test.MapTypes do
         constraints(
           fields: [
             foo: [
-              type: :string
+              type: :string,
+              allow_nil?: false
             ],
             bar: [
               type: :integer

@@ -157,8 +157,11 @@ defmodule AshGraphql.AttributeTest do
       data["__type"]["inputFields"]
       |> Enum.find(fn field -> field["name"] == "foo" end)
 
-    assert foo_field["type"]["kind"] == "SCALAR"
-    assert foo_field["type"]["name"] == "String"
+    # non null field
+    assert foo_field["type"]["kind"] == "NON_NULL"
+
+    assert foo_field["type"]["ofType"]["kind"] == "SCALAR"
+    assert foo_field["type"]["ofType"]["name"] == "String"
 
     bar_field =
       data["__type"]["inputFields"]
@@ -257,7 +260,11 @@ defmodule AshGraphql.AttributeTest do
                     },
                     %{
                       "name" => "fooBar",
-                      "type" => %{"kind" => "SCALAR", "name" => "String", "ofType" => nil}
+                      "type" => %{
+                        "kind" => "NON_NULL",
+                        "name" => nil,
+                        "ofType" => %{"kind" => "SCALAR", "name" => "String"}
+                      }
                     }
                   ]
                 }
@@ -301,7 +308,11 @@ defmodule AshGraphql.AttributeTest do
                     },
                     %{
                       "name" => "fooBar",
-                      "type" => %{"kind" => "SCALAR", "name" => "String", "ofType" => nil}
+                      "type" => %{
+                        "kind" => "NON_NULL",
+                        "name" => nil,
+                        "ofType" => %{"kind" => "SCALAR", "name" => "String"}
+                      }
                     }
                   ]
                 }

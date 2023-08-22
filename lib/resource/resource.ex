@@ -2454,13 +2454,24 @@ defmodule AshGraphql.Resource do
                     identifier: name,
                     __reference__: AshGraphql.Resource.ref(env),
                     name: to_string(name),
-                    type: nested_type_name
+                    type:
+                      if Keyword.get(
+                           attribute,
+                           :allow_nil?,
+                           true
+                         ) do
+                        nested_type_name
+                      else
+                        %Absinthe.Blueprint.TypeReference.NonNull{
+                          of_type: nested_type_name
+                        }
+                      end
                   }
                   | fields
                 ]
               }
 
-            _ ->
+            {type, _} ->
               {types,
                [
                  %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2468,7 +2479,18 @@ defmodule AshGraphql.Resource do
                    identifier: name,
                    __reference__: AshGraphql.Resource.ref(env),
                    name: to_string(name),
-                   type: do_field_type(attribute[:type], nil, nil, false)
+                   type:
+                     if Keyword.get(
+                          attribute,
+                          :allow_nil?,
+                          true
+                        ) do
+                       do_field_type(type, nil, nil, false)
+                     else
+                       %Absinthe.Blueprint.TypeReference.NonNull{
+                         of_type: do_field_type(type, nil, nil, false)
+                       }
+                     end
                  }
                  | fields
                ]}
@@ -2515,13 +2537,20 @@ defmodule AshGraphql.Resource do
                     identifier: name,
                     __reference__: AshGraphql.Resource.ref(env),
                     name: to_string(name),
-                    type: nested_type_name
+                    type:
+                      if Keyword.get(attribute, :allow_nil?, true) do
+                        nested_type_name
+                      else
+                        %Absinthe.Blueprint.TypeReference.NonNull{
+                          of_type: nested_type_name
+                        }
+                      end
                   }
                   | fields
                 ]
               }
 
-            _ ->
+            {type, _} ->
               {types,
                [
                  %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -2529,7 +2558,14 @@ defmodule AshGraphql.Resource do
                    identifier: name,
                    __reference__: AshGraphql.Resource.ref(env),
                    name: to_string(name),
-                   type: do_field_type(attribute[:type], nil, nil, false)
+                   type:
+                     if Keyword.get(attribute, :allow_nil?, true) do
+                       do_field_type(type, nil, nil, false)
+                     else
+                       %Absinthe.Blueprint.TypeReference.NonNull{
+                         of_type: do_field_type(type, nil, nil, false)
+                       }
+                     end
                  }
                  | fields
                ]}
