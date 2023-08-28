@@ -198,9 +198,37 @@ defmodule AshGraphql.Api do
         },
         %Absinthe.Blueprint.Schema.EnumValueDefinition{
           module: schema,
+          identifier: :desc_nils_first,
+          __reference__: AshGraphql.Resource.ref(env),
+          name: "DESC_NILS_FIRST",
+          value: :desc
+        },
+        %Absinthe.Blueprint.Schema.EnumValueDefinition{
+          module: schema,
+          identifier: :desc_nils_last,
+          __reference__: AshGraphql.Resource.ref(env),
+          name: "DESC_NILS_LAST",
+          value: :desc
+        },
+        %Absinthe.Blueprint.Schema.EnumValueDefinition{
+          module: schema,
           identifier: :asc,
           __reference__: AshGraphql.Resource.ref(env),
           name: "ASC",
+          value: :asc
+        },
+        %Absinthe.Blueprint.Schema.EnumValueDefinition{
+          module: schema,
+          identifier: :asc_nils_first,
+          __reference__: AshGraphql.Resource.ref(env),
+          name: "ASC_NILS_FIRST",
+          value: :asc
+        },
+        %Absinthe.Blueprint.Schema.EnumValueDefinition{
+          module: schema,
+          identifier: :asc_nils_last,
+          __reference__: AshGraphql.Resource.ref(env),
+          name: "ASC_NILS_LAST",
           value: :asc
         }
       ],
