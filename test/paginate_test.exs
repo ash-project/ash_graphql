@@ -33,7 +33,7 @@ defmodule AshGraphql.PaginateTest do
     test "default_limit records are fetched" do
       doc = """
       query KeysetPaginatedPosts {
-        keysetPaginatedPosts(sort: [{field: TEXT, order: ASC_NILS_LAST}]) {
+        keysetPaginatedPosts(sort: [{field: TEXT, order: ASC_NULLS_LAST}]) {
           count
           startKeyset
           endKeyset

@@ -200,15 +200,15 @@ defmodule AshGraphql.Api do
           module: schema,
           identifier: :desc_nils_first,
           __reference__: AshGraphql.Resource.ref(env),
-          name: "DESC_NILS_FIRST",
-          value: :desc
+          name: "DESC_NULLS_FIRST",
+          value: :dialyzer_succ_typings
         },
         %Absinthe.Blueprint.Schema.EnumValueDefinition{
           module: schema,
           identifier: :desc_nils_last,
           __reference__: AshGraphql.Resource.ref(env),
-          name: "DESC_NILS_LAST",
-          value: :desc
+          name: "DESC_NULLS_LAST",
+          value: :desc_nils_last
         },
         %Absinthe.Blueprint.Schema.EnumValueDefinition{
           module: schema,
@@ -221,15 +221,15 @@ defmodule AshGraphql.Api do
           module: schema,
           identifier: :asc_nils_first,
           __reference__: AshGraphql.Resource.ref(env),
-          name: "ASC_NILS_FIRST",
-          value: :asc
+          name: "ASC_NULLS_FIRST",
+          value: :asc_nils_first
         },
         %Absinthe.Blueprint.Schema.EnumValueDefinition{
           module: schema,
           identifier: :asc_nils_last,
           __reference__: AshGraphql.Resource.ref(env),
-          name: "ASC_NILS_LAST",
-          value: :asc
+          name: "ASC_NULLS_LAST",
+          value: :asc_nils_last
         }
       ],
       identifier: :sort_order,
