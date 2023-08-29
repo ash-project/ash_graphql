@@ -365,6 +365,7 @@ defmodule AshGraphql.Test.Post do
 
   aggregates do
     count(:comment_count, :comments)
+    max(:latest_comment_at, [:comments], :timestamp)
   end
 
   relationships do

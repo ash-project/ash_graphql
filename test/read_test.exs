@@ -594,6 +594,44 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"getCompositePrimaryKey" => %{"id" => ^id}}} = result
   end
 
+  test "aggregate of a calculation" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create,
+        text: "foo",
+        published: true,
+        score: 9.8
+      )
+      |> AshGraphql.Test.Api.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> AshGraphql.Test.Api.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> AshGraphql.Test.Api.create!()
+
+    resp =
+      """
+      query Post($id: ID!) {
+        getPost(id: $id) {
+          latestCommentAt
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+    assert result[:data]["getPost"]["latestCommentAt"]
+  end
+
   test "a read with custom types works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create,
