@@ -38,6 +38,16 @@ defmodule AshGraphql.Test.Comment do
       writable?(false)
       default(:comment)
     end
+
+    create_timestamp(:created_at)
+  end
+
+  calculations do
+    calculate(
+      :timestamp,
+      :utc_datetime_usec,
+      expr(created_at)
+    )
   end
 
   relationships do
