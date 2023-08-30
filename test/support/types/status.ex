@@ -27,7 +27,7 @@ defmodule AshGraphql.Test.Status do
   end
 
   @impl true
-  def cast_stored(value, nil), do: {:ok, nil}
+  def cast_stored(nil, _), do: {:ok, nil}
 
   def cast_stored(value, _) when value in @values do
     {:ok, value}

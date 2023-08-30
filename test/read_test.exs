@@ -595,14 +595,13 @@ defmodule AshGraphql.ReadTest do
   end
 
   test "aggregate of a calculation" do
-    post =
-      AshGraphql.Test.Post
-      |> Ash.Changeset.for_create(:create,
-        text: "foo",
-        published: true,
-        score: 9.8
-      )
-      |> AshGraphql.Test.Api.create!()
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "foo",
+      published: true,
+      score: 9.8
+    )
+    |> AshGraphql.Test.Api.create!()
 
     post =
       AshGraphql.Test.Post

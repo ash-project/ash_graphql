@@ -1854,7 +1854,7 @@ defmodule AshGraphql.Resource do
       with field when not is_nil(field) <- field,
            related when not is_nil(related) <-
              Ash.Resource.Info.related(resource, relationship_path),
-           attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, field) do
+           attr when not is_nil(attr) <- Ash.Resource.Info.field(related, field) do
         attr.type
       end
 
@@ -2271,7 +2271,7 @@ defmodule AshGraphql.Resource do
       with field when not is_nil(field) <- aggregate.field,
            related when not is_nil(related) <-
              Ash.Resource.Info.related(resource, aggregate.relationship_path),
-           attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, aggregate.field) do
+           attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
         attr.type
       end
 
@@ -3480,7 +3480,7 @@ defmodule AshGraphql.Resource do
         with field when not is_nil(field) <- aggregate.field,
              related when not is_nil(related) <-
                Ash.Resource.Info.related(resource, aggregate.relationship_path),
-             attr when not is_nil(attr) <- Ash.Resource.Info.attribute(related, aggregate.field) do
+             attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
           {attr.type, attr.constraints}
         else
           _ ->
