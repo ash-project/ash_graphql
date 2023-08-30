@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.0](https://github.com/ash-project/ash_graphql/compare/v0.25.14...v0.26.0) (2023-08-30)
+
+
+
+
+### Features:
+
+* add more sort order values (#91)
+
+### Bug Fixes:
+
+* support aggregates over calculations
+
+* wrap type in non-null reference if allow_nil? is set to false (#90)
+
+* wrap type in non-null reference if allow_nil? is set to false
+
+* get allow_nil? from the correct place
+
+* pass arguments to related read action
+
+* recurse through array types for union checking
+
+* don't add filter input for non-filterable resources
+
+* array unions: for arrays of embedded types unions when graphql_unnested_unions is used, without it they return empty values (#87)
+
 ## [v0.25.14](https://github.com/ash-project/ash_graphql/compare/v0.25.13...v0.25.14) (2023-08-01)
 
 
