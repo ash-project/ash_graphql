@@ -2841,7 +2841,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp unnest(%{type: {:array, type}, constraints: constraints} = attribute) do
-    %{attribute | type: type, constraints: constraints[:items] || []}
+    unnest(%{attribute | type: type, constraints: constraints[:items] || []})
   end
 
   defp unnest(other), do: other
