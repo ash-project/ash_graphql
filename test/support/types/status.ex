@@ -40,7 +40,11 @@ defmodule AshGraphql.Test.Status do
       :error
   end
 
+  def cast_stored(_, _), do: :error
+
   @impl true
+  def dump_to_native(nil, _), do: {:ok, nil}
+
   def dump_to_native(value, _) when is_atom(value) do
     {:ok, to_string(value)}
   end
