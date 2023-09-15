@@ -39,15 +39,16 @@ defmodule AshGraphql.MixProject do
   end
 
   defp extras() do
-    "documentation/**/*.md"
+    "documentation/**/*.{md,livemd,cheatmd}"
     |> Path.wildcard()
     |> Enum.map(fn path ->
       title =
         path
         |> Path.basename(".md")
+        |> Path.basename(".livemd")
+        |> Path.basename(".cheatmd")
         |> String.split(~r/[-_]/)
-        |> Enum.map(&String.capitalize/1)
-        |> Enum.join(" ")
+        |> Enum.map_join(" ", &capitalize/1)
         |> case do
           "F A Q" ->
             "FAQ"
@@ -63,24 +64,29 @@ defmodule AshGraphql.MixProject do
     end)
   end
 
-  defp groups_for_extras() do
-    "documentation/*"
-    |> Path.wildcard()
-    |> Enum.map(fn folder ->
-      name =
-        folder
-        |> Path.basename()
-        |> String.split(~r/[-_]/)
-        |> Enum.map(&String.capitalize/1)
-        |> Enum.join(" ")
-
-      {name, folder |> Path.join("**") |> Path.wildcard()}
+  defp capitalize(string) do
+    string
+    |> String.split(" ")
+    |> Enum.map(fn string ->
+      [hd | tail] = String.graphemes(string)
+      String.capitalize(hd) <> Enum.join(tail)
     end)
+  end
+
+  defp groups_for_extras() do
+    [
+      Tutorials: [
+        ~r'documentation/tutorials'
+      ],
+      "How To": ~r'documentation/how_to',
+      Topics: ~r'documentation/topics',
+      DSLs: ~r'documentation/dsls'
+    ]
   end
 
   defp docs do
     [
-      main: "AshGraphql",
+      main: "getting-started-with-graphql",
       source_ref: "v#{@version}",
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
@@ -108,7 +114,17 @@ defmodule AshGraphql.MixProject do
         ],
         Introspection: [
           AshGraphql.Resource.Info,
-          AshGraphql.Api.Info
+          AshGraphql.Api.Info,
+          AshGraphql.Resource,
+          AshGraphql.Api,
+          AshGraphql.Resource.Action,
+          AshGraphql.Resource.ManagedRelationship,
+          AshGraphql.Resource.Mutation,
+          AshGraphql.Resource.Query
+        ],
+        Errors: [
+          AshGraphql.Error,
+          AshGraphql.Errors
         ],
         Miscellaneous: [
           AshGraphql.Resource.Helpers
@@ -140,18 +156,17 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 2.11 and >= 2.11.8")},
-      {:dataloader, "~> 1.0"},
+      {:ash, ash_version("~> 2.14 and >= 2.14.17")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:jason, "~> 1.2"},
       {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
-      {:ex_check, "~> 0.12.0", only: [:dev, :test]},
+      {:ex_check, "~> 0.12", only: [:dev, :test]},
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.5.1", only: [:dev, :test]},
-      {:excoveralls, "~> 0.13.0", only: [:dev, :test]},
+      {:git_ops, "~> 2.5", only: [:dev, :test]},
+      {:excoveralls, "~> 0.13", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false}
     ]
   end
@@ -169,8 +184,16 @@ defmodule AshGraphql.MixProject do
     [
       sobelow: "sobelow --skip",
       credo: "credo --strict",
-      docs: ["docs", "ash.replace_doc_links"],
-      "spark.formatter": "spark.formatter --extensions AshGraphql.Resource,AshGraphql.Api"
+      docs: [
+        "spark.cheat_sheets",
+        "docs",
+        "ash.replace_doc_links",
+        "spark.cheat_sheets_in_search"
+      ],
+      "spark.formatter": "spark.formatter --extensions AshGraphql.Resource,AshGraphql.Api",
+      "spark.cheat_sheets_in_search":
+        "spark.cheat_sheets_in_search --extensions AshGraphql.Resource,AshGraphql.Api",
+      "spark.cheat_sheets": "spark.cheat_sheets --extensions AshGraphql.Resource,AshGraphql.Api"
     ]
   end
 end

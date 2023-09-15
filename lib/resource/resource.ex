@@ -47,6 +47,38 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  @action_schema [
+    name: [
+      type: :atom,
+      doc: "The name to use for the query.",
+      default: :get
+    ],
+    action: [
+      type: :atom,
+      doc: "The action to use for the query.",
+      required: true
+    ]
+  ]
+
+  defmodule Action do
+    @moduledoc "Represents a configured generic action"
+    defstruct [:type, :name, :action]
+  end
+
+  @action %Spark.Dsl.Entity{
+    name: :action,
+    schema: @action_schema,
+    args: [:name, :action],
+    describe: "Runs a generic action",
+    examples: [
+      "action :check_status, :check_status"
+    ],
+    target: Action,
+    auto_set_fields: [
+      type: :action
+    ]
+  }
+
   @create %Spark.Dsl.Entity{
     name: :create,
     schema: Mutation.create_schema(),
@@ -106,7 +138,8 @@ defmodule AshGraphql.Resource do
     entities: [
       @get,
       @read_one,
-      @list
+      @list,
+      @action
     ]
   }
 
@@ -151,6 +184,15 @@ defmodule AshGraphql.Resource do
     1.) provide the `:types` option to the `managed_relationship` constructor (see that option for more)
     2.) define a custom type, with a custom input object (see the custom types guide), and use that custom type instead of `:map`
     3.) change your actions to not have overlapping inputs with different types
+
+    Since managed relationships can ultimately call multiple actions, there is the possibility
+    of field type conflicts. Use the `types` option to determine the type of fields and remove the conflict warnings.
+
+    For `non_null` use `{:non_null, type}`, and for a list, use `{:array, type}`, for example:
+
+    `{:non_null, {:array, {:non_null, :string}}}` for a non null list of non null strings.
+
+    To *remove* a key from the input object, simply pass `nil` as the type.
     """
   }
 
@@ -195,7 +237,8 @@ defmodule AshGraphql.Resource do
     entities: [
       @create,
       @update,
-      @destroy
+      @destroy,
+      @action
     ]
   }
 
@@ -271,10 +314,7 @@ defmodule AshGraphql.Resource do
       keyset_field: [
         type: :atom,
         doc: """
-        If set, the keyset will be displayed on all read actions in this field.
-
-        It will always be `nil` unless at least one of the read actions on a resource uses keyset pagination.
-        It will also be nil on any mutation results.
+        If set, the keyset will be displayed on all read actions in this field.  It will be `nil` unless at least one of the read actions on a resource uses keyset pagination or it is the result of a mutation
         """
       ],
       attribute_types: [
@@ -335,19 +375,6 @@ defmodule AshGraphql.Resource do
 
   @moduledoc """
   This Ash resource extension adds configuration for exposing a resource in a graphql.
-
-  <!--- ash-hq-hide-start --> <!--- -->
-
-  ## DSL Documentation
-
-  ### Index
-
-  #{Spark.Dsl.Extension.doc_index(@sections)}
-
-  ### Docs
-
-  #{Spark.Dsl.Extension.doc(@sections)}
-  <!--- ash-hq-hide-stop --> <!--- -->
   """
 
   use Spark.Dsl.Extension, sections: @sections, transformers: @transformers, verifiers: @verifiers
@@ -415,27 +442,49 @@ defmodule AshGraphql.Resource do
     if type do
       resource
       |> queries()
-      |> Enum.filter(&(&1.as_mutation? == as_mutations?))
-      |> Enum.map(fn query ->
-        query_action =
-          Ash.Resource.Info.action(resource, query.action) ||
-            raise "No such action #{query.action} on #{resource}"
+      |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
+      |> Enum.map(fn
+        %{type: :action, name: name, action: action} = query ->
+          query_action =
+            Ash.Resource.Info.action(resource, action) ||
+              raise "No such action #{action} on #{resource}"
 
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: args(query.type, resource, query_action, schema, query.identity),
-          identifier: query.name,
-          middleware:
-            action_middleware ++
-              [
-                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
-              ],
-          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
-          module: schema,
-          name: to_string(query.name),
-          description: Ash.Resource.Info.action(resource, query.action).description,
-          type: query_type(query, resource, query_action, type),
-          __reference__: ref(__ENV__)
-        }
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            arguments: generic_action_args(query_action, resource, schema),
+            identifier: name,
+            middleware:
+              action_middleware ++
+                [
+                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+                ],
+            complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+            module: schema,
+            name: to_string(name),
+            description: query_action.description,
+            type: generic_action_type(query_action, resource),
+            __reference__: ref(__ENV__)
+          }
+
+        query ->
+          query_action =
+            Ash.Resource.Info.action(resource, query.action) ||
+              raise "No such action #{query.action} on #{resource}"
+
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            arguments: args(query.type, resource, query_action, schema, query.identity),
+            identifier: query.name,
+            middleware:
+              action_middleware ++
+                [
+                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+                ],
+            complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+            module: schema,
+            name: to_string(query.name),
+            description: Ash.Resource.Info.action(resource, query.action).description,
+            type: query_type(query, resource, query_action, type),
+            __reference__: ref(__ENV__)
+          }
       end)
     else
       []
@@ -448,6 +497,27 @@ defmodule AshGraphql.Resource do
     resource
     |> mutations()
     |> Enum.map(fn
+      %{type: :action, name: name, action: action} = query ->
+        query_action =
+          Ash.Resource.Info.action(resource, action) ||
+            raise "No such action #{action} on #{resource}"
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          arguments: generic_action_args(query_action, resource, schema),
+          identifier: name,
+          middleware:
+            action_middleware ++
+              [
+                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+              ],
+          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+          module: schema,
+          name: to_string(name),
+          description: query_action.description,
+          type: generic_action_type(query_action, resource),
+          __reference__: ref(__ENV__)
+        }
+
       %{type: :destroy} = mutation ->
         action =
           Ash.Resource.Info.action(resource, mutation.action) ||
@@ -836,39 +906,44 @@ defmodule AshGraphql.Resource do
     argument_names = AshGraphql.Resource.Info.argument_names(resource)
 
     attribute_fields =
-      if action.type == :destroy && !action.soft? do
-        []
-      else
-        resource
-        |> Ash.Resource.Info.public_attributes()
-        |> Enum.filter(fn attribute ->
-          AshGraphql.Resource.Info.show_field?(resource, attribute.name) &&
-            (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable?
-        end)
-        |> Enum.map(fn attribute ->
-          allow_nil? =
-            attribute.allow_nil? || attribute.default != nil || type == :update ||
-              attribute.generated? ||
-              (type == :create && attribute.name in action.allow_nil_input)
+      cond do
+        action.type == :action ->
+          []
 
-          explicitly_required = attribute.name in action.require_attributes
+        action.type == :destroy && !action.soft? ->
+          []
 
-          field_type =
-            attribute.type
-            |> field_type(attribute, resource, true)
-            |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
+        true ->
+          resource
+          |> Ash.Resource.Info.public_attributes()
+          |> Enum.filter(fn attribute ->
+            AshGraphql.Resource.Info.show_field?(resource, attribute.name) &&
+              (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable?
+          end)
+          |> Enum.map(fn attribute ->
+            allow_nil? =
+              attribute.allow_nil? || attribute.default != nil || type == :update ||
+                attribute.generated? ||
+                (type == :create && attribute.name in action.allow_nil_input)
 
-          name = field_names[attribute.name] || attribute.name
+            explicitly_required = attribute.name in action.require_attributes
 
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: attribute.description,
-            identifier: attribute.name,
-            module: schema,
-            name: to_string(name),
-            type: field_type,
-            __reference__: ref(__ENV__)
-          }
-        end)
+            field_type =
+              attribute.type
+              |> field_type(attribute, resource, true)
+              |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
+
+            name = field_names[attribute.name] || attribute.name
+
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: attribute.description,
+              identifier: attribute.name,
+              module: schema,
+              name: to_string(name),
+              type: field_type,
+              __reference__: ref(__ENV__)
+            }
+          end)
       end
 
     argument_fields =
@@ -1094,6 +1169,39 @@ defmodule AshGraphql.Resource do
         }
       end)
     end
+  end
+
+  defp generic_action_type(action, resource) do
+    fake_attribute = %{
+      type: action.returns,
+      constraints: action.constraints,
+      allow_nil?: Map.get(action, :allow_nil?, false),
+      name: action.name
+    }
+
+    fake_attribute.type
+    |> field_type(fake_attribute, resource, false)
+    |> maybe_wrap_non_null(argument_required?(fake_attribute))
+  end
+
+  defp generic_action_args(action, resource, schema) do
+    action.arguments
+    |> Enum.reject(& &1.private?)
+    |> Enum.map(fn argument ->
+      type =
+        argument.type
+        |> field_type(argument, resource, true)
+        |> maybe_wrap_non_null(argument_required?(argument))
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: argument.name,
+        module: schema,
+        name: to_string(argument.name),
+        description: argument.description,
+        type: type,
+        __reference__: ref(__ENV__)
+      }
+    end)
   end
 
   defp args(action_type, resource, action, schema, identity \\ nil)
@@ -1791,8 +1899,11 @@ defmodule AshGraphql.Resource do
         end
       end)
       |> Enum.filter(fn identity ->
-        is_nil(managed_relationship.lookup_identities) ||
+        if is_nil(managed_relationship.lookup_identities) do
+          identity.name in List.wrap(opts[:use_identities])
+        else
           identity.name in managed_relationship.lookup_identities
+        end
       end)
       |> Enum.flat_map(fn identity ->
         identity
@@ -2900,14 +3011,18 @@ defmodule AshGraphql.Resource do
       relay? =
         resource
         |> queries()
-        |> Enum.any?(& &1.relay?)
+        |> Enum.any?(&Map.get(&1, :relay?))
 
       countable? =
         resource
         |> queries()
-        |> Enum.any?(fn query ->
-          action = Ash.Resource.Info.action(resource, query.action)
-          query.relay? && action.pagination && action.pagination.countable
+        |> Enum.any?(fn
+          %{relay?: true} = query ->
+            action = Ash.Resource.Info.action(resource, query.action)
+            action.pagination && action.pagination.countable
+
+          _ ->
+            false
         end)
 
       if relay? do
@@ -3119,7 +3234,7 @@ defmodule AshGraphql.Resource do
 
     resource
     |> AshGraphql.Resource.Info.queries()
-    |> Enum.filter(&(&1.type_name && &1.type_name != resource_type))
+    |> Enum.filter(&(Map.get(&1, :type_name) && &1.type_name != resource_type))
     |> Enum.map(fn query ->
       relay? = Map.get(query, :relay?)
 
@@ -3161,7 +3276,7 @@ defmodule AshGraphql.Resource do
       relay? =
         resource
         |> queries()
-        |> Enum.any?(& &1.relay?)
+        |> Enum.any?(&Map.get(&1, :relay?))
 
       interfaces =
         if relay? do
@@ -3829,6 +3944,16 @@ defmodule AshGraphql.Resource do
 
   defp get_specific_field_type(Ash.Type.UUID, _, _, _), do: :id
   defp get_specific_field_type(Ash.Type.Float, _, _, _), do: :float
+
+  defp get_specific_field_type(Ash.Type.Struct, %{constraints: constraints}, resource, input?) do
+    type =
+      if !input? && constraints[:instance_of] &&
+           Ash.Resource.Info.resource?(constraints[:instance_of]) do
+        AshGraphql.Resource.Info.type(constraints[:instance_of])
+      end
+
+    type || get_specific_field_type(Ash.Type.Map, %{constraints: constraints}, resource, input?)
+  end
 
   defp get_specific_field_type(type, attribute, resource, _) do
     raise """

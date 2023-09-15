@@ -1,7 +1,8 @@
 defmodule AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries do
-  @moduledoc "Ensures that all relay queries configure keyset pagination"
-  use Spark.Dsl.Transformer
+  # Ensures that all relay queries configure keyset pagination
+  @moduledoc false
 
+  use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
 
   def after_compile?, do: true
@@ -10,7 +11,7 @@ defmodule AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries do
     dsl
     |> AshGraphql.Resource.Info.queries()
     |> Enum.each(fn query ->
-      if query.relay? do
+      if Map.get(query, :relay?) do
         action = Ash.Resource.Info.action(dsl, query.action)
 
         unless action.pagination && action.pagination.keyset? do

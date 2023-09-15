@@ -11,6 +11,110 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
+        {api, resource, %{name: query_name, action: action}}
+      ) do
+    action = Ash.Resource.Info.action(resource, action)
+
+    case handle_arguments(resource, action, arguments) do
+      {:ok, arguments} ->
+        metadata = %{
+          api: api,
+          resource: resource,
+          resource_short_name: Ash.Resource.Info.short_name(resource),
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant),
+          action: action,
+          source: :graphql,
+          query: query_name,
+          authorize?: AshGraphql.Api.Info.authorize?(api)
+        }
+
+        trace api,
+              resource,
+              :gql_query,
+              query_name,
+              metadata do
+          result =
+            %Ash.ActionInput{api: api, resource: resource}
+            |> Ash.ActionInput.set_context(get_context(context))
+            |> Ash.ActionInput.for_action(action.name, arguments)
+            |> api.run_action()
+            |> case do
+              {:ok, result} ->
+                load_opts =
+                  [
+                    actor: Map.get(context, :actor),
+                    action: action,
+                    api: api,
+                    verbose?: AshGraphql.Api.Info.debug?(api),
+                    authorize?: AshGraphql.Api.Info.authorize?(api),
+                    tenant: Map.get(context, :tenant)
+                  ]
+
+                if Ash.Type.can_load?(action.returns, action.constraints) do
+                  {fields, path} = nested_fields_and_path(resolution, [], [])
+
+                  loads =
+                    type_loads(
+                      fields,
+                      action.returns,
+                      action.constraints,
+                      load_opts,
+                      resource,
+                      action.name,
+                      resolution,
+                      path,
+                      hd(resolution.path),
+                      nil
+                    )
+
+                  case loads do
+                    [] ->
+                      {:ok, result}
+
+                    loads ->
+                      Ash.Type.load(
+                        action.returns,
+                        result,
+                        loads,
+                        action.constraints,
+                        Map.new(load_opts)
+                      )
+                  end
+                else
+                  {:ok, result}
+                end
+
+              {:error, error} ->
+                {:error, error}
+            end
+
+          resolution
+          |> Absinthe.Resolution.put_result(
+            to_resolution(
+              result,
+              context,
+              api
+            )
+          )
+          |> add_root_errors(api, result)
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  rescue
+    e ->
+      if AshGraphql.Api.Info.show_raised_errors?(api) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+      else
+        something_went_wrong(resolution, e, api, __STACKTRACE__)
+      end
+  end
+
+  def resolve(
+        %{arguments: arguments, context: context} = resolution,
         {api, resource,
          %{
            name: query_name,
@@ -42,7 +146,9 @@ defmodule AshGraphql.Graphql.Resolver do
           opts = [
             actor: Map.get(context, :actor),
             action: action,
-            verbose?: AshGraphql.Api.Info.debug?(api)
+            verbose?: AshGraphql.Api.Info.debug?(api),
+            authorize?: AshGraphql.Api.Info.authorize?(api),
+            tenant: Map.get(context, :tenant)
           ]
 
           filter = identity_filter(identity, resource, arguments)
@@ -66,6 +172,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       api: api,
                       tenant: Map.get(context, :tenant),
                       authorize?: AshGraphql.Api.Info.authorize?(api),
+                      tracer: AshGraphql.Api.Info.tracer(api),
                       actor: Map.get(context, :actor)
                     ],
                     resource,
@@ -96,6 +203,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       api: api,
                       tenant: Map.get(context, :tenant),
                       authorize?: AshGraphql.Api.Info.authorize?(api),
+                      tracer: AshGraphql.Api.Info.tracer(api),
                       actor: Map.get(context, :actor)
                     ],
                     resource,
@@ -174,7 +282,9 @@ defmodule AshGraphql.Graphql.Resolver do
         opts = [
           actor: Map.get(context, :actor),
           action: action,
-          verbose?: AshGraphql.Api.Info.debug?(api)
+          verbose?: AshGraphql.Api.Info.debug?(api),
+          authorize?: AshGraphql.Api.Info.authorize?(api),
+          tenant: Map.get(context, :tenant)
         ]
 
         query =
@@ -188,6 +298,7 @@ defmodule AshGraphql.Graphql.Resolver do
               api: api,
               tenant: Map.get(context, :tenant),
               authorize?: AshGraphql.Api.Info.authorize?(api),
+              tracer: AshGraphql.Api.Info.tracer(api),
               actor: Map.get(context, :actor)
             ],
             resource,
@@ -263,7 +374,9 @@ defmodule AshGraphql.Graphql.Resolver do
           opts = [
             actor: Map.get(context, :actor),
             action: action,
-            verbose?: AshGraphql.Api.Info.debug?(api)
+            verbose?: AshGraphql.Api.Info.debug?(api),
+            authorize?: AshGraphql.Api.Info.authorize?(api),
+            tenant: Map.get(context, :tenant)
           ]
 
           pagination = Ash.Resource.Info.action(resource, action).pagination
@@ -285,6 +398,7 @@ defmodule AshGraphql.Graphql.Resolver do
                        api: api,
                        tenant: Map.get(context, :tenant),
                        authorize?: AshGraphql.Api.Info.authorize?(api),
+                       tracer: AshGraphql.Api.Info.tracer(api),
                        actor: Map.get(context, :actor)
                      ],
                      resource,
@@ -880,6 +994,8 @@ defmodule AshGraphql.Graphql.Resolver do
             actor: Map.get(context, :actor),
             action: action,
             verbose?: AshGraphql.Api.Info.debug?(api),
+            authorize?: AshGraphql.Api.Info.authorize?(api),
+            tenant: Map.get(context, :tenant),
             upsert?: upsert?
           ]
 
@@ -905,6 +1021,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 api: api,
                 tenant: Map.get(context, :tenant),
                 authorize?: AshGraphql.Api.Info.authorize?(api),
+                tracer: AshGraphql.Api.Info.tracer(api),
                 actor: Map.get(context, :actor)
               ],
               resource,
@@ -1028,7 +1145,9 @@ defmodule AshGraphql.Graphql.Resolver do
                   opts = [
                     actor: Map.get(context, :actor),
                     action: action,
-                    verbose?: AshGraphql.Api.Info.debug?(api)
+                    verbose?: AshGraphql.Api.Info.debug?(api),
+                    authorize?: AshGraphql.Api.Info.authorize?(api),
+                    tenant: Map.get(context, :tenant)
                   ]
 
                   changeset =
@@ -1046,6 +1165,7 @@ defmodule AshGraphql.Graphql.Resolver do
                         api: api,
                         tenant: Map.get(context, :tenant),
                         authorize?: AshGraphql.Api.Info.authorize?(api),
+                        tracer: AshGraphql.Api.Info.tracer(api),
                         actor: Map.get(context, :actor)
                       ],
                       resource,
@@ -1181,7 +1301,13 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> add_root_errors(api, result)
 
                 {:ok, initial} ->
-                  opts = destroy_opts(api, context, action)
+                  opts = [
+                    action: action,
+                    verbose?: AshGraphql.Api.Info.debug?(api),
+                    actor: Map.get(context, :actor),
+                    authorize?: AshGraphql.Api.Info.authorize?(api),
+                    tenant: Map.get(context, :tenant)
+                  ]
 
                   changeset =
                     initial
@@ -1264,9 +1390,7 @@ defmodule AshGraphql.Graphql.Resolver do
   defp something_went_wrong(resolution, e, api, stacktrace) do
     tracer = AshGraphql.Api.Info.tracer(api)
 
-    if tracer do
-      tracer.set_error(Ash.Error.to_ash_error(e))
-    end
+    Ash.Tracer.set_error(tracer, e)
 
     uuid = log_exception(e, stacktrace)
 
@@ -1703,7 +1827,17 @@ defmodule AshGraphql.Graphql.Resolver do
           already_expanded?
         )
 
-      Ash.Type.embedded_type?(type) || Ash.Resource.Info.resource?(type) ->
+      Ash.Type.embedded_type?(type) || Ash.Resource.Info.resource?(type) ||
+          (type in [Ash.Type.Struct, :struct] && constraints[:instance_of] &&
+             (Ash.Type.embedded_type?(constraints[:instance_of]) ||
+                Ash.Resource.Info.resource?(constraints[:instance_of]))) ->
+        type =
+          if type in [:struct, Ash.Type.Struct] do
+            constraints[:instance_of]
+          else
+            type
+          end
+
         fields =
           if already_expanded? do
             selections
@@ -1723,8 +1857,7 @@ defmodule AshGraphql.Graphql.Resolver do
             fields
           end
 
-        fields
-        |> resource_loads(type, resolution, load_opts, path)
+        resource_loads(fields, type, resolution, load_opts, path)
 
       type == Ash.Type.Union ->
         {global_selections, fragments} =
@@ -1985,21 +2118,6 @@ defmodule AshGraphql.Graphql.Resolver do
           query
       end
     end)
-  end
-
-  defp destroy_opts(api, context, action) do
-    if AshGraphql.Api.Info.authorize?(api) do
-      [
-        actor: Map.get(context, :actor),
-        action: action,
-        verbose?: AshGraphql.Api.Info.debug?(api)
-      ]
-    else
-      [
-        action: action,
-        verbose?: AshGraphql.Api.Info.debug?(api)
-      ]
-    end
   end
 
   defp add_root_errors(resolution, api, {:error, error_or_errors}) do

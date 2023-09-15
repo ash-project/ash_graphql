@@ -1,5 +1,6 @@
 defmodule AshGraphql.Resource.Transformers.ValidateCompatibleNames do
-  @moduledoc "Ensures that all field names are valid or remapped to something valid exist"
+  # Ensures that all field names are valid or remapped to something valid exist
+  @moduledoc false
   use Spark.Dsl.Transformer
 
   alias Spark.Dsl.Transformer

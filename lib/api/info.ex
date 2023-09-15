@@ -10,7 +10,10 @@ defmodule AshGraphql.Api.Info do
 
   @doc "The tracer to use for the given schema"
   def tracer(api) do
-    Extension.get_opt(api, [:graphql], :tracer, Application.get_env(:ash, :tracer), true)
+    api
+    |> Extension.get_opt([:graphql], :tracer, nil, true)
+    |> List.wrap()
+    |> Enum.concat(List.wrap(Application.get_env(:ash, :tracer)))
   end
 
   @doc "Wether or not to surface errors to the root of the response"

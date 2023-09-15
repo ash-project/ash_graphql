@@ -27,8 +27,4 @@ defmodule AshGraphql.Test.Schema do
     value(:open, description: "The post is open")
     value(:closed, description: "The post is closed")
   end
-
-  def plugins do
-    [Absinthe.Middleware.Dataloader | Absinthe.Plugin.defaults()]
-  end
 end

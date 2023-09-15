@@ -35,9 +35,7 @@ defmodule AshGraphql.Resource.Mutation do
     modify_resolution: [
       type: :mfa,
       doc: """
-      An MFA that will be called with the resolution, the changeset, and the result of the action as the first three arguments (followed by the arguments in the mfa).
-      Must return a new absinthe resolution. This can be used to implement things like setting cookies based on resource actions. A method of using resolution context
-      for that is documented here: https://hexdocs.pm/absinthe_plug/Absinthe.Plug.html#module-before-send
+      An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
     ]
   ]
@@ -56,9 +54,7 @@ defmodule AshGraphql.Resource.Mutation do
     identity: [
       type: :atom,
       doc: """
-      The identity to use to fetch the record to be updated.
-
-      If no identity is required (e.g for a read action that already knows how to fetch the item to be updated), use `false`.
+      The identity to use to fetch the record to be updated. Use `false` if no identity is required.
       """
     ],
     read_action: [
@@ -87,8 +83,7 @@ defmodule AshGraphql.Resource.Mutation do
     identity: [
       type: :atom,
       doc: """
-      The identity to use to fetch the record to be destroyed.
-      If no identity is required (e.g for a read action that already knows how to fetch the item to be updated), use `false`.
+      The identity to use to fetch the record to be destroyed. Use `false` if no identity is required.
       """
     ]
   ]

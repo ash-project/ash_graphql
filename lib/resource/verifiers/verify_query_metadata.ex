@@ -1,5 +1,6 @@
 defmodule AshGraphql.Resource.Verifiers.VerifyQueryMetadata do
-  @moduledoc "Ensures that queries for actions with metadata have a type set"
+  # Ensures that queries for actions with metadata have a type set
+  @moduledoc false
   use Spark.Dsl.Verifier
 
   alias Spark.Dsl.Transformer
@@ -7,6 +8,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyQueryMetadata do
   def verify(dsl) do
     dsl
     |> AshGraphql.Resource.Info.queries()
+    |> Enum.reject(&(&1.type == :action))
     |> Enum.each(fn query ->
       action = Ash.Resource.Info.action(dsl, query.action)
       show_metadata = query.show_metadata || Enum.map(Map.get(action, :metadata, []), & &1.name)

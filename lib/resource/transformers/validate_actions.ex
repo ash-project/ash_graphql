@@ -1,5 +1,6 @@
 defmodule AshGraphql.Resource.Transformers.ValidateActions do
-  @moduledoc "Ensures that all referenced actiosn exist"
+  # Ensures that all referenced actiosn exist
+  @moduledoc false
   use Spark.Dsl.Transformer
 
   alias Spark.Dsl.Transformer
@@ -16,11 +17,23 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
           %AshGraphql.Resource.Query{} ->
             :read
 
+          %AshGraphql.Resource.Action{} ->
+            nil
+
           %AshGraphql.Resource.Mutation{type: type} ->
             type
         end
 
       available_actions = Transformer.get_entities(dsl, [:actions]) || []
+
+      available_actions =
+        if type do
+          Enum.filter(available_actions, fn action ->
+            action.type == type
+          end)
+        else
+          available_actions
+        end
 
       action =
         Enum.find(available_actions, fn action ->

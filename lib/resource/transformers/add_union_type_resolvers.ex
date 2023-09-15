@@ -1,5 +1,6 @@
 defmodule AshGraphql.Resource.Transformers.AddUnionTypeResolvers do
-  @moduledoc "Set the computation of resolving union types as functions"
+  # Set the computation of resolving union types as functions
+  @moduledoc false
   use Spark.Dsl.Transformer
 
   def after?(_), do: true

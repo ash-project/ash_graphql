@@ -114,6 +114,7 @@ defmodule AshGraphql.Test.Post do
       list :keyset_paginated_posts, :keyset_paginated
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
+      action(:post_count, :count)
     end
 
     managed_relationships do
@@ -149,6 +150,9 @@ defmodule AshGraphql.Test.Post do
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
       destroy :delete_post_with_error, :destroy_with_error
+
+      # this is a mutation just for testing
+      action(:random_post, :random)
     end
   end
 
@@ -174,6 +178,33 @@ defmodule AshGraphql.Test.Post do
       argument(:id, :uuid)
 
       change(AshGraphql.Test.ForceChangeId)
+    end
+
+    action :count, :integer do
+      argument(:published, :boolean)
+
+      run(fn input, _ ->
+        query =
+          if input.arguments[:published] do
+            Ash.Query.filter(__MODULE__, published == true)
+          else
+            __MODULE__
+          end
+
+        input.api.count(query)
+      end)
+    end
+
+    action :random, :struct do
+      constraints(instance_of: __MODULE__)
+      argument(:published, :boolean)
+      allow_nil? true
+
+      run(fn input, _ ->
+        __MODULE__
+        |> Ash.Query.limit(1)
+        |> input.api.read_one()
+      end)
     end
 
     create :create_confirm do

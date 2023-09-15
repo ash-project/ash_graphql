@@ -53,19 +53,6 @@ defmodule AshGraphql.Api do
 
   @moduledoc """
   The entrypoint for adding graphql behavior to an Ash API
-
-  <!--- ash-hq-hide-start --> <!--- -->
-
-  ## DSL Documentation
-
-  ### Index
-
-  #{Spark.Dsl.Extension.doc_index(@sections)}
-
-  ### Docs
-
-  #{Spark.Dsl.Extension.doc(@sections)}
-  <!--- ash-hq-hide-stop --> <!--- -->
   """
 
   require Ash.Api.Info
