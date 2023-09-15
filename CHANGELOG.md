@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.1](https://github.com/ash-project/ash_graphql/compare/v0.26.0...v0.26.1) (2023-09-15)
+
+
+
+
+### Bug Fixes:
+
+* handle nested array types
+
+### Improvements:
+
+* generic action support
+
 ## [v0.26.0](https://github.com/ash-project/ash_graphql/compare/v0.25.14...v0.26.0) (2023-08-30)
 
 
