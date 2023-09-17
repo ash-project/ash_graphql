@@ -1,4 +1,4 @@
-defmodule AshGraphql.CreateTest do
+defmodule AshGraphql.GenericActionsTest do
   use ExUnit.Case, async: false
 
   setup do

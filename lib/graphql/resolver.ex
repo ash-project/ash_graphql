@@ -11,7 +11,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource, %{name: query_name, action: action}}
+        {api, resource, %AshGraphql.Resource.Action{name: query_name, action: action}}
       ) do
     action = Ash.Resource.Info.action(resource, action)
 
