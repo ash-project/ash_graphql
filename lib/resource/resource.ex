@@ -1765,6 +1765,9 @@ defmodule AshGraphql.Resource do
         |> Enum.map(fn field ->
           {relationship.destination, action.name, field}
         end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier == relationship.destination_attribute
+        end)
 
       {:source, nil} ->
         []
@@ -1776,6 +1779,9 @@ defmodule AshGraphql.Resource do
         |> mutation_fields(schema, action, action.type)
         |> Enum.map(fn field ->
           {relationship.source, action.name, field}
+        end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier == relationship.source_attribute
         end)
 
       {:join, nil, _} ->
@@ -1793,6 +1799,12 @@ defmodule AshGraphql.Resource do
         end
         |> Enum.map(fn field ->
           {relationship.through, action.name, field}
+        end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier in [
+            relationship.destination_attribute_on_join_resource,
+            relationship.source_attribute_on_join_resource
+          ]
         end)
 
       nil ->
@@ -1816,6 +1828,9 @@ defmodule AshGraphql.Resource do
         |> Enum.map(fn field ->
           {relationship.destination, action.name, field}
         end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier == relationship.destination_attribute
+        end)
 
       {:join, nil, _} ->
         []
@@ -1832,6 +1847,12 @@ defmodule AshGraphql.Resource do
         end
         |> Enum.map(fn field ->
           {relationship.through, action.name, field}
+        end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier in [
+            relationship.destination_attribute_on_join_resource,
+            relationship.source_attribute_on_join_resource
+          ]
         end)
     end)
   end
@@ -1852,6 +1873,9 @@ defmodule AshGraphql.Resource do
         |> Enum.map(fn field ->
           {relationship.destination, action.name, field}
         end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier == relationship.destination_attribute
+        end)
 
       {:join, nil, _} ->
         []
@@ -1868,6 +1892,12 @@ defmodule AshGraphql.Resource do
         end
         |> Enum.map(fn field ->
           {relationship.through, action.name, field}
+        end)
+        |> Enum.reject(fn {_, _, field} ->
+          field.identifier in [
+            relationship.destination_attribute_on_join_resource,
+            relationship.source_attribute_on_join_resource
+          ]
         end)
     end)
   end
