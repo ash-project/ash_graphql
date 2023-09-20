@@ -363,8 +363,7 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Transformers.RequirePkeyDelimiter,
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
-    AshGraphql.Resource.Transformers.ValidateCompatibleNames,
-    AshGraphql.Resource.Transformers.AddUnionTypeResolvers
+    AshGraphql.Resource.Transformers.ValidateCompatibleNames
   ]
 
   @verifiers [
@@ -2870,7 +2869,7 @@ defmodule AshGraphql.Resource do
          [
            {:/, [],
             [
-              {{:., [], [resource, func_name]}, [], []},
+              {{:., [], [schema, func_name]}, [], []},
               2
             ]}
          ]},

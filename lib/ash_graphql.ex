@@ -83,6 +83,40 @@ defmodule AshGraphql do
       schema = __MODULE__
       schema_env = __ENV__
 
+      for resource <- ash_resources do
+        resource
+        |> AshGraphql.Resource.get_auto_unions()
+        |> Enum.concat(resource |> AshGraphql.Resource.global_unions() |> Enum.map(&elem(&1, 1)))
+        |> Enum.map(fn attribute ->
+          if Ash.Type.NewType.new_type?(attribute.type) do
+            cond do
+              function_exported?(attribute.type, :graphql_type, 0) ->
+                attribute.type.graphql_type()
+
+              function_exported?(attribute.type, :graphql_type, 1) ->
+                attribute.type.graphql_type(attribute.constraints)
+
+              true ->
+                AshGraphql.Resource.atom_enum_type(resource, attribute.name)
+            end
+          else
+            AshGraphql.Resource.atom_enum_type(resource, attribute.name)
+          end
+        end)
+        |> Enum.uniq()
+        |> Enum.each(fn type_name ->
+          # sobelow_skip ["DOS.BinToAtom"]
+          def unquote(:"resolve_gql_union_#{type_name}")(%Ash.Union{type: type}, _) do
+            # sobelow_skip ["DOS.BinToAtom"]
+            :"#{unquote(type_name)}_#{type}"
+          end
+
+          def unquote(:"resolve_gql_union_#{type_name}")(value, _) do
+            value.__union_type__
+          end
+        end)
+      end
+
       for {api, resources, first?} <- apis do
         defmodule Module.concat(api, AshTypes) do
           @moduledoc false
