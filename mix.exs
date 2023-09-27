@@ -160,7 +160,7 @@ defmodule AshGraphql.MixProject do
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:jason, "~> 1.2"},
-      {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
+      {:ex_doc, github: "elixir-lang/ex_doc", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.12", only: [:dev, :test]},
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
@@ -187,7 +187,7 @@ defmodule AshGraphql.MixProject do
       docs: [
         "spark.cheat_sheets",
         "docs",
-        "ash.replace_doc_links",
+        "spark.replace_doc_links",
         "spark.cheat_sheets_in_search"
       ],
       "spark.formatter": "spark.formatter --extensions AshGraphql.Resource,AshGraphql.Api",
