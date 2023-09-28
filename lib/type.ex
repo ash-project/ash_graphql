@@ -3,6 +3,12 @@ defmodule AshGraphql.Type do
   Callbacks used to enrich types with GraphQL-specific metadata.
   """
 
+  defmacro __using__(_) do
+    quote do
+      @behaviour AshGraphql.Type
+    end
+  end
+
   @doc """
   Sets the name of the graphql type for a given Ash type. For example: `:weekday`.
 

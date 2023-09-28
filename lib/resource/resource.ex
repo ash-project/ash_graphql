@@ -360,14 +360,14 @@ defmodule AshGraphql.Resource do
   }
 
   @transformers [
-    AshGraphql.Resource.Transformers.RequirePkeyDelimiter,
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
     AshGraphql.Resource.Transformers.ValidateCompatibleNames
   ]
 
   @verifiers [
-    AshGraphql.Resource.Verifiers.VerifyQueryMetadata
+    AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
+    AshGraphql.Resource.Verifiers.RequirePkeyDelimiter
   ]
 
   @sections [@graphql]
