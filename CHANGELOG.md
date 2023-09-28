@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.3](https://github.com/ash-project/ash_graphql/compare/v0.26.2...v0.26.3) (2023-09-28)
+
+
+
+
+### Bug Fixes:
+
+* fix primary key delimiter verificatoin step
+
+* don't include related fields in managed relationship inputs
+
+### Improvements:
+
+* add `AshGraphql.Type`
+
+* optimize union type resolver compile time logic
+
 ## [v0.26.2](https://github.com/ash-project/ash_graphql/compare/v0.26.1...v0.26.2) (2023-09-17)
 
 
