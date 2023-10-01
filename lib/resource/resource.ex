@@ -2493,6 +2493,17 @@ defmodule AshGraphql.Resource do
               of_type: resource_filter_type(resource)
             }
           }
+        },
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :not,
+          module: schema,
+          name: "not",
+          type: %Absinthe.Blueprint.TypeReference.List{
+            of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: resource_filter_type(resource)
+            }
+          },
+          __reference__: ref(__ENV__)
         }
       ]
     else
