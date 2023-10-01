@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.4](https://github.com/ash-project/ash_graphql/compare/v0.26.3...v0.26.4) (2023-10-01)
+
+
+
+
+### Improvements:
+
+* Add a top-level NOT filter, along with AND and OR filters. (#94)
+
 ## [v0.26.3](https://github.com/ash-project/ash_graphql/compare/v0.26.2...v0.26.3) (2023-09-28)
 
 
