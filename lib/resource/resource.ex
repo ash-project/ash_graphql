@@ -3059,7 +3059,7 @@ defmodule AshGraphql.Resource do
         |> Enum.any?(fn
           %{relay?: true} = query ->
             action = Ash.Resource.Info.action(resource, query.action)
-            action.pagination && action.pagination.countable
+            action.type == :read && action.pagination && action.pagination.countable
 
           _ ->
             false
@@ -3163,7 +3163,9 @@ defmodule AshGraphql.Resource do
       |> queries()
       |> Enum.any?(fn query ->
         action = Ash.Resource.Info.action(resource, query.action)
-        action.pagination && action.pagination.offset? && action.pagination.countable
+
+        action.type == :read && action.pagination && action.pagination.offset? &&
+          action.pagination.countable
       end)
 
     if paginatable? do
@@ -3219,7 +3221,9 @@ defmodule AshGraphql.Resource do
       |> queries()
       |> Enum.any?(fn query ->
         action = Ash.Resource.Info.action(resource, query.action)
-        action.pagination && action.pagination.keyset? && action.pagination.countable
+
+        action.type == :read && action.pagination && action.pagination.keyset? &&
+          action.pagination.countable
       end)
 
     if paginatable? do
