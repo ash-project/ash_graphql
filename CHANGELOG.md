@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.5](https://github.com/ash-project/ash_graphql/compare/v0.26.4...v0.26.5) (2023-10-02)
+
+
+
+
+### Bug Fixes:
+
+* don't access `.pagination` on generic action
+
 ## [v0.26.4](https://github.com/ash-project/ash_graphql/compare/v0.26.3...v0.26.4) (2023-10-01)
 
 
