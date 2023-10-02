@@ -11,8 +11,15 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource, %AshGraphql.Resource.Action{name: query_name, action: action}}
+        {api, resource, %AshGraphql.Resource.Action{name: query_name, action: action}, input?}
       ) do
+    arguments =
+      if input? do
+        arguments[:input] || %{}
+      else
+        arguments
+      end
+
     action = Ash.Resource.Info.action(resource, action)
 
     case handle_arguments(resource, action, arguments) do

@@ -454,7 +454,7 @@ defmodule AshGraphql.Resource do
             middleware:
               action_middleware ++
                 [
-                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, false}}
                 ],
             complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
             module: schema,
@@ -501,13 +501,30 @@ defmodule AshGraphql.Resource do
           Ash.Resource.Info.action(resource, action) ||
             raise "No such action #{action} on #{resource}"
 
+        args =
+          case query_action.arguments do
+            [] ->
+              []
+
+            _ ->
+              [
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  identifier: :input,
+                  module: schema,
+                  name: "input",
+                  placement: :argument_definition,
+                  type: String.to_atom("#{name}_input")
+                }
+              ]
+          end
+
         %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: generic_action_args(query_action, resource, schema),
+          arguments: args,
           identifier: name,
           middleware:
             action_middleware ++
               [
-                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, true}}
               ],
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,

@@ -48,4 +48,28 @@ defmodule AshGraphql.GenericActionsTest do
 
     assert %{data: %{"randomPost" => %{"id" => ^post_id, "comments" => []}}} = result
   end
+
+  test "generic action mutations can be run with input" do
+    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+
+    resp =
+      """
+      mutation {
+        randomPost(input: {published: true}) {
+          id
+          comments{
+            id
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    post_id = post.id
+
+    assert %{data: %{"randomPost" => %{"id" => ^post_id, "comments" => []}}} = result
+  end
 end
