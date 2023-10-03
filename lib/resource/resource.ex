@@ -3134,7 +3134,7 @@ defmodule AshGraphql.Resource do
                   name: "edges",
                   __reference__: ref(__ENV__),
                   type: %Absinthe.Blueprint.TypeReference.List{
-                    of_type: %Absinthe.Blueprint.TypeReference.List{
+                    of_type: %Absinthe.Blueprint.TypeReference.NonNull{
                       of_type: String.to_atom("#{type}_edge")
                     }
                   }
