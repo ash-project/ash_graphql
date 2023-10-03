@@ -3103,7 +3103,9 @@ defmodule AshGraphql.Resource do
                 module: schema,
                 name: "node",
                 __reference__: ref(__ENV__),
-                type: type
+                type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: type
+                }
               }
             ],
             identifier: String.to_atom("#{type}_edge"),
