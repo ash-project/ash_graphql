@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.6](https://github.com/ash-project/ash_graphql/compare/v0.26.5...v0.26.6) (2023-10-06)
+
+
+
+
+### Bug Fixes:
+
+* generic action mutations need to use the input object
+
+### Improvements:
+
+* make the node in relay edges non-null (#95)
+
 ## [v0.26.5](https://github.com/ash-project/ash_graphql/compare/v0.26.4...v0.26.5) (2023-10-02)
 
 
