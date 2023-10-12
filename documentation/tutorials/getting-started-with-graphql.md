@@ -39,7 +39,7 @@ defmodule Helpdesk.Support do
     authorize? false # Defaults to `true`, use this to disable authorization for the entire API (you probably only want this while prototyping)
   end
 
-  ... 
+  ...
 end
 ```
 
@@ -62,12 +62,12 @@ defmodule Helpdesk.Support.Ticket. do
       # Examples
 
       # create a field called `get_ticket` that uses the `read` read action to fetch a single ticke
-      get :get_ticket, :read 
+      get :get_ticket, :read
       # create a field called `most_important_ticket` that uses the `most_important` read action to fetch a single record
-      read_one :most_important_ticket, :most_important 
+      read_one :most_important_ticket, :most_important
 
       # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
-      list :list_tickets, :read 
+      list :list_tickets, :read
     end
 
     mutations do
@@ -87,7 +87,7 @@ end
 
 If you don't have an absinthe schema, you can create one just for ash.
 
-Define a `context/1` function, and call `AshGraphql.add_context/2` with the current context and your apis. Additionally, add the `Absinthe.Middleware.Dataloader` to your plugins, as shown below. If you're starting fresh, just copy the schema below and adjust the module name and api name.
+in `lib/helpdesk/schema.ex`
 
 ```elixir
 defmodule Helpdesk.Schema do
