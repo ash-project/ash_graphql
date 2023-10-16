@@ -35,7 +35,8 @@ defmodule AshGraphql do
     quote bind_quoted: [
             apis: opts[:apis],
             api: opts[:api],
-            action_middleware: opts[:action_middleware] || []
+            action_middleware: opts[:action_middleware] || [],
+            define_relay_types?: Keyword.get(opts, :define_relay_types?, true)
           ],
           generated: true do
       require Ash.Api.Info
@@ -169,7 +170,8 @@ defmodule AshGraphql do
                       unquote(resources),
                       unquote(schema),
                       __ENV__,
-                      true
+                      true,
+                      unquote(define_relay_types?)
                     ) ++
                     global_enums ++
                     global_unions ++
@@ -182,6 +184,7 @@ defmodule AshGraphql do
                   unquote(resources),
                   unquote(schema),
                   __ENV__,
+                  false,
                   false
                 )
               end

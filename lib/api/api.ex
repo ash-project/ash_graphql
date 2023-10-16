@@ -86,7 +86,7 @@ defmodule AshGraphql.Api do
   end
 
   @doc false
-  def type_definitions(api, resources, schema, env, first?) do
+  def type_definitions(api, resources, schema, env, first?, define_relay_types?) do
     resource_types =
       resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
@@ -101,67 +101,74 @@ defmodule AshGraphql.Api do
       end)
 
     if first? do
-      [
-        %Absinthe.Blueprint.Schema.InterfaceTypeDefinition{
-          description: "A relay node",
-          name: "Node",
-          fields: [
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "A unique identifier",
-              identifier: :id,
-              module: schema,
-              name: "id",
+      relay_types =
+        if define_relay_types? do
+          [
+            %Absinthe.Blueprint.Schema.InterfaceTypeDefinition{
+              description: "A relay node",
+              name: "Node",
+              fields: [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  description: "A unique identifier",
+                  identifier: :id,
+                  module: schema,
+                  name: "id",
+                  __reference__: AshGraphql.Resource.ref(env),
+                  type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
+                }
+              ],
+              identifier: :node,
               __reference__: AshGraphql.Resource.ref(env),
-              type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id}
+              module: schema
+            },
+            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+              description: "A relay page info",
+              name: "PageInfo",
+              fields: [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  description: "When paginating backwards, are there more items?",
+                  identifier: :has_previous_page,
+                  module: schema,
+                  name: "has_previous_page",
+                  __reference__: AshGraphql.Resource.ref(env),
+                  type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :boolean}
+                },
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  description: "When paginating forwards, are there more items?",
+                  identifier: :has_next_page,
+                  module: schema,
+                  name: "has_next_page",
+                  __reference__: AshGraphql.Resource.ref(env),
+                  type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :boolean}
+                },
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  description: "When paginating backwards, the cursor to continue",
+                  identifier: :start_cursor,
+                  module: schema,
+                  name: "start_cursor",
+                  __reference__: AshGraphql.Resource.ref(env),
+                  type: :string
+                },
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  description: "When paginating forwards, the cursor to continue",
+                  identifier: :end_cursor,
+                  module: schema,
+                  name: "end_cursor",
+                  __reference__: AshGraphql.Resource.ref(env),
+                  type: :string
+                }
+                # 'count' field is not compatible with keyset pagination
+              ],
+              identifier: :page_info,
+              module: schema,
+              __reference__: AshGraphql.Resource.ref(env)
             }
-          ],
-          identifier: :node,
-          __reference__: AshGraphql.Resource.ref(env),
-          module: schema
-        },
-        %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-          description: "A relay page info",
-          name: "PageInfo",
-          fields: [
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "When paginating backwards, are there more items?",
-              identifier: :has_previous_page,
-              module: schema,
-              name: "has_previous_page",
-              __reference__: AshGraphql.Resource.ref(env),
-              type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :boolean}
-            },
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "When paginating forwards, are there more items?",
-              identifier: :has_next_page,
-              module: schema,
-              name: "has_next_page",
-              __reference__: AshGraphql.Resource.ref(env),
-              type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :boolean}
-            },
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "When paginating backwards, the cursor to continue",
-              identifier: :start_cursor,
-              module: schema,
-              name: "start_cursor",
-              __reference__: AshGraphql.Resource.ref(env),
-              type: :string
-            },
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: "When paginating forwards, the cursor to continue",
-              identifier: :end_cursor,
-              module: schema,
-              name: "end_cursor",
-              __reference__: AshGraphql.Resource.ref(env),
-              type: :string
-            }
-            # 'count' field is not compatible with keyset pagination
-          ],
-          identifier: :page_info,
-          module: schema,
-          __reference__: AshGraphql.Resource.ref(env)
-        }
-      ] ++ resource_types
+          ]
+        else
+          []
+        end
+
+      relay_types ++ resource_types
     else
       resource_types
     end
