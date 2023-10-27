@@ -131,13 +131,12 @@ defmodule AshGraphql.Test.Post do
   alias AshGraphql.Test.CommonMap
   alias AshGraphql.Test.CommonMapStruct
   alias AshGraphql.Test.SponsoredComment
-  alias AshGraphql.Test.PubSub
 
   use Ash.Resource,
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshGraphql.Resource, Ash.Notifier.PubSub]
+    extensions: [AshGraphql.Resource]
 
   require Ash.Query
 
@@ -231,14 +230,6 @@ defmodule AshGraphql.Test.Post do
       # this is a mutation just for testing
       action(:random_post, :random)
     end
-  end
-
-  pub_sub do
-    module(PubSub)
-    prefix("post")
-    broadcast_type(:notification)
-
-    publish_all(:create, "created")
   end
 
   actions do

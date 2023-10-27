@@ -10,16 +10,19 @@ defmodule AshGraphql.Test.PubSub do
   end
 
   def subscribe(topic) do
-    Registry.register(__MODULE__, topic, [])
+    IO.inspect([topic: topic], label: "subscribe")
+    Registry.register(__MODULE__, topic, [self()])
     :ok
   end
 
   def publish_subscription(topic, data) do
-    message = %{
-      topic: topic,
-      event: "subscription:data",
-      result: data
-    }
+    message =
+      %{
+        topic: topic,
+        event: "subscription:data",
+        result: data
+      }
+      |> IO.inspect(label: :publish_subscription)
 
     Registry.dispatch(__MODULE__, topic, fn entries ->
       for {pid, _} <- entries, do: send(pid, {:broadcast, message})
@@ -27,13 +30,14 @@ defmodule AshGraphql.Test.PubSub do
   end
 
   def broadcast(topic, event, notification) do
+    IO.inspect([topic: topic, event: event, notification: notification], label: "broadcast")
+
     message =
       %{
         topic: topic,
         event: event,
         result: notification
       }
-      |> IO.inspect(label: :message)
 
     Registry.dispatch(__MODULE__, topic, fn entries ->
       for {pid, _} <- entries, do: send(pid, {:broadcast, message})
@@ -42,6 +46,7 @@ defmodule AshGraphql.Test.PubSub do
 
   def publish_mutation(_proxy_topic, _mutation_result, _subscribed_fields) do
     # this pubsub is local and doesn't support clusters
+    IO.inspect("publish mutation")
     :ok
   end
 end

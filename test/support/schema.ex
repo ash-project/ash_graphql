@@ -33,10 +33,10 @@ defmodule AshGraphql.Test.Schema do
   end
 
   subscription do
-    field :post_created, :post do
+    field :subscribable_created, :subscribable do
       config(fn
         _args, %{context: %{actor: %{id: user_id}}} ->
-          {:ok, topic: user_id, context_id: "user/#{user_id}"}
+          {:ok, topic: "subscribable:created", context_id: "user/#{user_id}"}
 
         _args, _context ->
           {:error, :unauthorized}
