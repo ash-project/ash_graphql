@@ -64,6 +64,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   loads =
                     type_loads(
                       fields,
+                      context,
                       action.returns,
                       action.constraints,
                       load_opts,
@@ -184,7 +185,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     ],
                     resource,
                     resolution,
-                    resolution.path
+                    resolution.path,
+                    context
                   )
 
                 result =
@@ -215,7 +217,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     ],
                     resource,
                     resolution,
-                    resolution.path
+                    resolution.path,
+                    context
                   )
 
                 {{:error, error}, [query, {:error, error}]}
@@ -310,7 +313,8 @@ defmodule AshGraphql.Graphql.Resolver do
             ],
             resource,
             resolution,
-            resolution.path
+            resolution.path,
+            context
           )
 
         result =
@@ -411,6 +415,7 @@ defmodule AshGraphql.Graphql.Resolver do
                      resource,
                      resolution,
                      resolution.path,
+                     context,
                      result_fields
                    ),
                  {:ok, page} <-
@@ -1034,6 +1039,7 @@ defmodule AshGraphql.Graphql.Resolver do
               resource,
               resolution,
               resolution.path,
+              context,
               ["result"]
             )
 
@@ -1178,6 +1184,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       resource,
                       resolution,
                       resolution.path,
+                      context,
                       ["result"]
                     )
 
@@ -1527,11 +1534,19 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   @doc false
-  def load_fields(query_or_changeset, load_opts, resource, resolution, path, nested \\ []) do
+  def load_fields(
+        query_or_changeset,
+        load_opts,
+        resource,
+        resolution,
+        path,
+        context,
+        nested \\ []
+      ) do
     {fields, path} = nested_fields_and_path(resolution, path, nested)
 
     fields
-    |> resource_loads(resource, resolution, load_opts, path)
+    |> resource_loads(resource, resolution, load_opts, path, context)
     |> then(fn load ->
       case query_or_changeset do
         %Ash.Query{} = query ->
@@ -1597,7 +1612,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp resource_loads(fields, resource, resolution, load_opts, path) do
+  defp resource_loads(fields, resource, resolution, load_opts, path, context) do
     Enum.flat_map(fields, fn selection ->
       cond do
         aggregate = Ash.Resource.Info.aggregate(resource, selection.schema_node.identifier) ->
@@ -1621,6 +1636,7 @@ defmodule AshGraphql.Graphql.Resolver do
             loads =
               type_loads(
                 selection.selections,
+                context,
                 calculation.type,
                 calculation.constraints,
                 load_opts,
@@ -1648,6 +1664,7 @@ defmodule AshGraphql.Graphql.Resolver do
             loads =
               type_loads(
                 selection.selections,
+                context,
                 attribute.type,
                 attribute.constraints,
                 load_opts,
@@ -1714,15 +1731,29 @@ defmodule AshGraphql.Graphql.Resolver do
             end)
 
           related_query =
+            relationship.destination
+            |> Ash.Query.new(relationship.destination)
+            |> Ash.Query.set_tenant(Map.get(context, :tenant))
+            |> Ash.Query.set_context(get_context(context))
+
+          related_query =
             args
-            |> apply_load_arguments(Ash.Query.new(relationship.destination))
+            |> apply_load_arguments(related_query)
             |> set_query_arguments(read_action, args)
             |> select_fields(
               relationship.destination,
               resolution,
               Enum.map(Enum.reverse([selection | path]), & &1.name)
             )
-            |> load_fields(load_opts, relationship.destination, resolution, [selection | path])
+            |> load_fields(
+              load_opts,
+              relationship.destination,
+              resolution,
+              [
+                selection | path
+              ],
+              context
+            )
 
           if selection.alias do
             {type, constraints} =
@@ -1757,6 +1788,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp type_loads(
          selections,
+         context,
          type,
          constraints,
          load_opts,
@@ -1772,6 +1804,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp type_loads(
          selections,
+         context,
          {:array, type},
          constraints,
          load_opts,
@@ -1786,6 +1819,7 @@ defmodule AshGraphql.Graphql.Resolver do
        ) do
     type_loads(
       selections,
+      context,
       type,
       constraints[:items] || [],
       load_opts,
@@ -1802,6 +1836,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp type_loads(
          selections,
+         context,
          type,
          constraints,
          load_opts,
@@ -1821,6 +1856,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
         type_loads(
           selections,
+          context,
           subtype_of,
           subtype_constraints,
           load_opts,
@@ -1864,7 +1900,7 @@ defmodule AshGraphql.Graphql.Resolver do
             fields
           end
 
-        resource_loads(fields, type, resolution, load_opts, path)
+        resource_loads(fields, type, resolution, load_opts, path, context)
 
       type == Ash.Type.Union ->
         {global_selections, fragments} =
@@ -1892,6 +1928,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
               type_loads(
                 global_selections,
+                context,
                 first_type,
                 first_constraints,
                 load_opts,
@@ -1982,6 +2019,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 type_name,
                 type_loads(
                   selection.selections,
+                  context,
                   config[:type],
                   config[:constraints],
                   load_opts,
@@ -2012,6 +2050,7 @@ defmodule AshGraphql.Graphql.Resolver do
               type_name,
               type_loads(
                 fields,
+                context,
                 config[:type],
                 config[:constraints],
                 load_opts,

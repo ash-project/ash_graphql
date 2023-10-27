@@ -24,7 +24,8 @@ defmodule AshGraphql.Subscription do
       ],
       query.resource,
       resolution,
-      resolution.path
+      resolution.path,
+      context
     )
   end
 end
