@@ -2015,7 +2015,7 @@ defmodule AshGraphql.Resource do
         attr.type
       end
 
-    {:ok, aggregate_type} = Ash.Query.Aggregate.kind_to_type(kind, field_type)
+    {:ok, aggregate_type, _} = Ash.Query.Aggregate.kind_to_type(kind, field_type, [])
 
     aggregate_type
   end
@@ -2424,17 +2424,31 @@ defmodule AshGraphql.Resource do
   end
 
   defp filterable?(%Ash.Resource.Aggregate{} = aggregate, resource) do
-    field_type =
+    attribute =
       with field when not is_nil(field) <- aggregate.field,
            related when not is_nil(related) <-
              Ash.Resource.Info.related(resource, aggregate.relationship_path),
            attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
-        attr.type
+        attr
       end
 
-    {:ok, type} = Aggregate.kind_to_type(aggregate.kind, field_type)
+    field_type =
+      if attribute do
+        attribute.type
+      end
 
-    filterable?(%Ash.Resource.Attribute{name: aggregate.name, type: type}, resource)
+    field_constraints =
+      if attribute do
+        attribute.constraints
+      end
+
+    {:ok, type, constraints} =
+      Aggregate.kind_to_type(aggregate.kind, field_type, field_constraints)
+
+    filterable?(
+      %Ash.Resource.Attribute{name: aggregate.name, type: type, constraints: constraints},
+      resource
+    )
   end
 
   defp filterable?(%{type: {:array, _}}, _), do: false
@@ -3667,14 +3681,15 @@ defmodule AshGraphql.Resource do
             {nil, []}
         end
 
-      {:ok, agg_type} = Aggregate.kind_to_type(aggregate.kind, field_type)
+      {:ok, agg_type, constraints} =
+        Aggregate.kind_to_type(aggregate.kind, field_type, constraints)
 
       type =
         if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) do
-          field_type(agg_type, aggregate, resource)
+          field_type(agg_type, Map.put(aggregate, :constraints, constraints), resource)
         else
           %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(agg_type, aggregate, resource)
+            of_type: field_type(agg_type, Map.put(aggregate, :constraints, constraints), resource)
           }
         end
 
