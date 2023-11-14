@@ -37,6 +37,7 @@ defmodule AshGraphql.Test.Comment do
     attribute :type, :atom do
       writable?(false)
       default(:comment)
+      constraints(one_of: [:comment, :reply])
     end
 
     create_timestamp(:created_at)

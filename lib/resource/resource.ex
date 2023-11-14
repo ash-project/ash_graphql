@@ -3670,26 +3670,42 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn aggregate ->
       name = field_names[aggregate.name] || aggregate.name
 
-      {field_type, constraints} =
+      {field, field_type, constraints} =
         with field when not is_nil(field) <- aggregate.field,
              related when not is_nil(related) <-
                Ash.Resource.Info.related(resource, aggregate.relationship_path),
              attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
-          {attr.type, attr.constraints}
+          {attr, attr.type, attr.constraints}
         else
           _ ->
-            {nil, []}
+            {nil, nil, []}
         end
 
       {:ok, agg_type, constraints} =
         Aggregate.kind_to_type(aggregate.kind, field_type, constraints)
 
+      attribute = field || Map.put(aggregate, :constraints, constraints)
+
       type =
         if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) do
-          field_type(agg_type, Map.put(aggregate, :constraints, constraints), resource)
+          resource =
+            if field do
+              Ash.Resource.Info.related(resource, aggregate.relationship_path)
+            else
+              resource
+            end
+
+          field_type(agg_type, attribute, resource)
         else
+          resource =
+            if field && aggregate.type in [:first, :list]  do
+              Ash.Resource.Info.related(resource, aggregate.relationship_path)
+            else
+              resource
+            end
+
           %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(agg_type, Map.put(aggregate, :constraints, constraints), resource)
+            of_type: field_type(agg_type, attribute, resource)
           }
         end
 
