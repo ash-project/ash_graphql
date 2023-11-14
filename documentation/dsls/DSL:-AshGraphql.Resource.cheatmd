@@ -409,8 +409,7 @@ get :get_post, :read
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -424,7 +423,27 @@ get :get_post, :read
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
+    <a id="graphql-queries-get-name" href="#graphql-queries-get-name">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        name
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    <code class="inline">:get</code>
+  </td>
+  <td style="text-align: left" colspan=2>
+    The name to use for the query.
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="graphql-queries-get-action" href="#graphql-queries-get-action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         action
       </span>
@@ -443,9 +462,23 @@ get :get_post, :read
   </td>
 </tr>
 
-<tr>
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
   <td style="text-align: left">
-    <a id="name-action-identity" href="#name-action-identity">
+    <a id="graphql-queries-get-identity" href="#graphql-queries-get-identity">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity
       </span>
@@ -465,7 +498,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-allow_nil?" href="#name-action-allow_nil?">
+    <a id="graphql-queries-get-allow_nil?" href="#graphql-queries-get-allow_nil?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         allow_nil?
       </span>
@@ -485,7 +518,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-modify_resolution" href="#name-action-modify_resolution">
+    <a id="graphql-queries-get-modify_resolution" href="#graphql-queries-get-modify_resolution">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         modify_resolution
       </span>
@@ -506,27 +539,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        name
-      </span>
-    </a>
-      
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    <code class="inline">:get</code>
-  </td>
-  <td style="text-align: left" colspan=2>
-    The name to use for the query.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-type_name" href="#name-action-type_name">
+    <a id="graphql-queries-get-type_name" href="#graphql-queries-get-type_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         type_name
       </span>
@@ -547,7 +560,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-metadata_names" href="#name-action-metadata_names">
+    <a id="graphql-queries-get-metadata_names" href="#graphql-queries-get-metadata_names">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         metadata_names
       </span>
@@ -567,7 +580,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-metadata_types" href="#name-action-metadata_types">
+    <a id="graphql-queries-get-metadata_types" href="#graphql-queries-get-metadata_types">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         metadata_types
       </span>
@@ -587,7 +600,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-show_metadata" href="#name-action-show_metadata">
+    <a id="graphql-queries-get-show_metadata" href="#graphql-queries-get-show_metadata">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         show_metadata
       </span>
@@ -607,7 +620,7 @@ get :get_post, :read
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-as_mutation?" href="#name-action-as_mutation?">
+    <a id="graphql-queries-get-as_mutation?" href="#graphql-queries-get-as_mutation?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         as_mutation?
       </span>
@@ -654,8 +667,7 @@ read_one :current_user, :current_user
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -669,48 +681,7 @@ read_one :current_user, :current_user
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        action
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The action to use for the query.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-allow_nil?" href="#name-action-allow_nil?">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        allow_nil?
-      </span>
-    </a>
-      
-  </td>
-  <td style="text-align: left">
-    <code class="inline">boolean</code>
-  </td>
-  <td style="text-align: left">
-    <code class="inline">true</code>
-  </td>
-  <td style="text-align: left" colspan=2>
-    Whether or not the action can return nil.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
+    <a id="graphql-queries-read_one-name" href="#graphql-queries-read_one-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -730,7 +701,62 @@ read_one :current_user, :current_user
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-type_name" href="#name-action-type_name">
+    <a id="graphql-queries-read_one-action" href="#graphql-queries-read_one-action">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        action
+      </span>
+    </a>
+      <sup style="color: red">*</sup>
+
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The action to use for the query.
+  </td>
+</tr>
+
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+  <td style="text-align: left">
+    <a id="graphql-queries-read_one-allow_nil?" href="#graphql-queries-read_one-allow_nil?">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        allow_nil?
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">boolean</code>
+  </td>
+  <td style="text-align: left">
+    <code class="inline">true</code>
+  </td>
+  <td style="text-align: left" colspan=2>
+    Whether or not the action can return nil.
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="graphql-queries-read_one-type_name" href="#graphql-queries-read_one-type_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         type_name
       </span>
@@ -751,7 +777,7 @@ read_one :current_user, :current_user
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-metadata_names" href="#name-action-metadata_names">
+    <a id="graphql-queries-read_one-metadata_names" href="#graphql-queries-read_one-metadata_names">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         metadata_names
       </span>
@@ -771,7 +797,7 @@ read_one :current_user, :current_user
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-metadata_types" href="#name-action-metadata_types">
+    <a id="graphql-queries-read_one-metadata_types" href="#graphql-queries-read_one-metadata_types">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         metadata_types
       </span>
@@ -791,7 +817,7 @@ read_one :current_user, :current_user
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-show_metadata" href="#name-action-show_metadata">
+    <a id="graphql-queries-read_one-show_metadata" href="#graphql-queries-read_one-show_metadata">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         show_metadata
       </span>
@@ -811,7 +837,7 @@ read_one :current_user, :current_user
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-as_mutation?" href="#name-action-as_mutation?">
+    <a id="graphql-queries-read_one-as_mutation?" href="#graphql-queries-read_one-as_mutation?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         as_mutation?
       </span>
@@ -862,8 +888,7 @@ list :list_posts_paginated, :read, relay?: true
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -877,7 +902,27 @@ list :list_posts_paginated, :read, relay?: true
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
+    <a id="graphql-queries-list-name" href="#graphql-queries-list-name">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        name
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    <code class="inline">:get</code>
+  </td>
+  <td style="text-align: left" colspan=2>
+    The name to use for the query.
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="graphql-queries-list-action" href="#graphql-queries-list-action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         action
       </span>
@@ -896,9 +941,23 @@ list :list_posts_paginated, :read, relay?: true
   </td>
 </tr>
 
-<tr>
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
   <td style="text-align: left">
-    <a id="name-action-relay?" href="#name-action-relay?">
+    <a id="graphql-queries-list-relay?" href="#graphql-queries-list-relay?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         relay?
       </span>
@@ -919,27 +978,7 @@ list :list_posts_paginated, :read, relay?: true
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        name
-      </span>
-    </a>
-      
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    <code class="inline">:get</code>
-  </td>
-  <td style="text-align: left" colspan=2>
-    The name to use for the query.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-type_name" href="#name-action-type_name">
+    <a id="graphql-queries-list-type_name" href="#graphql-queries-list-type_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         type_name
       </span>
@@ -960,7 +999,7 @@ list :list_posts_paginated, :read, relay?: true
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-metadata_names" href="#name-action-metadata_names">
+    <a id="graphql-queries-list-metadata_names" href="#graphql-queries-list-metadata_names">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         metadata_names
       </span>
@@ -980,7 +1019,7 @@ list :list_posts_paginated, :read, relay?: true
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-metadata_types" href="#name-action-metadata_types">
+    <a id="graphql-queries-list-metadata_types" href="#graphql-queries-list-metadata_types">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         metadata_types
       </span>
@@ -1000,7 +1039,7 @@ list :list_posts_paginated, :read, relay?: true
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-show_metadata" href="#name-action-show_metadata">
+    <a id="graphql-queries-list-show_metadata" href="#graphql-queries-list-show_metadata">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         show_metadata
       </span>
@@ -1020,7 +1059,7 @@ list :list_posts_paginated, :read, relay?: true
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-as_mutation?" href="#name-action-as_mutation?">
+    <a id="graphql-queries-list-as_mutation?" href="#graphql-queries-list-as_mutation?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         as_mutation?
       </span>
@@ -1081,7 +1120,27 @@ action :check_status, :check_status
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
+    <a id="graphql-queries-action-name" href="#graphql-queries-action-name">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        name
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    <code class="inline">:get</code>
+  </td>
+  <td style="text-align: left" colspan=2>
+    The name to use for the query.
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="graphql-queries-action-action" href="#graphql-queries-action-action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         action
       </span>
@@ -1102,40 +1161,7 @@ action :check_status, :check_status
 
   </tbody>
 </table>
-### Options
 
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Default</th>
-      <th colspan=2>Docs</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-  <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        name
-      </span>
-    </a>
-      
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    <code class="inline">:get</code>
-  </td>
-  <td style="text-align: left" colspan=2>
-    The name to use for the query.
-  </td>
-</tr>
-
-  </tbody>
-</table>
 
 
 
@@ -1187,8 +1213,7 @@ create :create_post, :create
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -1202,28 +1227,7 @@ create :create_post, :create
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        action
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The action to use for the mutation.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
+    <a id="graphql-mutations-create-name" href="#graphql-mutations-create-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -1243,7 +1247,42 @@ create :create_post, :create
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-upsert?" href="#name-action-upsert?">
+    <a id="graphql-mutations-create-action" href="#graphql-mutations-create-action">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        action
+      </span>
+    </a>
+      <sup style="color: red">*</sup>
+
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The action to use for the mutation.
+  </td>
+</tr>
+
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+  <td style="text-align: left">
+    <a id="graphql-mutations-create-upsert?" href="#graphql-mutations-create-upsert?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         upsert?
       </span>
@@ -1263,7 +1302,7 @@ create :create_post, :create
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-upsert_identity" href="#name-action-upsert_identity">
+    <a id="graphql-mutations-create-upsert_identity" href="#graphql-mutations-create-upsert_identity">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         upsert_identity
       </span>
@@ -1283,7 +1322,7 @@ create :create_post, :create
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-modify_resolution" href="#name-action-modify_resolution">
+    <a id="graphql-mutations-create-modify_resolution" href="#graphql-mutations-create-modify_resolution">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         modify_resolution
       </span>
@@ -1330,8 +1369,7 @@ update :update_post, :update
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -1345,28 +1383,7 @@ update :update_post, :update
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        action
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The action to use for the mutation.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
+    <a id="graphql-mutations-update-name" href="#graphql-mutations-update-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -1386,7 +1403,42 @@ update :update_post, :update
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-identity" href="#name-action-identity">
+    <a id="graphql-mutations-update-action" href="#graphql-mutations-update-action">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        action
+      </span>
+    </a>
+      <sup style="color: red">*</sup>
+
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The action to use for the mutation.
+  </td>
+</tr>
+
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+  <td style="text-align: left">
+    <a id="graphql-mutations-update-identity" href="#graphql-mutations-update-identity">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity
       </span>
@@ -1407,7 +1459,7 @@ update :update_post, :update
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-read_action" href="#name-action-read_action">
+    <a id="graphql-mutations-update-read_action" href="#graphql-mutations-update-read_action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         read_action
       </span>
@@ -1453,8 +1505,7 @@ destroy :destroy_post, :destroy
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -1468,28 +1519,7 @@ destroy :destroy_post, :destroy
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        action
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The action to use for the mutation.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
+    <a id="graphql-mutations-destroy-name" href="#graphql-mutations-destroy-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -1509,7 +1539,42 @@ destroy :destroy_post, :destroy
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-read_action" href="#name-action-read_action">
+    <a id="graphql-mutations-destroy-action" href="#graphql-mutations-destroy-action">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        action
+      </span>
+    </a>
+      <sup style="color: red">*</sup>
+
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The action to use for the mutation.
+  </td>
+</tr>
+
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+  <td style="text-align: left">
+    <a id="graphql-mutations-destroy-read_action" href="#graphql-mutations-destroy-read_action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         read_action
       </span>
@@ -1529,7 +1594,7 @@ destroy :destroy_post, :destroy
 
 <tr>
   <td style="text-align: left">
-    <a id="name-action-identity" href="#name-action-identity">
+    <a id="graphql-mutations-destroy-identity" href="#graphql-mutations-destroy-identity">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity
       </span>
@@ -1590,7 +1655,27 @@ action :check_status, :check_status
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-action-action" href="#name-action-action">
+    <a id="graphql-mutations-action-name" href="#graphql-mutations-action-name">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        name
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    <code class="inline">:get</code>
+  </td>
+  <td style="text-align: left" colspan=2>
+    The name to use for the query.
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="graphql-mutations-action-action" href="#graphql-mutations-action-action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         action
       </span>
@@ -1611,40 +1696,7 @@ action :check_status, :check_status
 
   </tbody>
 </table>
-### Options
 
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Default</th>
-      <th colspan=2>Docs</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-  <td style="text-align: left">
-    <a id="name-action-name" href="#name-action-name">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        name
-      </span>
-    </a>
-      
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    <code class="inline">:get</code>
-  </td>
-  <td style="text-align: left" colspan=2>
-    The name to use for the query.
-  </td>
-</tr>
-
-  </tbody>
-</table>
 
 
 
@@ -1767,8 +1819,7 @@ To *remove* a key from the input object, simply pass `nil` as the type.
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -1782,28 +1833,7 @@ To *remove* a key from the input object, simply pass `nil` as the type.
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="action-argument-argument" href="#action-argument-argument">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        argument
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">atom</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The argument for which an input object should be derived.
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="action-argument-action" href="#action-argument-action">
+    <a id="graphql-managed_relationships-managed_relationship-action" href="#graphql-managed_relationships-managed_relationship-action">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         action
       </span>
@@ -1823,7 +1853,42 @@ To *remove* a key from the input object, simply pass `nil` as the type.
 
 <tr>
   <td style="text-align: left">
-    <a id="action-argument-lookup_with_primary_key?" href="#action-argument-lookup_with_primary_key?">
+    <a id="graphql-managed_relationships-managed_relationship-argument" href="#graphql-managed_relationships-managed_relationship-argument">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        argument
+      </span>
+    </a>
+      <sup style="color: red">*</sup>
+
+  </td>
+  <td style="text-align: left">
+    <code class="inline">atom</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The argument for which an input object should be derived.
+  </td>
+</tr>
+
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+  <td style="text-align: left">
+    <a id="graphql-managed_relationships-managed_relationship-lookup_with_primary_key?" href="#graphql-managed_relationships-managed_relationship-lookup_with_primary_key?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         lookup_with_primary_key?
       </span>
@@ -1844,7 +1909,7 @@ To *remove* a key from the input object, simply pass `nil` as the type.
 
 <tr>
   <td style="text-align: left">
-    <a id="action-argument-lookup_identities" href="#action-argument-lookup_identities">
+    <a id="graphql-managed_relationships-managed_relationship-lookup_identities" href="#graphql-managed_relationships-managed_relationship-lookup_identities">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         lookup_identities
       </span>
@@ -1865,7 +1930,7 @@ To *remove* a key from the input object, simply pass `nil` as the type.
 
 <tr>
   <td style="text-align: left">
-    <a id="action-argument-type_name" href="#action-argument-type_name">
+    <a id="graphql-managed_relationships-managed_relationship-type_name" href="#graphql-managed_relationships-managed_relationship-type_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         type_name
       </span>
@@ -1886,7 +1951,7 @@ To *remove* a key from the input object, simply pass `nil` as the type.
 
 <tr>
   <td style="text-align: left">
-    <a id="action-argument-types" href="#action-argument-types">
+    <a id="graphql-managed_relationships-managed_relationship-types" href="#graphql-managed_relationships-managed_relationship-types">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         types
       </span>
