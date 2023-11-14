@@ -3698,7 +3698,7 @@ defmodule AshGraphql.Resource do
           field_type(agg_type, attribute, resource)
         else
           resource =
-            if field && aggregate.type in [:first, :list]  do
+            if field && aggregate.type in [:first, :list] do
               Ash.Resource.Info.related(resource, aggregate.relationship_path)
             else
               resource
