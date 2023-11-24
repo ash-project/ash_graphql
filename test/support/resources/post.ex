@@ -94,9 +94,20 @@ defmodule AshGraphql.Test.Post do
 
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshGraphql.Resource]
 
   require Ash.Query
+
+  policies do
+    policy always() do
+      authorize_if(always())
+    end
+
+    policy action(:count) do
+      authorize_if(actor_present())
+    end
+  end
 
   graphql do
     type :post

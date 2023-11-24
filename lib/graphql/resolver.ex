@@ -41,11 +41,17 @@ defmodule AshGraphql.Graphql.Resolver do
               :gql_query,
               query_name,
               metadata do
+          opts = [
+            actor: Map.get(context, :actor),
+            authorize?: AshGraphql.Api.Info.authorize?(api),
+            tenant: Map.get(context, :tenant)
+          ]
+
           result =
             %Ash.ActionInput{api: api, resource: resource}
             |> Ash.ActionInput.set_context(get_context(context))
             |> Ash.ActionInput.for_action(action.name, arguments)
-            |> api.run_action()
+            |> api.run_action(opts)
             |> case do
               {:ok, result} ->
                 load_opts =

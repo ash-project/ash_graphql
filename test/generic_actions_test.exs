@@ -16,7 +16,7 @@ defmodule AshGraphql.GenericActionsTest do
         postCount
       }
       """
-      |> Absinthe.run(AshGraphql.Test.Schema)
+      |> Absinthe.run(AshGraphql.Test.Schema, context: %{actor: %{id: "an-actor"}})
 
     assert {:ok, result} = resp
 
