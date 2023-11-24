@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.7](https://github.com/ash-project/ash_graphql/compare/v0.26.6...v0.26.7) (2023-11-24)
+
+
+
+
+### Bug Fixes:
+
+* make sure generic actions are authorized (#100)
+
+* properly generate `first` aggregates with correct destination type
+
+* pass context into loading and generate related query with it
+
+### Improvements:
+
+* support latest ash aggregate constraints
+
+* support `define_relay_types?: false`
+
 ## [v0.26.6](https://github.com/ash-project/ash_graphql/compare/v0.26.5...v0.26.6) (2023-10-06)
 
 
