@@ -51,7 +51,7 @@ defmodule AshGraphql.SubscriptionTest do
 
     assert_receive({:broadcast, msg})
 
-    Absinthe.Subscription.publish(PubSub, data, subscribable_created: nil)
+    Absinthe.Subscription.publish(PubSub, data, subscribable_created: "subscribable:created")
     |> IO.inspect(label: :publish)
 
     assert %{
