@@ -25,6 +25,35 @@ defmodule AshGraphql.GenericActionsTest do
     assert %{data: %{"postCount" => 0}} = result
   end
 
+  test "generic action that have policies return forbidden if no actor is present" do
+    resp =
+      """
+      query {
+        postCount
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    assert Map.has_key?(result, :errors)
+
+    assert %{
+             data: nil,
+             errors: [
+               %{
+                 code: "forbidden",
+                 message: "forbidden",
+                 path: ["postCount"],
+                 fields: [],
+                 vars: %{},
+                 locations: [%{line: 2, column: 3}],
+                 short_message: "forbidden"
+               }
+             ]
+           } == result
+  end
+
   test "generic action mutations can be run" do
     post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
 
