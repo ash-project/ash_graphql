@@ -4029,6 +4029,9 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.String, _, _, _), do: :string
   defp get_specific_field_type(Ash.Type.Term, _, _, _), do: :string
 
+  defp get_specific_field_type(Ash.Type.DateTime, _, _, _),
+    do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
+
   defp get_specific_field_type(Ash.Type.UtcDatetime, _, _, _),
     do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
 
