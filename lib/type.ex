@@ -60,7 +60,7 @@ defmodule AshGraphql.Type do
 
   See [the unions guide](/documentation/how_to/use-unions-with-graphql.md) for more.
   """
-  @callback graphql_unnested_unions(Ash.Type.constraints()) :: :atom
+  @callback graphql_unnested_unions(Ash.Type.constraints()) :: [atom()]
 
   @optional_callbacks graphql_type: 1,
                       graphql_input_type: 1,
