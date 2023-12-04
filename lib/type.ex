@@ -23,7 +23,7 @@ defmodule AshGraphql.Type do
   So you can use this to decide what it will be named. Otherwise, it behaves as stated above for
   regular types.
   """
-  @callback graphql_type(Ash.Type.constraints()) :: :atom
+  @callback graphql_type(Ash.Type.constraints()) :: atom
 
   @doc """
   Sets the name of the graphql input type for a given Ash type. For example: `:weekday`.
@@ -39,7 +39,7 @@ defmodule AshGraphql.Type do
   So you can use this to decide what it will be named. Otherwise, it behaves as stated above for
   regular types.
   """
-  @callback graphql_input_type(Ash.Type.constraints()) :: :atom
+  @callback graphql_input_type(Ash.Type.constraints()) :: atom
 
   @doc """
   Used for `Ash.Type.Enum` to rename individual values. For example:
@@ -53,7 +53,7 @@ defmodule AshGraphql.Type do
   end
   ```
   """
-  @callback graphql_rename_value(Ash.Type.constraints()) :: String.t() | :atom
+  @callback graphql_rename_value(Ash.Type.constraints()) :: String.t() | atom
 
   @doc """
   Used for map/embedded types embedded in unions, to avoid nesting them in a key by their name.
