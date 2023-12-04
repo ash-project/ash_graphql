@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.26.8](https://github.com/ash-project/ash_graphql/compare/v0.26.7...v0.26.8) (2023-12-04)
+
+
+
+
+### Bug Fixes:
+
+* fix dialyzer types for `AshGraphql.Type`
+
+* corrects spec for graphql_unnested_unions/1 (#103)
+
+* properly generate type for `Ash.Type.DateTime`
+
 ## [v0.26.7](https://github.com/ash-project/ash_graphql/compare/v0.26.6...v0.26.7) (2023-11-24)
 
 
