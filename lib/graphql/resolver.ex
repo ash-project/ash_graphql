@@ -2442,6 +2442,13 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  def resolve_attribute(
+        %{source: nil} = resolution,
+        _
+      ) do
+    Absinthe.Resolution.put_result(resolution, {:ok, nil})
+  end
+
   defp resolve_union_result(value, data) when is_list(value) do
     Enum.map(value, &resolve_union_result(&1, data))
   end
