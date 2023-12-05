@@ -241,7 +241,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 )
 
               resolution
-              |> Absinthe.Resolution.put_result({:error, [error]})
+              |> Absinthe.Resolution.put_result({:error, to_errors([error], context, api)})
               |> add_root_errors(api, result)
 
             {result, _} ->
