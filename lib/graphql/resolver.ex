@@ -233,10 +233,15 @@ defmodule AshGraphql.Graphql.Resolver do
           case {result, gql_query.allow_nil?} do
             {{:ok, nil}, false} ->
               {:ok, filter} = filter
-              result = not_found(filter, resource, context, api)
+
+              error =
+                Ash.Error.Query.NotFound.exception(
+                  primary_key: Map.new(filter || []),
+                  resource: resource
+                )
 
               resolution
-              |> Absinthe.Resolution.put_result(result)
+              |> Absinthe.Resolution.put_result({:error, [error]})
               |> add_root_errors(api, result)
 
             {result, _} ->
