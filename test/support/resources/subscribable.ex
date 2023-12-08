@@ -4,10 +4,13 @@ defmodule AshGraphql.Test.Subscribable do
 
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
-    notifiers: [Ash.Notifier.PubSub],
     extensions: [AshGraphql.Resource]
 
   require Ash.Query
+
+  resource do
+    simple_notifiers([AshGraphql.Resource.Notifier])
+  end
 
   graphql do
     type :subscribable
@@ -19,14 +22,6 @@ defmodule AshGraphql.Test.Subscribable do
     mutations do
       create :create_subscribable, :create
     end
-  end
-
-  pub_sub do
-    module(PubSub)
-    prefix("subscribable")
-    broadcast_type(:notification)
-
-    publish_all(:create, "created")
   end
 
   actions do
