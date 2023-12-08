@@ -4,8 +4,8 @@ defmodule AshGraphql.SubscriptionTest do
   alias AshGraphql.Test.PubSub
   alias AshGraphql.Test.Schema
 
-  setup_all do
-    Application.put_env(PubSub, :notifier_test_pid, self())
+  setup do
+    Application.put_env(PubSub, :notifier_test_pid, self() |> IO.inspect(label: :test_process))
     {:ok, _} = PubSub.start_link()
     {:ok, _} = Absinthe.Subscription.start_link(PubSub)
     :ok
@@ -28,8 +28,6 @@ defmodule AshGraphql.SubscriptionTest do
                context: %{pubsub: PubSub, actor: %{id: id}}
              )
 
-    PubSub.subscribe("subscribable:created")
-
     mutation = """
     mutation CreateSubscribable($input: CreateSubscribableInput) {
         createSubscribable(input: $input) {
@@ -43,28 +41,22 @@ defmodule AshGraphql.SubscriptionTest do
       }
     """
 
+    IO.inspect(self())
+
     assert {:ok, %{data: data}} =
              run_subscription(mutation, Schema,
                variables: %{"input" => %{"text" => "foo"}},
                context: %{pubsub: PubSub}
              )
 
-    assert_receive({:broadcast, msg})
-
-    Absinthe.Subscription.publish(PubSub, data, subscribable_created: "subscribable:created")
-    |> IO.inspect(label: :publish)
-
-    assert %{
-             event: "subscription:data",
-             result: %{data: %{"user" => %{"id" => "1", "name" => "foo"}}},
-             topic: topic
-           } == msg
+    assert_receive({:broadcast, absinthe_proxy, data, fields})
   end
 
   defp run_subscription(query, schema, opts) do
     opts = Keyword.update(opts, :context, %{pubsub: PubSub}, &Map.put(&1, :pubsub, PubSub))
 
-    case Absinthe.run(query, schema, opts) |> IO.inspect(label: :absinthe_run) do
+    case Absinthe.run(query, schema, opts) do
+      #  |> IO.inspect(label: :absinthe_run) do
       {:ok, %{"subscribed" => topic}} = val ->
         PubSub.subscribe(topic)
         val

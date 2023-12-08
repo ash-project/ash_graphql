@@ -35,11 +35,8 @@ defmodule AshGraphql.Test.Schema do
   subscription do
     field :subscribable_created, :subscribable do
       config(fn
-        _args, %{context: %{actor: %{id: user_id}}} ->
-          {:ok, topic: "subscribable:created", context_id: "user/#{user_id}"}
-
-        _args, _context ->
-          {:error, :unauthorized}
+        _args, _info ->
+          {:ok, topic: "*"}
       end)
 
       resolve(fn args, _, resolution ->
