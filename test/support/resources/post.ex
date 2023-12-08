@@ -140,6 +140,10 @@ defmodule AshGraphql.Test.Post do
 
   require Ash.Query
 
+  resource do
+    simple_notifiers [AshGraphql.Resource.Notifier]
+  end
+
   policies do
     policy always() do
       authorize_if(always())
