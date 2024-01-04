@@ -1,7 +1,5 @@
 defmodule AshGraphql.Test.Subscribable do
   @moduledoc false
-  alias AshGraphql.Test.PubSub
-
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
