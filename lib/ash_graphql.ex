@@ -202,6 +202,17 @@ defmodule AshGraphql do
               )
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
+
+                blueprint_with_subscriptions =
+                  api
+                  |> AshGraphql.Api.subscriptions(
+                    unquote(resources),
+                    action_middleware,
+                    __MODULE__
+                  )
+                  |> Enum.reduce(blueprint_with_queries, fn subscription, blueprint ->
+                    Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", mutation)
+                  end)
               end)
 
             managed_relationship_types =
@@ -212,7 +223,7 @@ defmodule AshGraphql do
               |> Enum.uniq_by(& &1.identifier)
               |> Enum.reject(fn type ->
                 existing_types =
-                  case blueprint_with_mutations do
+                  case blueprint_with_subscriptions do
                     %{schema_definitions: [%{type_definitions: type_definitions}]} ->
                       type_definitions
 

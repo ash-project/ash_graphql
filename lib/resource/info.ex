@@ -35,6 +35,11 @@ defmodule AshGraphql.Resource.Info do
     |> Enum.concat(Extension.get_entities(resource, [:graphql, :mutations]) || [])
   end
 
+  @doc "The subscriptions exposed for the resource"
+  def subscriptions(resource) do
+    Extension.get_entities(resource, [:graphql, :subscriptions]) || []
+  end
+
   @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"
   def encode_primary_key?(resource) do
     Extension.get_opt(resource, [:graphql], :encode_primary_key?, true)

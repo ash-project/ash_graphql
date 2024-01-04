@@ -2,7 +2,7 @@ defmodule AshGraphql.Resource do
   alias Ash.Changeset.ManagedRelationshipHelpers
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
-  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query}
+  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query, Subscription}
 
   @get %Spark.Dsl.Entity{
     name: :get,
@@ -272,6 +272,34 @@ defmodule AshGraphql.Resource do
 
   def mutations, do: [@create, @update, @destroy, @action]
 
+  @subscribe %Spark.Dsl.Entity{
+    name: :subscribe,
+    args: [:name, :config],
+    describe: "A query to fetch a record by primary key",
+    examples: [
+      "get :get_post, :read"
+    ],
+    schema: Subscription.schema(),
+    target: Subscription
+  }
+
+  @subscriptions %Spark.Dsl.Section{
+    name: :subscriptions,
+    describe: """
+    Subscriptions (notifications) to expose for the resource.
+    """,
+    examples: [
+      """
+      subscriptions do
+        subscribe :subscription_name, fn notifications -> ... end
+      end
+      """
+    ],
+    entities: [
+      @subscribe
+    ]
+  }
+
   @graphql %Spark.Dsl.Section{
     name: :graphql,
     imports: [AshGraphql.Resource.Helpers],
@@ -406,6 +434,7 @@ defmodule AshGraphql.Resource do
     sections: [
       @queries,
       @mutations,
+      @subscriptions,
       @managed_relationships
     ]
   }
@@ -435,6 +464,9 @@ defmodule AshGraphql.Resource do
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
   defdelegate mutations(resource, domain \\ []), to: AshGraphql.Resource.Info
+
+  @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
+  defdelegate subscriptions(resource), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.managed_relationships/1`"
   defdelegate managed_relationships(resource), to: AshGraphql.Resource.Info
@@ -1114,6 +1146,16 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
     end
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  @doc false
+  def subscriptions(api, resource, action_middleware, schema) do
+    resource
+    |> subscriptions()
+    |> dbg()
+
+    []
   end
 
   @doc false

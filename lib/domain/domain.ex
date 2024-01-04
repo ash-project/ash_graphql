@@ -209,6 +209,14 @@ defmodule AshGraphql.Domain do
     )
   end
 
+  def subscriptions(api, resources, action_middleware, schema) do
+    resources
+    |> Enum.filter(fn resource ->
+      AshGraphql.Resource in Spark.extensions(resource)
+    end)
+    |> Enum.flat_map(&AshGraphql.Resource.subscriptions(api, &1, action_middleware, schema))
+  end
+
   @doc false
   def type_definitions(
         domain,
