@@ -1153,9 +1153,15 @@ defmodule AshGraphql.Resource do
   def subscriptions(api, resource, action_middleware, schema) do
     resource
     |> subscriptions()
+    |> Enum.map(fn %Subscription{name: name, config: config} ->
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: name,
+        name: to_string(name),
+        type: AshGraphql.Resource.Info.type(resource),
+        __reference__: ref(__ENV__)
+      }
+    end)
     |> dbg()
-
-    []
   end
 
   @doc false

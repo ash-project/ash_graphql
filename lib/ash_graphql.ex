@@ -215,6 +215,13 @@ defmodule AshGraphql do
                   end)
               end)
 
+            blueprint_with_subscriptions =
+              api
+              |> AshGraphql.Api.subscriptions(unquote(resources), action_middleware, __MODULE__)
+              |> Enum.reduce(blueprint_with_mutations, fn subscription, blueprint ->
+                Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", subscription)
+              end)
+
             managed_relationship_types =
               AshGraphql.Resource.managed_relationship_definitions(
                 Process.get(:managed_relationship_requirements, []),
@@ -304,7 +311,7 @@ defmodule AshGraphql do
               end
 
             new_defs =
-              List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
+              List.update_at(blueprint_with_subscriptions.schema_definitions, 0, fn schema_def ->
                 %{
                   schema_def
                   | type_definitions:
@@ -313,7 +320,7 @@ defmodule AshGraphql do
                 }
               end)
 
-            {:ok, %{blueprint_with_mutations | schema_definitions: new_defs}}
+            {:ok, %{blueprint_with_subscriptions | schema_definitions: new_defs}}
           end
         end
 
