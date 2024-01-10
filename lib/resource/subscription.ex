@@ -12,17 +12,13 @@ defmodule AshGraphql.Resource.Subscription do
       doc: "The name to use for the subscription."
     ],
     config: [
-      type:
-        {:spark_function_behaviour, AshGraphql.Resource.Subscription.Config,
-         {AshGraphql.Resource.Subscription.Config.Function, 2}},
+      type: {:mfa_or_fun, 2},
       doc: """
       Function that creates the config for the subscription
       """
     ],
     resolve: [
-      type:
-        {:spark_function_behaviour, AshGraphql.Resource.Subscription.Resolve,
-         {AshGraphql.Resource.Subscription.Resolve.Function, 3}},
+      type: {:mfa_or_fun, 3},
       doc: """
       Function that creates the config for the subscription
       """,
