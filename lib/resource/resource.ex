@@ -1153,10 +1153,18 @@ defmodule AshGraphql.Resource do
   def subscriptions(api, resource, action_middleware, schema) do
     resource
     |> subscriptions()
-    |> Enum.map(fn %Subscription{name: name, config: config} ->
+    |> Enum.map(fn %Subscription{name: name, config: config} = subscription ->
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: name,
         name: to_string(name),
+        config: config,
+        module: schema,
+        middleware:
+          action_middleware ++
+            [
+              {{AshGraphql.Resource.Subscription.DefaultResolve, :resolve},
+               {api, resource, subscription, true}}
+            ],
         type: AshGraphql.Resource.Info.type(resource),
         __reference__: ref(__ENV__)
       }
