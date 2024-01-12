@@ -38,52 +38,6 @@ defmodule AshGraphql.MixProject do
     ["lib"]
   end
 
-  defp extras() do
-    "documentation/**/*.{md,livemd,cheatmd}"
-    |> Path.wildcard()
-    |> Enum.map(fn path ->
-      title =
-        path
-        |> Path.basename(".md")
-        |> Path.basename(".livemd")
-        |> Path.basename(".cheatmd")
-        |> String.split(~r/[-_]/)
-        |> Enum.map_join(" ", &capitalize/1)
-        |> case do
-          "F A Q" ->
-            "FAQ"
-
-          other ->
-            other
-        end
-
-      {String.to_atom(path),
-       [
-         title: title
-       ]}
-    end)
-  end
-
-  defp capitalize(string) do
-    string
-    |> String.split(" ")
-    |> Enum.map(fn string ->
-      [hd | tail] = String.graphemes(string)
-      String.capitalize(hd) <> Enum.join(tail)
-    end)
-  end
-
-  defp groups_for_extras() do
-    [
-      Tutorials: [
-        ~r'documentation/tutorials'
-      ],
-      "How To": ~r'documentation/how_to',
-      Topics: ~r'documentation/topics',
-      DSLs: ~r'documentation/dsls'
-    ]
-  end
-
   defp docs do
     [
       main: "getting-started-with-graphql",
@@ -105,8 +59,27 @@ defmodule AshGraphql.MixProject do
           """
         end
       end,
-      extras: extras(),
-      groups_for_extras: groups_for_extras(),
+      extras: [
+        "documentation/tutorials/getting-started-with-graphql.md",
+        "documentation/how_to/authorize-with-graphql.md",
+        "documentation/how_to/handle-errors.md",
+        "documentation/how_to/use-enums-with-graphql.md",
+        "documentation/how_to/use-json-with-graphql.md",
+        "documentation/how_to/use-subscriptions-with-graphql.md",
+        "documentation/how_to/use-unions-with-graphql.md",
+        "documentation/topics/monitoring.md",
+        "documentation/topics/graphql-generation.md",
+        "documentation/topics/modifying-the-resolution.md",
+        "documentation/topics/relay.md",
+        "documentation/dsls/DSL:-AshGraphql.Api.cheatmd",
+        "documentation/dsls/DSL:-AshGraphql.Resource.cheatmd"
+      ],
+      groups_for_extras: [
+        Tutorials: ~r'documentation/tutorials',
+        "How To": ~r'documentation/how_to',
+        Topics: ~r'documentation/topics',
+        DSLs: ~r'documentation/dsls'
+      ],
       groups_for_modules: [
         AshGraphql: [
           AshGraphql
