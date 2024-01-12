@@ -105,22 +105,6 @@ defmodule AshGraphql.MixProject do
           """
         end
       end,
-      spark: [
-        extensions: [
-          %{
-            module: AshGraphql.Resource,
-            name: "AshGraphql Resource",
-            target: "Ash.Resource",
-            type: "GraphQL Resource"
-          },
-          %{
-            module: AshGraphql.Api,
-            name: "AshGraphql Api",
-            target: "Ash.Api",
-            type: "GraphQL Api"
-          }
-        ]
-      ],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
       groups_for_modules: [
@@ -144,7 +128,15 @@ defmodule AshGraphql.MixProject do
         Miscellaneous: [
           AshGraphql.Resource.Helpers
         ],
-        Internals: ~r/.*/
+        Utilities: [
+          AshGraphql.ContextHelpers,
+          AshGraphql.DefaultErrorHandler,
+          AshGraphql.Plug,
+          AshGraphql.Subscription,
+          AshGraphql.Type,
+          AshGraphql.Types.JSON,
+          AshGraphql.Types.JSONString
+        ]
       ]
     ]
   end
