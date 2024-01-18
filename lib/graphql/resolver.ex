@@ -136,7 +136,7 @@ defmodule AshGraphql.Graphql.Resolver do
            action: action,
            identity: identity,
            modify_resolution: modify
-         } = gql_query}
+         } = gql_query, relay_ids?}
       ) do
     case handle_arguments(resource, action, arguments) do
       {:ok, arguments} ->
@@ -165,7 +165,7 @@ defmodule AshGraphql.Graphql.Resolver do
             tenant: Map.get(context, :tenant)
           ]
 
-          filter = identity_filter(identity, resource, arguments)
+          filter = identity_filter(identity, resource, arguments, relay_ids?)
 
           query =
             resource
@@ -279,7 +279,7 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: args, context: context} = resolution,
         {api, resource,
          %{name: query_name, type: :read_one, action: action, modify_resolution: modify} =
-           gql_query}
+           gql_query, _relay_ids?}
       ) do
     metadata = %{
       api: api,
@@ -372,7 +372,7 @@ defmodule AshGraphql.Graphql.Resolver do
            relay?: relay?,
            action: action,
            modify_resolution: modify
-         } = gql_query}
+         } = gql_query, _relay_ids?}
       ) do
     case handle_arguments(resource, action, args) do
       {:ok, args} ->
@@ -990,7 +990,7 @@ defmodule AshGraphql.Graphql.Resolver do
            upsert?: upsert?,
            upsert_identity: upsert_identity,
            modify_resolution: modify
-         }}
+         }, _relay_ids?}
       ) do
     input = arguments[:input] || %{}
 
@@ -1111,7 +1111,7 @@ defmodule AshGraphql.Graphql.Resolver do
            identity: identity,
            read_action: read_action,
            modify_resolution: modify
-         }}
+         }, relay_ids?}
       ) do
     read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
     input = arguments[:input] || %{}
@@ -1142,7 +1142,7 @@ defmodule AshGraphql.Graphql.Resolver do
               :gql_mutation,
               mutation_name,
               metadata do
-          filter = identity_filter(identity, resource, arguments)
+          filter = identity_filter(identity, resource, arguments, relay_ids?)
 
           case filter do
             {:ok, filter} ->
@@ -1271,7 +1271,7 @@ defmodule AshGraphql.Graphql.Resolver do
            identity: identity,
            read_action: read_action,
            modify_resolution: modify
-         }}
+         }, relay_ids?}
       ) do
     read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
     input = arguments[:input] || %{}
@@ -1302,7 +1302,7 @@ defmodule AshGraphql.Graphql.Resolver do
               :gql_mutation,
               mutation_name,
               metadata do
-          filter = identity_filter(identity, resource, arguments)
+          filter = identity_filter(identity, resource, arguments, relay_ids?)
 
           case filter do
             {:ok, filter} ->
@@ -1440,13 +1440,17 @@ defmodule AshGraphql.Graphql.Resolver do
     apply(m, f, [resolution | args] ++ a)
   end
 
-  def identity_filter(false, _resource, _arguments) do
+  def identity_filter(false, _resource, _arguments, _relay_ids?) do
     {:ok, nil}
   end
 
-  def identity_filter(nil, resource, arguments) do
-    if AshGraphql.Resource.Info.encode_primary_key?(resource) do
-      case AshGraphql.Resource.decode_primary_key(resource, Map.get(arguments, :id) || "") do
+  def identity_filter(nil, resource, arguments, relay_ids?) do
+    if relay_ids? or AshGraphql.Resource.Info.encode_primary_key?(resource) do
+      case AshGraphql.Resource.decode_id(
+             resource,
+             Map.get(arguments, :id) || "",
+             relay_ids?
+           ) do
         {:ok, value} ->
           {:ok, value}
 
@@ -1472,7 +1476,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  def identity_filter(identity, resource, arguments) do
+  def identity_filter(identity, resource, arguments, _relay_ids?) do
     {:ok,
      resource
      |> Ash.Resource.Info.identities()
@@ -2375,9 +2379,12 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_id(
         %{source: parent} = resolution,
-        {_resource, field}
+        {_resource, _field, relay_ids?}
       ) do
-    Absinthe.Resolution.put_result(resolution, {:ok, Map.get(parent, field)})
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:ok, AshGraphql.Resource.encode_id(parent, relay_ids?)}
+    )
   end
 
   def resolve_union(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -2508,11 +2515,11 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_composite_id(
         %{source: parent} = resolution,
-        {_resource, _fields}
+        {_resource, _fields, relay_ids?}
       ) do
     Absinthe.Resolution.put_result(
       resolution,
-      {:ok, AshGraphql.Resource.encode_primary_key(parent)}
+      {:ok, AshGraphql.Resource.encode_id(parent, relay_ids?)}
     )
   end
 

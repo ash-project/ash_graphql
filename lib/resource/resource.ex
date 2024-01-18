@@ -400,6 +400,14 @@ defmodule AshGraphql.Resource do
     %{module: __MODULE__, location: %{file: env.file, line: env.line}}
   end
 
+  def encode_id(record, relay_ids?) do
+    if relay_ids? do
+      encode_relay_id(record)
+    else
+      encode_primary_key(record)
+    end
+  end
+
   def encode_primary_key(%resource{} = record) do
     case Ash.Resource.Info.primary_key(resource) do
       [field] ->
@@ -414,6 +422,30 @@ defmodule AshGraphql.Resource do
           |> Enum.reduce([], fn key, acc -> [delimiter, to_string(Map.get(record, key)), acc] end)
 
         IO.iodata_to_binary(concatenated_keys)
+    end
+  end
+
+  def encode_relay_id(%resource{} = record) do
+    type = type(resource)
+    primary_key = encode_primary_key(record)
+
+    "#{type}:#{primary_key}"
+    |> Base.encode64()
+  end
+
+  def decode_id(resource, id, relay_ids?) do
+    type = type(resource)
+
+    if relay_ids? do
+      case decode_relay_id(id) do
+        {:ok, {^type, primary_key}} ->
+          decode_primary_key(resource, primary_key)
+
+        _ ->
+          {:error, "Invalid primary key"}
+      end
+    else
+      decode_primary_key(resource, id)
     end
   end
 
@@ -434,8 +466,22 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  def decode_relay_id(id) do
+    [type_string, primary_key] =
+      id
+      |> Base.decode64!()
+      |> String.split(":", parts: 2)
+
+    type = String.to_existing_atom(type_string)
+
+    {:ok, {type, primary_key}}
+  rescue
+    _ ->
+      {:error, "Invalid primary key"}
+  end
+
   @doc false
-  def queries(api, resource, action_middleware, schema, as_mutations? \\ false) do
+  def queries(api, resource, action_middleware, schema, relay_ids?, as_mutations? \\ false) do
     type = AshGraphql.Resource.Info.type(resource)
 
     if type do
@@ -475,7 +521,7 @@ defmodule AshGraphql.Resource do
             middleware:
               action_middleware ++
                 [
-                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query}}
+                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, relay_ids?}}
                 ],
             complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
             module: schema,
@@ -492,7 +538,7 @@ defmodule AshGraphql.Resource do
 
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
-  def mutations(api, resource, action_middleware, schema) do
+  def mutations(api, resource, action_middleware, schema, relay_ids?) do
     resource
     |> mutations()
     |> Enum.map(fn
@@ -540,7 +586,7 @@ defmodule AshGraphql.Resource do
             raise "No such action #{mutation.action} for #{inspect(resource)}"
 
         if action.soft? do
-          update_mutation(resource, schema, mutation, schema, action_middleware, api)
+          update_mutation(resource, schema, mutation, schema, action_middleware, api, relay_ids?)
         else
           %Absinthe.Blueprint.Schema.FieldDefinition{
             arguments: mutation_args(mutation, resource, schema),
@@ -548,7 +594,7 @@ defmodule AshGraphql.Resource do
             middleware:
               action_middleware ++
                 [
-                  {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+                  {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
                 ],
             module: schema,
             name: to_string(mutation.name),
@@ -591,7 +637,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               [
-                {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+                {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
               ],
           module: schema,
           name: to_string(mutation.name),
@@ -601,13 +647,13 @@ defmodule AshGraphql.Resource do
         }
 
       mutation ->
-        update_mutation(resource, schema, mutation, schema, action_middleware, api)
+        update_mutation(resource, schema, mutation, schema, action_middleware, api, relay_ids?)
     end)
-    |> Enum.concat(queries(api, resource, action_middleware, schema, true))
+    |> Enum.concat(queries(api, resource, action_middleware, schema, relay_ids?, true))
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp update_mutation(resource, schema, mutation, schema, action_middleware, api) do
+  defp update_mutation(resource, schema, mutation, schema, action_middleware, api, relay_ids?) do
     action =
       Ash.Resource.Info.action(resource, mutation.action) ||
         raise "No such action #{mutation.action} for #{inspect(resource)}"
@@ -642,7 +688,7 @@ defmodule AshGraphql.Resource do
       middleware:
         action_middleware ++
           [
-            {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation}}
+            {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
           ],
       module: schema,
       name: to_string(mutation.name),
@@ -1494,10 +1540,10 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def type_definitions(resource, api, schema) do
+  def type_definitions(resource, api, schema, relay_ids?) do
     List.wrap(calculation_input(resource, schema)) ++
-      List.wrap(type_definition(resource, api, schema)) ++
-      List.wrap(query_type_definitions(resource, api, schema)) ++
+      List.wrap(type_definition(resource, api, schema, relay_ids?)) ++
+      List.wrap(query_type_definitions(resource, api, schema, relay_ids?)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
@@ -3308,7 +3354,7 @@ defmodule AshGraphql.Resource do
     type.identifier == :node
   end
 
-  def query_type_definitions(resource, api, schema) do
+  def query_type_definitions(resource, api, schema, relay_ids?) do
     resource_type = AshGraphql.Resource.Info.type(resource)
 
     resource
@@ -3334,7 +3380,7 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
         description: Ash.Resource.Info.description(resource),
         interfaces: interfaces,
-        fields: fields(resource, api, schema, query),
+        fields: fields(resource, api, schema, relay_ids?, query),
         identifier: query.type_name,
         module: schema,
         name: Macro.camelize(to_string(query.type_name)),
@@ -3344,7 +3390,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  def type_definition(resource, api, schema) do
+  def type_definition(resource, api, schema, relay_ids?) do
     actual_resource = Ash.Type.NewType.subtype_of(resource)
 
     if generate_object?(resource) do
@@ -3356,6 +3402,7 @@ defmodule AshGraphql.Resource do
         resource
         |> queries()
         |> Enum.any?(&Map.get(&1, :relay?))
+        |> Kernel.or(relay_ids?)
 
       interfaces =
         if relay? do
@@ -3374,7 +3421,7 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
         description: Ash.Resource.Info.description(resource),
         interfaces: interfaces,
-        fields: fields(resource, api, schema),
+        fields: fields(resource, api, schema, relay_ids?),
         identifier: type,
         module: schema,
         name: Macro.camelize(to_string(type)),
@@ -3384,8 +3431,8 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp fields(resource, api, schema, query \\ nil) do
-    attributes(resource, api, schema) ++
+  defp fields(resource, api, schema, relay_ids?, query \\ nil) do
+    attributes(resource, api, schema, relay_ids?) ++
       metadata(query, resource, schema) ++
       relationships(resource, api, schema) ++
       aggregates(resource, api, schema) ++
@@ -3448,7 +3495,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp attributes(resource, api, schema) do
+  defp attributes(resource, api, schema, relay_ids?) do
     attribute_names = AshGraphql.Resource.Info.field_names(resource)
 
     attributes =
@@ -3490,15 +3537,15 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    if AshGraphql.Resource.Info.encode_primary_key?(resource) do
-      encoded_primary_key_attributes(resource, schema) ++
+    if relay_ids? or AshGraphql.Resource.Info.encode_primary_key?(resource) do
+      encoded_id(resource, schema, relay_ids?) ++
         attributes
     else
       attributes
     end
   end
 
-  defp encoded_primary_key_attributes(resource, schema) do
+  defp encoded_id(resource, schema, relay_ids?) do
     case Ash.Resource.Info.primary_key(resource) do
       [field] ->
         attribute = Ash.Resource.Info.attribute(resource, field)
@@ -3514,7 +3561,7 @@ defmodule AshGraphql.Resource do
               name: "id",
               type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
               middleware: [
-                {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field}}
+                {{AshGraphql.Graphql.Resolver, :resolve_id}, {resource, field, relay_ids?}}
               ],
               __reference__: ref(__ENV__)
             }
@@ -3530,7 +3577,8 @@ defmodule AshGraphql.Resource do
             name: "id",
             type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
             middleware: [
-              {{AshGraphql.Graphql.Resolver, :resolve_composite_id}, {resource, fields}}
+              {{AshGraphql.Graphql.Resolver, :resolve_composite_id},
+               {resource, fields, relay_ids?}}
             ],
             __reference__: ref(__ENV__)
           }
