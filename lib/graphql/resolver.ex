@@ -402,7 +402,7 @@ defmodule AshGraphql.Graphql.Resolver do
           ]
 
           pagination = Ash.Resource.Info.action(resource, action).pagination
-          query = apply_load_arguments(args, Ash.Query.new(resource))
+          query = apply_load_arguments(args, Ash.Query.new(resource), true)
 
           {result, modify_args} =
             with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
@@ -2536,12 +2536,12 @@ defmodule AshGraphql.Graphql.Resolver do
     child_complexity + 1
   end
 
-  defp apply_load_arguments(arguments, query) do
+  defp apply_load_arguments(arguments, query, will_paginate? \\ false) do
     Enum.reduce(arguments, query, fn
-      {:limit, limit}, query ->
+      {:limit, limit}, query when not will_paginate? ->
         Ash.Query.limit(query, limit)
 
-      {:offset, offset}, query ->
+      {:offset, offset}, query when not will_paginate? ->
         Ash.Query.offset(query, offset)
 
       {:filter, value}, query ->
