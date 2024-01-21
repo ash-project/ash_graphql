@@ -1115,6 +1115,67 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
 
+    test "loading through an unnested union with aliases works when one is nil" do
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(
+        text: "a",
+        embed_union_unnested: %{type: :foo, foo: "fred"},
+        published: true
+      )
+      |> AshGraphql.Test.Api.create!()
+
+      AshGraphql.Test.Post
+      |> Ash.Changeset.new(
+        text: "b",
+        published: true
+      )
+      |> AshGraphql.Test.Api.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            foo: embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysNil
+              }
+              ...on BarEmbed {
+                alwaysFalse
+              }
+            }
+            bar: embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysTrue
+              }
+              ...on BarEmbed {
+                alwaysTrue
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "bar" => %{"alwaysTrue" => true},
+                     "foo" => %{"alwaysNil" => nil}
+                   },
+                   %{
+                     "bar" => nil,
+                     "foo" => nil
+                   }
+                 ]
+               }
+             } = result
+    end
+
     test "loading relationships through a union with fragments works" do
       user1 =
         AshGraphql.Test.User
