@@ -3363,18 +3363,13 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn query ->
       relay? = Map.get(query, :relay?)
 
+      # We can implement the Relay node interface only if the resource has a get
+      # query using the primary key as identity
       interfaces =
-        if relay? do
+        if relay? and primary_key_get_query(resource) != nil do
           [:node]
         else
           []
-        end
-
-      is_type_of =
-        if relay? do
-          &AshGraphql.Resource.is_node_type/1
-        else
-          nil
         end
 
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
@@ -3384,8 +3379,7 @@ defmodule AshGraphql.Resource do
         identifier: query.type_name,
         module: schema,
         name: Macro.camelize(to_string(query.type_name)),
-        __reference__: ref(__ENV__),
-        is_type_of: is_type_of
+        __reference__: ref(__ENV__)
       }
     end)
   end
@@ -3404,18 +3398,13 @@ defmodule AshGraphql.Resource do
         |> Enum.any?(&Map.get(&1, :relay?))
         |> Kernel.or(relay_ids?)
 
+      # We can implement the Relay node interface only if the resource has a get
+      # query using the primary key as identity
       interfaces =
-        if relay? do
+        if relay? and primary_key_get_query(resource) != nil do
           [:node]
         else
           []
-        end
-
-      is_type_of =
-        if relay? do
-          &AshGraphql.Resource.is_node_type/1
-        else
-          nil
         end
 
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
@@ -3425,8 +3414,7 @@ defmodule AshGraphql.Resource do
         identifier: type,
         module: schema,
         name: Macro.camelize(to_string(type)),
-        __reference__: ref(__ENV__),
-        is_type_of: is_type_of
+        __reference__: ref(__ENV__)
       }
     end
   end
@@ -4165,5 +4153,12 @@ defmodule AshGraphql.Resource do
     else
       name
     end
+  end
+
+  def primary_key_get_query(resource) do
+    # Find the get query with no identities, i.e. the one that uses the primary key
+    resource
+    |> AshGraphql.Resource.Info.queries()
+    |> Enum.find(&(&1.type == :get and (&1.identity == nil or &1.identity == false)))
   end
 end

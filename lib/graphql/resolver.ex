@@ -2543,6 +2543,10 @@ defmodule AshGraphql.Graphql.Resolver do
     child_complexity + 1
   end
 
+  def resolve_node_type(%resource{}, _) do
+    AshGraphql.Resource.Info.type(resource)
+  end
+
   defp apply_load_arguments(arguments, query, will_paginate? \\ false) do
     Enum.reduce(arguments, query, fn
       {:limit, limit}, query when not will_paginate? ->

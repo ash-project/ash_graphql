@@ -123,6 +123,7 @@ defmodule AshGraphql.Api do
                 }
               ],
               identifier: :node,
+              resolve_type: &AshGraphql.Graphql.Resolver.resolve_node_type/2,
               __reference__: AshGraphql.Resource.ref(env),
               module: schema
             },
