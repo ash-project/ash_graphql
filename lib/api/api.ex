@@ -72,28 +72,33 @@ defmodule AshGraphql.Api do
   defdelegate debug?(api), to: AshGraphql.Api.Info
 
   @doc false
-  def queries(api, resources, action_middleware, schema) do
-    Enum.flat_map(resources, &AshGraphql.Resource.queries(api, &1, action_middleware, schema))
+  def queries(api, resources, action_middleware, schema, relay_ids?) do
+    Enum.flat_map(
+      resources,
+      &AshGraphql.Resource.queries(api, &1, action_middleware, schema, relay_ids?)
+    )
   end
 
   @doc false
-  def mutations(api, resources, action_middleware, schema) do
+  def mutations(api, resources, action_middleware, schema, relay_ids?) do
     resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
     end)
-    |> Enum.flat_map(&AshGraphql.Resource.mutations(api, &1, action_middleware, schema))
+    |> Enum.flat_map(
+      &AshGraphql.Resource.mutations(api, &1, action_middleware, schema, relay_ids?)
+    )
   end
 
   @doc false
-  def type_definitions(api, resources, schema, env, first?, define_relay_types?) do
+  def type_definitions(api, resources, schema, env, first?, define_relay_types?, relay_ids?) do
     resource_types =
       resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) &&
              AshGraphql.Resource.Info.type(resource) do
-          AshGraphql.Resource.type_definitions(resource, api, schema) ++
+          AshGraphql.Resource.type_definitions(resource, api, schema, relay_ids?) ++
             AshGraphql.Resource.mutation_types(resource, schema)
         else
           AshGraphql.Resource.no_graphql_types(resource, schema)
@@ -118,6 +123,7 @@ defmodule AshGraphql.Api do
                 }
               ],
               identifier: :node,
+              resolve_type: &AshGraphql.Graphql.Resolver.resolve_node_type/2,
               __reference__: AshGraphql.Resource.ref(env),
               module: schema
             },

@@ -141,3 +141,15 @@ defimpl AshGraphql.Error, for: Ash.Error.Forbidden.ForbiddenField do
     }
   end
 end
+
+defimpl AshGraphql.Error, for: Ash.Error.Invalid.InvalidPrimaryKey do
+  def to_error(error) do
+    %{
+      message: "invalid primary key provided",
+      short_message: "invalid primary key provided",
+      fields: [],
+      vars: Map.new(error.vars),
+      code: Ash.ErrorKind.code(error)
+    }
+  end
+end

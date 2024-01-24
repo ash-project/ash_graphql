@@ -14,7 +14,7 @@ defmodule AshGraphql.Subscription do
     query
     |> Ash.Query.set_tenant(Map.get(context, :tenant))
     |> Ash.Query.set_context(get_context(context))
-    |> AshGraphql.Graphql.Resolver.select_fields(query.resource, resolution)
+    |> AshGraphql.Graphql.Resolver.select_fields(query.resource, resolution, nil)
     |> AshGraphql.Graphql.Resolver.load_fields(
       [
         api: api,
