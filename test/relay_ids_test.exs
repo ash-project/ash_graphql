@@ -79,7 +79,7 @@ defmodule AshGraphql.RelayIdsTest do
         )
 
       assert {:ok, result} = resp
-      assert result[:errors] != nil
+      assert [%{code: "invalid_primary_key"}] = result[:errors]
     end
 
     test "returns error on ID for wrong resource" do
@@ -105,7 +105,7 @@ defmodule AshGraphql.RelayIdsTest do
         )
 
       assert {:ok, result} = resp
-      assert result[:errors] != nil
+      assert [%{code: "invalid_primary_key"}] = result[:errors]
     end
   end
 end

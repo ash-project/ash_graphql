@@ -442,7 +442,7 @@ defmodule AshGraphql.Resource do
           decode_primary_key(resource, primary_key)
 
         _ ->
-          {:error, "Invalid primary key"}
+          {:error, Ash.Error.Invalid.InvalidPrimaryKey.exception(resource: resource, value: id)}
       end
     else
       decode_primary_key(resource, id)
@@ -477,7 +477,7 @@ defmodule AshGraphql.Resource do
     {:ok, {type, primary_key}}
   rescue
     _ ->
-      {:error, "Invalid primary key"}
+      {:error, Ash.Error.Invalid.InvalidPrimaryKey.exception(resource: nil, value: id)}
   end
 
   @doc false
