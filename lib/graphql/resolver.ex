@@ -135,6 +135,7 @@ defmodule AshGraphql.Graphql.Resolver do
            type: :get,
            action: action,
            identity: identity,
+           type_name: type_name,
            modify_resolution: modify
          } = gql_query, relay_ids?}
       ) do
@@ -173,7 +174,7 @@ defmodule AshGraphql.Graphql.Resolver do
             |> Ash.Query.set_tenant(Map.get(context, :tenant))
             |> Ash.Query.set_context(get_context(context))
             |> set_query_arguments(action, arguments)
-            |> select_fields(resource, resolution)
+            |> select_fields(resource, resolution, type_name)
 
           {result, modify_args} =
             case filter do
@@ -212,7 +213,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Ash.Query.set_tenant(Map.get(context, :tenant))
                   |> Ash.Query.set_context(get_context(context))
                   |> set_query_arguments(action, arguments)
-                  |> select_fields(resource, resolution)
+                  |> select_fields(resource, resolution, type_name)
                   |> load_fields(
                     [
                       api: api,
@@ -278,7 +279,13 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve(
         %{arguments: args, context: context} = resolution,
         {api, resource,
-         %{name: query_name, type: :read_one, action: action, modify_resolution: modify} =
+         %{
+           name: query_name,
+           type: :read_one,
+           action: action,
+           modify_resolution: modify,
+           type_name: type_name
+         } =
            gql_query, _relay_ids?}
       ) do
     metadata = %{
@@ -313,7 +320,7 @@ defmodule AshGraphql.Graphql.Resolver do
           |> Ash.Query.set_tenant(Map.get(context, :tenant))
           |> Ash.Query.set_context(get_context(context))
           |> set_query_arguments(action, args)
-          |> select_fields(resource, resolution)
+          |> select_fields(resource, resolution, type_name)
           |> load_fields(
             [
               api: api,
@@ -371,6 +378,7 @@ defmodule AshGraphql.Graphql.Resolver do
            type: :list,
            relay?: relay?,
            action: action,
+           type_name: type_name,
            modify_resolution: modify
          } = gql_query, _relay_ids?}
       ) do
@@ -405,14 +413,15 @@ defmodule AshGraphql.Graphql.Resolver do
           query = apply_load_arguments(args, Ash.Query.new(resource), true)
 
           {result, modify_args} =
-            with {:ok, opts} <- validate_resolve_opts(resolution, pagination, opts, args),
+            with {:ok, opts} <-
+                   validate_resolve_opts(resolution, resource, pagination, relay?, opts, args),
                  result_fields <- get_result_fields(pagination, relay?),
                  initial_query <-
                    query
                    |> Ash.Query.set_tenant(Map.get(context, :tenant))
                    |> Ash.Query.set_context(get_context(context))
                    |> set_query_arguments(action, args)
-                   |> select_fields(resource, resolution, result_fields),
+                   |> select_fields(resource, resolution, type_name, result_fields),
                  query <-
                    load_fields(
                      initial_query,
@@ -727,7 +736,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  def validate_resolve_opts(resolution, pagination, opts, args) do
+  def validate_resolve_opts(resolution, resource, pagination, relay?, opts, args) do
     if pagination && (pagination.offset? || pagination.keyset?) do
       with page_opts <-
              args
@@ -735,7 +744,8 @@ defmodule AshGraphql.Graphql.Resolver do
              |> Enum.reject(fn {_, val} -> is_nil(val) end),
            {:ok, page_opts} <- validate_offset_opts(page_opts, pagination),
            {:ok, page_opts} <- validate_keyset_opts(page_opts, pagination) do
-        field_names = resolution |> fields([]) |> names_only()
+        type = page_type(resource, pagination, relay?)
+        field_names = resolution |> fields([], type) |> names_only()
 
         page =
           if Enum.any?(field_names, &(&1 == :count)) do
@@ -1029,6 +1039,8 @@ defmodule AshGraphql.Graphql.Resolver do
               opts
             end
 
+          type_name = mutation_result_type(mutation_name)
+
           changeset =
             resource
             |> Ash.Changeset.new()
@@ -1038,7 +1050,7 @@ defmodule AshGraphql.Graphql.Resolver do
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Api.Info.authorize?(api)
             )
-            |> select_fields(resource, resolution, ["result"])
+            |> select_fields(resource, resolution, type_name, ["result"])
             |> load_fields(
               [
                 api: api,
@@ -1174,6 +1186,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     tenant: Map.get(context, :tenant)
                   ]
 
+                  type_name = mutation_result_type(mutation_name)
+
                   changeset =
                     initial
                     |> Ash.Changeset.new()
@@ -1183,7 +1197,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       actor: Map.get(context, :actor),
                       authorize?: AshGraphql.Api.Info.authorize?(api)
                     )
-                    |> select_fields(resource, resolution, ["result"])
+                    |> select_fields(resource, resolution, type_name, ["result"])
                     |> load_fields(
                       [
                         api: api,
@@ -1334,6 +1348,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     tenant: Map.get(context, :tenant)
                   ]
 
+                  type_name = mutation_result_type(mutation_name)
+
                   changeset =
                     initial
                     |> Ash.Changeset.new()
@@ -1343,7 +1359,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       actor: Map.get(context, :actor),
                       authorize?: AshGraphql.Api.Info.authorize?(api)
                     )
-                    |> select_fields(resource, resolution, ["result"])
+                    |> select_fields(resource, resolution, type_name, ["result"])
 
                   {result, modify_args} =
                     changeset
@@ -1535,8 +1551,10 @@ defmodule AshGraphql.Graphql.Resolver do
   defp clear_fields(nil, _, _), do: nil
 
   defp clear_fields(result, resource, resolution) do
+    type = AshGraphql.Resource.Info.type(resource)
+
     resolution
-    |> fields(["result"])
+    |> fields(["result"], type)
     |> names_only()
     |> Enum.map(fn identifier ->
       Ash.Resource.Info.aggregate(resource, identifier)
@@ -1758,6 +1776,7 @@ defmodule AshGraphql.Graphql.Resolver do
             |> select_fields(
               relationship.destination,
               resolution,
+              nil,
               Enum.map(Enum.reverse([selection | path]), & &1.name)
             )
             |> load_fields(
@@ -2087,11 +2106,32 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp mutation_result_type(mutation_name) do
+    String.to_atom("#{mutation_name}_result")
+  end
+
+  defp page_type(resource, pagination, relay?) do
+    type = AshGraphql.Resource.Info.type(resource)
+
+    cond do
+      relay? ->
+        String.to_atom("#{type}_connection")
+
+      pagination.keyset? ->
+        String.to_atom("keyset_page_of_#{type}")
+
+      pagination.offset? ->
+        String.to_atom("page_of_#{type}")
+    end
+  end
+
   @doc false
-  def select_fields(query_or_changeset, resource, resolution, nested \\ []) do
+  def select_fields(query_or_changeset, resource, resolution, type_override, nested \\ []) do
+    type = type_override || AshGraphql.Resource.Info.type(resource)
+
     subfields =
       resolution
-      |> fields(nested)
+      |> fields(nested, type)
       |> names_only()
       |> Enum.map(&field_or_relationship(resource, &1))
       |> Enum.filter(& &1)
@@ -2122,12 +2162,15 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp fields(%Absinthe.Resolution{} = resolution, []) do
+  defp fields(%Absinthe.Resolution{} = resolution, [], type) do
     resolution
-    |> Absinthe.Resolution.project()
+    |> Absinthe.Resolution.project(type)
   end
 
-  defp fields(%Absinthe.Resolution{} = resolution, names) do
+  defp fields(%Absinthe.Resolution{} = resolution, names, _type) do
+    # Here we don't pass the type to project because the Enum.reduce below already
+    # takes care of projecting the nested fields using the correct type
+
     project =
       resolution
       |> Absinthe.Resolution.project()
