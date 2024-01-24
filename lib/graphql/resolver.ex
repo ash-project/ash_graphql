@@ -2586,6 +2586,22 @@ defmodule AshGraphql.Graphql.Resolver do
     child_complexity + 1
   end
 
+  def resolve_node(%{arguments: %{id: id}} = resolution, type_to_api_and_resource_map) do
+    case AshGraphql.Resource.decode_relay_id(id) do
+      {:ok, {type, primary_key}} ->
+        {api, resource} = Map.fetch!(type_to_api_and_resource_map, type)
+        # We can be sure this returns something since we check this at compile time
+        query = AshGraphql.Resource.primary_key_get_query(resource)
+
+        # We pass relay_ids? as false since we pass the already decoded primary key
+        put_in(resolution.arguments.id, primary_key)
+        |> resolve({api, resource, query, false})
+
+      {:error, _reason} = error ->
+        Absinthe.Resolution.put_result(resolution, error)
+    end
+  end
+
   def resolve_node_type(%resource{}, _) do
     AshGraphql.Resource.Info.type(resource)
   end

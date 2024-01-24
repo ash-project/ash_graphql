@@ -137,14 +137,25 @@ defmodule AshGraphql do
             api = unquote(api)
             action_middleware = unquote(action_middleware)
 
-            blueprint_with_queries =
-              api
-              |> AshGraphql.Api.queries(
+            api_queries =
+              AshGraphql.Api.queries(
+                api,
                 unquote(resources),
                 action_middleware,
                 __MODULE__,
                 unquote(relay_ids?)
               )
+
+            relay_queries =
+              if unquote(first?) and unquote(define_relay_types?) and unquote(relay_ids?) do
+                apis_with_resources = unquote(Enum.map(apis, &{elem(&1, 0), elem(&1, 1)}))
+                AshGraphql.relay_queries(apis_with_resources, unquote(schema), __ENV__)
+              else
+                []
+              end
+
+            blueprint_with_queries =
+              (relay_queries ++ api_queries)
               |> Enum.reduce(blueprint, fn query, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootQueryType", query)
               end)
@@ -349,6 +360,50 @@ defmodule AshGraphql do
         end
       end)
     end
+  end
+
+  def relay_queries(apis_with_resources, schema, env) do
+    type_to_api_and_resource_map =
+      apis_with_resources
+      |> Enum.flat_map(fn {api, resources} ->
+        resources
+        |> Enum.flat_map(fn resource ->
+          type = AshGraphql.Resource.Info.type(resource)
+
+          if type do
+            [{type, {api, resource}}]
+          else
+            []
+          end
+        end)
+      end)
+      |> Enum.into(%{})
+
+    [
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        name: "node",
+        identifier: :node,
+        arguments: [
+          %Absinthe.Blueprint.Schema.InputValueDefinition{
+            name: "id",
+            identifier: :id,
+            type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: :id
+            },
+            description: "The Node unique identifier",
+            __reference__: AshGraphql.Resource.ref(env)
+          }
+        ],
+        middleware: [
+          {{AshGraphql.Graphql.Resolver, :resolve_node}, type_to_api_and_resource_map}
+        ],
+        complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+        module: schema,
+        description: "Retrieves a Node from its global id",
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :node},
+        __reference__: AshGraphql.Resource.ref(__ENV__)
+      }
+    ]
   end
 
   defp nested_attrs({:array, type}, constraints, already_checked) do
