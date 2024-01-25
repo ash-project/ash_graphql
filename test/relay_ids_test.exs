@@ -225,4 +225,36 @@ defmodule AshGraphql.RelayIdsTest do
       assert result[:errors] != nil
     end
   end
+
+  describe "relay ID decoding" do
+    test "round trips" do
+      user =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "Fred"})
+        |> Api.create!()
+
+      user_id = user.id
+      user_type = AshGraphql.Resource.Info.type(User)
+
+      user_relay_id = AshGraphql.Resource.encode_relay_id(user)
+
+      assert {:ok, %{type: ^user_type, id: ^user_id}} =
+               AshGraphql.Resource.decode_relay_id(user_relay_id)
+    end
+
+    test "fails for invalid ids" do
+      assert {:error, %Ash.Error.Invalid.InvalidPrimaryKey{}} =
+               AshGraphql.Resource.decode_relay_id("notbase64")
+
+      assert {:error, %Ash.Error.Invalid.InvalidPrimaryKey{}} =
+               "non-existing-type:1234"
+               |> Base.encode64()
+               |> AshGraphql.Resource.decode_relay_id()
+
+      assert {:error, %Ash.Error.Invalid.InvalidPrimaryKey{}} =
+               "user"
+               |> Base.encode64()
+               |> AshGraphql.Resource.decode_relay_id()
+    end
+  end
 end

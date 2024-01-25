@@ -438,7 +438,7 @@ defmodule AshGraphql.Resource do
 
     if relay_ids? do
       case decode_relay_id(id) do
-        {:ok, {^type, primary_key}} ->
+        {:ok, %{type: ^type, id: primary_key}} ->
           decode_primary_key(resource, primary_key)
 
         _ ->
@@ -474,7 +474,7 @@ defmodule AshGraphql.Resource do
 
     type = String.to_existing_atom(type_string)
 
-    {:ok, {type, primary_key}}
+    {:ok, %{type: type, id: primary_key}}
   rescue
     _ ->
       {:error, Ash.Error.Invalid.InvalidPrimaryKey.exception(resource: nil, value: id)}

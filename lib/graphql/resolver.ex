@@ -2588,7 +2588,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_node(%{arguments: %{id: id}} = resolution, type_to_api_and_resource_map) do
     case AshGraphql.Resource.decode_relay_id(id) do
-      {:ok, {type, primary_key}} ->
+      {:ok, %{type: type, id: primary_key}} ->
         {api, resource} = Map.fetch!(type_to_api_and_resource_map, type)
         # We can be sure this returns something since we check this at compile time
         query = AshGraphql.Resource.primary_key_get_query(resource)
