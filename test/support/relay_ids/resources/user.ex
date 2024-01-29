@@ -14,11 +14,18 @@ defmodule AshGraphql.Test.RelayIds.User do
 
     mutations do
       create :create_user, :create
+      update :assign_posts, :assign_posts, relay_id_translations: [input: [post_ids: :post]]
     end
   end
 
   actions do
     defaults([:create, :update, :destroy, :read])
+
+    update :assign_posts do
+      argument(:post_ids, {:array, :uuid})
+
+      change(manage_relationship(:post_ids, :posts, value_is_key: :id, type: :append_and_remove))
+    end
   end
 
   attributes do

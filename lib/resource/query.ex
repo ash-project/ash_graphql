@@ -7,6 +7,7 @@ defmodule AshGraphql.Resource.Query do
     :identity,
     :allow_nil?,
     :modify_resolution,
+    :relay_id_translations,
     as_mutation?: false,
     metadata_names: [],
     metadata_types: [],
@@ -52,6 +53,13 @@ defmodule AshGraphql.Resource.Query do
       doc: """
       Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 

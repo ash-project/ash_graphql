@@ -257,4 +257,278 @@ defmodule AshGraphql.RelayIdsTest do
                |> AshGraphql.Resource.decode_relay_id()
     end
   end
+
+  describe "relay ID translation" do
+    test "works with create mutations" do
+      author_id =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "Fred"})
+        |> Api.create!()
+        |> AshGraphql.Resource.encode_relay_id()
+
+      resp =
+        """
+        mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+          simpleCreatePost(input: $input) {
+            result {
+              text
+              author {
+                id
+              }
+            }
+            errors {
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(Schema,
+          variables: %{
+            "input" => %{
+              "text" => "foo",
+              "author_id" => author_id
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "simpleCreatePost" => %{
+                   "result" => %{
+                     "text" => "foo",
+                     "author" => %{
+                       "id" => ^author_id
+                     }
+                   }
+                 }
+               }
+             } = result
+    end
+
+    test "works in update mutations" do
+      author_id =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "Fred"})
+        |> Api.create!()
+        |> AshGraphql.Resource.encode_relay_id()
+
+      post_id =
+        Post
+        |> Ash.Changeset.for_create(:create, %{text: "foo"})
+        |> Api.create!()
+        |> AshGraphql.Resource.encode_relay_id()
+
+      resp =
+        """
+        mutation AssignAuthor($id: ID!, $input: AssignAuthorInput) {
+          assignAuthor(id: $id, input: $input) {
+            result {
+              text
+              author {
+                id
+              }
+            }
+            errors {
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(Schema,
+          variables: %{
+            "id" => post_id,
+            "input" => %{
+              "author_id" => author_id
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "assignAuthor" => %{
+                   "result" => %{
+                     "author" => %{
+                       "id" => ^author_id
+                     }
+                   }
+                 }
+               }
+             } = result
+    end
+
+    test "works with lists" do
+      author_id =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "Fred"})
+        |> Api.create!()
+        |> AshGraphql.Resource.encode_relay_id()
+
+      post_ids =
+        Enum.map(1..5, fn i ->
+          Post
+          |> Ash.Changeset.for_create(:create, %{text: "foo #{i}"})
+          |> Api.create!()
+          |> AshGraphql.Resource.encode_relay_id()
+        end)
+
+      resp =
+        """
+        mutation AssignPosts($id: ID!, $input: AssignPostsInput) {
+          assignPosts(id: $id, input: $input) {
+            result {
+              posts {
+                id
+              }
+            }
+            errors {
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(Schema,
+          variables: %{
+            "id" => author_id,
+            "input" => %{
+              "post_ids" => post_ids
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "assignPosts" => %{
+                   "result" => %{
+                     "posts" => posts
+                   }
+                 }
+               }
+             } = result
+
+      assert length(posts) == 5
+      Enum.each(posts, fn post -> assert post["id"] in post_ids end)
+    end
+
+    test "rejects invalid IDs" do
+      author_id =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "Fred"})
+        |> Api.create!()
+        |> AshGraphql.Resource.encode_relay_id()
+
+      post_ids =
+        Enum.map(1..5, fn i ->
+          Post
+          |> Ash.Changeset.for_create(:create, %{text: "foo #{i}"})
+          |> Api.create!()
+          |> AshGraphql.Resource.encode_relay_id()
+        end)
+
+      post_ids = ["invalid_id" | post_ids]
+
+      resp =
+        """
+        mutation AssignPosts($id: ID!, $input: AssignPostsInput) {
+          assignPosts(id: $id, input: $input) {
+            result {
+              posts {
+                id
+              }
+            }
+            errors {
+              fields
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(Schema,
+          variables: %{
+            "id" => author_id,
+            "input" => %{
+              "post_ids" => post_ids
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      assert %{
+               data: %{
+                 "assignPosts" => %{
+                   "result" => nil,
+                   "errors" => [
+                     %{
+                       "fields" => ["post_ids"],
+                       "message" => "is invalid"
+                     }
+                   ]
+                 }
+               }
+             } = result
+    end
+
+    test "rejects IDs for another type" do
+      author_id =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "Fred"})
+        |> Api.create!()
+        |> AshGraphql.Resource.encode_relay_id()
+
+      post_ids = [author_id]
+
+      resp =
+        """
+        mutation AssignPosts($id: ID!, $input: AssignPostsInput) {
+          assignPosts(id: $id, input: $input) {
+            result {
+              posts {
+                id
+              }
+            }
+            errors {
+              fields
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(Schema,
+          variables: %{
+            "id" => author_id,
+            "input" => %{
+              "post_ids" => post_ids
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      assert %{
+               data: %{
+                 "assignPosts" => %{
+                   "result" => nil,
+                   "errors" => [
+                     %{
+                       "fields" => ["post_ids"],
+                       "message" => "is invalid"
+                     }
+                   ]
+                 }
+               }
+             } = result
+    end
+  end
 end
