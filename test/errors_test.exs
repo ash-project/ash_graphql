@@ -38,7 +38,7 @@ defmodule AshGraphql.ErrorsTest do
 
     assert {:ok, result} = resp
 
-    assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
+    assert %{data: nil, errors: [%{message: message}]} = result
 
     assert message =~ "confirmation did not match value"
   end
@@ -68,7 +68,7 @@ defmodule AshGraphql.ErrorsTest do
 
              assert {:ok, result} = resp
 
-             assert %{data: %{"createPostWithError" => nil}, errors: [%{message: message}]} =
+             assert %{data: nil, errors: [%{message: message}]} =
                       result
 
              assert message =~ "Something went wrong."
@@ -139,9 +139,7 @@ defmodule AshGraphql.ErrorsTest do
     assert {:ok, result} = resp
 
     assert %{
-             data: %{
-               "createPostWithError" => nil
-             },
+             data: nil,
              errors: [
                %{message: message}
              ]

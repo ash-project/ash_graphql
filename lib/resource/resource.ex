@@ -599,7 +599,9 @@ defmodule AshGraphql.Resource do
             module: schema,
             name: to_string(mutation.name),
             description: Ash.Resource.Info.action(resource, mutation.action).description,
-            type: String.to_atom("#{mutation.name}_result"),
+            type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: String.to_atom("#{mutation.name}_result")
+            },
             __reference__: ref(__ENV__)
           }
         end
@@ -642,7 +644,9 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(mutation.name),
           description: Ash.Resource.Info.action(resource, mutation.action).description,
-          type: String.to_atom("#{mutation.name}_result"),
+          type: %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: String.to_atom("#{mutation.name}_result")
+          },
           __reference__: ref(__ENV__)
         }
 
@@ -693,7 +697,9 @@ defmodule AshGraphql.Resource do
       module: schema,
       name: to_string(mutation.name),
       description: Ash.Resource.Info.action(resource, mutation.action).description,
-      type: String.to_atom("#{mutation.name}_result"),
+      type: %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: String.to_atom("#{mutation.name}_result")
+      },
       __reference__: ref(__ENV__)
     }
   end
