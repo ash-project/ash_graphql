@@ -6,6 +6,7 @@ config :ash, :validate_api_resource_inclusion?, false
 config :ash, :validate_api_config_inclusion?, false
 
 config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
+config :ash_graphql, :allow_non_null_mutation_arguments?, true
 
 if Mix.env() == :dev do
   config :git_ops,

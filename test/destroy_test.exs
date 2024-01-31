@@ -14,7 +14,7 @@ defmodule AshGraphql.DestroyTest do
 
     resp =
       """
-      mutation DeletePost($id: ID) {
+      mutation DeletePost($id: ID!) {
         deletePost(id: $id) {
           result{
             text
@@ -42,7 +42,7 @@ defmodule AshGraphql.DestroyTest do
 
     resp =
       """
-      mutation ArchivePost($id: ID) {
+      mutation ArchivePost($id: ID!) {
         deletePost(id: $id) {
           result{
             text
@@ -96,7 +96,7 @@ defmodule AshGraphql.DestroyTest do
 
     resp =
       """
-      mutation DeleteWithError($id: ID) {
+      mutation DeleteWithError($id: ID!) {
         deletePostWithError(id: $id) {
           result{
             text
@@ -128,7 +128,7 @@ defmodule AshGraphql.DestroyTest do
   test "destroying a non-existent record returns a not found error" do
     resp =
       """
-      mutation DeletePost($id: ID) {
+      mutation DeletePost($id: ID!) {
         deletePost(id: $id) {
           result{
             text
@@ -162,7 +162,7 @@ defmodule AshGraphql.DestroyTest do
 
     resp =
       """
-      mutation DeletePost($id: ID) {
+      mutation DeletePost($id: ID!) {
         deletePostWithError(id: $id) {
           result{
             text

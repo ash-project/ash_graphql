@@ -21,6 +21,7 @@ in `config/config.exs`
 
 ```elixir
 config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
+config :ash_graphql, :allow_non_null_mutation_arguments?, true
 ```
 
 This won't be necessary after the next major release, where this new configuration will be the default.
