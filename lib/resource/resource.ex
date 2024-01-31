@@ -552,14 +552,14 @@ defmodule AshGraphql.Resource do
             [] ->
               []
 
-            _ ->
+            fields ->
               [
                 %Absinthe.Blueprint.Schema.InputValueDefinition{
                   identifier: :input,
                   module: schema,
                   name: "input",
                   placement: :argument_definition,
-                  type: String.to_atom("#{name}_input")
+                  type: mutation_input_type(name, fields)
                 }
               ]
           end
@@ -621,14 +621,14 @@ defmodule AshGraphql.Resource do
             [] ->
               []
 
-            _ ->
+            fields ->
               [
                 %Absinthe.Blueprint.Schema.InputValueDefinition{
                   identifier: :input,
                   module: schema,
                   name: "input",
                   placement: :argument_definition,
-                  type: String.to_atom("#{mutation.name}_input")
+                  type: mutation_input_type(mutation.name, fields)
                 }
               ]
           end
@@ -672,7 +672,7 @@ defmodule AshGraphql.Resource do
         [] ->
           mutation_args(mutation, resource, schema)
 
-        _ ->
+        fields ->
           mutation_args(mutation, resource, schema) ++
             [
               %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -680,7 +680,7 @@ defmodule AshGraphql.Resource do
                 module: schema,
                 name: "input",
                 placement: :argument_definition,
-                type: String.to_atom("#{mutation.name}_input"),
+                type: mutation_input_type(mutation.name, fields),
                 __reference__: ref(__ENV__)
               }
             ]
@@ -730,6 +730,12 @@ defmodule AshGraphql.Resource do
     |> Enum.concat(mutation_read_args(mutation, resource, schema))
   end
 
+  @allow_non_null_mutation_arguments? Application.compile_env(
+                                        :ash_graphql,
+                                        :allow_non_null_mutation_arguments?,
+                                        false
+                                      )
+
   defp mutation_args(mutation, resource, schema) do
     [
       %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -737,11 +743,29 @@ defmodule AshGraphql.Resource do
         module: schema,
         name: "id",
         placement: :argument_definition,
-        type: :id,
+        type: maybe_wrap_non_null(:id, @allow_non_null_mutation_arguments?),
         __reference__: ref(__ENV__)
       }
       | mutation_read_args(mutation, resource, schema)
     ]
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp mutation_input_type(mutation_name, mutation_fields) do
+    any_non_null_field? =
+      mutation_fields
+      |> Enum.any?(fn
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          type: %Absinthe.Blueprint.TypeReference.NonNull{}
+        } ->
+          true
+
+        _ ->
+          false
+      end)
+
+    String.to_atom("#{mutation_name}_input")
+    |> maybe_wrap_non_null(any_non_null_field? and @allow_non_null_mutation_arguments?)
   end
 
   defp mutation_read_args(%{read_action: read_action}, resource, schema) do
