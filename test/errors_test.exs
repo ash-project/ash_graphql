@@ -353,4 +353,66 @@ defmodule AshGraphql.ErrorsTest do
 
     assert message =~ "Breakdown"
   end
+
+  test "error items are non-nullable" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "CreateUserResult") {
+          fields {
+            name
+            type {
+              kind
+              ofType {
+                kind
+                ofType {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    errors =
+      data["__type"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "errors" end)
+
+    assert errors["type"]["kind"] == "LIST"
+    assert errors["type"]["ofType"]["kind"] == "NON_NULL"
+    assert errors["type"]["ofType"]["ofType"]["name"] == "MutationError"
+  end
+
+  test "MutationError fields items are non-nullable" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "MutationError") {
+          fields {
+            name
+            type {
+              kind
+              ofType {
+                kind
+                ofType {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    fields =
+      data["__type"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "fields" end)
+
+    assert fields["type"]["kind"] == "LIST"
+    assert fields["type"]["ofType"]["kind"] == "NON_NULL"
+    assert fields["type"]["ofType"]["ofType"]["name"] == "String"
+  end
 end

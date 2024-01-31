@@ -811,7 +811,9 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: "errors",
           type: %Absinthe.Blueprint.TypeReference.List{
-            of_type: :mutation_error
+            of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: :mutation_error
+            }
           },
           __reference__: ref(__ENV__)
         }
