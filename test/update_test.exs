@@ -19,7 +19,7 @@ defmodule AshGraphql.UpdateTest do
 
     resp =
       """
-      mutation UpdatePost($id: ID, $input: UpdatePostInput) {
+      mutation UpdatePost($id: ID!, $input: UpdatePostInput) {
         updatePost(id: $id, input: $input) {
           result{
             text
@@ -209,7 +209,7 @@ defmodule AshGraphql.UpdateTest do
 
     resp =
       """
-      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID) {
+      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID!) {
         updatePostConfirm(input: $input, id: $id) {
           result{
             text
@@ -253,7 +253,7 @@ defmodule AshGraphql.UpdateTest do
 
     resp =
       """
-      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID) {
+      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID!) {
         updatePostConfirm(input: $input, id: $id) {
           result{
             text
