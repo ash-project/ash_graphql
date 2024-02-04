@@ -71,8 +71,8 @@ defmodule AshGraphql.MixProject do
         "documentation/topics/graphql-generation.md",
         "documentation/topics/modifying-the-resolution.md",
         "documentation/topics/relay.md",
-        "documentation/dsls/DSL:-AshGraphql.Api.cheatmd",
-        "documentation/dsls/DSL:-AshGraphql.Resource.cheatmd"
+        "documentation/dsls/DSL:-AshGraphql.Api.md",
+        "documentation/dsls/DSL:-AshGraphql.Resource.md"
       ],
       groups_for_extras: [
         Tutorials: ~r'documentation/tutorials',

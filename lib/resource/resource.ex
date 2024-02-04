@@ -2745,10 +2745,23 @@ defmodule AshGraphql.Resource do
                           :allow_nil?,
                           true
                         ) do
-                       do_field_type(type, nil, nil, false)
+                       do_field_type(
+                         type,
+                         nil,
+                         nil,
+                         false,
+                         Keyword.get(constraints, :constraints)
+                       )
                      else
                        %Absinthe.Blueprint.TypeReference.NonNull{
-                         of_type: do_field_type(type, nil, nil, false)
+                         of_type:
+                           do_field_type(
+                             type,
+                             nil,
+                             nil,
+                             false,
+                             Keyword.get(constraints, :constraints)
+                           )
                        }
                      end
                  }
@@ -3887,13 +3900,14 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp do_field_type(type, field, resource, input?)
+  defp do_field_type(type, field, resource, input?, constraints \\ nil)
 
   defp do_field_type(
          {:array, type},
          %Ash.Resource.Aggregate{kind: :list} = aggregate,
          resource,
-         input?
+         input?,
+         _
        ) do
     with related when not is_nil(related) <-
            Ash.Resource.Info.related(resource, aggregate.relationship_path),
@@ -3912,21 +3926,21 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp do_field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?) do
+  defp do_field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?, _) do
     %Absinthe.Blueprint.TypeReference.List{
       of_type: do_field_type(type, aggregate, resource, input?)
     }
   end
 
-  defp do_field_type({:array, type}, nil, resource, input?) do
-    field_type = do_field_type(type, nil, resource, input?)
+  defp do_field_type({:array, type}, nil, resource, input?, constraints) do
+    field_type = do_field_type(type, nil, resource, input?, constraints[:items] || [])
 
     %Absinthe.Blueprint.TypeReference.List{
       of_type: field_type
     }
   end
 
-  defp do_field_type({:array, type}, attribute, resource, input?) do
+  defp do_field_type({:array, type}, attribute, resource, input?, _) do
     new_constraints = attribute.constraints[:items] || []
     new_attribute = %{attribute | constraints: new_constraints, type: type}
 
@@ -3943,8 +3957,14 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
-  defp do_field_type(type, attribute, resource, input?) do
+  defp do_field_type(type, attribute, resource, input?, constraints) do
     type = Ash.Type.get_type(type)
+
+    constraints =
+      case attribute do
+        %{constraints: constraints} -> constraints
+        _ -> constraints
+      end || []
 
     if Ash.Type.builtin?(type) do
       get_specific_field_type(type, attribute, resource, input?)
@@ -3991,7 +4011,7 @@ defmodule AshGraphql.Resource do
 
             cond do
               function_exported?(type, function, 1) ->
-                apply(type, function, [Map.get(attribute, :constraints)])
+                apply(type, function, [constraints])
 
               function_exported?(type, function, 0) ->
                 apply(type, function, [])
@@ -4003,7 +4023,7 @@ defmodule AshGraphql.Resource do
                 if function_exported?(type, :graphql_type, 0) do
                   :"#{type.graphql_type()}_input"
                 else
-                  :"#{type.graphql_type(Map.get(attribute, :constraints, []))}_input"
+                  :"#{type.graphql_type(constraints)}_input"
                 end
 
               true ->
@@ -4015,7 +4035,7 @@ defmodule AshGraphql.Resource do
                       | type: type.subtype_of(),
                         constraints:
                           type.type_constraints(
-                            attribute.constraints,
+                            constraints,
                             type.subtype_constraints()
                           )
                     },
