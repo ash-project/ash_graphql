@@ -2664,10 +2664,10 @@ defmodule AshGraphql.Resource do
                   attribute.type.graphql_input_type(attribute.constraints)
 
                 true ->
-                  map_type(resource, attribute.name, _input? = true)
+                  map_type(resource, attribute.name, true)
               end
             else
-              map_type(resource, attribute.name, _input? = true)
+              map_type(resource, attribute.name, true)
             end
           else
             nil
@@ -2833,10 +2833,10 @@ defmodule AshGraphql.Resource do
                    name: to_string(name),
                    type:
                      if Keyword.get(attribute, :allow_nil?, true) do
-                       do_field_type(type, nil, nil, false)
+                       do_field_type(type, nil, nil, true)
                      else
                        %Absinthe.Blueprint.TypeReference.NonNull{
-                         of_type: do_field_type(type, nil, nil, false)
+                         of_type: do_field_type(type, nil, nil, true)
                        }
                      end
                  }

@@ -2106,10 +2106,12 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp mutation_result_type(mutation_name) do
     String.to_atom("#{mutation_name}_result")
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp page_type(resource, pagination, relay?) do
     type = AshGraphql.Resource.Info.type(resource)
 
