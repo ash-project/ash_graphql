@@ -57,12 +57,19 @@ defmodule AshGraphql.Resource do
       type: :atom,
       doc: "The action to use for the query.",
       required: true
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 
   defmodule Action do
     @moduledoc "Represents a configured generic action"
-    defstruct [:type, :name, :action]
+    defstruct [:type, :name, :action, :relay_id_translations]
   end
 
   @action %Spark.Dsl.Entity{
@@ -499,6 +506,7 @@ defmodule AshGraphql.Resource do
             identifier: name,
             middleware:
               action_middleware ++
+                id_translation_middleware(query.relay_id_translations, relay_ids?) ++
                 [
                   {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, false}}
                 ],
@@ -520,6 +528,7 @@ defmodule AshGraphql.Resource do
             identifier: query.name,
             middleware:
               action_middleware ++
+                id_translation_middleware(query.relay_id_translations, relay_ids?) ++
                 [
                   {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, relay_ids?}}
                 ],
@@ -569,6 +578,7 @@ defmodule AshGraphql.Resource do
           identifier: name,
           middleware:
             action_middleware ++
+              id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, true}}
               ],
@@ -593,6 +603,7 @@ defmodule AshGraphql.Resource do
             identifier: mutation.name,
             middleware:
               action_middleware ++
+                id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
                 [
                   {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
                 ],
@@ -638,6 +649,7 @@ defmodule AshGraphql.Resource do
           identifier: mutation.name,
           middleware:
             action_middleware ++
+              id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
               ],
@@ -691,6 +703,7 @@ defmodule AshGraphql.Resource do
       identifier: mutation.name,
       middleware:
         action_middleware ++
+          id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
           [
             {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
           ],
@@ -892,6 +905,14 @@ defmodule AshGraphql.Resource do
           [input, result] ++ List.wrap(metadata_object_type)
       end
     end)
+  end
+
+  defp id_translation_middleware(relay_id_translations, true) do
+    [{{AshGraphql.Graphql.IdTranslator, :translate_relay_ids}, relay_id_translations}]
+  end
+
+  defp id_translation_middleware(_relay_id_translations, _relay_ids?) do
+    []
   end
 
   # sobelow_skip ["DOS.StringToAtom"]

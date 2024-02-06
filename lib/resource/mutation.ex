@@ -8,7 +8,8 @@ defmodule AshGraphql.Resource.Mutation do
     :read_action,
     :upsert?,
     :upsert_identity,
-    :modify_resolution
+    :modify_resolution,
+    :relay_id_translations
   ]
 
   @create_schema [
@@ -37,6 +38,13 @@ defmodule AshGraphql.Resource.Mutation do
       doc: """
       An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 
@@ -61,6 +69,13 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc:
         "The read action to use to fetch the record to be updated. Defaults to the primary read action."
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 
@@ -85,6 +100,13 @@ defmodule AshGraphql.Resource.Mutation do
       doc: """
       The identity to use to fetch the record to be destroyed. Use `false` if no identity is required.
       """
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 

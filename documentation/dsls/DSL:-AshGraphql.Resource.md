@@ -127,6 +127,7 @@ get :get_post, :read
 | [`metadata_types`](#graphql-queries-get-metadata_types){: #graphql-queries-get-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-get-show_metadata){: #graphql-queries-get-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
 | [`as_mutation?`](#graphql-queries-get-as_mutation?){: #graphql-queries-get-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-get-relay_id_translations){: #graphql-queries-get-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -169,6 +170,7 @@ read_one :current_user, :current_user
 | [`metadata_types`](#graphql-queries-read_one-metadata_types){: #graphql-queries-read_one-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-read_one-show_metadata){: #graphql-queries-read_one-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
 | [`as_mutation?`](#graphql-queries-read_one-as_mutation?){: #graphql-queries-read_one-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-read_one-relay_id_translations){: #graphql-queries-read_one-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -215,6 +217,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`metadata_types`](#graphql-queries-list-metadata_types){: #graphql-queries-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-list-show_metadata){: #graphql-queries-list-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
 | [`as_mutation?`](#graphql-queries-list-as_mutation?){: #graphql-queries-list-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-list-relay_id_translations){: #graphql-queries-list-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -247,7 +250,11 @@ action :check_status, :check_status
 |------|------|---------|------|
 | [`name`](#graphql-queries-action-name){: #graphql-queries-action-name } | `atom` | `:get` | The name to use for the query. |
 | [`action`](#graphql-queries-action-action){: #graphql-queries-action-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
 
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`relay_id_translations`](#graphql-queries-action-relay_id_translations){: #graphql-queries-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -312,6 +319,7 @@ create :create_post, :create
 | [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`. |
 | [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-mutations-create-relay_id_translations){: #graphql-mutations-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -350,6 +358,7 @@ update :update_post, :update
 |------|------|---------|------|
 | [`identity`](#graphql-mutations-update-identity){: #graphql-mutations-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-update-read_action){: #graphql-mutations-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
+| [`relay_id_translations`](#graphql-mutations-update-relay_id_translations){: #graphql-mutations-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -388,6 +397,7 @@ destroy :destroy_post, :destroy
 |------|------|---------|------|
 | [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
 | [`identity`](#graphql-mutations-destroy-identity){: #graphql-mutations-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
+| [`relay_id_translations`](#graphql-mutations-destroy-relay_id_translations){: #graphql-mutations-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 
@@ -420,7 +430,11 @@ action :check_status, :check_status
 |------|------|---------|------|
 | [`name`](#graphql-mutations-action-name){: #graphql-mutations-action-name } | `atom` | `:get` | The name to use for the query. |
 | [`action`](#graphql-mutations-action-action){: #graphql-mutations-action-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
 
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
 

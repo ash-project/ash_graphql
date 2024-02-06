@@ -16,8 +16,9 @@ defmodule AshGraphql.Test.RelayIds.Post do
     end
 
     mutations do
-      create :simple_create_post, :create
+      create :simple_create_post, :create, relay_id_translations: [input: [author_id: :user]]
       update :update_post, :update
+      update :assign_author, :assign_author, relay_id_translations: [input: [author_id: :user]]
       destroy :delete_post, :destroy
     end
   end
@@ -27,6 +28,12 @@ defmodule AshGraphql.Test.RelayIds.Post do
 
     create :create do
       primary?(true)
+      argument(:author_id, :uuid)
+
+      change(set_attribute(:author_id, arg(:author_id)))
+    end
+
+    update :assign_author do
       argument(:author_id, :uuid)
 
       change(set_attribute(:author_id, arg(:author_id)))
