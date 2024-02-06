@@ -8,8 +8,6 @@ defmodule AshGraphql.Resource.Subscription.DefaultResolve do
         %{arguments: arguments, context: context} = resolution,
         {api, resource, %AshGraphql.Resource.Subscription{}, input?}
       ) do
-    dbg()
-
     result =
       AshGraphql.Subscription.query_for_subscription(
         resource,
@@ -19,7 +17,6 @@ defmodule AshGraphql.Resource.Subscription.DefaultResolve do
       # |> Ash.Query.filter(id == ^args.id)
       |> Ash.Query.limit(1)
       |> api.read_one(actor: resolution.context[:current_user])
-      |> IO.inspect()
 
     resolution
     |> Absinthe.Resolution.put_result(result)

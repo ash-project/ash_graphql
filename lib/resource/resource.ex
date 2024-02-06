@@ -442,7 +442,8 @@ defmodule AshGraphql.Resource do
   @transformers [
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
-    AshGraphql.Resource.Transformers.ValidateCompatibleNames
+    AshGraphql.Resource.Transformers.ValidateCompatibleNames,
+    AshGraphql.Resource.Transformers.Subscription
   ]
 
   @verifiers [
@@ -1131,7 +1132,6 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
     end)
-    |> dbg()
   end
 
   @doc false
