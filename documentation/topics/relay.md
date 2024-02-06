@@ -29,7 +29,7 @@ This allows refetching a node using the `node` query and passing its global ID.
 ### Translating Relay Global IDs passed as arguments
 
 When `relay_ids?: true` is passed, users of the API will have access only to the global IDs, so they
-will also pass use them when an ID is required as argument. You actions, though, internally use the
+will also need to use them when an ID is required as argument. You actions, though, internally use the
 normal IDs defined by the data layer.
 
 To handle the translation between the two ID domains, you can use the `relay_id_translations`
