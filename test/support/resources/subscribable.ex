@@ -6,10 +6,6 @@ defmodule AshGraphql.Test.Subscribable do
 
   require Ash.Query
 
-  resource do
-    simple_notifiers([AshGraphql.Resource.Notifier])
-  end
-
   graphql do
     type :subscribable
 
@@ -19,6 +15,13 @@ defmodule AshGraphql.Test.Subscribable do
 
     mutations do
       create :create_subscribable, :create
+    end
+
+    subscriptions do
+      subscribe(:subscribable_created, fn _, _ ->
+        IO.inspect("bucket_created")
+        {:ok, topic: "*"}
+      end)
     end
   end
 

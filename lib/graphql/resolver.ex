@@ -13,8 +13,6 @@ defmodule AshGraphql.Graphql.Resolver do
         %{arguments: arguments, context: context} = resolution,
         {domain, resource, %AshGraphql.Resource.Action{name: query_name, action: action}, input?}
       ) do
-    dbg()
-
     arguments =
       if input? do
         arguments[:input] || %{}
