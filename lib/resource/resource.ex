@@ -2131,6 +2131,61 @@ defmodule AshGraphql.Resource do
   end
 
   defp filter_fields(operator, type, array_type?, schema, attribute_or_aggregate, resource) do
+    if :attributes
+       |> operator.__info__()
+       |> Keyword.get_values(:behaviour)
+       |> List.flatten()
+       |> Enum.any?(&(&1 == Ash.Query.Operator)) do
+      operator_filter_fields(
+        operator,
+        type,
+        array_type?,
+        schema,
+        attribute_or_aggregate,
+        resource
+      )
+    else
+      function_filter_fields(
+        operator,
+        type,
+        array_type?,
+        schema,
+        attribute_or_aggregate,
+        resource
+      )
+    end
+  end
+
+  defp function_filter_fields(
+         function,
+         type,
+         _array_type?,
+         schema,
+         attribute_or_aggregate,
+         resource
+       ) do
+    [
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: function.name(),
+        module: schema,
+        name: to_string(function.name()),
+        type: field_type(type, attribute_or_aggregate, resource, true),
+        __reference__: ref(__ENV__)
+      }
+    ]
+  rescue
+    _e ->
+      []
+  end
+
+  defp operator_filter_fields(
+         operator,
+         type,
+         array_type?,
+         schema,
+         attribute_or_aggregate,
+         resource
+       ) do
     expressable_types =
       Enum.filter(operator.types(), fn
         [:any, {:array, type}] when is_atom(type) ->
