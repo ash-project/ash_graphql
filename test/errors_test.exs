@@ -12,8 +12,6 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "errors can be configured to be shown in the root" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api, graphql: [root_level_errors?: true])
-
     resp =
       """
       mutation CreatePost($input: CreatePostInput) {
@@ -27,7 +25,7 @@ defmodule AshGraphql.ErrorsTest do
         }
       }
       """
-      |> Absinthe.run(AshGraphql.Test.Schema,
+      |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
         variables: %{
           "input" => %{
             "text" => "foobar",
@@ -38,7 +36,7 @@ defmodule AshGraphql.ErrorsTest do
 
     assert {:ok, result} = resp
 
-    assert %{data: nil, errors: [%{message: message}]} = result
+    assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
 
     assert message =~ "confirmation did not match value"
   end
@@ -111,8 +109,8 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "showing raised errors alongside root errors shows raised errors in the root" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
-      graphql: [show_raised_errors?: true, root_level_errors?: true]
+    Application.put_env(:ash_graphql, AshGraphql.Test.RootLevelErrorsApi,
+      graphql: [show_raised_errors?: true]
     )
 
     resp =
@@ -128,7 +126,7 @@ defmodule AshGraphql.ErrorsTest do
         }
       }
       """
-      |> Absinthe.run(AshGraphql.Test.Schema,
+      |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
         variables: %{
           "input" => %{
             "text" => "foobar"
@@ -139,7 +137,7 @@ defmodule AshGraphql.ErrorsTest do
     assert {:ok, result} = resp
 
     assert %{
-             data: nil,
+             data: %{"createPostWithError" => nil},
              errors: [
                %{message: message}
              ]
@@ -414,5 +412,61 @@ defmodule AshGraphql.ErrorsTest do
     assert fields["type"]["kind"] == "LIST"
     assert fields["type"]["ofType"]["kind"] == "NON_NULL"
     assert fields["type"]["ofType"]["ofType"]["name"] == "String"
+  end
+
+  test "mutation result is non nullable without root level errors" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          mutationType {
+            name
+            fields {
+              name
+              type {
+                kind
+                ofType {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    create_post_mutation =
+      data["__schema"]["mutationType"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "createPost" end)
+
+    assert create_post_mutation["type"]["kind"] == "NON_NULL"
+    assert create_post_mutation["type"]["ofType"]["name"] == "CreatePostResult"
+  end
+
+  test "mutation result is nullable with root level errors" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          mutationType {
+            name
+            fields {
+              name
+              type {
+                name
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema)
+
+    create_post_mutation =
+      data["__schema"]["mutationType"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "createPost" end)
+
+    assert create_post_mutation["type"]["name"] == "CreatePostResult"
   end
 end
