@@ -610,9 +610,7 @@ defmodule AshGraphql.Resource do
             module: schema,
             name: to_string(mutation.name),
             description: Ash.Resource.Info.action(resource, mutation.action).description,
-            type: %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: String.to_atom("#{mutation.name}_result")
-            },
+            type: mutation_result_type(mutation.name, api),
             __reference__: ref(__ENV__)
           }
         end
@@ -656,9 +654,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(mutation.name),
           description: Ash.Resource.Info.action(resource, mutation.action).description,
-          type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: String.to_atom("#{mutation.name}_result")
-          },
+          type: mutation_result_type(mutation.name, api),
           __reference__: ref(__ENV__)
         }
 
@@ -710,11 +706,16 @@ defmodule AshGraphql.Resource do
       module: schema,
       name: to_string(mutation.name),
       description: Ash.Resource.Info.action(resource, mutation.action).description,
-      type: %Absinthe.Blueprint.TypeReference.NonNull{
-        of_type: String.to_atom("#{mutation.name}_result")
-      },
+      type: mutation_result_type(mutation.name, api),
       __reference__: ref(__ENV__)
     }
+  end
+
+  defp mutation_result_type(mutation_name, api) do
+    type = String.to_atom("#{mutation_name}_result")
+    root_level_errors? = AshGraphql.Api.Info.root_level_errors?(api)
+
+    maybe_wrap_non_null(type, not root_level_errors?)
   end
 
   defp mutation_args(%{identity: false} = mutation, resource, schema) do
