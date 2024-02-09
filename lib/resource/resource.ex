@@ -2127,6 +2127,7 @@ defmodule AshGraphql.Resource do
 
     fields =
       Ash.Filter.builtin_operators()
+      |> Enum.concat(Ash.DataLayer.functions(resource))
       |> Enum.filter(& &1.predicate?)
       |> restrict_for_lists(type)
       |> Enum.flat_map(fn operator ->
@@ -2150,27 +2151,15 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp filter_fields(operator, type, array_type?, schema, attribute_or_aggregate, resource) do
-    expressable_types =
-      Enum.filter(operator.types(), fn
-        [:any, {:array, type}] when is_atom(type) ->
-          true
-
-        [{:array, inner_type}, :same] when is_atom(inner_type) and array_type? ->
-          true
-
-        :same ->
-          true
-
-        :any ->
-          true
-
-        [:any, type] when is_atom(type) ->
-          true
-
-        _ ->
-          false
-      end)
+  defp filter_fields(
+         operator,
+         type,
+         array_type?,
+         schema,
+         attribute_or_aggregate,
+         resource
+       ) do
+    expressable_types = get_expressable_types(operator, type, array_type?)
 
     if Enum.any?(expressable_types, &(&1 == :same)) do
       [
@@ -2240,6 +2229,51 @@ defmodule AshGraphql.Resource do
   rescue
     _e ->
       []
+  end
+
+  defp get_expressable_types(operator_or_function, field_type, array_type?) do
+    if :attributes
+       |> operator_or_function.__info__()
+       |> Keyword.get_values(:behaviour)
+       |> List.flatten()
+       |> Enum.any?(&(&1 == Ash.Query.Operator)) do
+      do_get_expressable_types(operator_or_function.types(), field_type, array_type?)
+    else
+      do_get_expressable_types(operator_or_function.args(), field_type, array_type?)
+    end
+  end
+
+  defp do_get_expressable_types(operator_types, field_type, array_type?) do
+    field_type_short_name =
+      case Ash.Type.short_names()
+           |> Enum.find(fn {_, type} -> type == field_type end) do
+        nil -> nil
+        {short_name, _} -> short_name
+      end
+
+    operator_types
+    |> Enum.filter(fn
+      [:any, {:array, type}] when is_atom(type) ->
+        true
+
+      [{:array, inner_type}, :same] when is_atom(inner_type) and array_type? ->
+        true
+
+      :same ->
+        true
+
+      :any ->
+        true
+
+      [:any, type] when is_atom(type) ->
+        true
+
+      [^field_type_short_name, type] when is_atom(type) and not is_nil(field_type_short_name) ->
+        true
+
+      _ ->
+        false
+    end)
   end
 
   defp restrict_for_lists(operators, {:array, _}) do
