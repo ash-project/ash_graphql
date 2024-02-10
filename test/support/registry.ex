@@ -20,5 +20,9 @@ defmodule AshGraphql.Test.Registry do
     entry(AshGraphql.Test.SponsoredComment)
     entry(AshGraphql.Test.Tag)
     entry(AshGraphql.Test.User)
+    entry(AshGraphql.Test.Channel)
+    entry(AshGraphql.Test.Message)
+    entry(AshGraphql.Test.TextMessage)
+    entry(AshGraphql.Test.ImageMessage)
   end
 end
