@@ -717,6 +717,7 @@ defmodule AshGraphql.Resource do
     }
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp mutation_result_type(mutation_name, api) do
     type = String.to_atom("#{mutation_name}_result")
     root_level_errors? = AshGraphql.Api.Info.root_level_errors?(api)
@@ -3508,7 +3509,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  def is_node_type(type) do
+  def node_type?(type) do
     type.identifier == :node
   end
 
