@@ -2351,6 +2351,8 @@ defmodule AshGraphql.Graphql.Resolver do
         } = resolution,
         {api, resource, calculation}
       ) do
+    api = api || context[:api]
+
     result =
       if resolution.definition.alias do
         Map.get(parent.calculations, {:__ash_graphql_calculation__, resolution.definition.alias})
@@ -2439,6 +2441,8 @@ defmodule AshGraphql.Graphql.Resolver do
         %{source: parent, context: context} = resolution,
         {name, _field_type, _field, resource, _unnested_types, api} = data
       ) do
+    api = api || context[:api]
+
     value =
       if resolution.definition.alias do
         Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
@@ -2472,6 +2476,8 @@ defmodule AshGraphql.Graphql.Resolver do
         %{source: %resource{} = parent, context: context} = resolution,
         {name, type, constraints, api}
       ) do
+    api = api || context[:api]
+
     value =
       if resolution.definition.alias && Ash.Type.can_load?(type, constraints) do
         Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
@@ -2504,6 +2510,21 @@ defmodule AshGraphql.Graphql.Resolver do
         _
       ) do
     Absinthe.Resolution.put_result(resolution, {:ok, nil})
+  end
+
+  def resolve_attribute(
+        %{source: parent} = resolution,
+        {name, type, constraints, _api}
+      )
+      when is_map(parent) do
+    value =
+      if resolution.definition.alias && Ash.Type.can_load?(type, constraints) do
+        Map.get(parent.calculations, {:__ash_graphql_attribute__, resolution.definition.alias})
+      else
+        Map.get(parent, name)
+      end
+
+    Absinthe.Resolution.put_result(resolution, {:ok, value})
   end
 
   def resolve_attribute(

@@ -506,6 +506,7 @@ defmodule AshGraphql.Resource do
             identifier: name,
             middleware:
               action_middleware ++
+                api_middleware(api) ++
                 id_translation_middleware(query.relay_id_translations, relay_ids?) ++
                 [
                   {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, false}}
@@ -528,6 +529,7 @@ defmodule AshGraphql.Resource do
             identifier: query.name,
             middleware:
               action_middleware ++
+                api_middleware(api) ++
                 id_translation_middleware(query.relay_id_translations, relay_ids?) ++
                 [
                   {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, relay_ids?}}
@@ -578,6 +580,7 @@ defmodule AshGraphql.Resource do
           identifier: name,
           middleware:
             action_middleware ++
+              api_middleware(api) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, true}}
@@ -603,6 +606,7 @@ defmodule AshGraphql.Resource do
             identifier: mutation.name,
             middleware:
               action_middleware ++
+                api_middleware(api) ++
                 id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
                 [
                   {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
@@ -647,6 +651,7 @@ defmodule AshGraphql.Resource do
           identifier: mutation.name,
           middleware:
             action_middleware ++
+              api_middleware(api) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
@@ -699,6 +704,7 @@ defmodule AshGraphql.Resource do
       identifier: mutation.name,
       middleware:
         action_middleware ++
+          api_middleware(api) ++
           id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
           [
             {{AshGraphql.Graphql.Resolver, :mutate}, {api, resource, mutation, relay_ids?}}
@@ -916,7 +922,12 @@ defmodule AshGraphql.Resource do
     []
   end
 
+  defp api_middleware(api) do
+    [{{AshGraphql.Graphql.ApiMiddleware, :set_api}, api}]
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
+
   defp metadata_field(resource, mutation, schema) do
     metadata_fields =
       Map.get(mutation.action, :metadata, [])
@@ -2732,7 +2743,7 @@ defmodule AshGraphql.Resource do
         [
           type_name
         ]
-        |> define_map_types(constraints, schema, env)
+        |> define_map_types(constraints, schema, resource, env)
         |> Enum.concat(
           [
             input_type_name
@@ -2746,83 +2757,113 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp define_map_types(type_names, constraints, schema, env) do
+  defp define_map_types(type_names, constraints, schema, resource, env) do
     type_names
     |> Enum.filter(& &1)
     |> Enum.flat_map(fn type_name ->
       {types, fields} =
         Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
-          case {attribute[:type], attribute[:constraints]} do
-            {:map, constraints} when not is_nil(constraints) and constraints != [] ->
-              nested_type_name =
-                String.to_atom("#{Atom.to_string(type_name)}_#{Atom.to_string(name)}")
+          map_type? =
+            attribute[:type] in [:map, Ash.Type.Map] ||
+              (Ash.Type.NewType.new_type?(attribute[:type]) &&
+                 Ash.Type.NewType.subtype_of(attribute[:type]) in [:map, Ash.Type.Map])
 
-              {
-                define_map_types(
-                  [nested_type_name],
-                  constraints,
-                  schema,
-                  env
-                ) ++ types,
-                [
-                  %Absinthe.Blueprint.Schema.FieldDefinition{
-                    module: schema,
-                    identifier: name,
-                    __reference__: AshGraphql.Resource.ref(env),
-                    name: to_string(name),
-                    type:
-                      if Keyword.get(
-                           attribute,
-                           :allow_nil?,
-                           true
-                         ) do
-                        nested_type_name
-                      else
-                        %Absinthe.Blueprint.TypeReference.NonNull{
-                          of_type: nested_type_name
-                        }
-                      end
-                  }
-                  | fields
-                ]
-              }
+          if map_type? && attribute[:constraints] not in [nil, []] do
+            nested_type_name =
+              String.to_atom("#{Atom.to_string(type_name)}_#{Atom.to_string(name)}")
 
-            {type, _} ->
-              {types,
-               [
-                 %Absinthe.Blueprint.Schema.FieldDefinition{
-                   module: schema,
-                   identifier: name,
-                   __reference__: AshGraphql.Resource.ref(env),
-                   name: to_string(name),
-                   type:
-                     if Keyword.get(
-                          attribute,
-                          :allow_nil?,
-                          true
-                        ) do
-                       do_field_type(
-                         type,
-                         nil,
-                         nil,
-                         false,
-                         Keyword.get(constraints, :constraints)
-                       )
-                     else
-                       %Absinthe.Blueprint.TypeReference.NonNull{
-                         of_type:
-                           do_field_type(
-                             type,
-                             nil,
-                             nil,
-                             false,
-                             Keyword.get(constraints, :constraints)
-                           )
-                       }
-                     end
-                 }
-                 | fields
-               ]}
+            {
+              define_map_types(
+                [nested_type_name],
+                attribute[:constraints],
+                schema,
+                resource,
+                env
+              ) ++ types,
+              [
+                %Absinthe.Blueprint.Schema.FieldDefinition{
+                  module: schema,
+                  identifier: name,
+                  __reference__: AshGraphql.Resource.ref(env),
+                  name: to_string(name),
+                  middleware:
+                    middleware_for_field(
+                      resource,
+                      %{
+                        name: name,
+                        type: attribute[:type],
+                        constraints: attribute[:constraints] || []
+                      },
+                      name,
+                      attribute[:type],
+                      attribute[:constraints] || [],
+                      nil
+                    ),
+                  type:
+                    if Keyword.get(
+                         attribute,
+                         :allow_nil?,
+                         true
+                       ) do
+                      nested_type_name
+                    else
+                      %Absinthe.Blueprint.TypeReference.NonNull{
+                        of_type: nested_type_name
+                      }
+                    end
+                }
+                | fields
+              ]
+            }
+          else
+            {types,
+             [
+               %Absinthe.Blueprint.Schema.FieldDefinition{
+                 module: schema,
+                 identifier: name,
+                 __reference__: AshGraphql.Resource.ref(env),
+                 name: to_string(name),
+                 middleware:
+                   middleware_for_field(
+                     resource,
+                     %{
+                       name: name,
+                       type: attribute[:type],
+                       constraints: attribute[:constraints] || []
+                     },
+                     name,
+                     attribute[:type],
+                     attribute[:constraints] || [],
+                     nil
+                   ),
+                 type:
+                   if Keyword.get(
+                        attribute,
+                        :allow_nil?,
+                        true
+                      ) do
+                     do_field_type(
+                       attribute[:type],
+                       nil,
+                       nil,
+                       false,
+                       Keyword.get(constraints, :constraints) || []
+                     )
+                   else
+                     %Absinthe.Blueprint.TypeReference.NonNull{
+                       of_type:
+                         do_field_type(
+                           attribute[:type],
+                           nil,
+                           nil,
+                           false,
+                           Keyword.get(constraints, :constraints) || []
+                         )
+                     }
+                   end
+               }
+               | fields
+             ]}
           end
         end)
 
@@ -2846,58 +2887,74 @@ defmodule AshGraphql.Resource do
     |> Enum.flat_map(fn type_name ->
       {types, fields} =
         Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
-          case {attribute[:type], attribute[:constraints]} do
-            {:map, constraints} when not is_nil(constraints) and constraints != [] ->
-              nested_type_name =
-                String.to_atom(
-                  "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"
-                )
+          map_type? =
+            attribute[:type] in [:map, Ash.Type.Map] ||
+              (Ash.Type.NewType.new_type?(attribute[:type]) &&
+                 Ash.Type.NewType.subtype_of(attribute[:type]) in [:map, Ash.Type.Map])
 
-              {
-                define_input_map_types(
-                  [nested_type_name],
-                  constraints,
-                  schema,
-                  env
-                ) ++ types,
-                [
-                  %Absinthe.Blueprint.Schema.InputValueDefinition{
-                    module: schema,
-                    identifier: name,
-                    __reference__: AshGraphql.Resource.ref(env),
-                    name: to_string(name),
-                    type:
-                      if Keyword.get(attribute, :allow_nil?, true) do
-                        nested_type_name
-                      else
-                        %Absinthe.Blueprint.TypeReference.NonNull{
-                          of_type: nested_type_name
-                        }
-                      end
-                  }
-                  | fields
-                ]
-              }
+          if map_type? && attribute[:constraints] not in [nil, []] do
+            nested_type_name =
+              String.to_atom(
+                "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"
+              )
 
-            {type, _} ->
-              {types,
-               [
-                 %Absinthe.Blueprint.Schema.InputValueDefinition{
-                   module: schema,
-                   identifier: name,
-                   __reference__: AshGraphql.Resource.ref(env),
-                   name: to_string(name),
-                   type:
-                     if Keyword.get(attribute, :allow_nil?, true) do
-                       do_field_type(type, nil, nil, true)
-                     else
-                       %Absinthe.Blueprint.TypeReference.NonNull{
-                         of_type: do_field_type(type, nil, nil, true)
-                       }
-                     end
-                 }
-                 | fields
-               ]}
+            {
+              define_input_map_types(
+                [nested_type_name],
+                attribute[:constraints] || [],
+                schema,
+                env
+              ) ++ types,
+              [
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  module: schema,
+                  identifier: name,
+                  __reference__: AshGraphql.Resource.ref(env),
+                  name: to_string(name),
+                  type:
+                    if Keyword.get(attribute, :allow_nil?, true) do
+                      nested_type_name
+                    else
+                      %Absinthe.Blueprint.TypeReference.NonNull{
+                        of_type: nested_type_name
+                      }
+                    end
+                }
+                | fields
+              ]
+            }
+          else
+            {types,
+             [
+               %Absinthe.Blueprint.Schema.InputValueDefinition{
+                 module: schema,
+                 identifier: name,
+                 __reference__: AshGraphql.Resource.ref(env),
+                 name: to_string(name),
+                 type:
+                   if Keyword.get(attribute, :allow_nil?, true) do
+                     do_field_type(
+                       attribute[:type],
+                       nil,
+                       nil,
+                       true,
+                       attribute[:constraints] || []
+                     )
+                   else
+                     %Absinthe.Blueprint.TypeReference.NonNull{
+                       of_type:
+                         do_field_type(
+                           attribute[:type],
+                           nil,
+                           nil,
+                           true,
+                           attribute[:constraints] || []
+                         )
+                     }
+                   end
+               }
+               | fields
+             ]}
           end
         end)
 
