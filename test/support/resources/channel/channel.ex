@@ -34,16 +34,22 @@ defmodule AshGraphql.Test.Channel do
   end
 
   calculations do
-    calculate(:direct_channel_messages, {:array, AshGraphql.Test.MessageUnion}, fn record,
-                                                                                   %{
-                                                                                     api: api
-                                                                                   } ->
-      record = api.load!(record, :messages)
+    calculate(
+      :direct_channel_messages,
+      {:array, AshGraphql.Test.MessageUnion},
+      fn record,
+         %{
+           api: api
+         } ->
+        record = api.load!(record, :messages)
 
-      {:ok,
-       record.messages
-       |> Enum.map(&%Ash.Union{type: AshGraphql.Test.MessageUnion.struct_to_name(&1), value: &1})}
-    end)
+        {:ok,
+         record.messages
+         |> Enum.map(
+           &%Ash.Union{type: AshGraphql.Test.MessageUnion.struct_to_name(&1), value: &1}
+         )}
+      end
+    )
 
     calculate :indirect_channel_messages,
               AshGraphql.Test.PageOfChannelMessages,
