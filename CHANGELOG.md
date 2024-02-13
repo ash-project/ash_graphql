@@ -5,6 +5,47 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.27.0](https://github.com/ash-project/ash_graphql/compare/v0.26.9...v0.27.0) (2024-02-13)
+
+
+
+
+### Features:
+
+* add Relay ID translation in mutation and queries (#109)
+
+* Relay refetching support (#106)
+
+* add support for relay global IDs
+
+* add relay node query
+
+### Bug Fixes:
+
+* handle unions containing maps and vice versa
+
+* make results nullable again if root level errors are enabled (#114)
+
+* define map input types w/ nested input types
+
+* handle nested constraint derivation in union/map types
+
+### Improvements:
+
+* make the items of fields and errors non-null (#112)
+
+* make mutation arguments non-null (#111)
+
+* make mutation arguments non-null
+
+* make mutation results non-nullable (#110)
+
+* return a map from decode_relay_id/1 (#107)
+
+* use the GraphQL type when projecting fields
+
+* support latest ash
+
 ## [v0.26.9](https://github.com/ash-project/ash_graphql/compare/v0.26.8...v0.26.9) (2024-01-12)
 
 
