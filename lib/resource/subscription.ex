@@ -18,7 +18,8 @@ defmodule AshGraphql.Resource.Subscription do
       type: {:mfa_or_fun, 2},
       doc: """
       Function that creates the config for the subscription
-      """
+      """,
+      default: AshGraphql.Resource.Subscription.DefaultConfig
     ],
     resolve: [
       type: {:mfa_or_fun, 3},

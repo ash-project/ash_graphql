@@ -40,6 +40,10 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_entities(resource, [:graphql, :subscriptions]) || []
   end
 
+  def subscription_pubsub(resource) do
+    Extension.get_opt(resource, [:graphql, :subscriptions], :pubsub)
+  end
+
   @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"
   def encode_primary_key?(resource) do
     Extension.get_opt(resource, [:graphql], :encode_primary_key?, true)

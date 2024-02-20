@@ -274,7 +274,7 @@ defmodule AshGraphql.Resource do
 
   @subscribe %Spark.Dsl.Entity{
     name: :subscribe,
-    args: [:name, :config],
+    args: [:name],
     describe: "A query to fetch a record by primary key",
     examples: [
       "get :get_post, :read"
@@ -285,6 +285,13 @@ defmodule AshGraphql.Resource do
 
   @subscriptions %Spark.Dsl.Section{
     name: :subscriptions,
+    schema: [
+      pubsub: [
+        type: :module,
+        required: true,
+        doc: "The pubsub module to use for the subscription"
+      ]
+    ],
     describe: """
     Subscriptions (notifications) to expose for the resource.
     """,
@@ -1155,10 +1162,12 @@ defmodule AshGraphql.Resource do
     resource
     |> subscriptions()
     |> Enum.map(fn %Subscription{name: name, config: config} = subscription ->
+      dbg(config)
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: name,
         name: to_string(name),
-        config: config,
+        config: &AshGraphql.Resource.Subscription.DefaultConfig.config/2,
         module: schema,
         middleware:
           action_middleware ++
