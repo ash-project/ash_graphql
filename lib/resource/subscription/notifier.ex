@@ -1,12 +1,13 @@
-defmodule AshGraphq.Resource.Subscription.Notifier do
+defmodule AshGraphql.Resource.Subscription.Notifier do
+  alias AshGraphql.Resource.Info
   use Ash.Notifier
 
   @impl Ash.Notifier
   def notify(notification) do
-    IO.inspect(notification, label: :Notifier)
+    pub_sub = Info.subscription_pubsub(notification.resource)
 
-    Absinthe.Subscription.publish(AshGraphql.Test.PubSub, notification.data,
-      subscrible_created: "*"
-    )
+    for subscription <- AshGraphql.Resource.Info.subscriptions(notification.resource) do
+      Absinthe.Subscription.publish(pub_sub, notification.data, [{subscription.name, "*"}])
+    end
   end
 end

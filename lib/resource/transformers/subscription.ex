@@ -8,8 +8,7 @@ defmodule AshGraphql.Resource.Transformers.Subscription do
   alias Spark.Dsl.Transformer
 
   def transform(dsl) do
-    case dsl
-         |> Transformer.get_entities([:graphql, :subscriptions]) do
+    case dsl |> Transformer.get_entities([:graphql, :subscriptions]) do
       [] ->
         {:ok, dsl}
 
@@ -20,13 +19,10 @@ defmodule AshGraphql.Resource.Transformers.Subscription do
            [:resource],
            :simple_notifiers,
            [
-             AshGraphq.Resource.Subscription.Notifier
+             AshGraphql.Resource.Subscription.Notifier
            ] ++
              Transformer.get_option(dsl, [:resource], :simple_notifiers, [])
-         )
-         |> dbg()}
+         )}
     end
-
-    {:ok, dsl}
   end
 end
