@@ -1,13 +1,17 @@
 defmodule AshGraphql.Resource.Subscription.DefaultResolve do
   require Ash.Query
 
-  def resolve(%Absinthe.Resolution{state: :resolved} = resolution, _),
-    do: resolution
+  def resolve(%Absinthe.Resolution{state: :resolved} = resolution, _) do
+    dbg()
+    resolution
+  end
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
         {api, resource, %AshGraphql.Resource.Subscription{}, input?}
       ) do
+    dbg()
+
     result =
       AshGraphql.Subscription.query_for_subscription(
         resource,

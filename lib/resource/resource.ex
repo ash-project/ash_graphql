@@ -1167,7 +1167,12 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: name,
         name: to_string(name),
-        config: &AshGraphql.Resource.Subscription.DefaultConfig.config/2,
+        config:
+          AshGraphql.Resource.Subscription.DefaultConfig.create_config(
+            subscription,
+            api,
+            resource
+          ),
         module: schema,
         middleware:
           action_middleware ++
