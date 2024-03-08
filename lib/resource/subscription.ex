@@ -2,11 +2,8 @@ defmodule AshGraphql.Resource.Subscription do
   @moduledoc "Represents a configured query on a resource"
   defstruct [
     :name,
-    # :arg = filter,
     :config,
     :read_action
-    # :topic, fn _, _ -> {:ok, topic} | :error,
-    # :trigger fn notification -> {:ok, topics}
   ]
 
   @subscription_schema [
