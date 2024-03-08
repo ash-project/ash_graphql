@@ -1155,6 +1155,9 @@ defmodule AshGraphql.Resource do
       dbg(config)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
+        arguments:
+          args(:subscription, resource, nil, schema, nil)
+          |> IO.inspect(label: "args"),
         identifier: name,
         name: to_string(name),
         config:
@@ -1167,8 +1170,7 @@ defmodule AshGraphql.Resource do
         middleware:
           action_middleware ++
             [
-              {{AshGraphql.Resource.Subscription.DefaultResolve, :resolve},
-               {api, resource, subscription, true}}
+              {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, subscription, true}}
             ],
         type: AshGraphql.Resource.Info.type(resource),
         __reference__: ref(__ENV__)
