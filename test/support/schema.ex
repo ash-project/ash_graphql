@@ -5,7 +5,11 @@ defmodule AshGraphql.Test.Schema do
 
   @apis [AshGraphql.Test.Api]
 
+  alias AshGraphql.Test.Api
+  alias AshGraphql.Test.Post
   use AshGraphql, apis: @apis
+
+  require Ash.Query
 
   query do
   end

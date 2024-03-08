@@ -8,6 +8,9 @@ config :ash, :validate_api_config_inclusion?, false
 config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
 config :ash_graphql, :allow_non_null_mutation_arguments?, true
 
+config :ash, :pub_sub, debug?: true
+config :logger, level: :debug
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,

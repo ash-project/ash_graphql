@@ -18,6 +18,7 @@ defmodule AshGraphql.Test.Registry do
     entry(AshGraphql.Test.RelayPostTag)
     entry(AshGraphql.Test.RelayTag)
     entry(AshGraphql.Test.SponsoredComment)
+    entry(AshGraphql.Test.Subscribable)
     entry(AshGraphql.Test.Tag)
     entry(AshGraphql.Test.User)
     entry(AshGraphql.Test.Channel)

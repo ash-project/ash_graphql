@@ -91,6 +91,16 @@ defmodule AshGraphql.Api do
   end
 
   @doc false
+  def subscriptions(api, resources, action_middleware, schema) do
+    resources
+    |> IO.inspect(label: :subscriptions)
+    |> Enum.filter(fn resource ->
+      AshGraphql.Resource in Spark.extensions(resource)
+    end)
+    |> Enum.flat_map(&AshGraphql.Resource.subscriptions(api, &1, action_middleware, schema))
+  end
+
+  @doc false
   def type_definitions(api, resources, schema, env, first?, define_relay_types?, relay_ids?) do
     resource_types =
       resources

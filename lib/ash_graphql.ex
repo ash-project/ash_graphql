@@ -134,6 +134,11 @@ defmodule AshGraphql do
 
           @dialyzer {:nowarn_function, {:run, 2}}
           def run(blueprint, _opts) do
+            # IO.inspect(
+            #   blueprint.schema_definitions
+            #   |> Enum.find(&(&1.name == "RootSubscriptionType").fields)
+            # )
+
             api = unquote(api)
             action_middleware = unquote(action_middleware)
 
@@ -170,6 +175,13 @@ defmodule AshGraphql do
               )
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
+              end)
+
+            blueprint_with_subscriptions =
+              api
+              |> AshGraphql.Api.subscriptions(unquote(resources), action_middleware, __MODULE__)
+              |> Enum.reduce(blueprint_with_mutations, fn subscription, blueprint ->
+                Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", subscription)
               end)
 
             type_definitions =
@@ -218,14 +230,14 @@ defmodule AshGraphql do
               end
 
             new_defs =
-              List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
+              List.update_at(blueprint_with_subscriptions.schema_definitions, 0, fn schema_def ->
                 %{
                   schema_def
                   | type_definitions: schema_def.type_definitions ++ type_definitions
                 }
               end)
 
-            {:ok, %{blueprint_with_mutations | schema_definitions: new_defs}}
+            {:ok, %{blueprint_with_subscriptions | schema_definitions: new_defs}}
           end
         end
 
