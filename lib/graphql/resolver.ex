@@ -505,6 +505,29 @@ defmodule AshGraphql.Graphql.Resolver do
       end
   end
 
+  def resolve(
+        %{arguments: arguments, context: context} = resolution,
+        {api, resource, %AshGraphql.Resource.Subscription{}, _input?}
+      ) do
+    dbg()
+
+    result =
+      AshGraphql.Subscription.query_for_subscription(
+        resource,
+        api,
+        resolution
+      )
+      # > Ash.Query.filter(id == ^args.id)
+      |> Ash.Query.limit(1)
+      |> api.read_one(actor: resolution.context[:current_user])
+      |> dbg()
+
+    resolution
+    |> Absinthe.Resolution.put_result(result)
+
+    resolution
+  end
+
   defp read_one_query(resource, args) do
     case Map.fetch(args, :filter) do
       {:ok, filter} when filter != %{} ->
