@@ -939,11 +939,8 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.StringToAtom"]
 
   defp metadata_field(resource, mutation, schema) do
-    IO.inspect(mutation.action)
-
     metadata_fields =
       Map.get(mutation.action, :metadata, [])
-      |> IO.inspect()
       |> Enum.map(fn metadata ->
         field_type =
           metadata.type

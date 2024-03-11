@@ -24,6 +24,7 @@ spark_locals_without_parens = [
   get: 2,
   get: 3,
   hide_fields: 1,
+  hide_inputs: 1,
   identity: 1,
   keyset_field: 1,
   list: 2,
