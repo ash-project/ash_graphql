@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.27.1](https://github.com/ash-project/ash_graphql/compare/v0.27.0...v0.27.1) (2024-03-11)
+
+
+
+
+### Improvements:
+
+* add `hide_inputs` to queries and mutations
+
 ## [v0.27.0](https://github.com/ash-project/ash_graphql/compare/v0.26.9...v0.27.0) (2024-02-13)
 
 
