@@ -9,6 +9,7 @@ defmodule AshGraphql.Resource.Query do
     :modify_resolution,
     :relay_id_translations,
     as_mutation?: false,
+    hide_inputs: [],
     metadata_names: [],
     metadata_types: [],
     show_metadata: nil,
@@ -59,6 +60,11 @@ defmodule AshGraphql.Resource.Query do
       doc: """
       A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
       """,
+      default: []
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "A list of inputs to hide from the mutation.",
       default: []
     ]
   ]

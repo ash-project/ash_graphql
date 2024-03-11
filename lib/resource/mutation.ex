@@ -9,7 +9,8 @@ defmodule AshGraphql.Resource.Mutation do
     :upsert?,
     :upsert_identity,
     :modify_resolution,
-    :relay_id_translations
+    :relay_id_translations,
+    hide_inputs: []
   ]
 
   @create_schema [
@@ -38,6 +39,11 @@ defmodule AshGraphql.Resource.Mutation do
       doc: """
       An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      default: [],
+      doc: "A list of inputs to hide from the mutation."
     ],
     relay_id_translations: [
       type: :keyword_list,
@@ -70,6 +76,10 @@ defmodule AshGraphql.Resource.Mutation do
       doc:
         "The read action to use to fetch the record to be updated. Defaults to the primary read action."
     ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "A list of inputs to hide from the mutation."
+    ],
     relay_id_translations: [
       type: :keyword_list,
       doc: """
@@ -100,6 +110,10 @@ defmodule AshGraphql.Resource.Mutation do
       doc: """
       The identity to use to fetch the record to be destroyed. Use `false` if no identity is required.
       """
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "A list of inputs to hide from the mutation."
     ],
     relay_id_translations: [
       type: :keyword_list,

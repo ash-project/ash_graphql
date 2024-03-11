@@ -58,6 +58,11 @@ defmodule AshGraphql.Resource do
       doc: "The action to use for the query.",
       required: true
     ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "Inputs to hide in the mutation/query",
+      default: []
+    ],
     relay_id_translations: [
       type: :keyword_list,
       doc: """
@@ -69,7 +74,7 @@ defmodule AshGraphql.Resource do
 
   defmodule Action do
     @moduledoc "Represents a configured generic action"
-    defstruct [:type, :name, :action, :relay_id_translations]
+    defstruct [:type, :name, :action, :relay_id_translations, hide_inputs: []]
   end
 
   @action %Spark.Dsl.Entity{
@@ -525,7 +530,8 @@ defmodule AshGraphql.Resource do
               raise "No such action #{query.action} on #{resource}"
 
           %Absinthe.Blueprint.Schema.FieldDefinition{
-            arguments: args(query.type, resource, query_action, schema, query.identity),
+            arguments:
+              args(query.type, resource, query_action, schema, query.identity, query.hide_inputs),
             identifier: query.name,
             middleware:
               action_middleware ++
@@ -629,7 +635,8 @@ defmodule AshGraphql.Resource do
                  resource,
                  schema,
                  action,
-                 mutation.type
+                 mutation.type,
+                 mutation.hide_inputs
                ) do
             [] ->
               []
@@ -680,7 +687,8 @@ defmodule AshGraphql.Resource do
              resource,
              schema,
              action,
-             mutation.type
+             mutation.type,
+             mutation.hide_inputs
            ) do
         [] ->
           mutation_args(mutation, resource, schema)
@@ -896,7 +904,8 @@ defmodule AshGraphql.Resource do
              resource,
              schema,
              mutation.action,
-             mutation.type
+             mutation.type,
+             mutation.hide_inputs
            ) do
         [] ->
           [result] ++ List.wrap(metadata_object_type)
@@ -930,8 +939,11 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.StringToAtom"]
 
   defp metadata_field(resource, mutation, schema) do
+    IO.inspect(mutation.action)
+
     metadata_fields =
       Map.get(mutation.action, :metadata, [])
+      |> IO.inspect()
       |> Enum.map(fn metadata ->
         field_type =
           metadata.type
@@ -1029,7 +1041,7 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp mutation_fields(resource, schema, action, type) do
+  defp mutation_fields(resource, schema, action, type, hide_inputs \\ []) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
     argument_names = AshGraphql.Resource.Info.argument_names(resource)
 
@@ -1046,7 +1058,8 @@ defmodule AshGraphql.Resource do
           |> Ash.Resource.Info.public_attributes()
           |> Enum.filter(fn attribute ->
             AshGraphql.Resource.Info.show_field?(resource, attribute.name) &&
-              (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable?
+              (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable? &&
+              attribute.name not in hide_inputs
           end)
           |> Enum.map(fn attribute ->
             allow_nil? =
@@ -1332,14 +1345,14 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp args(action_type, resource, action, schema, identity \\ nil)
+  defp args(action_type, resource, action, schema, identity \\ nil, hide_inputs \\ [])
 
-  defp args(:get, resource, action, schema, nil) do
+  defp args(:get, resource, action, schema, nil, hide_inputs) do
     get_fields(resource) ++
-      read_args(resource, action, schema)
+      read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:get, resource, action, schema, identity) do
+  defp args(:get, resource, action, schema, identity, hide_inputs) do
     if identity do
       resource
       |> Ash.Resource.Info.identities()
@@ -1361,10 +1374,10 @@ defmodule AshGraphql.Resource do
     else
       []
     end
-    |> Enum.concat(read_args(resource, action, schema))
+    |> Enum.concat(read_args(resource, action, schema, hide_inputs))
   end
 
-  defp args(:read_one, resource, action, schema, _) do
+  defp args(:read_one, resource, action, schema, _, hide_inputs) do
     args =
       if AshGraphql.Resource.Info.derive_filter?(resource) do
         case resource_filter_fields(resource, schema) do
@@ -1386,10 +1399,10 @@ defmodule AshGraphql.Resource do
         []
       end
 
-    args ++ read_args(resource, action, schema)
+    args ++ read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:list, resource, action, schema, _) do
+  defp args(:list, resource, action, schema, _, hide_inputs) do
     args =
       if AshGraphql.Resource.Info.derive_filter?(resource) do
         case resource_filter_fields(resource, schema) do
@@ -1435,11 +1448,11 @@ defmodule AshGraphql.Resource do
         args
       end
 
-    args ++ pagination_args(action) ++ read_args(resource, action, schema)
+    args ++ pagination_args(action) ++ read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:list_related, resource, action, schema, identity) do
-    args(:list, resource, action, schema, identity) ++
+  defp args(:list_related, resource, action, schema, identity, hide_inputs) do
+    args(:list, resource, action, schema, identity, hide_inputs) ++
       [
         %Absinthe.Blueprint.Schema.InputValueDefinition{
           name: "limit",
@@ -1458,13 +1471,13 @@ defmodule AshGraphql.Resource do
       ]
   end
 
-  defp args(:one_related, resource, action, schema, _identity) do
-    read_args(resource, action, schema)
+  defp args(:one_related, resource, action, schema, _identity, hide_inputs) do
+    read_args(resource, action, schema, hide_inputs)
   end
 
-  defp read_args(resource, action, schema) do
+  defp read_args(resource, action, schema, hide_inputs) do
     action.arguments
-    |> Enum.reject(& &1.private?)
+    |> Enum.reject(&(&1.private? || &1.name in hide_inputs))
     |> Enum.map(fn argument ->
       type =
         argument.type

@@ -157,6 +157,10 @@ defmodule AshGraphql.Test.Post do
       update :update_best_post, :update, read_action: :best_post, identity: false
       update :update_best_post_arg, :update, read_action: :best_post_arg, identity: false
 
+      update :update_post_with_hidden_input, :update do
+        hide_inputs([:score])
+      end
+
       destroy :archive_post, :archive
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false

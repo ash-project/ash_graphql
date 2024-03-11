@@ -280,4 +280,43 @@ defmodule AshGraphql.UpdateTest do
 
     assert message =~ "confirmation did not match value"
   end
+
+  test "referencing a hidden input is not allowed" do
+    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+
+    resp =
+      """
+      mutation UpdatePostWithHiddenInput($id: ID!, $input: UpdatePostWithHiddenInputInput) {
+        updatePostWithHiddenInput(id: $id, input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id,
+          "input" => %{
+            "score" => 10
+          }
+        }
+      )
+
+    assert {
+             :ok,
+             %{
+               errors: [
+                 %{
+                   message:
+                     "Argument \"input\" has invalid value $input.\nIn field \"score\": Unknown field."
+                 }
+               ]
+             }
+           } =
+             resp
+  end
 end
