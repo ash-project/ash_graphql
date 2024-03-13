@@ -12,6 +12,7 @@ defmodule AshGraphql.Resource.Query do
     hide_inputs: [],
     metadata_names: [],
     metadata_types: [],
+    paginate_with: :keyset,
     show_metadata: nil,
     type_name: nil,
     relay?: false
@@ -105,6 +106,13 @@ defmodule AshGraphql.Resource.Query do
                    default: false,
                    doc: """
                    If true, the graphql queries/resolvers for this resource will be built to honor the relay specification. See [the relay guide](/documentation/topics/relay.html) for more.
+                   """
+                 ],
+                 paginate_with: [
+                   type: {:one_of, [:keyset, :offset, nil]},
+                   default: :keyset,
+                   doc: """
+                   Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used.
                    """
                  ]
                ]

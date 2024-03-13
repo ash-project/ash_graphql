@@ -531,7 +531,15 @@ defmodule AshGraphql.Resource do
 
           %Absinthe.Blueprint.Schema.FieldDefinition{
             arguments:
-              args(query.type, resource, query_action, schema, query.identity, query.hide_inputs),
+              args(
+                query.type,
+                resource,
+                query_action,
+                schema,
+                query.identity,
+                query.hide_inputs,
+                query
+              ),
             identifier: query.name,
             middleware:
               action_middleware ++
@@ -1237,7 +1245,7 @@ defmodule AshGraphql.Resource do
   defp query_type(%{type: :list, relay?: relay?} = query, _resource, action, type) do
     type = query.type_name || type
 
-    if action.pagination do
+    if pagination_strategy(query, action) do
       cond do
         relay? ->
           String.to_atom("#{type}_connection")
@@ -1263,6 +1271,43 @@ defmodule AshGraphql.Resource do
     type = query.type_name || type
 
     maybe_wrap_non_null(type, not query.allow_nil?)
+  end
+
+  defp pagination_strategy(nil, _) do
+    nil
+  end
+
+  defp pagination_strategy(%{paginate_with: strategy}, action) do
+    if !action.pagination do
+      nil
+    else
+      strategies =
+        if !action.pagination.required? do
+          [nil]
+        else
+          []
+        end
+
+      strategies =
+        if action.pagination.keyset? do
+          [:keyset | strategies]
+        else
+          strategies
+        end
+
+      strategies =
+        if action.pagination.offset? do
+          [:offset | strategies]
+        else
+          strategies
+        end
+
+      if strategy in strategies do
+        strategy
+      else
+        Enum.at(strategies, 0)
+      end
+    end
   end
 
   defp maybe_wrap_non_null({:non_null, type}, true) do
@@ -1342,14 +1387,22 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp args(action_type, resource, action, schema, identity \\ nil, hide_inputs \\ [])
+  defp args(
+         action_type,
+         resource,
+         action,
+         schema,
+         identity \\ nil,
+         hide_inputs \\ [],
+         query \\ nil
+       )
 
-  defp args(:get, resource, action, schema, nil, hide_inputs) do
+  defp args(:get, resource, action, schema, nil, hide_inputs, _query) do
     get_fields(resource) ++
       read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:get, resource, action, schema, identity, hide_inputs) do
+  defp args(:get, resource, action, schema, identity, hide_inputs, _query) do
     if identity do
       resource
       |> Ash.Resource.Info.identities()
@@ -1374,7 +1427,7 @@ defmodule AshGraphql.Resource do
     |> Enum.concat(read_args(resource, action, schema, hide_inputs))
   end
 
-  defp args(:read_one, resource, action, schema, _, hide_inputs) do
+  defp args(:read_one, resource, action, schema, _, hide_inputs, _query) do
     args =
       if AshGraphql.Resource.Info.derive_filter?(resource) do
         case resource_filter_fields(resource, schema) do
@@ -1399,7 +1452,7 @@ defmodule AshGraphql.Resource do
     args ++ read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:list, resource, action, schema, _, hide_inputs) do
+  defp args(:list, resource, action, schema, _, hide_inputs, query) do
     args =
       if AshGraphql.Resource.Info.derive_filter?(resource) do
         case resource_filter_fields(resource, schema) do
@@ -1445,10 +1498,10 @@ defmodule AshGraphql.Resource do
         args
       end
 
-    args ++ pagination_args(action) ++ read_args(resource, action, schema, hide_inputs)
+    args ++ pagination_args(query, action) ++ read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:list_related, resource, action, schema, identity, hide_inputs) do
+  defp args(:list_related, resource, action, schema, identity, hide_inputs, _) do
     args(:list, resource, action, schema, identity, hide_inputs) ++
       [
         %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -1468,7 +1521,7 @@ defmodule AshGraphql.Resource do
       ]
   end
 
-  defp args(:one_related, resource, action, schema, _identity, hide_inputs) do
+  defp args(:one_related, resource, action, schema, _identity, hide_inputs, _) do
     read_args(resource, action, schema, hide_inputs)
   end
 
@@ -1492,15 +1545,16 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp pagination_args(action) do
-    if action.pagination do
-      if action.pagination.keyset? do
+  defp pagination_args(query, action) do
+    case pagination_strategy(query, action) do
+      nil ->
+        []
+
+      :keyset ->
         keyset_pagination_args(action)
-      else
+
+      :offset ->
         offset_pagination_args(action)
-      end
-    else
-      []
     end
   end
 
