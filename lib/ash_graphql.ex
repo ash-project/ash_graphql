@@ -341,6 +341,14 @@ defmodule AshGraphql do
       |> Ash.Resource.Info.public_attributes()
       |> Enum.concat(all_arguments(resource))
       |> Enum.concat(Ash.Resource.Info.calculations(resource))
+      |> Enum.concat(
+        resource
+        |> Ash.Resource.Info.actions()
+        |> Enum.filter(&(&1.type == :action))
+        |> Enum.map(fn action ->
+          %{type: action.returns, constraints: action.constraints, name: action.name}
+        end)
+      )
       |> Enum.reduce({[], already_checked}, fn %{type: type} = attr, {acc, already_checked} ->
         if nested? do
           constraints = Map.get(attr, :constraints, [])
