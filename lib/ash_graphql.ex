@@ -268,10 +268,18 @@ defmodule AshGraphql do
                 value
               end
 
+            description =
+              if function_exported?(type, :graphql_describe_enum_value, 1) do
+                type.graphql_describe_enum_value(value)
+              else
+                enum_type_description(type, value)
+              end
+
             %Absinthe.Blueprint.Schema.EnumValueDefinition{
               module: schema,
               identifier: value,
               __reference__: AshGraphql.Resource.ref(env),
+              description: description,
               name: String.upcase(to_string(name)),
               value: value
             }
@@ -281,6 +289,14 @@ defmodule AshGraphql do
       }
     end)
     |> Enum.uniq_by(& &1.identifier)
+  end
+
+  defp enum_type_description(type, value) do
+    if Spark.implements_behaviour?(type, Ash.Type.Enum) do
+      type.description(value)
+    else
+      nil
+    end
   end
 
   def global_unions(resources, schema, env) do
