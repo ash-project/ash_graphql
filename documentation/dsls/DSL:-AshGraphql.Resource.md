@@ -214,6 +214,7 @@ list :list_posts_paginated, :read, relay?: true
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`relay?`](#graphql-queries-list-relay?){: #graphql-queries-list-relay? } | `boolean` | `false` | If true, the graphql queries/resolvers for this resource will be built to honor the relay specification. See [the relay guide](/documentation/topics/relay.html) for more. |
+| [`paginate_with`](#graphql-queries-list-paginate_with){: #graphql-queries-list-paginate_with } | `:keyset \| :offset \| nil` | `:keyset` | Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used. |
 | [`type_name`](#graphql-queries-list-type_name){: #graphql-queries-list-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`metadata_names`](#graphql-queries-list-metadata_names){: #graphql-queries-list-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-list-metadata_types){: #graphql-queries-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
