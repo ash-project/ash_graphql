@@ -1277,36 +1277,36 @@ defmodule AshGraphql.Resource do
     nil
   end
 
+  defp pagination_strategy(_query, %{pagination: pagination}) when pagination in [nil, false] do
+    nil
+  end
+
   defp pagination_strategy(%{paginate_with: strategy}, action) do
-    if !action.pagination do
-      nil
-    else
-      strategies =
-        if !action.pagination.required? do
-          [nil]
-        else
-          []
-        end
-
-      strategies =
-        if action.pagination.keyset? do
-          [:keyset | strategies]
-        else
-          strategies
-        end
-
-      strategies =
-        if action.pagination.offset? do
-          [:offset | strategies]
-        else
-          strategies
-        end
-
-      if strategy in strategies do
-        strategy
+    strategies =
+      if action.pagination.required? do
+        []
       else
-        Enum.at(strategies, 0)
+        [nil]
       end
+
+    strategies =
+      if action.pagination.keyset? do
+        [:keyset | strategies]
+      else
+        strategies
+      end
+
+    strategies =
+      if action.pagination.offset? do
+        [:offset | strategies]
+      else
+        strategies
+      end
+
+    if strategy in strategies do
+      strategy
+    else
+      Enum.at(strategies, 0)
     end
   end
 
