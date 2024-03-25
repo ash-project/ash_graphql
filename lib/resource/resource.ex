@@ -1961,21 +1961,6 @@ defmodule AshGraphql.Resource do
           field.identifier == relationship.destination_attribute
         end)
 
-      {:source, nil} ->
-        []
-
-      {:source, action} ->
-        action = Ash.Resource.Info.action(relationship.source, action)
-
-        relationship.source
-        |> mutation_fields(schema, action, action.type)
-        |> Enum.map(fn field ->
-          {relationship.source, action.name, field}
-        end)
-        |> Enum.reject(fn {_, _, field} ->
-          field.identifier == relationship.source_attribute
-        end)
-
       {:join, nil, _} ->
         []
 
