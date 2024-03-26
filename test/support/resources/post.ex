@@ -329,6 +329,8 @@ defmodule AshGraphql.Test.Post do
     attribute(:foo, AshGraphql.Test.Foo)
     attribute(:status, AshGraphql.Test.Status)
     attribute(:status_enum, AshGraphql.Test.StatusEnum)
+    attribute(:enum_with_ash_graphql_description, AshGraphql.Test.EnumWithAshGraphqlDescription)
+    attribute(:enum_with_ash_description, AshGraphql.Test.EnumWithAshDescription)
     attribute(:best, :boolean)
     attribute(:score, :float)
     attribute(:integer_as_string_in_api, :integer)

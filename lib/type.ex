@@ -62,8 +62,23 @@ defmodule AshGraphql.Type do
   """
   @callback graphql_unnested_unions(Ash.Type.constraints()) :: [atom()]
 
+  @doc """
+  Used for `Ash.Type.Enum` to provide a description for individual values. For example:
+
+  ```elixir
+  defmodule MyEnum do
+  use Ash.Type.Enum, values: [:foo, :bar, :baz]
+
+    def graphql_describe_enum_value(:baz), do: "A baz"
+    def graphql_describe_enum_value(_), do: nil
+  end
+  ```
+  """
+  @callback graphql_describe_enum_value(atom) :: String.t() | nil
+
   @optional_callbacks graphql_type: 1,
                       graphql_input_type: 1,
                       graphql_rename_value: 1,
-                      graphql_unnested_unions: 1
+                      graphql_unnested_unions: 1,
+                      graphql_describe_enum_value: 1
 end

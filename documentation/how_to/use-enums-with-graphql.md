@@ -35,6 +35,14 @@ defmodule AshPostgres.Test.Types.Status do
 
   def graphql_rename_value(:"10"), do: :ten
   def graphql_rename_value(value), do: value
+
+  # You can also provide descriptions for the enum values, which will be exposed in the GraphQL
+  # schema.
+  # Remember to have a fallback clause that returns nil if you don't provide descriptions for all
+  # values.
+
+  def graphql_describe_enum_value(:open), do: "The post is open"
+  def graphql_describe_enum_value(_), do: nil
 end
 
 ```
