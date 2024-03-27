@@ -318,6 +318,11 @@ defmodule AshGraphql.Resource do
         type: {:list, :atom},
         doc: "A list of attributes to hide from the api"
       ],
+      show_fields: [
+        type: {:list, :atom},
+        doc:
+          "A list of attributes to show in the api. If not specified includes all (excluding `hide_fiels`)."
+      ],
       argument_names: [
         type: :keyword_list,
         doc:

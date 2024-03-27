@@ -99,9 +99,17 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :hide_fields, [])
   end
 
+  @doc "Fields to show in the graphql api"
+  def show_fields(resource) do
+    Extension.get_opt(resource, [:graphql], :show_fields, nil)
+  end
+
   @doc "Wether or not a given field will be shown"
   def show_field?(resource, field) do
-    field not in hide_fields(resource)
+    hide_fields = hide_fields(resource)
+    show_fields = show_fields(resource) || [field]
+
+    field not in hide_fields and field in show_fields
   end
 
   @doc "Which relationships should be included in the generated type"
