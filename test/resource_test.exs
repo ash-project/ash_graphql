@@ -8,4 +8,19 @@ defmodule AshGraphql.ResourceTest do
 
     assert nil == Absinthe.Schema.lookup_type(AshGraphql.Test.Schema, :no_object)
   end
+
+  test "resource with no type can execute generic queries" do
+    resp =
+      """
+      query NoObjectCount {
+        noObjectCount
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"noObjectCount" => [1, 2, 3, 4, 5]}} = result
+  end
 end

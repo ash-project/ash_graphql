@@ -281,8 +281,8 @@ defmodule AshGraphql.Resource do
     schema: [
       type: [
         type: :atom,
-        required: true,
-        doc: "The type to use for this entity in the graphql schema"
+        doc:
+          "The type to use for this entity in the graphql schema. If the resource doesn't have a type, it also needs to have `generate_object? false` and can only expose generic action queries."
       ],
       derive_filter?: [
         type: :boolean,
@@ -499,71 +499,74 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def queries(api, resource, action_middleware, schema, relay_ids?, as_mutations? \\ false) do
-    type = AshGraphql.Resource.Info.type(resource)
+    resource
+    |> queries()
+    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
+    |> Enum.map(fn
+      %{type: :action, name: name, action: action} = query ->
+        query_action =
+          Ash.Resource.Info.action(resource, action) ||
+            raise "No such action #{action} on #{resource}"
 
-    if type do
-      resource
-      |> queries()
-      |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
-      |> Enum.map(fn
-        %{type: :action, name: name, action: action} = query ->
-          query_action =
-            Ash.Resource.Info.action(resource, action) ||
-              raise "No such action #{action} on #{resource}"
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          arguments: generic_action_args(query_action, resource, schema),
+          identifier: name,
+          middleware:
+            action_middleware ++
+              api_middleware(api) ++
+              id_translation_middleware(query.relay_id_translations, relay_ids?) ++
+              [
+                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, false}}
+              ],
+          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+          module: schema,
+          name: to_string(name),
+          description: query_action.description,
+          type: generic_action_type(query_action, resource),
+          __reference__: ref(__ENV__)
+        }
 
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            arguments: generic_action_args(query_action, resource, schema),
-            identifier: name,
-            middleware:
-              action_middleware ++
-                api_middleware(api) ++
-                id_translation_middleware(query.relay_id_translations, relay_ids?) ++
-                [
-                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, false}}
-                ],
-            complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
-            module: schema,
-            name: to_string(name),
-            description: query_action.description,
-            type: generic_action_type(query_action, resource),
-            __reference__: ref(__ENV__)
-          }
+      query ->
+        query_action =
+          Ash.Resource.Info.action(resource, query.action) ||
+            raise "No such action #{query.action} on #{resource}"
 
-        query ->
-          query_action =
-            Ash.Resource.Info.action(resource, query.action) ||
-              raise "No such action #{query.action} on #{resource}"
+        type =
+          AshGraphql.Resource.Info.type(resource) ||
+            raise """
+            Resource #{inspect(resource)} is trying to define the query #{inspect(query.name)}
+            which requires a GraphQL type to be defined.
 
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            arguments:
-              args(
-                query.type,
-                resource,
-                query_action,
-                schema,
-                query.identity,
-                query.hide_inputs,
-                query
-              ),
-            identifier: query.name,
-            middleware:
-              action_middleware ++
-                api_middleware(api) ++
-                id_translation_middleware(query.relay_id_translations, relay_ids?) ++
-                [
-                  {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, relay_ids?}}
-                ],
-            complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
-            module: schema,
-            name: to_string(query.name),
-            description: Ash.Resource.Info.action(resource, query.action).description,
-            type: query_type(query, resource, query_action, type),
-            __reference__: ref(__ENV__)
-          }
-      end)
-    else
-      []
-    end
+            You should define the type of your resource with `type :my_resource_type`.
+            """
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          arguments:
+            args(
+              query.type,
+              resource,
+              query_action,
+              schema,
+              query.identity,
+              query.hide_inputs,
+              query
+            ),
+          identifier: query.name,
+          middleware:
+            action_middleware ++
+              api_middleware(api) ++
+              id_translation_middleware(query.relay_id_translations, relay_ids?) ++
+              [
+                {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, query, relay_ids?}}
+              ],
+          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+          module: schema,
+          name: to_string(query.name),
+          description: Ash.Resource.Info.action(resource, query.action).description,
+          type: query_type(query, resource, query_action, type),
+          __reference__: ref(__ENV__)
+        }
+    end)
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -845,9 +848,20 @@ defmodule AshGraphql.Resource do
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
   def mutation_types(resource, schema) do
+    resource_type = AshGraphql.Resource.Info.type(resource)
+
     resource
     |> mutations()
     |> Enum.flat_map(fn mutation ->
+      unless resource_type do
+        raise """
+        Resource #{inspect(resource)} is trying to define the mutation #{inspect(mutation.name)}
+        which requires a GraphQL type to be defined.
+
+        You should define the type of your resource with `type :my_resource_type`.
+        """
+      end
+
       mutation = %{
         mutation
         | action:
@@ -868,7 +882,7 @@ defmodule AshGraphql.Resource do
           identifier: :result,
           module: schema,
           name: "result",
-          type: AshGraphql.Resource.Info.type(resource),
+          type: resource_type,
           __reference__: ref(__ENV__)
         },
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -3601,7 +3615,22 @@ defmodule AshGraphql.Resource do
     actual_resource = Ash.Type.NewType.subtype_of(resource)
 
     if generate_object?(resource) do
-      type = AshGraphql.Resource.Info.type(resource)
+      type =
+        AshGraphql.Resource.Info.type(resource) ||
+          raise """
+          Resource #{inspect(resource)} needs to generate its GraphQL type but doesn't have a type
+          configured in its `graphql` section.
+
+          To fix this do one of the following:
+
+          1) Define the type of your resource with `type :your_resource_type` to let Ash generate it.
+
+          2) Pass both `generate_object? false` and `type :your_resource_type` to manually define
+          your resource type using Absinthe.
+
+          3) Pass only `generate_object? false` to skip the resource type entirely. This means that
+          you can only use actions which don't require the type (e.g. `action` queries).
+          """
 
       resource = actual_resource
 

@@ -135,7 +135,7 @@ defmodule AshGraphql.Resource.Info do
 
   @doc "Wether or not an object should be generated, or if one with the type name for this resource should be used."
   def generate_object?(resource) do
-    Extension.get_opt(resource, [:graphql], :generate_object?, nil)
+    Extension.get_opt(resource, [:graphql], :generate_object?, true)
   end
 
   @doc "Fields that may be filtered on"

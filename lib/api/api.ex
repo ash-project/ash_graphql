@@ -96,8 +96,7 @@ defmodule AshGraphql.Api do
       resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
-        if AshGraphql.Resource in Spark.extensions(resource) &&
-             AshGraphql.Resource.Info.type(resource) do
+        if AshGraphql.Resource in Spark.extensions(resource) do
           AshGraphql.Resource.type_definitions(resource, api, schema, relay_ids?) ++
             AshGraphql.Resource.mutation_types(resource, schema)
         else
