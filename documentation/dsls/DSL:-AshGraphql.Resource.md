@@ -58,6 +58,7 @@ end
 | [`relationships`](#graphql-relationships){: #graphql-relationships } | `list(atom)` |  | A list of relationships to include on the created type. Defaults to all public relationships where the destination defines a graphql type. |
 | [`field_names`](#graphql-field_names){: #graphql-field_names } | `keyword` |  | A keyword list of name overrides for attributes. |
 | [`hide_fields`](#graphql-hide_fields){: #graphql-hide_fields } | `list(atom)` |  | A list of attributes to hide from the api |
+| [`show_fields`](#graphql-show_fields){: #graphql-show_fields } | `list(atom)` |  | A list of attributes to show in the api. If not specified includes all (excluding `hide_fiels`). |
 | [`argument_names`](#graphql-argument_names){: #graphql-argument_names } | `keyword` |  | A nested keyword list of action names, to argument name remappings. i.e `create: [arg_name: :new_name]` |
 | [`keyset_field`](#graphql-keyset_field){: #graphql-keyset_field } | `atom` |  | If set, the keyset will be displayed on all read actions in this field.  It will be `nil` unless at least one of the read actions on a resource uses keyset pagination or it is the result of a mutation |
 | [`attribute_types`](#graphql-attribute_types){: #graphql-attribute_types } | `keyword` |  | A keyword list of type overrides for attributes. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used. |
