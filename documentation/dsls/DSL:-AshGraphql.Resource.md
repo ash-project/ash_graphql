@@ -51,7 +51,7 @@ end
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`type`](#graphql-type){: #graphql-type .spark-required} | `atom` |  | The type to use for this entity in the graphql schema |
+| [`type`](#graphql-type){: #graphql-type } | `atom` |  | The type to use for this entity in the graphql schema. If the resource doesn't have a type, it also needs to have `generate_object? false` and can only expose generic action queries. |
 | [`derive_filter?`](#graphql-derive_filter?){: #graphql-derive_filter? } | `boolean` | `true` | Set to false to disable the automatic generation of a filter input for read actions. |
 | [`derive_sort?`](#graphql-derive_sort?){: #graphql-derive_sort? } | `boolean` | `true` | Set to false to disable the automatic generation of a sort input for read actions. |
 | [`encode_primary_key?`](#graphql-encode_primary_key?){: #graphql-encode_primary_key? } | `boolean` | `true` | For resources with composite primary keys, or primary keys not called `:id`, this will cause the id to be encoded as a single `id` attribute, both in the representation of the resource and in get requests |

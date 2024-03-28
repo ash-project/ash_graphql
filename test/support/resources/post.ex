@@ -451,5 +451,7 @@ defmodule AshGraphql.Test.Post do
       manual(RelatedPosts)
       no_attributes?(true)
     end
+
+    has_one(:no_graphql, AshGraphql.Test.NoGraphql)
   end
 end

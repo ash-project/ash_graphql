@@ -11,6 +11,7 @@ defmodule AshGraphql.Test.Registry do
     entry(AshGraphql.Test.MapTypes)
     entry(AshGraphql.Test.MultitenantPostTag)
     entry(AshGraphql.Test.MultitenantTag)
+    entry(AshGraphql.Test.NoGraphql)
     entry(AshGraphql.Test.NoObject)
     entry(AshGraphql.Test.NonIdPrimaryKey)
     entry(AshGraphql.Test.Post)
