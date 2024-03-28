@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.Tag do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -20,6 +21,7 @@ defmodule AshGraphql.Test.Tag do
   end
 
   actions do
+    default_accept(:*)
     defaults([:read, :update, :destroy])
 
     create :create do
@@ -30,11 +32,11 @@ defmodule AshGraphql.Test.Tag do
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:name, :string)
+    attribute(:name, :string, public?: true)
   end
 
   identities do
-    identity(:name, [:name], pre_check_with: AshGraphql.Test.Api)
+    identity(:name, [:name], pre_check_with: AshGraphql.Test.Domain)
   end
 
   relationships do

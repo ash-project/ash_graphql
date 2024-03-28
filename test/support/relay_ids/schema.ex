@@ -3,9 +3,9 @@ defmodule AshGraphql.Test.RelayIds.Schema do
 
   use Absinthe.Schema
 
-  @apis [AshGraphql.Test.RelayIds.Api]
+  @domains [AshGraphql.Test.RelayIds.Domain]
 
-  use AshGraphql, apis: @apis, relay_ids?: true
+  use AshGraphql, domains: @domains, relay_ids?: true
 
   query do
   end

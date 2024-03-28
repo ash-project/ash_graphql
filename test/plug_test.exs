@@ -25,8 +25,8 @@ defmodule AshGraphql.PlugTest do
   test "when the actor is set, the current user returns the correct value" do
     user =
       AshGraphql.Test.User
-      |> Ash.Changeset.for_create(:create, %{name: "Marty McFly"})
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create, %{name: "My Name"})
+      |> Ash.create!()
 
     resp =
       """
@@ -67,7 +67,7 @@ defmodule AshGraphql.PlugTest do
     tag =
       AshGraphql.Test.MultitenantTag
       |> Ash.Changeset.for_create(:create, [name: "1985"], tenant: tenant)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """

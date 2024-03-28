@@ -2,7 +2,7 @@
 
 ## Get familiar with Ash resources
 
-If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html). This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/apis.
+If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html). This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/domains.
 
 ## Bring in the ash_graphql dependency
 
@@ -26,18 +26,18 @@ config :ash_graphql, :allow_non_null_mutation_arguments?, true
 
 This won't be necessary after the next major release, where this new configuration will be the default.
 
-## Add the API Extension
+## Add the domain Extension
 
-Add the following to your API module. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
+Add the following to your domain module. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
 
 ```elixir
 defmodule Helpdesk.Support do
-  use Ash.Api, extensions: [
-    AshGraphql.Api
+  use Ash.Domain, extensions: [
+    AshGraphql.Domain
   ]
 
   graphql do
-    authorize? false # Defaults to `true`, use this to disable authorization for the entire API (you probably only want this while prototyping)
+    authorize? false # Defaults to `true`, use this to disable authorization for the entire domain (you probably only want this while prototyping)
   end
 
   ...
@@ -94,9 +94,9 @@ in `lib/helpdesk/schema.ex`
 defmodule Helpdesk.Schema do
   use Absinthe.Schema
 
-  @apis [Helpdesk.Support]
+  @domains [Helpdesk.Support]
 
-  use AshGraphql, apis: @apis
+  use AshGraphql, domains: @domains
 
   # The query and mutation blocks is where you can add custom absinthe code
   query do

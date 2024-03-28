@@ -3,9 +3,9 @@ defmodule AshGraphql.Test.RootLevelErrorsSchema do
 
   use Absinthe.Schema
 
-  @apis [AshGraphql.Test.RootLevelErrorsApi]
+  @domains [AshGraphql.Test.RootLevelErrorsDomain]
 
-  use AshGraphql, apis: @apis
+  use AshGraphql, domains: @domains
 
   query do
   end

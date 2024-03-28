@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.NoObject do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -26,6 +27,6 @@ defmodule AshGraphql.Test.NoObject do
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:name, :string)
+    attribute(:name, :string, public?: true)
   end
 end

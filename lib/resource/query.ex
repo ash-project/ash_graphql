@@ -89,7 +89,7 @@ defmodule AshGraphql.Resource.Query do
                   """
                 ]
               ]
-              |> Spark.OptionsHelpers.merge_schemas(@query_schema, "Shared Query Options")
+              |> Spark.Options.merge(@query_schema, "Shared Query Options")
 
   @read_one_schema [
                      allow_nil?: [
@@ -98,7 +98,7 @@ defmodule AshGraphql.Resource.Query do
                        doc: "Whether or not the action can return nil."
                      ]
                    ]
-                   |> Spark.OptionsHelpers.merge_schemas(@query_schema, "Shared Query Options")
+                   |> Spark.Options.merge(@query_schema, "Shared Query Options")
 
   @list_schema [
                  relay?: [
@@ -116,7 +116,7 @@ defmodule AshGraphql.Resource.Query do
                    """
                  ]
                ]
-               |> Spark.OptionsHelpers.merge_schemas(@query_schema, "Shared Query Options")
+               |> Spark.Options.merge(@query_schema, "Shared Query Options")
 
   def get_schema, do: @get_schema
   def read_one_schema, do: @read_one_schema

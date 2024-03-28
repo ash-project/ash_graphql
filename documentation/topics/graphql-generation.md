@@ -247,11 +247,11 @@ mutation($input: CreateTicketInput!) {
 - Validation errors are wrapped in a list of error objects under `errors`, also specified in the query.
   AshGraphql does this by default instead of exposing errors in GraphQL's standard `errors` array.
   This behavior can be changed by setting `root_level_errors? true` in the `graphql` section
-  of your Ash API module:
+  of your Ash domain module:
 
   ```elixir
   defmodule Helpdesk.Support do
-    use Ash.Api, extensions: [AshGraphql.Api]
+    use Ash.Domain, extensions: [AshGraphql.Domain]
 
     graphql do
       root_level_errors? true
@@ -302,4 +302,4 @@ If you haven't already, please turn on the documentation tag for AshGraphql. Tag
 at the top of the left navigation menu, under "Including Libraries:".
 
 - [Getting Started With GraphQL](/documentation/tutorials/getting-started-with-graphql.md)
-- `AshGraphql.Api`
+- `AshGraphql.Domain`

@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.SponsoredComment do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -18,6 +19,7 @@ defmodule AshGraphql.Test.SponsoredComment do
   end
 
   actions do
+    default_accept(:*)
     defaults([:create, :update, :destroy])
 
     read :read do
@@ -31,15 +33,16 @@ defmodule AshGraphql.Test.SponsoredComment do
 
   attributes do
     uuid_primary_key(:id)
-    attribute(:text, :string)
+    attribute(:text, :string, public?: true)
 
     attribute :type, :atom do
+      public?(true)
       writable?(false)
       default(:sponsored)
     end
   end
 
   relationships do
-    belongs_to(:post, AshGraphql.Test.Post)
+    belongs_to(:post, AshGraphql.Test.Post, public?: true)
   end
 end

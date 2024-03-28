@@ -57,8 +57,8 @@ end
 | [`encode_primary_key?`](#graphql-encode_primary_key?){: #graphql-encode_primary_key? } | `boolean` | `true` | For resources with composite primary keys, or primary keys not called `:id`, this will cause the id to be encoded as a single `id` attribute, both in the representation of the resource and in get requests |
 | [`relationships`](#graphql-relationships){: #graphql-relationships } | `list(atom)` |  | A list of relationships to include on the created type. Defaults to all public relationships where the destination defines a graphql type. |
 | [`field_names`](#graphql-field_names){: #graphql-field_names } | `keyword` |  | A keyword list of name overrides for attributes. |
-| [`hide_fields`](#graphql-hide_fields){: #graphql-hide_fields } | `list(atom)` |  | A list of attributes to hide from the api |
-| [`show_fields`](#graphql-show_fields){: #graphql-show_fields } | `list(atom)` |  | A list of attributes to show in the api. If not specified includes all (excluding `hide_fiels`). |
+| [`hide_fields`](#graphql-hide_fields){: #graphql-hide_fields } | `list(atom)` |  | A list of attributes to hide from the domain |
+| [`show_fields`](#graphql-show_fields){: #graphql-show_fields } | `list(atom)` |  | A list of attributes to show in the domain. If not specified includes all (excluding `hide_fiels`). |
 | [`argument_names`](#graphql-argument_names){: #graphql-argument_names } | `keyword` |  | A nested keyword list of action names, to argument name remappings. i.e `create: [arg_name: :new_name]` |
 | [`keyset_field`](#graphql-keyset_field){: #graphql-keyset_field } | `atom` |  | If set, the keyset will be displayed on all read actions in this field.  It will be `nil` unless at least one of the read actions on a resource uses keyset pagination or it is the result of a mutation |
 | [`attribute_types`](#graphql-attribute_types){: #graphql-attribute_types } | `keyword` |  | A keyword list of type overrides for attributes. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used. |
@@ -322,7 +322,7 @@ create :create_post, :create
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`. |
+| [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
 | [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |

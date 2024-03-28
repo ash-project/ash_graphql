@@ -1,8 +1,8 @@
 defmodule AshGraphql.Graphql.Resolver do
   @moduledoc false
 
-  require Ash.Query
   require Logger
+  import Ash.Expr
   import AshGraphql.TraceHelpers
   import AshGraphql.ContextHelpers
 
@@ -11,7 +11,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource, %AshGraphql.Resource.Action{name: query_name, action: action}, input?}
+        {domain, resource, %AshGraphql.Resource.Action{name: query_name, action: action}, input?}
       ) do
     arguments =
       if input? do
@@ -25,7 +25,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case handle_arguments(resource, action, arguments) do
       {:ok, arguments} ->
         metadata = %{
-          api: api,
+          domain: domain,
           resource: resource,
           resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
@@ -33,34 +33,33 @@ defmodule AshGraphql.Graphql.Resolver do
           action: action,
           source: :graphql,
           query: query_name,
-          authorize?: AshGraphql.Api.Info.authorize?(api)
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
         }
 
-        trace api,
+        trace domain,
               resource,
               :gql_query,
               query_name,
               metadata do
           opts = [
             actor: Map.get(context, :actor),
-            authorize?: AshGraphql.Api.Info.authorize?(api),
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
             tenant: Map.get(context, :tenant)
           ]
 
           result =
-            %Ash.ActionInput{api: api, resource: resource}
+            %Ash.ActionInput{domain: domain, resource: resource}
             |> Ash.ActionInput.set_context(get_context(context))
             |> Ash.ActionInput.for_action(action.name, arguments)
-            |> api.run_action(opts)
+            |> domain.run_action(opts)
             |> case do
               {:ok, result} ->
                 load_opts =
                   [
                     actor: Map.get(context, :actor),
                     action: action,
-                    api: api,
-                    verbose?: AshGraphql.Api.Info.debug?(api),
-                    authorize?: AshGraphql.Api.Info.authorize?(api),
+                    domain: domain,
+                    authorize?: AshGraphql.Domain.Info.authorize?(domain),
                     tenant: Map.get(context, :tenant)
                   ]
 
@@ -108,10 +107,10 @@ defmodule AshGraphql.Graphql.Resolver do
             to_resolution(
               result,
               context,
-              api
+              domain
             )
           )
-          |> add_root_errors(api, result)
+          |> add_root_errors(domain, result)
         end
 
       {:error, error} ->
@@ -119,17 +118,21 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, error}, context, domain)
+        )
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource,
+        {domain, resource,
          %{
            name: query_name,
            type: :get,
@@ -142,7 +145,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case handle_arguments(resource, action, arguments) do
       {:ok, arguments} ->
         metadata = %{
-          api: api,
+          domain: domain,
           resource: resource,
           resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
@@ -150,10 +153,10 @@ defmodule AshGraphql.Graphql.Resolver do
           action: action,
           source: :graphql,
           query: query_name,
-          authorize?: AshGraphql.Api.Info.authorize?(api)
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
         }
 
-        trace api,
+        trace domain,
               resource,
               :gql_query,
               query_name,
@@ -161,8 +164,7 @@ defmodule AshGraphql.Graphql.Resolver do
           opts = [
             actor: Map.get(context, :actor),
             action: action,
-            verbose?: AshGraphql.Api.Info.debug?(api),
-            authorize?: AshGraphql.Api.Info.authorize?(api),
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
             tenant: Map.get(context, :tenant)
           ]
 
@@ -184,10 +186,10 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Ash.Query.do_filter(filter)
                   |> load_fields(
                     [
-                      api: api,
+                      domain: domain,
                       tenant: Map.get(context, :tenant),
-                      authorize?: AshGraphql.Api.Info.authorize?(api),
-                      tracer: AshGraphql.Api.Info.tracer(api),
+                      authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                      tracer: AshGraphql.Domain.Info.tracer(domain),
                       actor: Map.get(context, :actor)
                     ],
                     resource,
@@ -200,9 +202,9 @@ defmodule AshGraphql.Graphql.Resolver do
                   query
                   |> Ash.Query.for_read(action, %{},
                     actor: opts[:actor],
-                    authorize?: AshGraphql.Api.Info.authorize?(api)
+                    authorize?: AshGraphql.Domain.Info.authorize?(domain)
                   )
-                  |> api.read_one(opts)
+                  |> domain.read_one(opts)
 
                 {result, [query, result]}
 
@@ -216,10 +218,10 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> select_fields(resource, resolution, type_name)
                   |> load_fields(
                     [
-                      api: api,
+                      domain: domain,
                       tenant: Map.get(context, :tenant),
-                      authorize?: AshGraphql.Api.Info.authorize?(api),
-                      tracer: AshGraphql.Api.Info.tracer(api),
+                      authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                      tracer: AshGraphql.Domain.Info.tracer(domain),
                       actor: Map.get(context, :actor)
                     ],
                     resource,
@@ -242,8 +244,8 @@ defmodule AshGraphql.Graphql.Resolver do
                 )
 
               resolution
-              |> Absinthe.Resolution.put_result({:error, to_errors([error], context, api)})
-              |> add_root_errors(api, result)
+              |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+              |> add_root_errors(domain, result)
 
             {result, _} ->
               resolution
@@ -255,10 +257,10 @@ defmodule AshGraphql.Graphql.Resolver do
                     Ash.Resource.Info.action(query.resource, action)
                   ),
                   context,
-                  api
+                  domain
                 )
               )
-              |> add_root_errors(api, result)
+              |> add_root_errors(domain, result)
               |> modify_resolution(modify, modify_args)
           end
         end
@@ -268,17 +270,21 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, error}, context, domain)
+        )
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource,
+        {domain, resource,
          %{
            name: query_name,
            type: :read_one,
@@ -289,7 +295,7 @@ defmodule AshGraphql.Graphql.Resolver do
            gql_query, _relay_ids?}
       ) do
     metadata = %{
-      api: api,
+      domain: domain,
       resource: resource,
       resource_short_name: Ash.Resource.Info.short_name(resource),
       actor: Map.get(context, :actor),
@@ -297,12 +303,12 @@ defmodule AshGraphql.Graphql.Resolver do
       action: action,
       source: :graphql,
       query: query_name,
-      authorize?: AshGraphql.Api.Info.authorize?(api)
+      authorize?: AshGraphql.Domain.Info.authorize?(domain)
     }
 
     with {:ok, args} <- handle_arguments(resource, action, args),
          {:ok, query} <- read_one_query(resource, args) do
-      trace api,
+      trace domain,
             resource,
             :gql_query,
             query_name,
@@ -310,8 +316,7 @@ defmodule AshGraphql.Graphql.Resolver do
         opts = [
           actor: Map.get(context, :actor),
           action: action,
-          verbose?: AshGraphql.Api.Info.debug?(api),
-          authorize?: AshGraphql.Api.Info.authorize?(api),
+          authorize?: AshGraphql.Domain.Info.authorize?(domain),
           tenant: Map.get(context, :tenant)
         ]
 
@@ -323,10 +328,10 @@ defmodule AshGraphql.Graphql.Resolver do
           |> select_fields(resource, resolution, type_name)
           |> load_fields(
             [
-              api: api,
+              domain: domain,
               tenant: Map.get(context, :tenant),
-              authorize?: AshGraphql.Api.Info.authorize?(api),
-              tracer: AshGraphql.Api.Info.tracer(api),
+              authorize?: AshGraphql.Domain.Info.authorize?(domain),
+              tracer: AshGraphql.Domain.Info.tracer(domain),
               actor: Map.get(context, :actor)
             ],
             resource,
@@ -339,9 +344,9 @@ defmodule AshGraphql.Graphql.Resolver do
           query
           |> Ash.Query.for_read(action, %{},
             actor: opts[:actor],
-            authorize?: AshGraphql.Api.Info.authorize?(api)
+            authorize?: AshGraphql.Domain.Info.authorize?(domain)
           )
-          |> api.read_one(opts)
+          |> domain.read_one(opts)
 
         result =
           add_read_metadata(
@@ -351,28 +356,32 @@ defmodule AshGraphql.Graphql.Resolver do
           )
 
         resolution
-        |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-        |> add_root_errors(api, result)
+        |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+        |> add_root_errors(domain, result)
         |> modify_resolution(modify, [query, args])
       end
     else
       {:error, error} ->
         resolution
-        |> Absinthe.Resolution.put_result(to_resolution({:error, error}, context, api))
+        |> Absinthe.Resolution.put_result(to_resolution({:error, error}, context, domain))
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, error}, context, domain)
+        )
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
   def resolve(
         %{arguments: args, context: context} = resolution,
-        {api, resource,
+        {domain, resource,
          %{
            name: query_name,
            type: :list,
@@ -385,7 +394,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case handle_arguments(resource, action, args) do
       {:ok, args} ->
         metadata = %{
-          api: api,
+          domain: domain,
           resource: resource,
           resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
@@ -393,10 +402,10 @@ defmodule AshGraphql.Graphql.Resolver do
           action: action,
           source: :graphql,
           query: query_name,
-          authorize?: AshGraphql.Api.Info.authorize?(api)
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
         }
 
-        trace api,
+        trace domain,
               resource,
               :gql_query,
               query_name,
@@ -404,8 +413,7 @@ defmodule AshGraphql.Graphql.Resolver do
           opts = [
             actor: Map.get(context, :actor),
             action: action,
-            verbose?: AshGraphql.Api.Info.debug?(api),
-            authorize?: AshGraphql.Api.Info.authorize?(api),
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
             tenant: Map.get(context, :tenant)
           ]
 
@@ -426,10 +434,10 @@ defmodule AshGraphql.Graphql.Resolver do
                    load_fields(
                      initial_query,
                      [
-                       api: api,
+                       domain: domain,
                        tenant: Map.get(context, :tenant),
-                       authorize?: AshGraphql.Api.Info.authorize?(api),
-                       tracer: AshGraphql.Api.Info.tracer(api),
+                       authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                       tracer: AshGraphql.Domain.Info.tracer(domain),
                        actor: Map.get(context, :actor)
                      ],
                      resource,
@@ -442,9 +450,9 @@ defmodule AshGraphql.Graphql.Resolver do
                    query
                    |> Ash.Query.for_read(action, %{},
                      actor: Map.get(context, :actor),
-                     authorize?: AshGraphql.Api.Info.authorize?(api)
+                     authorize?: AshGraphql.Domain.Info.authorize?(domain)
                    )
-                   |> api.read(opts) do
+                   |> domain.read(opts) do
               result = paginate(resource, action, page, relay?)
               {result, [query, result]}
             else
@@ -456,8 +464,8 @@ defmodule AshGraphql.Graphql.Resolver do
             add_read_metadata(result, gql_query, Ash.Resource.Info.action(query.resource, action))
 
           resolution
-          |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-          |> add_root_errors(api, modify_args)
+          |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+          |> add_root_errors(domain, modify_args)
           |> modify_resolution(modify, modify_args)
         end
 
@@ -466,11 +474,15 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
-        Absinthe.Resolution.put_result(resolution, to_resolution({:error, error}, context, api))
+
+        Absinthe.Resolution.put_result(
+          resolution,
+          to_resolution({:error, error}, context, domain)
+        )
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
@@ -570,13 +582,13 @@ defmodule AshGraphql.Graphql.Resolver do
 
             Enum.reduce(defaults, Ash.Changeset.manage_relationship_schema(), fn {key, value},
                                                                                  manage_opts ->
-              Spark.OptionsHelpers.set_default!(manage_opts, key, value)
+              Spark.Options.Helpers.set_default!(manage_opts, key, value)
             end)
           else
             Ash.Changeset.manage_relationship_schema()
           end
 
-        manage_opts = Spark.OptionsHelpers.validate!(opts[:opts], manage_opts_schema)
+        manage_opts = Spark.Options.validate!(opts[:opts], manage_opts_schema)
 
         fields =
           manage_opts
@@ -644,7 +656,7 @@ defmodule AshGraphql.Graphql.Resolver do
           name
         )
 
-      Ash.Type.embedded_type?(type) and is_map(value) ->
+      AshGraphql.Resource.embedded?(type) and is_map(value) ->
         create_action =
           if constraints[:create_action] do
             Ash.Resource.Info.action(type, constraints[:create_action]) ||
@@ -992,7 +1004,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def mutate(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource,
+        {domain, resource,
          %{
            type: :create,
            name: mutation_name,
@@ -1007,7 +1019,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case handle_arguments(resource, action, input) do
       {:ok, input} ->
         metadata = %{
-          api: api,
+          domain: domain,
           resource: resource,
           resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
@@ -1015,10 +1027,10 @@ defmodule AshGraphql.Graphql.Resolver do
           action: action,
           source: :graphql,
           mutation_name: mutation_name,
-          authorize?: AshGraphql.Api.Info.authorize?(api)
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
         }
 
-        trace api,
+        trace domain,
               resource,
               :gql_mutation,
               mutation_name,
@@ -1026,8 +1038,7 @@ defmodule AshGraphql.Graphql.Resolver do
           opts = [
             actor: Map.get(context, :actor),
             action: action,
-            verbose?: AshGraphql.Api.Info.debug?(api),
-            authorize?: AshGraphql.Api.Info.authorize?(api),
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
             tenant: Map.get(context, :tenant),
             upsert?: upsert?
           ]
@@ -1048,15 +1059,15 @@ defmodule AshGraphql.Graphql.Resolver do
             |> Ash.Changeset.set_context(get_context(context))
             |> Ash.Changeset.for_create(action, input,
               actor: Map.get(context, :actor),
-              authorize?: AshGraphql.Api.Info.authorize?(api)
+              authorize?: AshGraphql.Domain.Info.authorize?(domain)
             )
             |> select_fields(resource, resolution, type_name, ["result"])
             |> load_fields(
               [
-                api: api,
+                domain: domain,
                 tenant: Map.get(context, :tenant),
-                authorize?: AshGraphql.Api.Info.authorize?(api),
-                tracer: AshGraphql.Api.Info.tracer(api),
+                authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                tracer: AshGraphql.Domain.Info.tracer(domain),
                 actor: Map.get(context, :actor)
               ],
               resource,
@@ -1068,20 +1079,20 @@ defmodule AshGraphql.Graphql.Resolver do
 
           {result, modify_args} =
             changeset
-            |> api.create(opts)
+            |> domain.create(opts)
             |> case do
               {:ok, value} ->
                 {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
                  [changeset, {:ok, value}]}
 
               {:error, %{changeset: changeset} = error} ->
-                {{:ok, %{result: nil, errors: to_errors(changeset.errors, context, api)}},
+                {{:ok, %{result: nil, errors: to_errors(changeset.errors, context, domain)}},
                  [changeset, {:error, error}]}
             end
 
           resolution
-          |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-          |> add_root_errors(api, modify_args)
+          |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+          |> add_root_errors(domain, modify_args)
           |> modify_resolution(modify, modify_args)
         end
 
@@ -1090,32 +1101,32 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
 
-        if AshGraphql.Api.Info.root_level_errors?(api) do
+        if AshGraphql.Domain.Info.root_level_errors?(domain) do
           Absinthe.Resolution.put_result(
             resolution,
-            to_resolution({:error, error}, context, api)
+            to_resolution({:error, error}, context, domain)
           )
         else
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, api)}},
+              {:ok, %{result: nil, errors: to_errors(error, context, domain)}},
               context,
-              api
+              domain
             )
           )
         end
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
   def mutate(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource,
+        {domain, resource,
          %{
            name: mutation_name,
            type: :update,
@@ -1138,7 +1149,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case args_result do
       {:ok, input, read_action_input} ->
         metadata = %{
-          api: api,
+          domain: domain,
           resource: resource,
           resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
@@ -1146,10 +1157,10 @@ defmodule AshGraphql.Graphql.Resolver do
           action: action,
           mutation: mutation_name,
           source: :graphql,
-          authorize?: AshGraphql.Api.Info.authorize?(api)
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
         }
 
-        trace api,
+        trace domain,
               resource,
               :gql_mutation,
               mutation_name,
@@ -1163,26 +1174,24 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(get_context(context))
               |> set_query_arguments(read_action, read_action_input)
-              |> api.read_one(
+              |> domain.read_one(
                 action: read_action,
-                verbose?: AshGraphql.Api.Info.debug?(api),
                 actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Api.Info.authorize?(api)
+                authorize?: AshGraphql.Domain.Info.authorize?(domain)
               )
               |> case do
                 {:ok, nil} ->
-                  result = not_found(filter, resource, context, api)
+                  result = not_found(filter, resource, context, domain)
 
                   resolution
                   |> Absinthe.Resolution.put_result(result)
-                  |> add_root_errors(api, result)
+                  |> add_root_errors(domain, result)
 
                 {:ok, initial} ->
                   opts = [
                     actor: Map.get(context, :actor),
                     action: action,
-                    verbose?: AshGraphql.Api.Info.debug?(api),
-                    authorize?: AshGraphql.Api.Info.authorize?(api),
+                    authorize?: AshGraphql.Domain.Info.authorize?(domain),
                     tenant: Map.get(context, :tenant)
                   ]
 
@@ -1195,15 +1204,15 @@ defmodule AshGraphql.Graphql.Resolver do
                     |> Ash.Changeset.set_context(get_context(context))
                     |> Ash.Changeset.for_update(action, input,
                       actor: Map.get(context, :actor),
-                      authorize?: AshGraphql.Api.Info.authorize?(api)
+                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
                     )
                     |> select_fields(resource, resolution, type_name, ["result"])
                     |> load_fields(
                       [
-                        api: api,
+                        domain: domain,
                         tenant: Map.get(context, :tenant),
-                        authorize?: AshGraphql.Api.Info.authorize?(api),
-                        tracer: AshGraphql.Api.Info.tracer(api),
+                        authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                        tracer: AshGraphql.Domain.Info.tracer(domain),
                         actor: Map.get(context, :actor)
                       ],
                       resource,
@@ -1215,7 +1224,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
                   {result, modify_args} =
                     changeset
-                    |> api.update(opts)
+                    |> domain.update(opts)
                     |> case do
                       {:ok, value} ->
                         {{:ok,
@@ -1223,26 +1232,27 @@ defmodule AshGraphql.Graphql.Resolver do
                          [changeset, {:ok, value}]}
 
                       {:error, error} ->
-                        {{:ok, %{result: nil, errors: to_errors(List.wrap(error), context, api)}},
+                        {{:ok,
+                          %{result: nil, errors: to_errors(List.wrap(error), context, domain)}},
                          [changeset, {:error, error}]}
                     end
 
                   resolution
-                  |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-                  |> add_root_errors(api, modify_args)
+                  |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+                  |> add_root_errors(domain, modify_args)
                   |> modify_resolution(modify, modify_args)
 
                 {:error, error} ->
                   Absinthe.Resolution.put_result(
                     resolution,
-                    to_resolution({:error, error}, context, api)
+                    to_resolution({:error, error}, context, domain)
                   )
               end
 
             {:error, error} ->
               Absinthe.Resolution.put_result(
                 resolution,
-                to_resolution({:error, error}, context, api)
+                to_resolution({:error, error}, context, domain)
               )
           end
         end
@@ -1252,32 +1262,32 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
 
-        if AshGraphql.Api.Info.root_level_errors?(api) do
+        if AshGraphql.Domain.Info.root_level_errors?(domain) do
           Absinthe.Resolution.put_result(
             resolution,
-            to_resolution({:error, error}, context, api)
+            to_resolution({:error, error}, context, domain)
           )
         else
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, api)}},
+              {:ok, %{result: nil, errors: to_errors(error, context, domain)}},
               context,
-              api
+              domain
             )
           )
         end
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
   def mutate(
         %{arguments: arguments, context: context} = resolution,
-        {api, resource,
+        {domain, resource,
          %{
            name: mutation_name,
            type: :destroy,
@@ -1300,7 +1310,7 @@ defmodule AshGraphql.Graphql.Resolver do
     case args_result do
       {:ok, input, read_action_input} ->
         metadata = %{
-          api: api,
+          domain: domain,
           resource: resource,
           resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
@@ -1308,10 +1318,10 @@ defmodule AshGraphql.Graphql.Resolver do
           action: action,
           source: :graphql,
           mutation: mutation_name,
-          authorize?: AshGraphql.Api.Info.authorize?(api)
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
         }
 
-        trace api,
+        trace domain,
               resource,
               :gql_mutation,
               mutation_name,
@@ -1325,26 +1335,24 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.set_tenant(Map.get(context, :tenant))
               |> Ash.Query.set_context(get_context(context))
               |> set_query_arguments(action, read_action_input)
-              |> api.read_one(
+              |> domain.read_one(
                 action: read_action,
-                verbose?: AshGraphql.Api.Info.debug?(api),
                 actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Api.Info.authorize?(api)
+                authorize?: AshGraphql.Domain.Info.authorize?(domain)
               )
               |> case do
                 {:ok, nil} ->
-                  result = not_found(filter, resource, context, api)
+                  result = not_found(filter, resource, context, domain)
 
                   resolution
                   |> Absinthe.Resolution.put_result(result)
-                  |> add_root_errors(api, result)
+                  |> add_root_errors(domain, result)
 
                 {:ok, initial} ->
                   opts = [
                     action: action,
-                    verbose?: AshGraphql.Api.Info.debug?(api),
                     actor: Map.get(context, :actor),
-                    authorize?: AshGraphql.Api.Info.authorize?(api),
+                    authorize?: AshGraphql.Domain.Info.authorize?(domain),
                     tenant: Map.get(context, :tenant)
                   ]
 
@@ -1357,31 +1365,31 @@ defmodule AshGraphql.Graphql.Resolver do
                     |> Ash.Changeset.set_context(get_context(context))
                     |> Ash.Changeset.for_destroy(action, input,
                       actor: Map.get(context, :actor),
-                      authorize?: AshGraphql.Api.Info.authorize?(api)
+                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
                     )
                     |> select_fields(resource, resolution, type_name, ["result"])
 
                   {result, modify_args} =
                     changeset
-                    |> api.destroy(opts)
-                    |> destroy_result(initial, resource, changeset, api, resolution)
+                    |> domain.destroy(opts)
+                    |> destroy_result(initial, resource, changeset, domain, resolution)
 
                   resolution
-                  |> Absinthe.Resolution.put_result(to_resolution(result, context, api))
-                  |> add_root_errors(api, result)
+                  |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+                  |> add_root_errors(domain, result)
                   |> modify_resolution(modify, modify_args)
 
                 {:error, error} ->
                   Absinthe.Resolution.put_result(
                     resolution,
-                    to_resolution({:error, error}, context, api)
+                    to_resolution({:error, error}, context, domain)
                   )
               end
 
             {:error, error} ->
               Absinthe.Resolution.put_result(
                 resolution,
-                to_resolution({:error, error}, context, api)
+                to_resolution({:error, error}, context, domain)
               )
           end
         end
@@ -1391,26 +1399,26 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   rescue
     e ->
-      if AshGraphql.Api.Info.show_raised_errors?(api) do
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
         error = Ash.Error.to_ash_error([e], __STACKTRACE__)
 
-        if AshGraphql.Api.Info.root_level_errors?(api) do
+        if AshGraphql.Domain.Info.root_level_errors?(domain) do
           Absinthe.Resolution.put_result(
             resolution,
-            to_resolution({:error, error}, context, api)
+            to_resolution({:error, error}, context, domain)
           )
         else
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, api)}},
+              {:ok, %{result: nil, errors: to_errors(error, context, domain)}},
               context,
-              api
+              domain
             )
           )
         end
       else
-        something_went_wrong(resolution, e, api, __STACKTRACE__)
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
 
@@ -1428,8 +1436,8 @@ defmodule AshGraphql.Graphql.Resolver do
     uuid
   end
 
-  defp something_went_wrong(resolution, e, api, stacktrace) do
-    tracer = AshGraphql.Api.Info.tracer(api)
+  defp something_went_wrong(resolution, e, domain, stacktrace) do
+    tracer = AshGraphql.Domain.Info.tracer(domain)
 
     Ash.Tracer.set_error(tracer, e)
 
@@ -1481,9 +1489,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
         if value do
           if expr do
-            {:cont, {:ok, Ash.Query.expr(^expr and ref(^key) == ^value)}}
+            {:cont, {:ok, Ash.Expr.expr(^expr and ^ref(key) == ^value)}}
           else
-            {:cont, {:ok, Ash.Query.expr(ref(^key) == ^value)}}
+            {:cont, {:ok, Ash.Expr.expr(^ref(key) == ^value)}}
           end
         else
           {:halt, {:error, "Required key not present"}}
@@ -1503,7 +1511,7 @@ defmodule AshGraphql.Graphql.Resolver do
      end)}
   end
 
-  defp not_found(filter, resource, context, api) do
+  defp not_found(filter, resource, context, domain) do
     {:ok,
      %{
        result: nil,
@@ -1514,7 +1522,7 @@ defmodule AshGraphql.Graphql.Resolver do
              resource: resource
            ),
            context,
-           api
+           domain
          )
      }}
   end
@@ -1717,7 +1725,8 @@ defmodule AshGraphql.Graphql.Resolver do
                       {:__ash_graphql_attribute__, selection.alias},
                       Ash.Resource.Calculation.LoadAttribute,
                       Keyword.put(load_opts, :attribute, attribute.name),
-                      {attribute.type, attribute.constraints}
+                      attribute.type,
+                      attribute.constraints
                     )
 
                   [
@@ -1734,7 +1743,8 @@ defmodule AshGraphql.Graphql.Resolver do
                       {:__ash_graphql_attribute__, selection.alias},
                       Ash.Resource.Calculation.LoadAttribute,
                       Keyword.merge(load_opts, load: loads, attribute: attribute.name),
-                      {attribute.type, attribute.constraints}
+                      attribute.type,
+                      attribute.constraints
                     )
 
                   [
@@ -1765,7 +1775,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
           related_query =
             relationship.destination
-            |> Ash.Query.new(relationship.destination)
+            |> Ash.Query.new()
             |> Ash.Query.set_tenant(Map.get(context, :tenant))
             |> Ash.Query.set_context(get_context(context))
 
@@ -1804,7 +1814,8 @@ defmodule AshGraphql.Graphql.Resolver do
                 {:__ash_graphql_relationship__, selection.alias},
                 Ash.Resource.Calculation.LoadRelationship,
                 Keyword.merge(load_opts, relationship: relationship.name, query: related_query),
-                {type, constraints}
+                type,
+                constraints
               )
 
             [
@@ -1904,9 +1915,9 @@ defmodule AshGraphql.Graphql.Resolver do
           already_expanded?
         )
 
-      Ash.Type.embedded_type?(type) || Ash.Resource.Info.resource?(type) ||
+      AshGraphql.Resource.embedded?(type) || Ash.Resource.Info.resource?(type) ||
           (type in [Ash.Type.Struct, :struct] && constraints[:instance_of] &&
-             (Ash.Type.embedded_type?(constraints[:instance_of]) ||
+             (AshGraphql.Resource.embedded?(constraints[:instance_of]) ||
                 Ash.Resource.Info.resource?(constraints[:instance_of]))) ->
         type =
           if type in [:struct, Ash.Type.Struct] do
@@ -2214,7 +2225,7 @@ defmodule AshGraphql.Graphql.Resolver do
       end
 
     action.arguments
-    |> Enum.reject(& &1.private?)
+    |> Enum.filter(& &1.public?)
     |> Enum.reduce(query, fn argument, query ->
       case Map.fetch(arg_values, argument.name) do
         {:ok, value} ->
@@ -2226,35 +2237,35 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp add_root_errors(resolution, api, {:error, error_or_errors}) do
-    do_root_errors(api, resolution, error_or_errors)
+  defp add_root_errors(resolution, domain, {:error, error_or_errors}) do
+    do_root_errors(domain, resolution, error_or_errors)
   end
 
-  defp add_root_errors(resolution, api, [_, {:error, error_or_errors}]) do
-    do_root_errors(api, resolution, error_or_errors)
+  defp add_root_errors(resolution, domain, [_, {:error, error_or_errors}]) do
+    do_root_errors(domain, resolution, error_or_errors)
   end
 
-  defp add_root_errors(resolution, api, [_, {:ok, %{errors: errors}}])
+  defp add_root_errors(resolution, domain, [_, {:ok, %{errors: errors}}])
        when errors not in [nil, []] do
-    do_root_errors(api, resolution, errors, false)
+    do_root_errors(domain, resolution, errors, false)
   end
 
-  defp add_root_errors(resolution, api, {:ok, %{errors: errors}})
+  defp add_root_errors(resolution, domain, {:ok, %{errors: errors}})
        when errors not in [nil, []] do
-    do_root_errors(api, resolution, errors, false)
+    do_root_errors(domain, resolution, errors, false)
   end
 
-  defp add_root_errors(resolution, _api, _other_thing) do
+  defp add_root_errors(resolution, _domain, _other_thing) do
     resolution
   end
 
-  defp do_root_errors(api, resolution, error_or_errors, to_errors? \\ true) do
-    if AshGraphql.Api.Info.root_level_errors?(api) do
+  defp do_root_errors(domain, resolution, error_or_errors, to_errors? \\ true) do
+    if AshGraphql.Domain.Info.root_level_errors?(domain) do
       Map.update!(resolution, :errors, fn current_errors ->
         if to_errors? do
           Enum.concat(
             current_errors || [],
-            List.wrap(to_errors(error_or_errors, resolution.context, api))
+            List.wrap(to_errors(error_or_errors, resolution.context, domain))
           )
         else
           Enum.concat(current_errors || [], List.wrap(error_or_errors))
@@ -2310,14 +2321,14 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp destroy_result(result, initial, resource, changeset, api, resolution) do
+  defp destroy_result(result, initial, resource, changeset, domain, resolution) do
     case result do
       :ok ->
         {{:ok, %{result: clear_fields(initial, resource, resolution), errors: []}},
          [changeset, :ok]}
 
       {:error, %{changeset: changeset} = error} ->
-        {{:ok, %{result: nil, errors: to_errors(changeset.errors, resolution.context, api)}},
+        {{:ok, %{result: nil, errors: to_errors(changeset.errors, resolution.context, domain)}},
          {:error, error}}
     end
   end
@@ -2337,8 +2348,8 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp to_errors(errors, context, api) do
-    AshGraphql.Errors.to_errors(errors, context, api)
+  defp to_errors(errors, context, domain) do
+    AshGraphql.Errors.to_errors(errors, context, domain)
   end
 
   def resolve_calculation(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -2349,9 +2360,9 @@ defmodule AshGraphql.Graphql.Resolver do
           source: parent,
           context: context
         } = resolution,
-        {api, resource, calculation}
+        {domain, resource, calculation}
       ) do
-    api = api || context[:api]
+    domain = domain || context[:domain]
 
     result =
       if resolution.definition.alias do
@@ -2371,7 +2382,7 @@ defmodule AshGraphql.Graphql.Resolver do
                field: resolution.definition.name
              )},
             context,
-            api
+            domain
           )
         )
 
@@ -2389,13 +2400,13 @@ defmodule AshGraphql.Graphql.Resolver do
 
             resolve_union_result(
               result,
-              {calculation.name, calculation.type, calculation, resource, unnested_types, api}
+              {calculation.name, calculation.type, calculation, resource, unnested_types, domain}
             )
           else
             result
           end
 
-        Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, api))
+        Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, domain))
     end
   end
 
@@ -2409,7 +2420,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_assoc(
         %{source: parent} = resolution,
-        {_api, relationship}
+        {_domain, relationship}
       ) do
     value =
       if resolution.definition.alias do
@@ -2439,9 +2450,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_union(
         %{source: parent, context: context} = resolution,
-        {name, _field_type, _field, resource, _unnested_types, api} = data
+        {name, _field_type, _field, resource, _unnested_types, domain} = data
       ) do
-    api = api || context[:api]
+    domain = domain || context[:domain]
 
     value =
       if resolution.definition.alias do
@@ -2461,7 +2472,7 @@ defmodule AshGraphql.Graphql.Resolver do
                field: resolution.definition.name
              )},
             context,
-            api
+            domain
           )
         )
 
@@ -2474,9 +2485,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_attribute(
         %{source: %resource{} = parent, context: context} = resolution,
-        {name, type, constraints, api}
+        {name, type, constraints, domain}
       ) do
-    api = api || context[:api]
+    domain = domain || context[:domain]
 
     value =
       if resolution.definition.alias && Ash.Type.can_load?(type, constraints) do
@@ -2496,7 +2507,7 @@ defmodule AshGraphql.Graphql.Resolver do
                field: resolution.definition.name
              )},
             context,
-            api
+            domain
           )
         )
 
@@ -2514,7 +2525,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_attribute(
         %{source: parent} = resolution,
-        {name, type, constraints, _api}
+        {name, type, constraints, _domain}
       )
       when is_map(parent) do
     value =
@@ -2540,7 +2551,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp resolve_union_result(
          value,
-         {_name, field_type, field, resource, unnested_types, _api}
+         {_name, field_type, field, resource, unnested_types, _domain}
        ) do
     case value do
       %Ash.Union{type: type, value: value} = union ->
@@ -2551,7 +2562,7 @@ defmodule AshGraphql.Graphql.Resolver do
             type =
               AshGraphql.Resource.field_type(
                 constraints[:types][type][:type],
-                field,
+                %{field | constraints: constraints[:types][type][:constraints]},
                 resource
               )
 
@@ -2609,16 +2620,16 @@ defmodule AshGraphql.Graphql.Resolver do
     child_complexity + 1
   end
 
-  def resolve_node(%{arguments: %{id: id}} = resolution, type_to_api_and_resource_map) do
+  def resolve_node(%{arguments: %{id: id}} = resolution, type_to_domain_and_resource_map) do
     case AshGraphql.Resource.decode_relay_id(id) do
       {:ok, %{type: type, id: primary_key}} ->
-        {api, resource} = Map.fetch!(type_to_api_and_resource_map, type)
+        {domain, resource} = Map.fetch!(type_to_domain_and_resource_map, type)
         # We can be sure this returns something since we check this at compile time
         query = AshGraphql.Resource.primary_key_get_query(resource)
 
         # We pass relay_ids? as false since we pass the already decoded primary key
         put_in(resolution.arguments.id, primary_key)
-        |> resolve({api, resource, query, false})
+        |> resolve({domain, resource, query, false})
 
       {:error, _reason} = error ->
         Absinthe.Resolution.put_result(resolution, error)
@@ -2647,7 +2658,7 @@ defmodule AshGraphql.Graphql.Resolver do
               %{arguments: [_ | _]} ->
                 input_name = String.to_existing_atom("#{field}_input")
 
-                {field, {order, input[input_name] || %{}}}
+                {field, {input[input_name] || %{}, order}}
 
               _ ->
                 {field, order}
@@ -2661,9 +2672,9 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp to_resolution({:ok, value}, _context, _api), do: {:ok, value}
+  defp to_resolution({:ok, value}, _context, _domain), do: {:ok, value}
 
-  defp to_resolution({:error, error}, context, api) do
+  defp to_resolution({:error, error}, context, domain) do
     {:error,
      error
      |> unwrap_errors()
@@ -2671,7 +2682,7 @@ defmodule AshGraphql.Graphql.Resolver do
        if AshGraphql.Error.impl_for(error) do
          error = AshGraphql.Error.to_error(error)
 
-         case AshGraphql.Api.Info.error_handler(api) do
+         case AshGraphql.Domain.Info.error_handler(domain) do
            nil ->
              error
 
@@ -2694,7 +2705,7 @@ defmodule AshGraphql.Graphql.Resolver do
            "`#{uuid}`: AshGraphql.Error not implemented for error:\n\n#{Exception.format(:error, error, stacktrace)}"
          )
 
-         if AshGraphql.Api.Info.show_raised_errors?(api) do
+         if AshGraphql.Domain.Info.show_raised_errors?(domain) do
            %{
              message: """
              Raised error: #{uuid}

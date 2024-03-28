@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.MultitenantTag do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -24,6 +25,7 @@ defmodule AshGraphql.Test.MultitenantTag do
   end
 
   actions do
+    default_accept(:*)
     defaults([:read, :update, :destroy])
 
     create :create do
@@ -34,18 +36,19 @@ defmodule AshGraphql.Test.MultitenantTag do
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:name, :string)
+    attribute(:name, :string, public?: true)
   end
 
   identities do
-    identity(:name, [:name], pre_check_with: AshGraphql.Test.Api)
+    identity(:name, [:name], pre_check_with: AshGraphql.Test.Domain)
   end
 
   relationships do
     many_to_many(:posts, AshGraphql.Test.Post,
       through: AshGraphql.Test.MultitenantPostTag,
       source_attribute_on_join_resource: :tag_id,
-      destination_attribute_on_join_resource: :post_id
+      destination_attribute_on_join_resource: :post_id,
+      public?: true
     )
   end
 end

@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.User do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshGraphql.Resource]
@@ -25,12 +26,14 @@ defmodule AshGraphql.Test.User do
   end
 
   actions do
+    default_accept(:*)
+
     defaults([:create, :update, :destroy, :read])
 
     create(:create_policies)
 
     read :current_user do
-      filter(id: actor(:id))
+      filter(expr(id == ^actor(:id)))
     end
 
     read :current_user_with_metadata do
@@ -50,20 +53,21 @@ defmodule AshGraphql.Test.User do
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:name, :string)
+    attribute(:name, :string, public?: true)
 
     attribute(:secret, :string) do
+      public?(true)
       allow_nil? false
       default("super secret")
     end
   end
 
   relationships do
-    has_many(:posts, AshGraphql.Test.Post, destination_attribute: :author_id)
+    has_many(:posts, AshGraphql.Test.Post, destination_attribute: :author_id, public?: true)
   end
 
   calculations do
-    calculate(:name_twice, :string, expr(name <> " " <> name))
+    calculate(:name_twice, :string, expr(name <> " " <> name), public?: true)
   end
 
   policies do

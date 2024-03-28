@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.RelayIds.ResourceWithNoPrimaryKeyGet do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.RelayIds.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -18,6 +19,7 @@ defmodule AshGraphql.Test.RelayIds.ResourceWithNoPrimaryKeyGet do
   end
 
   actions do
+    default_accept(:*)
     defaults([:create, :update, :destroy, :read])
 
     read(:get_by_name, get_by: :name)
@@ -25,14 +27,17 @@ defmodule AshGraphql.Test.RelayIds.ResourceWithNoPrimaryKeyGet do
 
   attributes do
     uuid_primary_key(:id)
-    attribute(:name, :string, allow_nil?: false)
+    attribute(:name, :string, allow_nil?: false, public?: true)
   end
 
   identities do
-    identity(:name, [:name], pre_check_with: AshGraphql.Test.RelayIds.Api)
+    identity(:name, [:name], pre_check_with: AshGraphql.Test.RelayIds.Domain)
   end
 
   relationships do
-    has_many(:posts, AshGraphql.Test.RelayIds.Post, destination_attribute: :author_id)
+    has_many(:posts, AshGraphql.Test.RelayIds.Post,
+      destination_attribute: :author_id,
+      public?: true
+    )
   end
 end

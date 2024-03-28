@@ -9,11 +9,13 @@ defmodule MyApp.Armor do
     types: [
       plate: [
         # This is an embedded resource, with its own fields
-        type: MyApp.Armor.Plate
+        type: :struct,
+        constraints: [MyApp.Armor.Plate]
       ],
       chain_mail: [
         # And so is this
-        type: MyApp.Armor.ChainMail
+        type: :struct,
+        constraints: [instance_of: MyApp.Armor.ChainMail]
       ],
       custom: [
         type: :string

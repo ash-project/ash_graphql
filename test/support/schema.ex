@@ -3,9 +3,9 @@ defmodule AshGraphql.Test.Schema do
 
   use Absinthe.Schema
 
-  @apis [AshGraphql.Test.Api]
+  @domains [AshGraphql.Test.Domain]
 
-  use AshGraphql, apis: @apis
+  use AshGraphql, domains: @domains
 
   query do
   end

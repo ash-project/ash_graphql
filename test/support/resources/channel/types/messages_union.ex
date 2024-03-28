@@ -3,12 +3,14 @@ defmodule AshGraphql.Test.MessageUnion do
 
   @types [
     text: [
-      type: AshGraphql.Test.TextMessage,
+      type: :struct,
+      constraints: [instance_of: AshGraphql.Test.TextMessage],
       tag: :type,
       tag_value: :text_message
     ],
     image: [
-      type: AshGraphql.Test.ImageMessage,
+      type: :struct,
+      constraints: [instance_of: AshGraphql.Test.ImageMessage],
       tag: :type,
       tag_value: :image_message
     ]

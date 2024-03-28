@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.DoubleRelEmbed do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: :embedded,
     extensions: [AshGraphql.Resource]
 
@@ -10,6 +11,6 @@ defmodule AshGraphql.Test.DoubleRelEmbed do
   end
 
   attributes do
-    attribute(:recursive, :string, default: "No, not I, but me dad be!")
+    attribute(:recursive, :string, default: "No, not I, but me dad be!", public?: true)
   end
 end

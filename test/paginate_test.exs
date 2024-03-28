@@ -17,13 +17,13 @@ defmodule AshGraphql.PaginateTest do
         post =
           AshGraphql.Test.Post
           |> Ash.Changeset.for_create(:create, text: text, published: true)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
 
         for text <- letters do
           AshGraphql.Test.Comment
           |> Ash.Changeset.for_create(:create, text: text)
           |> Ash.Changeset.manage_relationship(:post, post, type: :append_and_remove)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
         end
       end
 
@@ -77,13 +77,13 @@ defmodule AshGraphql.PaginateTest do
         post =
           AshGraphql.Test.Post
           |> Ash.Changeset.for_create(:create, text: text, published: true)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
 
         for text <- letters do
           AshGraphql.Test.Comment
           |> Ash.Changeset.for_create(:create, text: text)
           |> Ash.Changeset.manage_relationship(:post, post, type: :append_and_remove)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
         end
       end
 

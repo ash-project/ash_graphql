@@ -18,11 +18,11 @@ subscription do
       # loads all the data you need
       AshGraphql.Subscription.query_for_subscription(
         YourResource,
-        YourAPi,
+        YourDomain,
         resolution
       )
       |> Ash.Query.filter(id == ^args.id)
-      |> YourAPi.read(actor: resolution.context.current_user)
+      |> Ash.read(actor: resolution.context.current_user)
     end)
   end
 end
