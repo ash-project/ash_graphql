@@ -5,6 +5,35 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.28.0](https://github.com/ash-project/ash_graphql/compare/v0.27.1...v0.28.0) (2024-03-30)
+
+
+
+
+### Features:
+
+* allow resources without types (#121)
+
+* allow resources without types
+
+* allow providing descriptions for enum values (#117)
+
+* allow providing descriptions for enum values
+
+### Bug Fixes:
+
+* regenerate spark formatter and cheatsheet
+
+* add `show_fields` to `spark_locals_without_parens` in formatter (#122)
+
+* include generic actions in enum filtering
+
+### Improvements:
+
+* add `show_fields` option as explicit fields whitelist (#120)
+
+* make pagination more explicitly configurable
+
 ## [v0.27.1](https://github.com/ash-project/ash_graphql/compare/v0.27.0...v0.27.1) (2024-03-11)
 
 
