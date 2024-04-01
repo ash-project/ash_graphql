@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.RelayIds.Post do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.RelayIds.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -24,6 +25,7 @@ defmodule AshGraphql.Test.RelayIds.Post do
   end
 
   actions do
+    default_accept(:*)
     defaults([:update, :read, :destroy])
 
     create :create do
@@ -42,11 +44,12 @@ defmodule AshGraphql.Test.RelayIds.Post do
 
   attributes do
     uuid_primary_key(:id)
-    attribute(:text, :string)
+    attribute(:text, :string, public?: true)
   end
 
   relationships do
     belongs_to(:author, AshGraphql.Test.RelayIds.User) do
+      public?(true)
       attribute_writable?(true)
     end
   end

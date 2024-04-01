@@ -3,7 +3,7 @@ defmodule AshGraphql.CreateTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
 
       AshGraphql.TestHelpers.stop_ets()
     end)
@@ -304,7 +304,7 @@ defmodule AshGraphql.CreateTest do
         simpleCreatePost(input: $input) {
           result{
             text1
-            integerAsStringInApi
+            integerAsStringInDomain
           }
           errors{
             message
@@ -313,7 +313,7 @@ defmodule AshGraphql.CreateTest do
       }
       """
       |> Absinthe.run(AshGraphql.Test.Schema,
-        variables: %{"input" => %{"text1" => "foo", "integerAsStringInApi" => "1"}}
+        variables: %{"input" => %{"text1" => "foo", "integerAsStringInDomain" => "1"}}
       )
 
     assert {:ok, result} = resp
@@ -324,7 +324,7 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "simpleCreatePost" => %{
                  "result" => %{
-                   "integerAsStringInApi" => "1"
+                   "integerAsStringInDomain" => "1"
                  }
                }
              }
@@ -332,7 +332,10 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "a create can load a calculation on a related belongs_to record" do
-    author = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.User, name: "bob"))
+    author =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create, name: "My Name")
+      |> Ash.create!()
 
     resp =
       """
@@ -365,7 +368,7 @@ defmodule AshGraphql.CreateTest do
                  "result" => %{
                    "fullText" => "foobar",
                    "author" => %{
-                     "nameTwice" => "bob bob"
+                     "nameTwice" => "My Name My Name"
                    }
                  }
                }
@@ -487,8 +490,8 @@ defmodule AshGraphql.CreateTest do
   test "an upsert works" do
     post =
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(text: "foobar")
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create, text: "foobar")
+      |> Ash.create!()
 
     resp =
       """
@@ -560,7 +563,7 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "errors can be intercepted" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
       graphql: [
         error_handler: {ErrorHandler, :handle_error, []}
       ]
@@ -600,7 +603,7 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "root level error" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 

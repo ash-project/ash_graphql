@@ -6,7 +6,7 @@ AshGraphql uses three special keys in the `absinthe` context:
 * `:tenant` - a tenant when using [multitenancy](https://ash-hq.org/docs/guides/ash/latest/topics/multitenancy.md).
 * `:ash_context` - a map of arbitrary context to be passed into the changeset/query. Accessible via `changeset.context` and `query.context`
 
-By default, `authorize?` in the api is set to true. To disable authorization for a given API in graphql, use:
+By default, `authorize?` in the domain is set to true. To disable authorization for a given domain in graphql, use:
 
 ```elixir
 graphql do

@@ -4,7 +4,7 @@ defmodule AshGraphql.ErrorsTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
       Application.delete_env(:ash_graphql, :policies)
 
       AshGraphql.TestHelpers.stop_ets()
@@ -74,7 +74,9 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "raised errors can be configured to be shown" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api, graphql: [show_raised_errors?: true])
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
+      graphql: [show_raised_errors?: true]
+    )
 
     resp =
       """
@@ -109,7 +111,7 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "showing raised errors alongside root errors shows raised errors in the root" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.RootLevelErrorsApi,
+    Application.put_env(:ash_graphql, AshGraphql.Test.RootLevelErrorsDomain,
       graphql: [show_raised_errors?: true]
     )
 
@@ -157,7 +159,7 @@ defmodule AshGraphql.ErrorsTest do
                  [name: "My Tag4"],
                  tenant: tenant
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              resp =
                """
@@ -188,7 +190,7 @@ defmodule AshGraphql.ErrorsTest do
                  [name: "My Tag2"],
                  tenant: tenant
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              resp =
                """
@@ -219,7 +221,7 @@ defmodule AshGraphql.ErrorsTest do
                  [name: "My Tag3"],
                  tenant: tenant
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              post =
                AshGraphql.Test.Post
@@ -230,7 +232,7 @@ defmodule AshGraphql.ErrorsTest do
                  on_no_match: {:create, :create_action},
                  on_lookup: :relate
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              resp =
                """
@@ -266,7 +268,7 @@ defmodule AshGraphql.ErrorsTest do
       |> Ash.Changeset.for_create(:create,
         name: "My Name"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -315,7 +317,7 @@ defmodule AshGraphql.ErrorsTest do
       |> Ash.Changeset.for_create(:create,
         name: "My Name"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """

@@ -94,12 +94,12 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :field_names, [])
   end
 
-  @doc "Fields to hide from the graphql api"
+  @doc "Fields to hide from the graphql domain"
   def hide_fields(resource) do
     Extension.get_opt(resource, [:graphql], :hide_fields, [])
   end
 
-  @doc "Fields to show in the graphql api"
+  @doc "Fields to show in the graphql domain"
   def show_fields(resource) do
     Extension.get_opt(resource, [:graphql], :show_fields, nil)
   end

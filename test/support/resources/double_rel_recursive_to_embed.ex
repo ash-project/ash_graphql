@@ -2,12 +2,14 @@ defmodule AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
   alias AshGraphql.Test.DoubleRelRecursive
 
   actions do
+    default_accept(:*)
     defaults([:read, :create, :update, :destroy])
   end
 

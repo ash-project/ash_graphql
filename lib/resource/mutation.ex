@@ -27,7 +27,7 @@ defmodule AshGraphql.Resource.Mutation do
     upsert?: [
       type: :boolean,
       default: false,
-      doc: "Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`."
+      doc: "Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`."
     ],
     upsert_identity: [
       type: :atom,

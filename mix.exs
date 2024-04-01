@@ -71,7 +71,7 @@ defmodule AshGraphql.MixProject do
         "documentation/topics/graphql-generation.md",
         "documentation/topics/modifying-the-resolution.md",
         "documentation/topics/relay.md",
-        "documentation/dsls/DSL:-AshGraphql.Api.md",
+        "documentation/dsls/DSL:-AshGraphql.Domain.md",
         "documentation/dsls/DSL:-AshGraphql.Resource.md"
       ],
       groups_for_extras: [
@@ -86,9 +86,9 @@ defmodule AshGraphql.MixProject do
         ],
         Introspection: [
           AshGraphql.Resource.Info,
-          AshGraphql.Api.Info,
+          AshGraphql.Domain.Info,
           AshGraphql.Resource,
-          AshGraphql.Api,
+          AshGraphql.Domain,
           AshGraphql.Resource.Action,
           AshGraphql.Resource.ManagedRelationship,
           AshGraphql.Resource.Mutation,
@@ -136,7 +136,7 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 2.17")},
+      {:ash, ash_version("~> 3.0-dev")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:jason, "~> 1.2"},
@@ -147,7 +147,8 @@ defmodule AshGraphql.MixProject do
       {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.5", only: [:dev, :test]},
       {:excoveralls, "~> 0.13", only: [:dev, :test]},
-      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false}
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
+      {:simple_sat, ">= 0.0.0", only: :test}
     ]
   end
 
@@ -170,10 +171,11 @@ defmodule AshGraphql.MixProject do
         "spark.replace_doc_links",
         "spark.cheat_sheets_in_search"
       ],
-      "spark.formatter": "spark.formatter --extensions AshGraphql.Resource,AshGraphql.Api",
+      "spark.formatter": "spark.formatter --extensions AshGraphql.Resource,AshGraphql.Domain",
       "spark.cheat_sheets_in_search":
-        "spark.cheat_sheets_in_search --extensions AshGraphql.Resource,AshGraphql.Api",
-      "spark.cheat_sheets": "spark.cheat_sheets --extensions AshGraphql.Resource,AshGraphql.Api"
+        "spark.cheat_sheets_in_search --extensions AshGraphql.Resource,AshGraphql.Domain",
+      "spark.cheat_sheets":
+        "spark.cheat_sheets --extensions AshGraphql.Resource,AshGraphql.Domain"
     ]
   end
 end

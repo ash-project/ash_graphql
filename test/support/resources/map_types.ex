@@ -1,6 +1,7 @@
 defmodule AshGraphql.Test.MapTypes do
   @moduledoc false
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -24,15 +25,19 @@ defmodule AshGraphql.Test.MapTypes do
       )
 
       allow_nil? false
+      public?(true)
     end
 
-    attribute(:json_map, :map)
+    attribute(:json_map, :map, public?: true)
 
     attribute :values, AshGraphql.Test.ConstrainedMap do
+      public?(true)
     end
   end
 
   actions do
+    default_accept(:*)
+
     defaults([:create, :read, :update, :destroy])
 
     update :inline do

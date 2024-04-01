@@ -17,20 +17,20 @@ defmodule AshGraphql.CustpmPaginateTest do
     test "channel record with direct union message records are fetched" do
       channel =
         AshGraphql.Test.Channel
-        |> Ash.Changeset.new(%{})
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
 
       text_message =
         AshGraphql.Test.TextMessage
         |> Ash.Changeset.for_create(:create, text: "test text message")
         |> Ash.Changeset.manage_relationship(:channel, channel, type: :append_and_remove)
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!()
 
       image_message =
         AshGraphql.Test.ImageMessage
         |> Ash.Changeset.for_create(:create, text: "test image message")
         |> Ash.Changeset.manage_relationship(:channel, channel, type: :append_and_remove)
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!()
 
       resp =
         """
@@ -88,20 +88,20 @@ defmodule AshGraphql.CustpmPaginateTest do
     test "channel record with page of channel messages record is fetched" do
       channel =
         AshGraphql.Test.Channel
-        |> Ash.Changeset.new(%{})
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
 
       text_message =
         AshGraphql.Test.TextMessage
         |> Ash.Changeset.for_create(:create, text: "test text message")
         |> Ash.Changeset.manage_relationship(:channel, channel, type: :append_and_remove)
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!()
 
       image_message =
         AshGraphql.Test.ImageMessage
         |> Ash.Changeset.for_create(:create, text: "test image message")
         |> Ash.Changeset.manage_relationship(:channel, channel, type: :append_and_remove)
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!()
 
       resp =
         """

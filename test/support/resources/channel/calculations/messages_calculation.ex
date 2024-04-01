@@ -1,20 +1,24 @@
 defmodule AshGraphql.Test.PageOfChannelMessagesCalculation do
   @moduledoc false
-  use Ash.Calculation
+  use Ash.Resource.Calculation
 
   def load(_, _, context) do
-    limit = context[:limit] || 100
-    offset = context[:offset] || 0
+    limit = context.arguments.limit || 100
+    offset = context.arguments.offset || 0
 
     [
       :channel_message_count,
-      messages: AshGraphql.Test.Message |> Ash.Query.limit(limit) |> Ash.Query.offset(offset)
+      messages:
+        AshGraphql.Test.Message
+        |> Ash.Query.limit(limit)
+        |> Ash.Query.offset(offset)
+        |> Ash.Query.select([:type, :text])
     ]
   end
 
   def calculate([post], _, context) do
-    limit = context[:limit] || 100
-    offset = context[:offset] || 0
+    limit = context.arguments.limit || 100
+    offset = context.arguments.offset || 0
 
     {:ok,
      [

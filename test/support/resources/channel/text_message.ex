@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.TextMessage do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -18,6 +19,7 @@ defmodule AshGraphql.Test.TextMessage do
   end
 
   actions do
+    default_accept(:*)
     defaults([:read, :update, :destroy])
 
     create :create do
@@ -28,12 +30,12 @@ defmodule AshGraphql.Test.TextMessage do
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:text, :string)
+    attribute(:text, :string, public?: true)
 
-    attribute(:type, :atom, default: :text, constraints: [one_of: [:text, :image]])
+    attribute(:type, :atom, default: :text, constraints: [one_of: [:text, :image]], public?: true)
   end
 
   relationships do
-    belongs_to(:channel, AshGraphql.Test.Channel)
+    belongs_to(:channel, AshGraphql.Test.Channel, public?: true)
   end
 end

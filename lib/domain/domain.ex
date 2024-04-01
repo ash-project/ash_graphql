@@ -1,4 +1,4 @@
-defmodule AshGraphql.Api do
+defmodule AshGraphql.Domain do
   @graphql %Spark.Dsl.Section{
     name: :graphql,
     describe: """
@@ -7,14 +7,14 @@ defmodule AshGraphql.Api do
     examples: [
       """
       graphql do
-        authorize? false # To skip authorization for this API
+        authorize? false # To skip authorization for this domain
       end
       """
     ],
     schema: [
       authorize?: [
         type: :boolean,
-        doc: "Whether or not to perform authorization for this API",
+        doc: "Whether or not to perform authorization for this domain",
         default: true
       ],
       tracer: [
@@ -40,11 +40,6 @@ defmodule AshGraphql.Api do
         default: false,
         doc:
           "For security purposes, if an error is *raised* then Ash simply shows a generic error. If you want to show those errors, set this to true."
-      ],
-      debug?: [
-        type: :boolean,
-        doc: "Whether or not to log (extremely verbose) debug information",
-        default: false
       ]
     ]
   }
@@ -52,52 +47,49 @@ defmodule AshGraphql.Api do
   @sections [@graphql]
 
   @moduledoc """
-  The entrypoint for adding graphql behavior to an Ash API
+  The entrypoint for adding graphql behavior to an Ash domain
   """
 
-  require Ash.Api.Info
+  require Ash.Domain.Info
 
   use Spark.Dsl.Extension, sections: @sections
 
-  @deprecated "See `AshGraphql.Api.Info.authorize?/1`"
-  defdelegate authorize?(api), to: AshGraphql.Api.Info
+  @deprecated "See `AshGraphql.Domain.Info.authorize?/1`"
+  defdelegate authorize?(domain), to: AshGraphql.Domain.Info
 
-  @deprecated "See `AshGraphql.Api.Info.root_level_errors?/1`"
-  defdelegate root_level_errors?(api), to: AshGraphql.Api.Info
+  @deprecated "See `AshGraphql.Domain.Info.root_level_errors?/1`"
+  defdelegate root_level_errors?(domain), to: AshGraphql.Domain.Info
 
-  @deprecated "See `AshGraphql.Api.Info.show_raised_errors?/1`"
-  defdelegate show_raised_errors?(api), to: AshGraphql.Api.Info
-
-  @deprecated "See `AshGraphql.Api.Info.debug?/1`"
-  defdelegate debug?(api), to: AshGraphql.Api.Info
+  @deprecated "See `AshGraphql.Domain.Info.show_raised_errors?/1`"
+  defdelegate show_raised_errors?(domain), to: AshGraphql.Domain.Info
 
   @doc false
-  def queries(api, resources, action_middleware, schema, relay_ids?) do
+  def queries(domain, resources, action_middleware, schema, relay_ids?) do
     Enum.flat_map(
       resources,
-      &AshGraphql.Resource.queries(api, &1, action_middleware, schema, relay_ids?)
+      &AshGraphql.Resource.queries(domain, &1, action_middleware, schema, relay_ids?)
     )
   end
 
   @doc false
-  def mutations(api, resources, action_middleware, schema, relay_ids?) do
+  def mutations(domain, resources, action_middleware, schema, relay_ids?) do
     resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
     end)
     |> Enum.flat_map(
-      &AshGraphql.Resource.mutations(api, &1, action_middleware, schema, relay_ids?)
+      &AshGraphql.Resource.mutations(domain, &1, action_middleware, schema, relay_ids?)
     )
   end
 
   @doc false
-  def type_definitions(api, resources, schema, env, first?, define_relay_types?, relay_ids?) do
+  def type_definitions(domain, resources, schema, env, first?, define_relay_types?, relay_ids?) do
     resource_types =
       resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
-          AshGraphql.Resource.type_definitions(resource, api, schema, relay_ids?) ++
+          AshGraphql.Resource.type_definitions(resource, domain, schema, relay_ids?) ++
             AshGraphql.Resource.mutation_types(resource, schema)
         else
           AshGraphql.Resource.no_graphql_types(resource, schema)

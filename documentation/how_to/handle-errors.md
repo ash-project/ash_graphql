@@ -1,6 +1,6 @@
 # Handling Errors
 
-There are various options that can be set on the Api module to determine how errors behave and/or are shown in the GraphQL.
+There are various options that can be set on the Domain module to determine how errors behave and/or are shown in the GraphQL.
 
 ## Showing raised errors
 
@@ -12,9 +12,9 @@ graphql do
 end
 
 # or it can be done in config
-# make sure you've set `otp_app` in your api, i.e use Ash.Api, otp_app: :my_app
+# make sure you've set `otp_app` in your domain, i.e use Ash.Domain, otp_app: :my_app
 
-config :my_app, YourApi, [
+config :my_app, YourDomain, [
   graphql: [
     show_raised_errors?: true
   ]

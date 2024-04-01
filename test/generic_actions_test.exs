@@ -3,7 +3,7 @@ defmodule AshGraphql.GenericActionsTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
 
       AshGraphql.TestHelpers.stop_ets()
     end)
@@ -55,7 +55,10 @@ defmodule AshGraphql.GenericActionsTest do
   end
 
   test "generic action mutations can be run" do
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """
@@ -79,7 +82,10 @@ defmodule AshGraphql.GenericActionsTest do
   end
 
   test "generic action mutations can be run with input" do
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """

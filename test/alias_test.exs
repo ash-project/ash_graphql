@@ -13,7 +13,7 @@ defmodule AliasTest do
     post =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "foo", published: true, score: 9.8)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -39,7 +39,7 @@ defmodule AliasTest do
     post =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "foo", published: true, score: 9.8)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -70,7 +70,7 @@ defmodule AliasTest do
         published: true,
         score: 9.8
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -103,7 +103,7 @@ defmodule AliasTest do
         published: true,
         score: 9.8
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -144,7 +144,7 @@ defmodule AliasTest do
         published: true,
         score: 9.8
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -179,7 +179,7 @@ defmodule AliasTest do
         published: true,
         score: 9.8
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -209,8 +209,8 @@ defmodule AliasTest do
   test "relationship alias works correctly" do
     author =
       AshGraphql.Test.User
-      |> Ash.Changeset.for_create(:create, name: "test")
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create, name: "My Name")
+      |> Ash.create!()
 
     post =
       AshGraphql.Test.Post
@@ -220,7 +220,7 @@ defmodule AliasTest do
         score: 9.8,
         author_id: author.id
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """

@@ -1,7 +1,7 @@
 defmodule AshGraphql.RelayIdsTest do
   use ExUnit.Case, async: false
 
-  alias AshGraphql.Test.RelayIds.{Api, Post, ResourceWithNoPrimaryKeyGet, Schema, User}
+  alias AshGraphql.Test.RelayIds.{Post, ResourceWithNoPrimaryKeyGet, Schema, User}
 
   setup do
     on_exit(fn ->
@@ -14,7 +14,7 @@ defmodule AshGraphql.RelayIdsTest do
       user =
         User
         |> Ash.Changeset.for_create(:create, %{name: "fred"})
-        |> Api.create!()
+        |> Ash.create!()
 
       post =
         Post
@@ -22,11 +22,10 @@ defmodule AshGraphql.RelayIdsTest do
           :create,
           %{
             author_id: user.id,
-            text: "foo",
-            published: true
+            text: "foo"
           }
         )
-        |> Api.create!()
+        |> Ash.create!()
 
       user_relay_id = AshGraphql.Resource.encode_relay_id(user)
       post_relay_id = AshGraphql.Resource.encode_relay_id(post)
@@ -79,14 +78,14 @@ defmodule AshGraphql.RelayIdsTest do
         )
 
       assert {:ok, result} = resp
-      assert [%{code: "invalid_primary_key"}] = result[:errors]
+      assert [%{message: "invalid primary key provided"}] = result[:errors]
     end
 
     test "returns error on ID for wrong resource" do
       user =
         User
         |> Ash.Changeset.for_create(:create, %{name: "fred"})
-        |> Api.create!()
+        |> Ash.create!()
 
       user_relay_id = AshGraphql.Resource.encode_relay_id(user)
 
@@ -105,7 +104,7 @@ defmodule AshGraphql.RelayIdsTest do
         )
 
       assert {:ok, result} = resp
-      assert [%{code: "invalid_primary_key"}] = result[:errors]
+      assert [%{message: "invalid primary key provided"}] = result[:errors]
     end
   end
 
@@ -114,7 +113,7 @@ defmodule AshGraphql.RelayIdsTest do
       user =
         User
         |> Ash.Changeset.for_create(:create, %{name: "fred"})
-        |> Api.create!()
+        |> Ash.create!()
 
       post =
         Post
@@ -122,11 +121,10 @@ defmodule AshGraphql.RelayIdsTest do
           :create,
           %{
             author_id: user.id,
-            text: "foo",
-            published: true
+            text: "foo"
           }
         )
-        |> Api.create!()
+        |> Ash.create!()
 
       user_relay_id = AshGraphql.Resource.encode_relay_id(user)
       post_relay_id = AshGraphql.Resource.encode_relay_id(post)
@@ -195,7 +193,7 @@ defmodule AshGraphql.RelayIdsTest do
       resource =
         ResourceWithNoPrimaryKeyGet
         |> Ash.Changeset.for_create(:create, %{name: "foo"})
-        |> Api.create!()
+        |> Ash.create!()
 
       document =
         """
@@ -231,7 +229,7 @@ defmodule AshGraphql.RelayIdsTest do
       user =
         User
         |> Ash.Changeset.for_create(:create, %{name: "Fred"})
-        |> Api.create!()
+        |> Ash.create!()
 
       user_id = user.id
       user_type = AshGraphql.Resource.Info.type(User)
@@ -263,7 +261,7 @@ defmodule AshGraphql.RelayIdsTest do
       author_id =
         User
         |> Ash.Changeset.for_create(:create, %{name: "Fred"})
-        |> Api.create!()
+        |> Ash.create!()
         |> AshGraphql.Resource.encode_relay_id()
 
       resp =
@@ -313,13 +311,13 @@ defmodule AshGraphql.RelayIdsTest do
       author_id =
         User
         |> Ash.Changeset.for_create(:create, %{name: "Fred"})
-        |> Api.create!()
+        |> Ash.create!()
         |> AshGraphql.Resource.encode_relay_id()
 
       post_id =
         Post
         |> Ash.Changeset.for_create(:create, %{text: "foo"})
-        |> Api.create!()
+        |> Ash.create!()
         |> AshGraphql.Resource.encode_relay_id()
 
       resp =
@@ -368,14 +366,14 @@ defmodule AshGraphql.RelayIdsTest do
       author_id =
         User
         |> Ash.Changeset.for_create(:create, %{name: "Fred"})
-        |> Api.create!()
+        |> Ash.create!()
         |> AshGraphql.Resource.encode_relay_id()
 
       post_ids =
         Enum.map(1..5, fn i ->
           Post
           |> Ash.Changeset.for_create(:create, %{text: "foo #{i}"})
-          |> Api.create!()
+          |> Ash.create!()
           |> AshGraphql.Resource.encode_relay_id()
         end)
 
@@ -425,14 +423,14 @@ defmodule AshGraphql.RelayIdsTest do
       author_id =
         User
         |> Ash.Changeset.for_create(:create, %{name: "Fred"})
-        |> Api.create!()
+        |> Ash.create!()
         |> AshGraphql.Resource.encode_relay_id()
 
       post_ids =
         Enum.map(1..5, fn i ->
           Post
           |> Ash.Changeset.for_create(:create, %{text: "foo #{i}"})
-          |> Api.create!()
+          |> Ash.create!()
           |> AshGraphql.Resource.encode_relay_id()
         end)
 
@@ -484,7 +482,7 @@ defmodule AshGraphql.RelayIdsTest do
       author_id =
         User
         |> Ash.Changeset.for_create(:create, %{name: "Fred"})
-        |> Api.create!()
+        |> Ash.create!()
         |> AshGraphql.Resource.encode_relay_id()
 
       post_ids = [author_id]

@@ -8,7 +8,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidChanges do
       message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
       fields: List.wrap(error.fields)
     }
   end
@@ -20,7 +19,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
       message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
       fields: [error.field]
     }
   end
@@ -32,7 +30,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Page.InvalidKeyset do
       message: "Invalid value provided as a keyset for %{key}: %{value}",
       short_message: "invalid keyset",
       vars: Map.merge(Map.new(error.vars), %{value: inspect(error.value), key: error.key}),
-      code: Ash.ErrorKind.code(error),
       fields: List.wrap(Map.get(error, :key))
     }
   end
@@ -44,7 +41,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidAttribute do
       message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
       fields: [error.field]
     }
   end
@@ -54,7 +50,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidArgument do
   def to_error(error) do
     %{
       message: error.message,
-      code: Ash.ErrorKind.code(error),
       short_message: error.message,
       vars: Map.new(error.vars),
       fields: [error.field]
@@ -66,7 +61,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidArgument do
   def to_error(error) do
     %{
       message: error.message,
-      code: Ash.ErrorKind.code(error),
       short_message: error.message,
       vars: Map.new(error.vars),
       fields: [error.field]
@@ -79,7 +73,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.Required do
     %{
       message: "is required",
       short_message: "is required",
-      code: Ash.ErrorKind.code(error),
       vars: error.vars,
       fields: [error.field]
     }
@@ -92,8 +85,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.NotFound do
       message: "could not be found",
       short_message: "could not be found",
       fields: Map.keys(error.primary_key || %{}),
-      vars: error.vars,
-      code: Ash.ErrorKind.code(error)
+      vars: error.vars
     }
   end
 end
@@ -104,7 +96,6 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.Required do
       message: "is required",
       short_message: "is required",
       vars: error.vars,
-      code: Ash.ErrorKind.code(error),
       fields: [error.field]
     }
   end
@@ -148,8 +139,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Invalid.InvalidPrimaryKey do
       message: "invalid primary key provided",
       short_message: "invalid primary key provided",
       fields: [],
-      vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error)
+      vars: Map.new(error.vars)
     }
   end
 end

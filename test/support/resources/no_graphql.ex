@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.NoGraphql do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets
 
   attributes do

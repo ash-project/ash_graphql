@@ -33,14 +33,14 @@ defmodule AshGraphql do
 
   defmacro __using__(opts) do
     quote bind_quoted: [
-            apis: opts[:apis],
-            api: opts[:api],
+            domains: opts[:domains],
+            domain: opts[:domain],
             action_middleware: opts[:action_middleware] || [],
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
             relay_ids?: Keyword.get(opts, :relay_ids?, false)
           ],
           generated: true do
-      require Ash.Api.Info
+      require Ash.Domain.Info
 
       import Absinthe.Schema,
         except: [
@@ -52,34 +52,34 @@ defmodule AshGraphql do
           mutation: 1
         ]
 
-      apis =
-        api
+      domains =
+        domain
         |> List.wrap()
-        |> Kernel.++(List.wrap(apis))
+        |> Kernel.++(List.wrap(domains))
 
-      apis =
-        apis
+      domains =
+        domains
         |> Enum.map(fn
-          {api, registry} ->
+          {domain, registry} ->
             IO.warn("""
-            It is no longer required to list the registry along with an API when using `AshGraphql`
+            It is no longer required to list the registry along with a domain when using `AshGraphql`
 
-               use AshGraphql, apis: [{My.App.Api, My.App.Registry}]
+               use AshGraphql, domains: [{My.App.Domain, My.App.Registry}]
 
             Can now be stated simply as
 
-               use AshGraphql, apis: [My.App.Api]
+               use AshGraphql, domains: [My.App.Domain]
             """)
 
-            api
+            domain
 
-          api ->
-            api
+          domain ->
+            domain
         end)
-        |> Enum.map(fn api -> {api, Ash.Api.Info.depend_on_resources(api), false} end)
-        |> List.update_at(0, fn {api, resources, _} -> {api, resources, true} end)
+        |> Enum.map(fn domain -> {domain, Ash.Domain.Info.resources(domain), false} end)
+        |> List.update_at(0, fn {domain, resources, _} -> {domain, resources, true} end)
 
-      @ash_resources Enum.flat_map(apis, &elem(&1, 1))
+      @ash_resources Enum.flat_map(domains, &elem(&1, 1))
       ash_resources = @ash_resources
 
       schema = __MODULE__
@@ -119,8 +119,8 @@ defmodule AshGraphql do
         end)
       end
 
-      for {api, resources, first?} <- apis do
-        defmodule Module.concat(api, AshTypes) do
+      for {domain, resources, first?} <- domains do
+        defmodule Module.concat(domain, AshTypes) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
 
@@ -134,12 +134,12 @@ defmodule AshGraphql do
 
           @dialyzer {:nowarn_function, {:run, 2}}
           def run(blueprint, _opts) do
-            api = unquote(api)
+            domain = unquote(domain)
             action_middleware = unquote(action_middleware)
 
-            api_queries =
-              AshGraphql.Api.queries(
-                api,
+            domain_queries =
+              AshGraphql.Domain.queries(
+                domain,
                 unquote(resources),
                 action_middleware,
                 __MODULE__,
@@ -148,21 +148,21 @@ defmodule AshGraphql do
 
             relay_queries =
               if unquote(first?) and unquote(define_relay_types?) and unquote(relay_ids?) do
-                apis_with_resources = unquote(Enum.map(apis, &{elem(&1, 0), elem(&1, 1)}))
-                AshGraphql.relay_queries(apis_with_resources, unquote(schema), __ENV__)
+                domains_with_resources = unquote(Enum.map(domains, &{elem(&1, 0), elem(&1, 1)}))
+                AshGraphql.relay_queries(domains_with_resources, unquote(schema), __ENV__)
               else
                 []
               end
 
             blueprint_with_queries =
-              (relay_queries ++ api_queries)
+              (relay_queries ++ domain_queries)
               |> Enum.reduce(blueprint, fn query, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootQueryType", query)
               end)
 
             blueprint_with_mutations =
-              api
-              |> AshGraphql.Api.mutations(
+              domain
+              |> AshGraphql.Domain.mutations(
                 unquote(resources),
                 action_middleware,
                 __MODULE__,
@@ -174,7 +174,7 @@ defmodule AshGraphql do
 
             type_definitions =
               if unquote(first?) do
-                apis = unquote(Enum.map(apis, &elem(&1, 0)))
+                domains = unquote(Enum.map(domains, &elem(&1, 0)))
 
                 embedded_types =
                   AshGraphql.get_embedded_types(
@@ -190,9 +190,9 @@ defmodule AshGraphql do
                   AshGraphql.global_unions(unquote(ash_resources), unquote(schema), __ENV__)
 
                 Enum.uniq_by(
-                  AshGraphql.Api.global_type_definitions(unquote(schema), __ENV__) ++
-                    AshGraphql.Api.type_definitions(
-                      api,
+                  AshGraphql.Domain.global_type_definitions(unquote(schema), __ENV__) ++
+                    AshGraphql.Domain.type_definitions(
+                      domain,
                       unquote(resources),
                       unquote(schema),
                       __ENV__,
@@ -206,8 +206,8 @@ defmodule AshGraphql do
                   & &1.identifier
                 )
               else
-                AshGraphql.Api.type_definitions(
-                  api,
+                AshGraphql.Domain.type_definitions(
+                  domain,
                   unquote(resources),
                   unquote(schema),
                   __ENV__,
@@ -235,7 +235,7 @@ defmodule AshGraphql do
           import_types(AshGraphql.Types.JSONString)
         end
 
-        @pipeline_modifier Module.concat(api, AshTypes)
+        @pipeline_modifier Module.concat(domain, AshTypes)
       end
     end
   end
@@ -386,16 +386,16 @@ defmodule AshGraphql do
     end
   end
 
-  def relay_queries(apis_with_resources, schema, env) do
-    type_to_api_and_resource_map =
-      apis_with_resources
-      |> Enum.flat_map(fn {api, resources} ->
+  def relay_queries(domains_with_resources, schema, env) do
+    type_to_domain_and_resource_map =
+      domains_with_resources
+      |> Enum.flat_map(fn {domain, resources} ->
         resources
         |> Enum.flat_map(fn resource ->
           type = AshGraphql.Resource.Info.type(resource)
 
           if type do
-            [{type, {api, resource}}]
+            [{type, {domain, resource}}]
           else
             []
           end
@@ -419,7 +419,7 @@ defmodule AshGraphql do
           }
         ],
         middleware: [
-          {{AshGraphql.Graphql.Resolver, :resolve_node}, type_to_api_and_resource_map}
+          {{AshGraphql.Graphql.Resolver, :resolve_node}, type_to_domain_and_resource_map}
         ],
         complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
         module: schema,
@@ -458,7 +458,7 @@ defmodule AshGraphql do
 
   defp nested_attrs(type, constraints, already_checked) do
     cond do
-      Ash.Type.embedded_type?(type) ->
+      AshGraphql.Resource.embedded?(type) ->
         type
         |> unwrap_type()
         |> all_attributes_and_arguments(already_checked, true, true)
@@ -625,7 +625,7 @@ defmodule AshGraphql do
             attribute.constraints[:types]
             |> Kernel.||([])
             |> Enum.flat_map(fn {name, config} ->
-              if Ash.Type.embedded_type?(config[:type]) do
+              if AshGraphql.Resource.embedded?(config[:type]) do
                 [
                   {source_resource,
                    %{
@@ -641,7 +641,7 @@ defmodule AshGraphql do
             end)
 
           other ->
-            if Ash.Type.embedded_type?(other) do
+            if AshGraphql.Resource.embedded?(other) do
               [{source_resource, attribute}]
             else
               []
@@ -661,7 +661,7 @@ defmodule AshGraphql do
         [
           AshGraphql.Resource.type_definition(
             embedded_type,
-            Module.concat(embedded_type, ShadowApi),
+            Module.concat(embedded_type, ShadowDomain),
             schema,
             relay_ids?
           ),
@@ -732,7 +732,7 @@ defmodule AshGraphql do
   defp get_nested_embedded_types(embedded_type) do
     embedded_type
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.filter(&Ash.Type.embedded_type?(&1.type))
+    |> Enum.filter(&AshGraphql.Resource.embedded?(&1.type))
     |> Enum.map(fn attribute ->
       {attribute, unwrap_type(attribute.type)}
     end)
@@ -742,7 +742,7 @@ defmodule AshGraphql do
   end
 
   @deprecated "add_context is no longer necessary"
-  def add_context(ctx, _apis, _options \\ []) do
+  def add_context(ctx, _domains, _options \\ []) do
     ctx
   end
 end

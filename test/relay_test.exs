@@ -20,7 +20,7 @@ defmodule AshGraphql.RelayTest do
             :create,
             name: name
           )
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
 
         for text <- letters do
           AshGraphql.Test.Post
@@ -31,7 +31,7 @@ defmodule AshGraphql.RelayTest do
             on_no_match: :error,
             on_lookup: :relate_and_update
           )
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
         end
       end
 
@@ -796,7 +796,6 @@ defmodule AshGraphql.RelayTest do
                    %{
                      locations: [%{column: 3, line: 2}],
                      message: "Invalid value provided as a keyset for after: \"abc\"",
-                     code: "invalid_keyset",
                      short_message: "invalid keyset",
                      path: ["getRelayTags"]
                    }
@@ -833,7 +832,6 @@ defmodule AshGraphql.RelayTest do
                    %{
                      locations: [%{column: 3, line: 2}],
                      message: "Invalid value provided as a keyset for before: \"abc\"",
-                     code: "invalid_keyset",
                      short_message: "invalid keyset",
                      path: ["getRelayTags"]
                    }

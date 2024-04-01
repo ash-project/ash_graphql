@@ -3,7 +3,7 @@ defmodule AshGraphql.AttributeTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
 
       try do
         AshGraphql.TestHelpers.stop_ets()
