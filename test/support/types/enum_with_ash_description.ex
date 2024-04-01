@@ -6,5 +6,5 @@ defmodule AshGraphql.Test.EnumWithAshDescription do
       buzz: "A buzz"
     ]
 
-  def graphql_type, do: :enum_with_ash_description
+  def graphql_type(_), do: :enum_with_ash_description
 end

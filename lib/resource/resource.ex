@@ -1710,14 +1710,12 @@ defmodule AshGraphql.Resource do
       List.wrap(keyset_page_of(resource, schema)) ++
       map_definitions(resource, schema, __ENV__) ++
       enum_definitions(resource, schema, __ENV__) ++
-      union_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
   def no_graphql_types(resource, schema) do
     map_definitions(resource, schema, __ENV__) ++
-      enum_definitions(resource, schema, __ENV__, true) ++
-      union_definitions(resource, schema, __ENV__) ++
+      enum_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
@@ -2774,48 +2772,18 @@ defmodule AshGraphql.Resource do
   def map_definitions(resource, schema, env) do
     if AshGraphql.Resource.Info.type(resource) do
       resource
-      |> get_auto_maps()
+      |> global_maps()
       |> Enum.flat_map(fn attribute ->
         constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
 
         type_name =
-          if constraints[:fields] do
-            if Ash.Type.NewType.new_type?(attribute.type) do
-              cond do
-                function_exported?(attribute.type, :graphql_type, 0) ->
-                  attribute.type.graphql_type()
-
-                function_exported?(attribute.type, :graphql_type, 1) ->
-                  attribute.type.graphql_type(attribute.constraints)
-
-                true ->
-                  map_type(resource, attribute.name)
-              end
-            else
-              map_type(resource, attribute.name)
-            end
-          else
-            nil
+          if function_exported?(attribute.type, :graphql_type, 1) do
+            attribute.type.graphql_type(attribute.constraints)
           end
 
         input_type_name =
-          if constraints[:fields] do
-            if Ash.Type.NewType.new_type?(attribute.type) do
-              cond do
-                function_exported?(attribute.type, :graphql_input_type, 0) ->
-                  attribute.type.graphql_input_type()
-
-                function_exported?(attribute.type, :graphql_input_type, 1) ->
-                  attribute.type.graphql_input_type(attribute.constraints)
-
-                true ->
-                  map_type(resource, attribute.name, true)
-              end
-            else
-              map_type(resource, attribute.name, true)
-            end
-          else
-            nil
+          if function_exported?(attribute.type, :graphql_input_type, 1) do
+            attribute.type.graphql_input_type(attribute.constraints)
           end
 
         [
@@ -3049,115 +3017,30 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  def enum_definitions(resource, schema, env, only_auto? \\ false) do
+  def enum_definitions(resource, schema, env) do
     resource = Ash.Type.NewType.subtype_of(resource)
 
-    if AshGraphql.Resource.Info.type(resource) do
-      atom_enums =
-        resource
-        |> get_auto_enums()
-        |> Enum.flat_map(fn attribute ->
-          constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+    if AshGraphql.Resource.Info.type(resource) && AshGraphql.Resource.Info.derive_sort?(resource) do
+      sort_values = sort_values(resource)
 
-          type_name =
-            if constraints[:one_of] do
-              if Ash.Type.NewType.new_type?(attribute.type) do
-                cond do
-                  function_exported?(attribute.type, :graphql_type, 0) ->
-                    attribute.type.graphql_type()
-
-                  function_exported?(attribute.type, :graphql_type, 1) ->
-                    attribute.type.graphql_type(attribute.constraints)
-
-                  true ->
-                    atom_enum_type(resource, attribute.name)
-                end
-              else
-                atom_enum_type(resource, attribute.name)
-              end
-            end
-
-          additional_type_name =
-            if constraints[:one_of] && Ash.Type.NewType.new_type?(attribute.type) do
-              cond do
-                function_exported?(attribute.type, :graphql_input_type, 0) ->
-                  attribute.type.graphql_input_type()
-
-                function_exported?(attribute.type, :graphql_input_type, 1) ->
-                  attribute.type.graphql_input_type(attribute.constraints)
-
-                true ->
-                  atom_enum_type(resource, attribute.name)
-              end
-            else
-              nil
-            end
-
-          [
-            type_name,
-            additional_type_name
-          ]
-          |> Enum.filter(& &1)
-          |> Enum.map(fn type_name ->
-            %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+      sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
+        module: schema,
+        name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
+        identifier: resource_sort_field_type(resource),
+        __reference__: ref(__ENV__),
+        values:
+          Enum.map(sort_values, fn {sort_value_alias, sort_value} ->
+            %Absinthe.Blueprint.Schema.EnumValueDefinition{
               module: schema,
-              name: type_name |> to_string() |> Macro.camelize(),
-              values:
-                Enum.map(constraints[:one_of], fn value ->
-                  %Absinthe.Blueprint.Schema.EnumValueDefinition{
-                    module: schema,
-                    identifier: value,
-                    __reference__: AshGraphql.Resource.ref(env),
-                    name: String.upcase(to_string(value)),
-                    value: value
-                  }
-                end),
-              identifier: type_name,
-              __reference__: ref(__ENV__)
+              identifier: sort_value_alias,
+              __reference__: AshGraphql.Resource.ref(env),
+              name: String.upcase(to_string(sort_value_alias)),
+              value: sort_value
             }
           end)
-        end)
+      }
 
-      if only_auto? || !AshGraphql.Resource.Info.derive_sort?(resource) do
-        atom_enums
-      else
-        sort_values = sort_values(resource)
-
-        sort_order = %Absinthe.Blueprint.Schema.EnumTypeDefinition{
-          module: schema,
-          name: resource |> resource_sort_field_type() |> to_string() |> Macro.camelize(),
-          identifier: resource_sort_field_type(resource),
-          __reference__: ref(__ENV__),
-          values:
-            Enum.map(sort_values, fn {sort_value_alias, sort_value} ->
-              %Absinthe.Blueprint.Schema.EnumValueDefinition{
-                module: schema,
-                identifier: sort_value_alias,
-                __reference__: AshGraphql.Resource.ref(env),
-                name: String.upcase(to_string(sort_value_alias)),
-                value: sort_value
-              }
-            end)
-        }
-
-        [sort_order | atom_enums]
-      end
-    else
-      []
-    end
-  end
-
-  # sobelow_skip ["RCE.CodeModule", "DOS.BinToAtom", "DOS.StringToAtom"]
-  def union_definitions(resource, schema, env) do
-    if AshGraphql.Resource.Info.type(resource) do
-      resource
-      |> get_auto_unions()
-      |> Enum.flat_map(fn attribute ->
-        type_name = atom_enum_type(resource, attribute.name)
-        input_type_name = "#{atom_enum_type(resource, attribute.name)}_input"
-
-        union_type_definitions(resource, attribute, type_name, schema, env, input_type_name)
-      end)
+      [sort_order]
     else
       []
     end
@@ -3292,20 +3175,11 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def get_auto_maps(resource) do
+  def global_maps(resource) do
     resource
     |> AshGraphql.all_attributes_and_arguments([], false)
     |> Enum.map(&unnest/1)
     |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map))
-    |> Enum.uniq_by(& &1.name)
-  end
-
-  @doc false
-  def get_auto_enums(resource) do
-    resource
-    |> AshGraphql.all_attributes_and_arguments([], false)
-    |> Enum.map(&unnest/1)
-    |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Atom))
     |> Enum.uniq_by(& &1.name)
   end
 
@@ -3314,20 +3188,6 @@ defmodule AshGraphql.Resource do
   end
 
   defp unnest(other), do: other
-
-  @doc false
-  def get_auto_unions(resource) do
-    resource
-    |> AshGraphql.all_attributes_and_arguments()
-    |> Enum.map(fn attribute ->
-      unnest(attribute)
-    end)
-    |> Enum.reject(fn attribute ->
-      function_exported?(attribute.type, :graphql_type, 0) ||
-        function_exported?(attribute.type, :graphql_type, 1)
-    end)
-    |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Union))
-  end
 
   @doc false
   def global_unions(resource) do
@@ -4201,15 +4061,10 @@ defmodule AshGraphql.Resource do
           end
         else
           if Spark.implements_behaviour?(type, Ash.Type.Enum) do
-            cond do
-              function_exported?(type, :graphql_type, 0) ->
-                type.graphql_type()
-
-              function_exported?(type, :graphql_type, 1) ->
-                type.graphql_type(attribute.constraints)
-
-              true ->
-                :string
+            if function_exported?(type, :graphql_type, 1) do
+              type.graphql_type(attribute.constraints)
+            else
+              :string
             end
           else
             function =
@@ -4223,18 +4078,10 @@ defmodule AshGraphql.Resource do
               function_exported?(type, function, 1) ->
                 apply(type, function, [constraints])
 
-              function_exported?(type, function, 0) ->
-                apply(type, function, [])
-
               input? && Ash.Type.NewType.new_type?(type) &&
                 Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
-                  (function_exported?(type, :graphql_type, 0) ||
-                     function_exported?(type, :graphql_type, 1)) ->
-                if function_exported?(type, :graphql_type, 0) do
-                  :"#{type.graphql_type()}_input"
-                else
-                  :"#{type.graphql_type(constraints)}_input"
-                end
+                  function_exported?(type, :graphql_type, 1) ->
+                :"#{type.graphql_type(constraints)}_input"
 
               true ->
                 if Ash.Type.NewType.new_type?(type) do
@@ -4266,57 +4113,23 @@ defmodule AshGraphql.Resource do
 
   defp get_specific_field_type(
          Ash.Type.Atom,
-         %{constraints: constraints, name: name},
-         resource,
+         _,
+         _resource,
          _input?
-       )
-       when not is_nil(resource) do
-    if is_list(constraints[:one_of]) && AshGraphql.Resource.Info.type(resource) do
-      atom_enum_type(resource, name)
-    else
-      :string
-    end
-  end
-
-  # sobelow_skip ["DOS.BinToAtom"]
-  defp get_specific_field_type(
-         Ash.Type.Union,
-         %{name: name},
-         resource,
-         input?
-       )
-       when not is_nil(resource) do
-    # same logic for naming a union currently
-    base_type_name = atom_enum_type(resource, name)
-
-    if input? do
-      :"#{base_type_name}_input"
-    else
-      base_type_name
-    end
+       ) do
+    :string
   end
 
   defp get_specific_field_type(
          Ash.Type.Map,
-         %{constraints: constraints, name: name},
-         resource,
-         input?
+         _attribute,
+         _resource,
+         _input?
        ) do
-    if is_list(constraints[:fields]) do
-      map_type(resource, name, input?)
-    else
-      Application.get_env(:ash_graphql, :json_type) || :json_string
-    end
+    Application.get_env(:ash_graphql, :json_type) || :json_string
   end
-
-  defp get_specific_field_type(Ash.Type.Map, _, _, _),
-    do: Application.get_env(:ash_graphql, :json_type) || :json_string
 
   defp get_specific_field_type(Ash.Type.Boolean, _, _, _), do: :boolean
-
-  defp get_specific_field_type(Ash.Type.Atom, _, _, _) do
-    :string
-  end
 
   defp get_specific_field_type(Ash.Type.CiString, _, _, _), do: :string
   defp get_specific_field_type(Ash.Type.Date, _, _, _), do: :date
@@ -4328,13 +4141,13 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.Term, _, _, _), do: :string
 
   defp get_specific_field_type(Ash.Type.DateTime, _, _, _),
-    do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
+    do: Application.get_env(:ash, :utc_datetime_type) || :datetime
 
   defp get_specific_field_type(Ash.Type.UtcDatetime, _, _, _),
-    do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
+    do: Application.get_env(:ash, :utc_datetime_type) || :datetime
 
   defp get_specific_field_type(Ash.Type.UtcDatetimeUsec, _, _, _),
-    do: Application.get_env(:ash, :utc_datetime_type) || raise_datetime_error()
+    do: Application.get_env(:ash, :utc_datetime_type) || :datetime
 
   defp get_specific_field_type(Ash.Type.NaiveDatetime, _, _, _), do: :naive_datetime
   defp get_specific_field_type(Ash.Type.Time, _, _, _), do: :time
@@ -4356,65 +4169,17 @@ defmodule AshGraphql.Resource do
     raise """
     Could not determine graphql field type for #{inspect(type)} on #{inspect(resource)}.#{attribute.name}
 
-    If this is a custom type, you can add `def graphql_type/1` to your type to define the graphql type.
-    If this is not your type, you will need to use `types` or `attribute_types` or `attribute_input_types`
-    to configure the type for any field using this type. If this is an `Ash.Type.NewType`, you may need to define
-    `graphql_type` and `graphql_input_type`s for it.
+    If this is an `Ash.Type.Enum` or a custom type, you can add `def graphql_type/1` or `def graphql_input_type/1`
+    to your type. This does not *define* the type, but tells us what type to use for it, so you may need
+    to add a type to your absinthe schema if it does not map to a built in absinthe data type.
+
+    ## Ash.Type.NewType
+
+    The exception to the above are special instances of `Ash.Type.NewType`. If you have an `Ash.Type.NewType`,
+    that is a subset of `:union` or `:map`(with the `:fields` constraint), AshGraphql will define that type for you.
+    If you are seeing this message, it likely means that you are missing `def graphql_type/1` or `def graphql_input_type/1`
+    on your type definition.
     """
-  end
-
-  defp raise_datetime_error do
-    raise """
-    No type configured for utc_datetimes!
-
-    The existing default of using `:naive_datetime` for `:utc_datetime` and `:utc_datetime_usec` is being deprecated.
-
-    To prevent accidental API breakages, we are requiring that you configure your selected type for these, via
-
-        # This was the previous default, so use this if you want to ensure no unintended
-        # change in your API, although switching to `:datetime` eventually is suggested.
-        config :ash, :utc_datetime_type, :naive_datetime
-
-        or
-
-        config :ash, :utc_datetime_type, :datetime
-
-    When the 1.0 version of ash_graphql is released, the default will be changed to `:datetime`, and this error message will
-    no longer be shown (but any configuration set will be retained indefinitely).
-    """
-  end
-
-  # sobelow_skip ["DOS.StringToAtom"]
-  @doc false
-  def atom_enum_type(resource, attribute_name) do
-    field_names = AshGraphql.Resource.Info.field_names(resource)
-
-    resource
-    |> AshGraphql.Resource.Info.type()
-    |> to_string()
-    |> Kernel.<>("_")
-    |> Kernel.<>(to_string(field_names[attribute_name] || attribute_name))
-    |> String.to_atom()
-  end
-
-  # sobelow_skip ["DOS.StringToAtom", "DOS.BinToAtom"]
-  @doc false
-  def map_type(resource, attribute_name, input? \\ false) do
-    field_names = AshGraphql.Resource.Info.field_names(resource)
-
-    name =
-      resource
-      |> AshGraphql.Resource.Info.type()
-      |> to_string()
-      |> Kernel.<>("_")
-      |> Kernel.<>(to_string(field_names[attribute_name] || attribute_name))
-      |> String.to_atom()
-
-    if input? do
-      :"#{name}_input"
-    else
-      name
-    end
   end
 
   def primary_key_get_query(resource) do

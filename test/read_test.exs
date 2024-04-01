@@ -53,10 +53,10 @@ defmodule AshGraphql.ReadTest do
         postLibrary {
           text
           simpleUnion {
-            ... on PostSimpleUnionString {
+            ... on SimpleUnionString {
               value
             }
-            ... on PostSimpleUnionInt {
+            ... on SimpleUnionInt {
               value
             }
           }
@@ -886,7 +886,7 @@ defmodule AshGraphql.ReadTest do
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create,
         text: "a",
-        embed_union: %{type: :foo, foo: "fred"},
+        embed_union_new_type: %{type: :foo, foo: "fred"},
         published: true
       )
       |> Ash.create!()
@@ -894,7 +894,7 @@ defmodule AshGraphql.ReadTest do
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create,
         text: "b",
-        embed_union: %{type: :bar, bar: "george"},
+        embed_union_new_type: %{type: :bar, bar: "george"},
         published: true
       )
       |> Ash.create!()
@@ -903,13 +903,13 @@ defmodule AshGraphql.ReadTest do
         """
         query postLibrary {
           postLibrary(sort: {field: TEXT}) {
-            embedUnion{
-              ...on PostEmbedUnionFoo {
+            embedUnionNewType{
+              ...on EmbedUnionNewTypeFoo {
                 value {
                   alwaysNil
                 }
               }
-              ...on PostEmbedUnionBar {
+              ...on EmbedUnionNewTypeBar {
                 value {
                   alwaysFalse
                 }
@@ -928,14 +928,14 @@ defmodule AshGraphql.ReadTest do
                data: %{
                  "postLibrary" => [
                    %{
-                     "embedUnion" => %{
+                     "embedUnionNewType" => %{
                        "value" => %{
                          "alwaysNil" => nil
                        }
                      }
                    },
                    %{
-                     "embedUnion" => %{
+                     "embedUnionNewType" => %{
                        "value" => %{
                          "alwaysFalse" => false
                        }

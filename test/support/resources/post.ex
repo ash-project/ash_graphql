@@ -346,39 +346,9 @@ defmodule AshGraphql.Test.Post do
     attribute(:text2, :string, public?: true)
     attribute(:visibility, :atom, constraints: [one_of: [:public, :private]], public?: true)
 
-    attribute(:simple_union, :union,
-      constraints: [
-        types: [
-          int: [
-            type: :integer
-          ],
-          string: [
-            type: :string
-          ]
-        ]
-      ],
-      public?: true
-    )
+    attribute(:simple_union, AshGraphql.Test.Types.SimpleUnion, public?: true)
 
     attribute(:embed_foo, Foo, public?: true)
-
-    attribute(:embed_union, :union,
-      constraints: [
-        types: [
-          foo: [
-            type: Foo,
-            tag: :type,
-            tag_value: :foo
-          ],
-          bar: [
-            type: Bar,
-            tag: :type,
-            tag_value: :bar
-          ]
-        ]
-      ],
-      public?: true
-    )
 
     attribute(:embed_union_new_type_list, {:array, AshGraphql.Types.EmbedUnionNewTypeUnnested},
       public?: true
@@ -386,7 +356,6 @@ defmodule AshGraphql.Test.Post do
 
     attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType, public?: true)
     attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested, public?: true)
-    attribute(:enum_new_type, AshGraphql.Types.EnumNewType, public?: true)
     attribute(:string_new_type, AshGraphql.Types.StringNewType, public?: true)
 
     attribute :required_string, :string do

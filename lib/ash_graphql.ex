@@ -87,22 +87,11 @@ defmodule AshGraphql do
 
       for resource <- ash_resources do
         resource
-        |> AshGraphql.Resource.get_auto_unions()
-        |> Enum.concat(resource |> AshGraphql.Resource.global_unions() |> Enum.map(&elem(&1, 1)))
+        |> AshGraphql.Resource.global_unions()
+        |> Enum.map(&elem(&1, 1))
         |> Enum.map(fn attribute ->
-          if Ash.Type.NewType.new_type?(attribute.type) do
-            cond do
-              function_exported?(attribute.type, :graphql_type, 0) ->
-                attribute.type.graphql_type()
-
-              function_exported?(attribute.type, :graphql_type, 1) ->
-                attribute.type.graphql_type(attribute.constraints)
-
-              true ->
-                AshGraphql.Resource.atom_enum_type(resource, attribute.name)
-            end
-          else
-            AshGraphql.Resource.atom_enum_type(resource, attribute.name)
+          if function_exported?(attribute.type, :graphql_type, 1) do
+            attribute.type.graphql_type(attribute.constraints)
           end
         end)
         |> Enum.uniq()
@@ -252,7 +241,7 @@ defmodule AshGraphql do
             {"DurationName", :duration_name}
 
           type ->
-            graphql_type = type.graphql_type()
+            graphql_type = type.graphql_type([])
             {graphql_type |> to_string() |> Macro.camelize(), graphql_type}
         end
 
@@ -305,23 +294,13 @@ defmodule AshGraphql do
       resource
       |> AshGraphql.Resource.global_unions()
       |> Enum.flat_map(fn {type, attribute} ->
-        type_name =
-          if function_exported?(type, :graphql_type, 0) do
-            type.graphql_type()
-          else
-            type.graphql_type(attribute.constraints)
-          end
+        type_name = type.graphql_type(attribute.constraints)
 
         input_type_name =
-          cond do
-            function_exported?(type, :graphql_input_type, 0) ->
-              type.graphql_input_type()
-
-            function_exported?(type, :graphql_input_type, 1) ->
-              type.graphql_input_type(attribute.constraints)
-
-            true ->
-              "#{type_name}_input"
+          if function_exported?(type, :graphql_input_type, 1) do
+            type.graphql_input_type(attribute.constraints)
+          else
+            "#{type_name}_input"
           end
 
         AshGraphql.Resource.union_type_definitions(
@@ -580,8 +559,7 @@ defmodule AshGraphql do
   defp union_type(type) do
     if Ash.Type.NewType.new_type?(type) &&
          Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
-         (function_exported?(type, :graphql_type, 0) ||
-            function_exported?(type, :graphql_type, 1)) do
+         function_exported?(type, :graphql_type, 1) do
       type
     end
   end

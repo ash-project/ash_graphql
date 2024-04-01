@@ -24,6 +24,6 @@ defmodule AshGraphql.Test.ConstrainedMap do
       ]
     ]
 
-  def graphql_type, do: :constrained_map
-  def graphql_input_type, do: :constrained_map_input
+  def graphql_type(_), do: :constrained_map
+  def graphql_input_type(_), do: :constrained_map_input
 end

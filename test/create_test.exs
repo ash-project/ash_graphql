@@ -104,10 +104,10 @@ defmodule AshGraphql.CreateTest do
           result{
             text1
             simpleUnion {
-              ... on PostSimpleUnionString {
+              ... on SimpleUnionString {
                 value
               }
-              ... on PostSimpleUnionInt {
+              ... on SimpleUnionInt {
                 value
               }
             }
@@ -153,13 +153,13 @@ defmodule AshGraphql.CreateTest do
         simpleCreatePost(input: $input) {
           result{
             text1
-            embedUnion {
-              ... on PostEmbedUnionFoo {
+            embedUnionNewType {
+              ... on EmbedUnionNewTypeFoo {
                 value {
                   foo
                 }
               }
-              ... on PostEmbedUnionBar {
+              ... on EmbedUnionNewTypeBar {
                 value {
                   bar
                 }
@@ -176,7 +176,7 @@ defmodule AshGraphql.CreateTest do
         variables: %{
           "input" => %{
             "text1" => "foo",
-            "embedUnion" => %{
+            "embedUnionNewType" => %{
               "foo" => %{
                 "foo" => "10"
               }
@@ -193,7 +193,7 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "simpleCreatePost" => %{
                  "result" => %{
-                   "embedUnion" => %{
+                   "embedUnionNewType" => %{
                      "value" => %{
                        "foo" => "10"
                      }
@@ -212,12 +212,12 @@ defmodule AshGraphql.CreateTest do
           result{
             text1
             embedUnionNewType {
-              ... on FooBarFoo {
+              ... on EmbedUnionNewTypeFoo {
                 value {
                   foo
                 }
               }
-              ... on FooBarBar {
+              ... on EmbedUnionNewTypeBar {
                 value {
                   bar
                 }
@@ -713,44 +713,6 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "createPost" => %{
                  "result" => %{"text" => "foobar", "statusEnum" => "OPEN"}
-               }
-             }
-           } = result
-  end
-
-  test "enum newtypes can be written to" do
-    resp =
-      """
-      mutation CreatePost($input: CreatePostInput) {
-        createPost(input: $input) {
-          result{
-            text
-            enumNewType
-          }
-          errors{
-            message
-          }
-        }
-      }
-      """
-      |> Absinthe.run(AshGraphql.Test.Schema,
-        variables: %{
-          "input" => %{
-            "text" => "foobar",
-            "confirmation" => "foobar",
-            "enumNewType" => "BIZ"
-          }
-        }
-      )
-
-    assert {:ok, result} = resp
-
-    refute Map.has_key?(result, :errors)
-
-    assert %{
-             data: %{
-               "createPost" => %{
-                 "result" => %{"text" => "foobar", "enumNewType" => "BIZ"}
                }
              }
            } = result

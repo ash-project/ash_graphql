@@ -1991,15 +1991,8 @@ defmodule AshGraphql.Graphql.Resolver do
           case original_type do
             {type, constraints} ->
               configured_type_name =
-                cond do
-                  function_exported?(type, :graphql_type, 0) ->
-                    type.graphql_type()
-
-                  function_exported?(type, :graphql_type, 1) ->
-                    type.graphql_type(constraints)
-
-                  true ->
-                    nil
+                if function_exported?(type, :graphql_type, 1) do
+                  type.graphql_type(constraints)
                 end
 
               unnested_unions =
@@ -2026,8 +2019,7 @@ defmodule AshGraphql.Graphql.Resolver do
                  config[:type],
                  %Ash.Resource.Attribute{
                    name:
-                     configured_type_name ||
-                       AshGraphql.Resource.atom_enum_type(resource, field_name),
+                     configured_type_name,
                    type: config[:type],
                    constraints: config[:constraints]
                  },

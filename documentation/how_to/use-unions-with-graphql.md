@@ -1,7 +1,6 @@
 # Use Unions with GraphQL
 
-By default, if a union is used in your resource in line, it will get a nice type generated for it based on the
-resource/key name. Often, you'll want to define a union using `Ash.Type.NewType`. For example:
+Unions must be defined with `Ash.Type.NewType`:
 
 ```elixir
 defmodule MyApp.Armor do

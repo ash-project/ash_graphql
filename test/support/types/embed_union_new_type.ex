@@ -17,5 +17,5 @@ defmodule AshGraphql.Types.EmbedUnionNewType do
       ]
     ]
 
-  def graphql_type, do: :foo_bar
+  def graphql_type(_), do: :embed_union_new_type
 end
