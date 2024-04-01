@@ -159,7 +159,7 @@ defmodule AshGraphql.Resource do
     name: :managed_relationship,
     schema: ManagedRelationship.schema(),
     args: [:action, :argument],
-  target: ManagedRelationship,
+    target: ManagedRelationship,
     describe: """
     Instructs ash_graphql that a given argument with a `manage_relationship` change should have its input objects derived automatically from the potential actions to be called.
 

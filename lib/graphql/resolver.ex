@@ -566,7 +566,10 @@ defmodule AshGraphql.Graphql.Resolver do
       AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name, type: type}) &&
           is_map(value) ->
         managed_relationship =
-          AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name, type: type})
+          AshGraphql.Resource.Info.managed_relationship(resource, action, %{
+            name: name,
+            type: type
+          })
 
         opts = AshGraphql.Resource.find_manage_change(%{name: name}, action, resource)
 
