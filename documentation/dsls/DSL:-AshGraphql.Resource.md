@@ -478,7 +478,7 @@ end
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`auto?`](#graphql-managed_relationships-auto?){: #graphql-managed_relationships-auto? } | `boolean` |  | Automatically derive types for all arguments that have a `manage_relationship` call change. |
+| [`auto?`](#graphql-managed_relationships-auto?){: #graphql-managed_relationships-auto? } | `boolean` | `true` | Automatically derive types for all arguments that have a `manage_relationship` call change. |
 
 
 
@@ -552,6 +552,7 @@ To *remove* a key from the input object, simply pass `nil` as the type.
 | [`lookup_identities`](#graphql-managed_relationships-managed_relationship-lookup_identities){: #graphql-managed_relationships-managed_relationship-lookup_identities } | `list(atom)` |  | Determines which identities are provided in the input object for looking up, if there is `on_lookup` behavior. Defalts to the `use_identities` option. |
 | [`type_name`](#graphql-managed_relationships-managed_relationship-type_name){: #graphql-managed_relationships-managed_relationship-type_name } | `atom` |  | The name of the input object that will be derived. Defaults to `<action_type>_<resource>_<argument_name>_input` |
 | [`types`](#graphql-managed_relationships-managed_relationship-types){: #graphql-managed_relationships-managed_relationship-types } | `any` |  | A keyword list of field names to their graphql type identifiers. |
+| [`ignore?`](#graphql-managed_relationships-managed_relationship-ignore?){: #graphql-managed_relationships-managed_relationship-ignore? } | `boolean` | `false` | Use this to ignore a given managed relationship, preventing `auto? true` from deriving a type for it. |
 
 
 

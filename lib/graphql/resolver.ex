@@ -563,10 +563,10 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp handle_argument(resource, action, type, constraints, value, name) do
     cond do
-      AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name}) &&
+      AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name, type: type}) &&
           is_map(value) ->
         managed_relationship =
-          AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name})
+          AshGraphql.Resource.Info.managed_relationship(resource, action, %{name: name, type: type})
 
         opts = AshGraphql.Resource.find_manage_change(%{name: name}, action, resource)
 
@@ -2018,8 +2018,7 @@ defmodule AshGraphql.Graphql.Resolver do
               {AshGraphql.Resource.field_type(
                  config[:type],
                  %Ash.Resource.Attribute{
-                   name:
-                     configured_type_name,
+                   name: configured_type_name,
                    type: config[:type],
                    constraints: config[:constraints]
                  },

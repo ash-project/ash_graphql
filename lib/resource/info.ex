@@ -24,7 +24,7 @@ defmodule AshGraphql.Resource.Info do
   end
 
   def managed_relationships_auto?(resource) do
-    Extension.get_opt(resource, [:graphql, :managed_relationships], :auto?, false)
+    Extension.get_opt(resource, [:graphql, :managed_relationships], :auto?, true)
   end
 
   @doc "The managed_relationshi configuration for a given action/argument"
@@ -37,10 +37,14 @@ defmodule AshGraphql.Resource.Info do
         managed_relationship.action == action.name
     end)
     |> then(fn managed_relationship ->
-      if managed_relationships_auto?(resource) do
-        managed_relationship || default_managed_relationship(action, argument)
+      if managed_relationship && managed_relationship.ignore? do
+        nil
       else
-        managed_relationship
+        if managed_relationships_auto?(resource) do
+          managed_relationship || default_managed_relationship(action, argument)
+        else
+          managed_relationship
+        end
       end
     end)
   end
@@ -52,7 +56,7 @@ defmodule AshGraphql.Resource.Info do
 
          _ ->
            nil
-       end) do
+       end) && map_type?(argument.type) do
       %AshGraphql.Resource.ManagedRelationship{
         argument: argument.name,
         action: action,
@@ -63,6 +67,11 @@ defmodule AshGraphql.Resource.Info do
       }
     end
   end
+
+  defp map_type?({:array, type}), do: map_type?(type)
+  defp map_type?(Ash.Type.Map), do: true
+  defp map_type?(:map), do: true
+  defp map_type?(_), do: false
 
   @doc "The graphql type of the resource"
   def type(resource) do

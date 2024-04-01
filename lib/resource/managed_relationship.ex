@@ -7,7 +7,8 @@ defmodule AshGraphql.Resource.ManagedRelationship do
     :types,
     :type_name,
     :lookup_with_primary_key?,
-    :lookup_identities
+    :lookup_identities,
+    :ignore?
   ]
 
   @schema [
@@ -42,6 +43,13 @@ defmodule AshGraphql.Resource.ManagedRelationship do
       type: :any,
       doc: """
       A keyword list of field names to their graphql type identifiers.
+      """
+    ],
+    ignore?: [
+      type: :boolean,
+      default: false,
+      doc: """
+      Use this to ignore a given managed relationship, preventing `auto? true` from deriving a type for it.
       """
     ]
   ]
