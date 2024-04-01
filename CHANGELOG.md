@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.0.0-rc.0](https://github.com/ash-project/ash_graphql/compare/v0.28.0...v1.0.0-rc.0) (2024-04-01)
+### Breaking Changes:
+
+* auto? managed_relationships by default
+
+* No longer automagically derive types
+
+* port AshGraphql to Ash 3.0 (#123)
+
+
+
 ## [v0.28.0](https://github.com/ash-project/ash_graphql/compare/v0.27.1...v0.28.0) (2024-03-30)
 
 ### Features:
