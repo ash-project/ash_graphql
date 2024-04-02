@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.0.0-rc.1](https://github.com/ash-project/ash_graphql/compare/v1.0.0-rc.0...v1.0.0-rc.1) (2024-04-02)
+
+
+
+
+### Improvements:
+
+* update ash rc dependency
+
 ## [v1.0.0-rc.0](https://github.com/ash-project/ash_graphql/compare/v0.28.0...v1.0.0-rc.0) (2024-04-01)
 ### Breaking Changes:
 
