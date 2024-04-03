@@ -632,8 +632,33 @@ defmodule AshGraphql.Resource do
             relay_ids?
           )
         else
+          args =
+            case mutation_fields(
+                    resource,
+                    schema,
+                    action,
+                    mutation.type,
+                    mutation.hide_inputs
+                  ) do
+              [] ->
+                mutation_args(mutation, resource, schema)
+
+              fields ->
+                mutation_args(mutation, resource, schema) ++
+                  [
+                    %Absinthe.Blueprint.Schema.InputValueDefinition{
+                      identifier: :input,
+                      module: schema,
+                      name: "input",
+                      placement: :argument_definition,
+                      type: mutation_input_type(mutation.name, fields),
+                      __reference__: ref(__ENV__)
+                    }
+                  ]
+            end
+
           %Absinthe.Blueprint.Schema.FieldDefinition{
-            arguments: mutation_args(mutation, resource, schema),
+            arguments: args,
             identifier: mutation.name,
             middleware:
               action_middleware ++
