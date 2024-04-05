@@ -634,12 +634,12 @@ defmodule AshGraphql.Resource do
         else
           args =
             case mutation_fields(
-                    resource,
-                    schema,
-                    action,
-                    mutation.type,
-                    mutation.hide_inputs
-                  ) do
+                   resource,
+                   schema,
+                   action,
+                   mutation.type,
+                   mutation.hide_inputs
+                 ) do
               [] ->
                 mutation_args(mutation, resource, schema)
 
