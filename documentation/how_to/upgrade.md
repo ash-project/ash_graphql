@@ -120,3 +120,13 @@ managed_relationships do
   managed_relationship :create, :comments, ignore?: true
 end
 ```
+
+## `Ash.Api` is now `Ash.Domain` in Ash 3.0
+
+Your Absinthe schema file (ie. `MyApp.Schema`) will need all references to `api` updated to be `domain`. eg.
+
+```elixir
+@domains [MyApp.Domain1, MyApp.Domain2]
+
+use AshGraphql, domains: @domains
+```
