@@ -15,16 +15,6 @@ def deps()
 end
 ```
 
-## Add some backwards compatibility configuration
-
-in `config/config.exs`
-
-```elixir
-config :ash_graphql, :allow_non_null_mutation_arguments?, true
-```
-
-This won't be necessary after the next major release, where this new configuration will be the default.
-
 ## Add the domain Extension
 
 Add the following to your domain module. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
