@@ -80,12 +80,10 @@ If you don't have an absinthe schema, you can create one just for ash.
 in `lib/helpdesk/schema.ex`
 
 ```elixir
-defmodule Helpdesk.Schema do
+defmodule Helpdesk.GraphqlSchema do
   use Absinthe.Schema
 
-  @domains [Helpdesk.Support]
-
-  use AshGraphql, domains: @domains
+  use AshGraphql, domains: [Helpdesk.Support]
 
   # The query and mutation blocks is where you can add custom absinthe code
   query do
@@ -110,12 +108,12 @@ plug AshGraphql.Plug
 
 forward "/gql",
   to: Absinthe.Plug,
-  init_opts: [schema: Helpdesk.Schema]
+  init_opts: [schema: Helpdesk.GraphqlSchema]
 
 forward "/playground",
   to: Absinthe.Plug.GraphiQL,
   init_opts: [
-    schema: Helpdesk.Schema,
+    schema: Helpdesk.GraphqlSchema,
     interface: :playground
   ]
 ```
@@ -134,11 +132,11 @@ end
 scope "/" do
   pipe_through [:graphql]
 
-  forward "/gql", Absinthe.Plug, schema: Helpdesk.Schema
+  forward "/gql", Absinthe.Plug, schema: Helpdesk.GraphqlSchema
 
   forward "/playground",
           Absinthe.Plug.GraphiQL,
-          schema: Helpdesk.Schema,
+          schema: Helpdesk.GraphqlSchema,
           interface: :playground
 end
 ```
