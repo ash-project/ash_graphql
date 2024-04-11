@@ -1353,6 +1353,10 @@ defmodule AshGraphql.Resource do
   end
 
   defp generic_action_type(action, resource) do
+    if !action.returns do
+      raise "Cannot use #{inspect(resource)}.#{action.name} with AshGraphql, because it does not have a return type."
+    end
+
     fake_attribute = %{
       type: action.returns,
       constraints: action.constraints,

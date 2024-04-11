@@ -339,7 +339,7 @@ defmodule AshGraphql do
       |> Enum.concat(
         resource
         |> Ash.Resource.Info.actions()
-        |> Enum.filter(&(&1.type == :action))
+        |> Enum.filter(&(&1.type == :action && &1.returns))
         |> Enum.map(fn action ->
           %{type: action.returns, constraints: action.constraints, name: action.name}
         end)
