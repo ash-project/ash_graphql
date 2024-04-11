@@ -10,7 +10,7 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 def deps()
   [
     ...
-    {:ash_graphql, "~> 1.0.0-rc.1"}
+    {:ash_graphql, "~> 1.0.0-rc.2"}
   ]
 end
 ```
