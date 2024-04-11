@@ -5,7 +5,7 @@ defmodule AshGraphql.MixProject do
   An absinthe-backed graphql extension for Ash
   """
 
-  @version "1.0.0-rc.2"
+  @version "1.0.0-rc.3"
 
   def project do
     [
