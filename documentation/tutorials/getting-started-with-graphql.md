@@ -108,15 +108,19 @@ plug AshGraphql.Plug
 
 forward "/gql",
   to: Absinthe.Plug,
-  init_opts: [schema: Helpdesk.GraphqlSchema]
+  init_opts: [schema: Module.concat(["Helpdesk.GraphqlSchema"])]
 
 forward "/playground",
   to: Absinthe.Plug.GraphiQL,
   init_opts: [
-    schema: Helpdesk.GraphqlSchema,
+    schema: Module.concat(["Helpdesk.GraphqlSchema"]),
     interface: :playground
   ]
 ```
+
+> ### Whats up with `Module.concat/1`? {: .info}
+>
+> This `Module.concat/1` prevents a [compile-time dependency] from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have *drastic* impacts on your compile times in certain scenarios.
 
 ### Using Phoenix
 
