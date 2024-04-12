@@ -1,7 +1,6 @@
 defmodule Foo do
   @moduledoc false
   use Ash.Resource,
-    domain: AshGraphql.Test.Domain,
     data_layer: :embedded,
     extensions: [
       AshGraphql.Resource
@@ -33,7 +32,6 @@ end
 defmodule Bar do
   @moduledoc false
   use Ash.Resource,
-    domain: AshGraphql.Test.Domain,
     data_layer: :embedded,
     extensions: [
       AshGraphql.Resource
