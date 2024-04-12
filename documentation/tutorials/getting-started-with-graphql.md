@@ -120,7 +120,7 @@ forward "/playground",
 
 > ### Whats up with `Module.concat/1`? {: .info}
 >
-> This `Module.concat/1` prevents a [compile-time dependency] from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have *drastic* impacts on your compile times in certain scenarios.
+> This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have *drastic* impacts on your compile times in certain scenarios.
 
 ### Using Phoenix
 
