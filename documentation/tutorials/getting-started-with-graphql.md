@@ -96,6 +96,39 @@ end
 
 ## Connect your schema
 
+### Using Phoenix
+
+You will simply want to add some code to your router, like so.
+
+You will also likely want to set up the "playground" for trying things out.
+
+```elixir
+pipeline :graphql do
+  plug AshGraphql.Plug
+end
+
+scope "/" do
+  pipe_through [:graphql]
+
+  forward "/gql",
+    Absinthe.Plug,
+    schema: Module.concat(["Helpdesk.GraphqlSchema"])
+
+  forward "/playground",
+          Absinthe.Plug.GraphiQL,
+          schema: Module.concat(["Helpdesk.GraphqlSchema"]),
+          interface: :playground
+end
+```
+
+> ### Whats up with `Module.concat/1`? {: .info}
+>
+> This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have *drastic* impacts on your compile times in certain scenarios.
+
+If you started with `mix new ...` instead of `mix phx.new ...` and you want to
+still use phoenix, the fastest path that way is typically to just create a new
+phoenix application and copy your resources/config over.
+
 ### Using Plug
 
 If you are unfamiliar with how plug works, this [guide](https://elixirschool.com/en/lessons/specifics/plug/#dependencies) will be helpful for understanding it. It also guides you through
@@ -118,36 +151,7 @@ forward "/playground",
   ]
 ```
 
-> ### Whats up with `Module.concat/1`? {: .info}
->
-> This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have *drastic* impacts on your compile times in certain scenarios.
-
-### Using Phoenix
-
-You will simply want to add some code to your router, like so.
-
-You will also likely want to set up the "playground" for trying things out.
-
-```elixir
-pipeline :graphql do
-  plug AshGraphql.Plug
-end
-
-scope "/" do
-  pipe_through [:graphql]
-
-  forward "/gql", Absinthe.Plug, schema: Helpdesk.GraphqlSchema
-
-  forward "/playground",
-          Absinthe.Plug.GraphiQL,
-          schema: Helpdesk.GraphqlSchema,
-          interface: :playground
-end
-```
-
-If you started with `mix new ...` instead of `mix phx.new ...` and you want to
-still use phoenix, the fastest path that way is typically to just create a new
-phoenix application and copy your resources/config over.
+For information on why we are using `Module.concat/1`, see the note above in the Phoenix section.
 
 ## What's next?
 
