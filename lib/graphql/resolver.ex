@@ -587,7 +587,7 @@ defmodule AshGraphql.Graphql.Resolver do
             type: type
           })
 
-        opts = AshGraphql.Resource.find_manage_change(%{name: name}, action, resource)
+        opts = AshGraphql.Resource.find_manage_change(%{name: name, type: type}, action, resource)
 
         relationship =
           Ash.Resource.Info.relationship(resource, opts[:relationship]) ||
