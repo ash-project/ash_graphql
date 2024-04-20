@@ -1243,25 +1243,25 @@ defmodule AshGraphql.Resource do
   defp query_type(%{type: :list, relay?: relay?} = query, _resource, action, type) do
     type = query.type_name || type
 
-    if pagination_strategy(query, action) do
-      cond do
-        relay? ->
-          String.to_atom("#{type}_connection")
-
-        action.pagination.keyset? ->
+    if relay? do
+      String.to_atom("#{type}_connection")
+    else
+      case pagination_strategy(query, action) do
+        :keyset ->
           String.to_atom("keyset_page_of_#{type}")
 
-        true ->
+        :offset ->
           String.to_atom("page_of_#{type}")
-      end
-    else
-      %Absinthe.Blueprint.TypeReference.NonNull{
-        of_type: %Absinthe.Blueprint.TypeReference.List{
-          of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: type
+
+        nil ->
+          %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: %Absinthe.Blueprint.TypeReference.List{
+              of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                of_type: type
+              }
+            }
           }
-        }
-      }
+      end
     end
   end
 
@@ -1271,40 +1271,45 @@ defmodule AshGraphql.Resource do
     maybe_wrap_non_null(type, not query.allow_nil?)
   end
 
-  defp pagination_strategy(nil, _) do
+  @doc false
+  def pagination_strategy(nil, _) do
     nil
   end
 
-  defp pagination_strategy(_query, %{pagination: pagination}) when pagination in [nil, false] do
+  def pagination_strategy(_query, %{pagination: pagination}) when pagination in [nil, false] do
     nil
   end
 
-  defp pagination_strategy(%{paginate_with: strategy}, action) do
-    strategies =
-      if action.pagination.required? do
-        []
-      else
-        [nil]
-      end
+  def pagination_strategy(%{paginate_with: strategy}, action) do
+    if action.pagination do
+      strategies =
+        if action.pagination.required? do
+          []
+        else
+          [nil]
+        end
 
-    strategies =
-      if action.pagination.keyset? do
-        [:keyset | strategies]
-      else
-        strategies
-      end
+      strategies =
+        if action.pagination.keyset? do
+          [:keyset | strategies]
+        else
+          strategies
+        end
 
-    strategies =
-      if action.pagination.offset? do
-        [:offset | strategies]
-      else
-        strategies
-      end
+      strategies =
+        if action.pagination.offset? do
+          [:offset | strategies]
+        else
+          strategies
+        end
 
-    if strategy in strategies do
-      strategy
+      if strategy in strategies do
+        strategy
+      else
+        Enum.at(strategies, 0)
+      end
     else
-      Enum.at(strategies, 0)
+      nil
     end
   end
 

@@ -422,8 +422,24 @@ defmodule AshGraphql.Graphql.Resolver do
 
           {result, modify_args} =
             with {:ok, opts} <-
-                   validate_resolve_opts(resolution, resource, pagination, relay?, opts, args),
-                 result_fields <- get_result_fields(pagination, relay?),
+                   validate_resolve_opts(
+                     resolution,
+                     resource,
+                     pagination,
+                     relay?,
+                     opts,
+                     args,
+                     gql_query,
+                     action
+                   ),
+                 result_fields <-
+                   get_result_fields(
+                     AshGraphql.Resource.pagination_strategy(
+                       gql_query,
+                       Ash.Resource.Info.action(resource, action)
+                     ),
+                     relay?
+                   ),
                  initial_query <-
                    query
                    |> Ash.Query.set_tenant(Map.get(context, :tenant))
@@ -453,7 +469,7 @@ defmodule AshGraphql.Graphql.Resolver do
                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
                    )
                    |> domain.read(opts) do
-              result = paginate(resource, action, page, relay?)
+              result = paginate(resource, gql_query, action, page, relay?)
               {result, [query, result]}
             else
               {:error, error} ->
@@ -751,35 +767,39 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  def validate_resolve_opts(resolution, resource, pagination, relay?, opts, args) do
-    if pagination && (pagination.offset? || pagination.keyset?) do
-      with page_opts <-
-             args
-             |> Map.take([:limit, :offset, :first, :after, :before, :last])
-             |> Enum.reject(fn {_, val} -> is_nil(val) end),
-           {:ok, page_opts} <- validate_offset_opts(page_opts, pagination),
-           {:ok, page_opts} <- validate_keyset_opts(page_opts, pagination) do
-        type = page_type(resource, pagination, relay?)
-        field_names = resolution |> fields([], type) |> names_only()
+  def validate_resolve_opts(resolution, resource, pagination, relay?, opts, args, query, action) do
+    action = Ash.Resource.Info.action(resource, action)
 
-        page =
-          if Enum.any?(field_names, &(&1 == :count)) do
-            Keyword.put(page_opts, :count, true)
-          else
-            page_opts
-          end
+    case AshGraphql.Resource.pagination_strategy(query, action) do
+      nil ->
+        {:ok, opts}
 
-        {:ok, Keyword.put(opts, :page, page)}
-      else
-        error ->
-          error
-      end
-    else
-      {:ok, opts}
+      strategy ->
+        with page_opts <-
+               args
+               |> Map.take([:limit, :offset, :first, :after, :before, :last])
+               |> Enum.reject(fn {_, val} -> is_nil(val) end),
+             {:ok, page_opts} <- validate_offset_opts(page_opts, strategy, pagination),
+             {:ok, page_opts} <- validate_keyset_opts(page_opts, strategy, pagination) do
+          type = page_type(resource, strategy, relay?)
+          field_names = resolution |> fields([], type) |> names_only()
+
+          page =
+            if Enum.any?(field_names, &(&1 == :count)) do
+              Keyword.put(page_opts, :count, true)
+            else
+              page_opts
+            end
+
+          {:ok, Keyword.put(opts, :page, page)}
+        else
+          error ->
+            error
+        end
     end
   end
 
-  defp validate_offset_opts(opts, %{offset?: true, max_page_size: max_page_size}) do
+  defp validate_offset_opts(opts, :offset, %{max_page_size: max_page_size}) do
     limit =
       case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
         %{limit: limit} ->
@@ -792,11 +812,11 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok, Keyword.put(opts, :limit, limit)}
   end
 
-  defp validate_offset_opts(opts, _) do
+  defp validate_offset_opts(opts, _, _) do
     {:ok, opts}
   end
 
-  defp validate_keyset_opts(opts, %{keyset?: true, max_page_size: max_page_size}) do
+  defp validate_keyset_opts(opts, :keyset, %{max_page_size: max_page_size}) do
     case opts |> Keyword.take([:first, :last, :after, :before]) |> Enum.into(%{}) do
       %{first: _first, last: _last} ->
         {:error,
@@ -839,19 +859,19 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp validate_keyset_opts(opts, _) do
+  defp validate_keyset_opts(opts, _, _) do
     {:ok, opts}
   end
 
-  defp get_result_fields(%{keyset?: true}, true) do
+  defp get_result_fields(:keyset, true) do
     ["edges", "node"]
   end
 
-  defp get_result_fields(%{keyset?: true}, false) do
+  defp get_result_fields(:keyset, false) do
     ["results"]
   end
 
-  defp get_result_fields(%{offset?: true}, _) do
+  defp get_result_fields(:offset, _) do
     ["results"]
   end
 
@@ -861,6 +881,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp paginate(
          _resource,
+         _gql_query,
          _action,
          %Ash.Page.Keyset{
            results: results,
@@ -924,6 +945,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp paginate(
          _resource,
+         _gql_query,
          _action,
          %Ash.Page.Offset{results: results, count: count, more?: more},
          true
@@ -967,6 +989,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp paginate(
          _resource,
+         _gql_query,
          _action,
          %Ash.Page.Offset{results: results, count: count, more?: more?},
          _
@@ -974,19 +997,31 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok, %{results: results, count: count, more?: more?}}
   end
 
-  defp paginate(resource, action, page, relay?) do
-    case Ash.Resource.Info.action(resource, action).pagination do
-      %{offset?: true} ->
+  defp paginate(resource, query, action, page, relay?) do
+    action =
+      if is_atom(action) do
+        Ash.Resource.Info.action(resource, action)
+      else
+        action
+      end
+
+    case AshGraphql.Resource.pagination_strategy(query, action) do
+      nil ->
+        {:ok, page}
+
+      :offset ->
         paginate(
           resource,
+          query,
           action,
           %Ash.Page.Offset{results: page, count: Enum.count(page), more?: false},
           relay?
         )
 
-      %{keyset?: true} ->
+      :keyset ->
         paginate(
           resource,
+          query,
           action,
           %Ash.Page.Keyset{
             results: page,
@@ -2117,17 +2152,17 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp page_type(resource, pagination, relay?) do
+  defp page_type(resource, strategy, relay?) do
     type = AshGraphql.Resource.Info.type(resource)
 
     cond do
       relay? ->
         String.to_atom("#{type}_connection")
 
-      pagination.keyset? ->
+      strategy == :keyset ->
         String.to_atom("keyset_page_of_#{type}")
 
-      pagination.offset? ->
+      strategy == :offset ->
         String.to_atom("page_of_#{type}")
     end
   end
