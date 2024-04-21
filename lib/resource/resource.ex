@@ -1111,7 +1111,7 @@ defmodule AshGraphql.Resource do
           |> Ash.Resource.Info.public_attributes()
           |> Enum.filter(fn attribute ->
             AshGraphql.Resource.Info.show_field?(resource, attribute.name) &&
-              (is_nil(action.accept) || attribute.name in action.accept) && attribute.writable? &&
+              attribute.name in action.accept && attribute.writable? &&
               attribute.name not in hide_inputs
           end)
           |> Enum.map(fn attribute ->
