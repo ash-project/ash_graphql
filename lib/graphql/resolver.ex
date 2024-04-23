@@ -754,9 +754,10 @@ defmodule AshGraphql.Graphql.Resolver do
         config = constraints[:types][key]
 
         if config[:tag] && is_map(value) do
-          {:ok, Map.put_new(value, config[:tag], config[:tag_value])}
+          {:ok,
+           %Ash.Union{type: key, value: Map.put_new(value, config[:tag], config[:tag_value])}}
         else
-          {:ok, value}
+          {:ok, %Ash.Union{type: key, value: value}}
         end
 
       key_vals ->
@@ -2587,7 +2588,7 @@ defmodule AshGraphql.Graphql.Resolver do
         constraints = Ash.Type.NewType.constraints(field_type, field.constraints)
 
         if type in unnested_types do
-          if value do
+          if not is_nil(value) do
             type =
               AshGraphql.Resource.field_type(
                 constraints[:types][type][:type],
