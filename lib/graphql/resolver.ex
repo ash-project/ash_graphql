@@ -723,9 +723,10 @@ defmodule AshGraphql.Graphql.Resolver do
         config = constraints[:types][key]
 
         if config[:tag] && is_map(value) do
-          {:ok, Map.put_new(value, config[:tag], config[:tag_value])}
+          {:ok,
+           %Ash.Union{type: key, value: Map.put_new(value, config[:tag], config[:tag_value])}}
         else
-          {:ok, value}
+          {:ok, %Ash.Union{type: key, value: value}}
         end
 
       key_vals ->
