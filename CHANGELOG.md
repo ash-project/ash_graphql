@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.28.1](https://github.com/ash-project/ash_graphql/compare/v0.28.0...v0.28.1) (2024-04-23)
+
+
+
+
+### Bug Fixes:
+
+* properly tag union input types
+
+* accept input object for destroy mutations
+
 ## [v0.28.0](https://github.com/ash-project/ash_graphql/compare/v0.27.1...v0.28.0) (2024-03-30)
 
 
