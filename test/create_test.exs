@@ -146,6 +146,54 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "an embedded union type uses the correct types" do
+    assert {:ok, resp} =
+             """
+             mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+               simpleCreatePost(input: $input) {
+                 result{
+                   text1
+                   simpleUnion {
+                     ... on SimpleUnionString {
+                       value
+                     }
+                     ... on SimpleUnionInt {
+                       value
+                     }
+                   }
+                 }
+                 errors{
+                   message
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema,
+               variables: %{
+                 "input" => %{
+                   "text1" => "foo",
+                   "simpleUnion" => %{
+                     "string" => "5"
+                   }
+                 }
+               }
+             )
+
+    refute Map.has_key?(resp, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "simpleUnion" => %{
+                     "value" => "5"
+                   }
+                 }
+               }
+             }
+           } = resp
+  end
+
   test "an embedded union type can be written to" do
     resp =
       """
