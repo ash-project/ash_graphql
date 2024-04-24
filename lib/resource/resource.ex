@@ -3158,9 +3158,9 @@ defmodule AshGraphql.Resource do
     resource
     |> AshGraphql.all_attributes_and_arguments([], false)
     |> Enum.map(&unnest/1)
-    |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map))
     |> Enum.filter(
-      &(!Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []))
+      &(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map &&
+          !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []))
     )
     |> Enum.uniq_by(& &1.name)
   end
