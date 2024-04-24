@@ -2787,7 +2787,7 @@ defmodule AshGraphql.Resource do
     |> Enum.filter(& &1)
     |> Enum.flat_map(fn type_name ->
       {types, fields} =
-        Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
+        Enum.reduce(constraints[:fields] || [], {[], []}, fn {name, attribute}, {types, fields} ->
           map_type? =
             attribute[:type] in [:map, Ash.Type.Map] ||
               (Ash.Type.NewType.new_type?(attribute[:type]) &&
@@ -3159,6 +3159,9 @@ defmodule AshGraphql.Resource do
     |> AshGraphql.all_attributes_and_arguments([], false)
     |> Enum.map(&unnest/1)
     |> Enum.filter(&(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map))
+    |> Enum.filter(
+      &(!Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []))
+    )
     |> Enum.uniq_by(& &1.name)
   end
 
