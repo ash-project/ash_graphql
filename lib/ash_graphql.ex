@@ -519,7 +519,9 @@ defmodule AshGraphql do
   end
 
   defp only_enum_types(attributes) do
-    Enum.flat_map(attributes, fn attribute ->
+    attributes
+    |> Enum.filter(&AshGraphql.Resource.define_type?(&1.type, &1.constraints))
+    |> Enum.flat_map(fn attribute ->
       attribute = %{
         type:
           attribute.type

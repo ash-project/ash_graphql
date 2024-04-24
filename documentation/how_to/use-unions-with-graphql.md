@@ -49,3 +49,12 @@ Which, in this case, would yield:
 ```
 type Armor = Plate | ChainMail | {custom: {value: String}}
 ```
+
+## Bypassing type generation for a union
+
+Add the `graphql_define_type?/1` callback, like so, to skip Ash's generation (i.e if you're defining it yourself)
+
+```elixir
+@impl true
+def graphql_define_type?(_), do: false
+```

@@ -62,6 +62,7 @@ defmodule AshGraphql.MixProject do
         "documentation/how_to/use-json-with-graphql.md",
         "documentation/how_to/use-subscriptions-with-graphql.md",
         "documentation/how_to/use-unions-with-graphql.md",
+        "documentation/how_to/use-maps-with-graphql.md",
         "documentation/topics/monitoring.md",
         "documentation/topics/graphql-generation.md",
         "documentation/topics/modifying-the-resolution.md",

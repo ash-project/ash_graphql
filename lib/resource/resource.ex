@@ -3160,9 +3160,23 @@ defmodule AshGraphql.Resource do
     |> Enum.map(&unnest/1)
     |> Enum.filter(
       &(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map &&
-          !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []))
+          !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []) &&
+          define_type?(&1.type, &1.constraints))
     )
     |> Enum.uniq_by(& &1.name)
+  end
+
+  @spec define_type?(Ash.Type.t(), Ash.Type.constraints()) :: boolean()
+  def define_type?({:array, type}, constraints), do: define_type?(type, constraints)
+
+  def define_type?(type, constraints) do
+    type = Ash.Type.get_type(type)
+
+    if function_exported?(type, :graphql_define_type?, 1) do
+      type.graphql_define_type?(constraints)
+    else
+      true
+    end
   end
 
   defp unnest(%{type: {:array, type}, constraints: constraints} = attribute) do
@@ -3175,6 +3189,7 @@ defmodule AshGraphql.Resource do
   def global_unions(resource) do
     resource
     |> AshGraphql.all_attributes_and_arguments()
+    |> Enum.filter(&define_type?(&1.type, &1.constraints))
     |> AshGraphql.only_union_types()
     |> Enum.uniq_by(&elem(&1, 0))
   end

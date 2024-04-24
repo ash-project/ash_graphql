@@ -63,6 +63,11 @@ defmodule AshGraphql.Type do
   @callback graphql_unnested_unions(Ash.Type.constraints()) :: [atom()]
 
   @doc """
+  Used for maps/enums/unions that *would* define a type automatically, to disable them.
+  """
+  @callback graphql_define_type?(Ash.Type.constraints()) :: false
+
+  @doc """
   Used for `Ash.Type.Enum` to provide a description for individual values. For example:
 
   ```elixir
@@ -80,5 +85,6 @@ defmodule AshGraphql.Type do
                       graphql_input_type: 1,
                       graphql_rename_value: 1,
                       graphql_unnested_unions: 1,
-                      graphql_describe_enum_value: 1
+                      graphql_describe_enum_value: 1,
+                      graphql_define_type?: 1
 end
