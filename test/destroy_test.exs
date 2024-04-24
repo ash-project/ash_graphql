@@ -38,6 +38,7 @@ defmodule AshGraphql.DestroyTest do
 
     refute Map.has_key?(result, :errors)
     assert %{data: %{"deletePost" => %{"result" => %{"text" => "foobar"}}}} = result
+    refute Ash.get!(AshGraphql.Test.Post, post.id, error?: false)
   end
 
   test "a soft destroy works" do

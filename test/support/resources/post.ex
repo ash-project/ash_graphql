@@ -300,6 +300,7 @@ defmodule AshGraphql.Test.Post do
     update :update, primary?: true
 
     update :update_with_comments do
+      require_atomic?(false)
       argument(:comments, {:array, :map})
       argument(:sponsored_comments, {:array, :map})
 
@@ -320,6 +321,7 @@ defmodule AshGraphql.Test.Post do
     end
 
     destroy :destroy_with_error do
+      require_atomic?(false)
       change(AfterActionRaiseResourceError)
     end
   end

@@ -43,6 +43,7 @@ defmodule AshGraphql.Graphql.Resolver do
               metadata do
           opts = [
             actor: Map.get(context, :actor),
+            domain: domain,
             authorize?: AshGraphql.Domain.Info.authorize?(domain),
             tenant: Map.get(context, :tenant)
           ]
@@ -51,7 +52,7 @@ defmodule AshGraphql.Graphql.Resolver do
             %Ash.ActionInput{domain: domain, resource: resource}
             |> Ash.ActionInput.set_context(get_context(context))
             |> Ash.ActionInput.for_action(action.name, arguments)
-            |> domain.run_action(opts)
+            |> Ash.run_action(opts)
             |> case do
               {:ok, result} ->
                 load_opts =
@@ -204,7 +205,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     actor: opts[:actor],
                     authorize?: AshGraphql.Domain.Info.authorize?(domain)
                   )
-                  |> domain.read_one(opts)
+                  |> Ash.read_one(opts)
 
                 {result, [query, result]}
 
@@ -344,9 +345,10 @@ defmodule AshGraphql.Graphql.Resolver do
           query
           |> Ash.Query.for_read(action, %{},
             actor: opts[:actor],
+            domain: domain,
             authorize?: AshGraphql.Domain.Info.authorize?(domain)
           )
-          |> domain.read_one(opts)
+          |> Ash.read_one(opts)
 
         result =
           add_read_metadata(
@@ -466,9 +468,10 @@ defmodule AshGraphql.Graphql.Resolver do
                    query
                    |> Ash.Query.for_read(action, %{},
                      actor: Map.get(context, :actor),
+                     domain: domain,
                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
                    )
-                   |> domain.read(opts) do
+                   |> Ash.read(opts) do
               result = paginate(resource, gql_query, action, page, relay?)
               {result, [query, result]}
             else
@@ -1118,7 +1121,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
           {result, modify_args} =
             changeset
-            |> domain.create(opts)
+            |> Ash.create(opts)
             |> case do
               {:ok, value} ->
                 {{:ok, add_metadata(%{result: value, errors: []}, value, changeset.action)},
@@ -1208,45 +1211,32 @@ defmodule AshGraphql.Graphql.Resolver do
 
           case filter do
             {:ok, filter} ->
-              resource
-              |> Ash.Query.do_filter(filter)
-              |> Ash.Query.set_tenant(Map.get(context, :tenant))
-              |> Ash.Query.set_context(get_context(context))
-              |> set_query_arguments(read_action, read_action_input)
-              |> domain.read_one(
-                action: read_action,
-                actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Domain.Info.authorize?(domain)
-              )
-              |> case do
-                {:ok, nil} ->
-                  result = not_found(filter, resource, context, domain)
+              query =
+                resource
+                |> Ash.Query.do_filter(filter)
+                |> Ash.Query.set_tenant(Map.get(context, :tenant))
+                |> Ash.Query.set_context(get_context(context))
+                |> set_query_arguments(read_action, read_action_input)
+                |> Ash.Query.limit(1)
 
-                  resolution
-                  |> Absinthe.Resolution.put_result(result)
-                  |> add_root_errors(domain, result)
-
-                {:ok, initial} ->
-                  opts = [
-                    actor: Map.get(context, :actor),
-                    action: action,
-                    authorize?: AshGraphql.Domain.Info.authorize?(domain),
-                    tenant: Map.get(context, :tenant)
-                  ]
-
-                  type_name = mutation_result_type(mutation_name)
-
-                  changeset =
-                    initial
-                    |> Ash.Changeset.new()
-                    |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-                    |> Ash.Changeset.set_context(get_context(context))
-                    |> Ash.Changeset.for_update(action, input,
-                      actor: Map.get(context, :actor),
-                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
-                    )
-                    |> select_fields(resource, resolution, type_name, ["result"])
-                    |> load_fields(
+              {result, modify_args} =
+                query
+                |> Ash.bulk_update(action, input,
+                  return_errors?: true,
+                  notify?: true,
+                  strategy: [:atomic, :stream, :atomic_batches],
+                  allow_stream_with: :full_read,
+                  return_records?: true,
+                  tenant: Map.get(context, :tenant),
+                  context: get_context(context) || %{},
+                  authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                  domain: domain,
+                  select:
+                    get_select(resource, resolution, mutation_result_type(mutation_name), [
+                      "result"
+                    ]),
+                  load:
+                    get_loads(
                       [
                         domain: domain,
                         tenant: Map.get(context, :tenant),
@@ -1260,33 +1250,48 @@ defmodule AshGraphql.Graphql.Resolver do
                       context,
                       ["result"]
                     )
+                )
+                |> case do
+                  %Ash.BulkResult{status: :success, records: [value]} ->
+                    action = Ash.Resource.Info.action(resource, action)
 
-                  {result, modify_args} =
-                    changeset
-                    |> domain.update(opts)
-                    |> case do
-                      {:ok, value} ->
-                        {{:ok,
-                          add_metadata(%{result: value, errors: []}, value, changeset.action)},
-                         [changeset, {:ok, value}]}
+                    {{:ok, add_metadata(%{result: value, errors: []}, value, action)},
+                     [query, {:ok, value}]}
 
-                      {:error, error} ->
-                        {{:ok,
-                          %{result: nil, errors: to_errors(List.wrap(error), context, domain)}},
-                         [changeset, {:error, error}]}
-                    end
+                  %Ash.BulkResult{status: :success, records: []} ->
+                    {{:ok,
+                      %{
+                        result: nil,
+                        errors:
+                          to_errors(
+                            [
+                              Ash.Error.Query.NotFound.exception(
+                                primary_key: Map.new(filter),
+                                resource: resource
+                              )
+                            ],
+                            context,
+                            domain
+                          )
+                      }},
+                     [
+                       query,
+                       {:error,
+                        Ash.Error.Query.NotFound.exception(
+                          primary_key: Map.new(filter),
+                          resource: resource
+                        )}
+                     ]}
 
-                  resolution
-                  |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-                  |> add_root_errors(domain, modify_args)
-                  |> modify_resolution(modify, modify_args)
+                  %Ash.BulkResult{status: :error, errors: errors} ->
+                    {{:ok, %{result: nil, errors: to_errors(errors, context, domain)}},
+                     [query, {:error, errors}]}
+                end
 
-                {:error, error} ->
-                  Absinthe.Resolution.put_result(
-                    resolution,
-                    to_resolution({:error, error}, context, domain)
-                  )
-              end
+              resolution
+              |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+              |> add_root_errors(domain, modify_args)
+              |> modify_resolution(modify, modify_args)
 
             {:error, error} ->
               Absinthe.Resolution.put_result(
@@ -1369,61 +1374,87 @@ defmodule AshGraphql.Graphql.Resolver do
 
           case filter do
             {:ok, filter} ->
-              resource
-              |> Ash.Query.do_filter(filter)
-              |> Ash.Query.set_tenant(Map.get(context, :tenant))
-              |> Ash.Query.set_context(get_context(context))
-              |> set_query_arguments(action, read_action_input)
-              |> domain.read_one(
-                action: read_action,
-                actor: Map.get(context, :actor),
-                authorize?: AshGraphql.Domain.Info.authorize?(domain)
-              )
-              |> case do
-                {:ok, nil} ->
-                  result = not_found(filter, resource, context, domain)
+              query =
+                resource
+                |> Ash.Query.do_filter(filter)
+                |> Ash.Query.set_tenant(Map.get(context, :tenant))
+                |> Ash.Query.set_context(get_context(context))
+                |> set_query_arguments(read_action, read_action_input)
+                |> Ash.Query.limit(1)
 
-                  resolution
-                  |> Absinthe.Resolution.put_result(result)
-                  |> add_root_errors(domain, result)
-
-                {:ok, initial} ->
-                  opts = [
-                    action: action,
-                    actor: Map.get(context, :actor),
-                    authorize?: AshGraphql.Domain.Info.authorize?(domain),
-                    tenant: Map.get(context, :tenant)
-                  ]
-
-                  type_name = mutation_result_type(mutation_name)
-
-                  changeset =
-                    initial
-                    |> Ash.Changeset.new()
-                    |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
-                    |> Ash.Changeset.set_context(get_context(context))
-                    |> Ash.Changeset.for_destroy(action, input,
-                      actor: Map.get(context, :actor),
-                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
+              {result, modify_args} =
+                query
+                |> Ash.bulk_destroy(action, input,
+                  return_errors?: true,
+                  notify?: true,
+                  strategy: [:atomic, :stream, :atomic_batches],
+                  allow_stream_with: :full_read,
+                  return_records?: true,
+                  tenant: Map.get(context, :tenant),
+                  context: get_context(context) || %{},
+                  authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                  domain: domain,
+                  select:
+                    get_select(resource, resolution, mutation_result_type(mutation_name), [
+                      "result"
+                    ]),
+                  load:
+                    get_loads(
+                      [
+                        domain: domain,
+                        tenant: Map.get(context, :tenant),
+                        authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                        tracer: AshGraphql.Domain.Info.tracer(domain),
+                        actor: Map.get(context, :actor)
+                      ],
+                      resource,
+                      resolution,
+                      resolution.path,
+                      context,
+                      ["result"]
                     )
-                    |> select_fields(resource, resolution, type_name, ["result"])
+                )
+                |> case do
+                  %Ash.BulkResult{status: :success, records: [value]} ->
+                    action = Ash.Resource.Info.action(resource, action)
 
-                  {result, modify_args} =
-                    changeset
-                    |> domain.destroy(opts)
-                    |> destroy_result(initial, resource, changeset, domain, resolution)
+                    {{:ok, add_metadata(%{result: value, errors: []}, value, action)},
+                     [query, {:ok, value}]}
 
-                  resolution
-                  |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-                  |> add_root_errors(domain, result)
-                  |> modify_resolution(modify, modify_args)
+                  %Ash.BulkResult{status: :success, records: []} ->
+                    {{:ok,
+                      %{
+                        result: nil,
+                        errors:
+                          to_errors(
+                            [
+                              Ash.Error.Query.NotFound.exception(
+                                primary_key: Map.new(filter),
+                                resource: resource
+                              )
+                            ],
+                            context,
+                            domain
+                          )
+                      }},
+                     [
+                       query,
+                       {:error,
+                        Ash.Error.Query.NotFound.exception(
+                          primary_key: Map.new(filter),
+                          resource: resource
+                        )}
+                     ]}
 
-                {:error, error} ->
-                  Absinthe.Resolution.put_result(
-                    resolution,
-                    to_resolution({:error, error}, context, domain)
-                  )
-              end
+                  %Ash.BulkResult{status: :error, errors: errors} ->
+                    {{:ok, %{result: nil, errors: to_errors(errors, context, domain)}},
+                     [query, {:error, errors}]}
+                end
+
+              resolution
+              |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+              |> add_root_errors(domain, modify_args)
+              |> modify_resolution(modify, modify_args)
 
             {:error, error} ->
               Absinthe.Resolution.put_result(
@@ -1550,22 +1581,6 @@ defmodule AshGraphql.Graphql.Resolver do
      end)}
   end
 
-  defp not_found(filter, resource, context, domain) do
-    {:ok,
-     %{
-       result: nil,
-       errors:
-         to_errors(
-           Ash.Error.Query.NotFound.exception(
-             primary_key: Map.new(filter || []),
-             resource: resource
-           ),
-           context,
-           domain
-         )
-     }}
-  end
-
   defp massage_filter(_resource, nil), do: nil
 
   defp massage_filter(resource, filter) when is_map(filter) do
@@ -1595,24 +1610,6 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp clear_fields(nil, _, _), do: nil
-
-  defp clear_fields(result, resource, resolution) do
-    type = AshGraphql.Resource.Info.type(resource)
-
-    resolution
-    |> fields(["result"], type)
-    |> names_only()
-    |> Enum.map(fn identifier ->
-      Ash.Resource.Info.aggregate(resource, identifier)
-    end)
-    |> Enum.filter(& &1)
-    |> Enum.map(& &1.name)
-    |> Enum.reduce(result, fn field, result ->
-      Map.put(result, field, nil)
-    end)
-  end
-
   @doc false
   def load_fields(
         query_or_changeset,
@@ -1623,19 +1620,29 @@ defmodule AshGraphql.Graphql.Resolver do
         context,
         nested \\ []
       ) do
+    load = get_loads(load_opts, resource, resolution, path, context, nested)
+
+    case query_or_changeset do
+      %Ash.Query{} = query ->
+        Ash.Query.load(query, load)
+
+      %Ash.Changeset{} = changeset ->
+        Ash.Changeset.load(changeset, load)
+    end
+  end
+
+  @doc false
+  def get_loads(
+        load_opts,
+        resource,
+        resolution,
+        path,
+        context,
+        nested \\ []
+      ) do
     {fields, path} = nested_fields_and_path(resolution, path, nested)
 
-    fields
-    |> resource_loads(resource, resolution, load_opts, path, context)
-    |> then(fn load ->
-      case query_or_changeset do
-        %Ash.Query{} = query ->
-          Ash.Query.load(query, load)
-
-        %Ash.Changeset{} = changeset ->
-          Ash.Changeset.load(changeset, load)
-      end
-    end)
+    resource_loads(fields, resource, resolution, load_opts, path, context)
   end
 
   defp nested_fields_and_path(resolution, path, []) do
@@ -2170,15 +2177,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   @doc false
   def select_fields(query_or_changeset, resource, resolution, type_override, nested \\ []) do
-    type = type_override || AshGraphql.Resource.Info.type(resource)
-
-    subfields =
-      resolution
-      |> fields(nested, type)
-      |> names_only()
-      |> Enum.map(&field_or_relationship(resource, &1))
-      |> Enum.filter(& &1)
-      |> Enum.map(& &1.name)
+    subfields = get_select(resource, resolution, type_override, nested)
 
     case query_or_changeset do
       %Ash.Query{} = query ->
@@ -2187,6 +2186,17 @@ defmodule AshGraphql.Graphql.Resolver do
       %Ash.Changeset{} = changeset ->
         changeset |> Ash.Changeset.select(subfields)
     end
+  end
+
+  defp get_select(resource, resolution, type_override, nested) do
+    type = type_override || AshGraphql.Resource.Info.type(resource)
+
+    resolution
+    |> fields(nested, type)
+    |> names_only()
+    |> Enum.map(&field_or_relationship(resource, &1))
+    |> Enum.filter(& &1)
+    |> Enum.map(& &1.name)
   end
 
   defp field_or_relationship(resource, identifier) do
@@ -2348,18 +2358,6 @@ defmodule AshGraphql.Graphql.Resolver do
         end)
 
       Map.put(result, :metadata, metadata)
-    end
-  end
-
-  defp destroy_result(result, initial, resource, changeset, domain, resolution) do
-    case result do
-      :ok ->
-        {{:ok, %{result: clear_fields(initial, resource, resolution), errors: []}},
-         [changeset, :ok]}
-
-      {:error, %{changeset: changeset} = error} ->
-        {{:ok, %{result: nil, errors: to_errors(changeset.errors, resolution.context, domain)}},
-         {:error, error}}
     end
   end
 
