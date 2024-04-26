@@ -5,6 +5,41 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.0.0-rc.4](https://github.com/ash-project/ash_graphql/compare/v1.0.0-rc.3...v1.0.0-rc.4) (2024-04-26)
+### Breaking Changes:
+
+* auto? managed_relationships by default
+
+* No longer automagically derive types
+
+* port AshGraphql to Ash 3.0 (#123)
+
+
+
+### Bug Fixes:
+
+* don't process maps with no fields
+
+* tag union values with their type before casting
+
+* ensure type is set when using `find_manage_relationship`
+
+* properly honor new pagination config everywhere
+
+* accept input object for destroy mutations
+
+### Improvements:
+
+* update ash
+
+* use bulk actions for create/destroy
+
+* add `graphql_define_type?/1` callback for graphql types
+
+* support generic actions with no return type
+
+* update ash rc dependency
+
 ## [v1.0.0-rc.3](https://github.com/ash-project/ash_graphql/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2024-04-11)
 
 
