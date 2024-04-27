@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.0.0-rc.5](https://github.com/ash-project/ash_graphql/compare/v1.0.0-rc.4...v1.0.0-rc.5) (2024-04-27)
+
+
+
+
+### Bug Fixes:
+
+* properly set actor on bulk action calls
+
 ## [v1.0.0-rc.4](https://github.com/ash-project/ash_graphql/compare/v1.0.0-rc.3...v1.0.0-rc.4) (2024-04-26)
 ### Breaking Changes:
 
