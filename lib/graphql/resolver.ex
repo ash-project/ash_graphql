@@ -1231,6 +1231,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   context: get_context(context) || %{},
                   authorize?: AshGraphql.Domain.Info.authorize?(domain),
                   domain: domain,
+                  actor: Map.get(context, :actor),
                   select:
                     get_select(resource, resolution, mutation_result_type(mutation_name), [
                       "result"
@@ -1393,6 +1394,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   tenant: Map.get(context, :tenant),
                   context: get_context(context) || %{},
                   authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                  actor: Map.get(context, :actor),
                   domain: domain,
                   select:
                     get_select(resource, resolution, mutation_result_type(mutation_name), [

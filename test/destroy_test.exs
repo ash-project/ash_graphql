@@ -196,4 +196,35 @@ defmodule AshGraphql.DestroyTest do
 
     assert %{errors: [%{message: "could not be found"}]} = result
   end
+
+  test "destroy properly allows policy authorized destroys" do
+    user =
+      AshGraphql.Test.User |> Ash.Changeset.for_create(:create) |> Ash.create!(authorize?: false)
+
+    resp =
+      """
+      mutation DeleteCurrentUser {
+        deleteCurrentUser {
+          result{
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        context: %{
+          actor: user
+        }
+      )
+
+    assert {:ok,
+            %{
+              data: %{
+                "deleteCurrentUser" => %{"errors" => [], "result" => %{"name" => nil}}
+              }
+            }} = resp
+  end
 end

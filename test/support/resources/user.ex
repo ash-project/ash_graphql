@@ -21,7 +21,10 @@ defmodule AshGraphql.Test.User do
 
     mutations do
       create :create_user, :create
-      # update :update_user, :update
+
+      destroy :delete_current_user, :destroy_current_user do
+        identity false
+      end
     end
   end
 
@@ -47,6 +50,10 @@ defmodule AshGraphql.Test.User do
            end)}
         end)
       end)
+    end
+
+    destroy :destroy_current_user do
+      filter(expr(id == ^actor(:id)))
     end
   end
 
@@ -77,6 +84,10 @@ defmodule AshGraphql.Test.User do
 
     policy action_type(:read) do
       authorize_if(always())
+    end
+
+    policy action_type(:destroy) do
+      authorize_if(expr(id == ^actor(:id)))
     end
   end
 
