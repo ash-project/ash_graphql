@@ -23,4 +23,54 @@ defmodule AshGraphql.ResourceTest do
     refute Map.has_key?(result, :errors)
     assert %{data: %{"noObjectCount" => [1, 2, 3, 4, 5]}} = result
   end
+
+  test "queries can be created with custom descriptions" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          queryType {
+            name
+            fields {
+              name
+              description
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    get_post_with_custom_description_query =
+      data["__schema"]["queryType"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "getPostWithCustomDescription" end)
+
+    assert get_post_with_custom_description_query["description"] ==
+             "A custom description"
+  end
+
+  test "mutations can be created with custom descriptions" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          mutationType {
+            name
+            fields {
+              name
+              description
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    create_post_with_custom_description_mutation =
+      data["__schema"]["mutationType"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "createPostWithCustomDescription" end)
+
+    assert create_post_with_custom_description_mutation["description"] ==
+             "Another custom description"
+  end
 end

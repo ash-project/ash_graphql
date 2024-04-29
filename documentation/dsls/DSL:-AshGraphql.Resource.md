@@ -124,6 +124,7 @@ get :get_post, :read
 | [`allow_nil?`](#graphql-queries-get-allow_nil?){: #graphql-queries-get-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
 | [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`type_name`](#graphql-queries-get-type_name){: #graphql-queries-get-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-get-description){: #graphql-queries-get-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`metadata_names`](#graphql-queries-get-metadata_names){: #graphql-queries-get-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-get-metadata_types){: #graphql-queries-get-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-get-show_metadata){: #graphql-queries-get-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -168,6 +169,7 @@ read_one :current_user, :current_user
 |------|------|---------|------|
 | [`allow_nil?`](#graphql-queries-read_one-allow_nil?){: #graphql-queries-read_one-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
 | [`type_name`](#graphql-queries-read_one-type_name){: #graphql-queries-read_one-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-read_one-description){: #graphql-queries-read_one-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`metadata_names`](#graphql-queries-read_one-metadata_names){: #graphql-queries-read_one-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-read_one-metadata_types){: #graphql-queries-read_one-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-read_one-show_metadata){: #graphql-queries-read_one-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -217,6 +219,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`relay?`](#graphql-queries-list-relay?){: #graphql-queries-list-relay? } | `boolean` | `false` | If true, the graphql queries/resolvers for this resource will be built to honor the relay specification. See [the relay guide](/documentation/topics/relay.html) for more. |
 | [`paginate_with`](#graphql-queries-list-paginate_with){: #graphql-queries-list-paginate_with } | `:keyset \| :offset \| nil` | `:keyset` | Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used. |
 | [`type_name`](#graphql-queries-list-type_name){: #graphql-queries-list-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-list-description){: #graphql-queries-list-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`metadata_names`](#graphql-queries-list-metadata_names){: #graphql-queries-list-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-list-metadata_types){: #graphql-queries-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-list-show_metadata){: #graphql-queries-list-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -259,6 +262,7 @@ action :check_status, :check_status
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
+| [`description`](#graphql-queries-action-description){: #graphql-queries-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`hide_inputs`](#graphql-queries-action-hide_inputs){: #graphql-queries-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`relay_id_translations`](#graphql-queries-action-relay_id_translations){: #graphql-queries-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
@@ -322,6 +326,7 @@ create :create_post, :create
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
+| [`description`](#graphql-mutations-create-description){: #graphql-mutations-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
 | [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
@@ -443,6 +448,7 @@ action :check_status, :check_status
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
+| [`description`](#graphql-mutations-action-description){: #graphql-mutations-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`hide_inputs`](#graphql-mutations-action-hide_inputs){: #graphql-mutations-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 

@@ -58,6 +58,11 @@ defmodule AshGraphql.Resource do
       doc: "The action to use for the query.",
       required: true
     ],
+    description: [
+      type: :string,
+      doc:
+        "The description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
     hide_inputs: [
       type: {:list, :atom},
       doc: "Inputs to hide in the mutation/query",
@@ -74,7 +79,7 @@ defmodule AshGraphql.Resource do
 
   defmodule Action do
     @moduledoc "Represents a configured generic action"
-    defstruct [:type, :name, :action, :relay_id_translations, hide_inputs: []]
+    defstruct [:type, :name, :action, :description, :relay_id_translations, hide_inputs: []]
   end
 
   @action %Spark.Dsl.Entity{
@@ -522,7 +527,7 @@ defmodule AshGraphql.Resource do
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(name),
-          description: query_action.description,
+          description: query.description || query_action.description,
           type: generic_action_type(query_action, resource),
           __reference__: ref(__ENV__)
         }
@@ -563,7 +568,7 @@ defmodule AshGraphql.Resource do
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(query.name),
-          description: Ash.Resource.Info.action(resource, query.action).description,
+          description: query.description || query_action.description,
           type: query_type(query, resource, query_action, type),
           __reference__: ref(__ENV__)
         }
@@ -611,7 +616,7 @@ defmodule AshGraphql.Resource do
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(name),
-          description: query_action.description,
+          description: query.description || query_action.description,
           type: generic_action_type(query_action, resource),
           __reference__: ref(__ENV__)
         }
@@ -670,7 +675,9 @@ defmodule AshGraphql.Resource do
                 ],
             module: schema,
             name: to_string(mutation.name),
-            description: Ash.Resource.Info.action(resource, mutation.action).description,
+            description:
+              mutation.description ||
+                Ash.Resource.Info.action(resource, mutation.action).description,
             type: mutation_result_type(mutation.name, domain),
             __reference__: ref(__ENV__)
           }
@@ -716,7 +723,9 @@ defmodule AshGraphql.Resource do
               ],
           module: schema,
           name: to_string(mutation.name),
-          description: Ash.Resource.Info.action(resource, mutation.action).description,
+          description:
+            mutation.description ||
+              Ash.Resource.Info.action(resource, mutation.action).description,
           type: mutation_result_type(mutation.name, domain),
           __reference__: ref(__ENV__)
         }
@@ -770,7 +779,9 @@ defmodule AshGraphql.Resource do
           ],
       module: schema,
       name: to_string(mutation.name),
-      description: Ash.Resource.Info.action(resource, mutation.action).description,
+      description:
+        mutation.description ||
+          Ash.Resource.Info.action(resource, mutation.action).description,
       type: mutation_result_type(mutation.name, domain),
       __reference__: ref(__ENV__)
     }

@@ -10,6 +10,7 @@ defmodule AshGraphql.Resource.Mutation do
     :upsert_identity,
     :modify_resolution,
     :relay_id_translations,
+    :description,
     hide_inputs: []
   ]
 
@@ -23,6 +24,11 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc: "The action to use for the mutation.",
       required: true
+    ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
     ],
     upsert?: [
       type: :boolean,

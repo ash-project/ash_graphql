@@ -8,6 +8,7 @@ defmodule AshGraphql.Resource.Query do
     :allow_nil?,
     :modify_resolution,
     :relay_id_translations,
+    :description,
     as_mutation?: false,
     hide_inputs: [],
     metadata_names: [],
@@ -34,6 +35,11 @@ defmodule AshGraphql.Resource.Query do
       doc: """
       Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key.
       """
+    ],
+    description: [
+      type: :string,
+      doc:
+        "The query description that gets shown in the Graphql schema. If not provided, the action description will be used."
     ],
     metadata_names: [
       type: :keyword_list,

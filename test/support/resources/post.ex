@@ -120,6 +120,7 @@ defmodule AshGraphql.Test.Post do
 
     queries do
       get :get_post, :read
+      get :get_post_with_custom_description, :read, description: "A custom description"
       list :post_library, :library
       list :post_score, :score
       list :paginated_posts, :paginated
@@ -151,6 +152,9 @@ defmodule AshGraphql.Test.Post do
 
       create :create_post_with_comments, :with_comments
       create :create_post_with_comments_and_tags, :with_comments_and_tags
+
+      create :create_post_with_custom_description, :create,
+        description: "Another custom description"
 
       update :update_post, :update
       update :update_post_with_comments, :update_with_comments
