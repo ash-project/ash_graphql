@@ -1,18 +1,22 @@
 # Relay
 
-Enabling relay for a resource sets it up to follow the [relay specification](https://relay.dev/graphql/connections.htm).
+Enabling Relay for a resource sets it up to follow the [Relay specification](https://relay.dev/graphql/connections.htm).
 
 The two changes that are made currently are:
 
-* the type for the resource will implement the `Node` interface
-* pagination over that resource will behave as a Connection.
+- the type for the resource will implement the `Node` interface
+- pagination over that resource will behave as a `Connection`.
 
-## Using with Absinthe.Relay
+## Using Ash's built-in Relay support
 
-Use the following option when calling `use AshGraphql`
+Set `relay? true` on the resource:
 
 ```elixir
-use AshGraphql, define_relay_types?: false
+graphql do
+  relay? true
+
+  ...
+end
 ```
 
 ## Relay Global IDs
@@ -55,4 +59,12 @@ mutations do
     relay_id_translations [input: [author_id: :user]]
   end
 end
+```
+
+## Using with Absinthe.Relay instead of Ash's relay type
+
+Use the following option when calling `use AshGraphql`
+
+```elixir
+use AshGraphql, define_relay_types?: false
 ```

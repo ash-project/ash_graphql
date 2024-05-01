@@ -123,7 +123,7 @@ end
 
 > ### Whats up with `Module.concat/1`? {: .info}
 >
-> This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have *drastic* impacts on your compile times in certain scenarios.
+> This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have _drastic_ impacts on your compile times in certain scenarios.
 
 If you started with `mix new ...` instead of `mix phx.new ...` and you want to
 still use phoenix, the fastest path that way is typically to just create a new
@@ -161,9 +161,9 @@ Topics:
 
 How Tos:
 
-- [Authorize With GraphQL](/documentation/how_to/authorize-with-graphql.md)
-- [Handle Errors](/documentation/how_to/handle-errors.md)
-- [Use Enums with GraphQL](/documentation/how_to/use-enums-with-graphql.md)
-- [Use JSON with GraphQL](/documentation/how_to/use-json-with-graphql.md)
+- [Authorize With GraphQL](/documentation/topics/authorize-with-graphql.md)
+- [Handle Errors](/documentation/topics/handle-errors.md)
+- [Use Enums with GraphQL](/documentation/topics/use-enums-with-graphql.md)
+- [Use JSON with GraphQL](/documentation/topics/use-json-with-graphql.md)
 
 [Monitoring](/documentation/monitoring.md)

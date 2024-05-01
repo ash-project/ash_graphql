@@ -58,7 +58,7 @@ defmodule AshGraphql.Type do
   @doc """
   Used for map/embedded types embedded in unions, to avoid nesting them in a key by their name.
 
-  See [the unions guide](/documentation/how_to/use-unions-with-graphql.md) for more.
+  See [the unions guide](/documentation/topics/use-unions-with-graphql.md) for more.
   """
   @callback graphql_unnested_unions(Ash.Type.constraints()) :: [atom()]
 

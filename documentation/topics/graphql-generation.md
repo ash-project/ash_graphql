@@ -1,9 +1,8 @@
 # GraphQL Query Generation
 
-## Fetch Data by ID
+Following where we left off from [Getting Started with GraphQL](/documentation/tutorials/getting-started-with-graphql.md), this guide explores what the GraphQL requests and responses look like for different queries defined with the AshGraphql DSL.
 
-Following where we left off from [Getting Started with GraphQL](/documentation/tutorials/getting-started-with-graphql.md), we'll explore what the GraphQL
-requests and responses look like for different queries defined with the AshGraphql DSL.
+## Fetch Data by ID
 
 ```elixir
 defmodule Helpdesk.Support.Ticket do
@@ -31,7 +30,7 @@ defmodule Helpdesk.Support.Ticket do
 
     queries do
       # create a field called `get_ticket` that uses the `read` read action to fetch a single ticket
-      get :get_ticket, :read 
+      get :get_ticket, :read
     end
   end
 end
@@ -40,7 +39,7 @@ end
 For the `get_ticket` query defined above, the corresponding GraphQL would look like this:
 
 ```graphql
-query($id: ID!) {
+query ($id: ID!) {
   getTicket(id: $id) {
     id
     subject
@@ -69,10 +68,10 @@ Let's look at an example of querying a list of things.
 
     queries do
       # create a field called `get_ticket` that uses the `read` read action to fetch a single ticket
-      get :get_ticket, :read 
+      get :get_ticket, :read
 
       # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
-      list :list_tickets, :read 
+      list :list_tickets, :read
     end
   end
 ```
@@ -120,7 +119,7 @@ Consider `list :list_tickets, :read` and the `actions` section:
 
     queries do
       # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
-      list :list_tickets, :read 
+      list :list_tickets, :read
     end
   end
 ```
@@ -134,7 +133,7 @@ We'll call this action `:query_tickets`:
 ```elixir
   actions do
     defaults [:read, :update, :destroy]
-    
+
     read :query_tickets do
       argument :representative_id, :uuid
 
@@ -161,7 +160,7 @@ In the `graphql` section, the `list/2` call has been changed, replacing the `:re
 The GraphQL request would look something like this:
 
 ```graphql
-query($representative_id: ID) {
+query ($representative_id: ID) {
   list_tickets(representative_id: $representative_id) {
     id
     representative_id
@@ -199,9 +198,9 @@ defmodule Helpdesk.Support.Ticket do
     type :ticket
 
     queries do
-      get :get_ticket, :read 
+      get :get_ticket, :read
     end
-    
+
     mutations do
       create :create_ticket, :create
     end
@@ -223,7 +222,7 @@ See [Use Enums with GraphQL](/documentation/guides/use-enums-with-graphql.md) fo
 We can now create a ticket with the `createTicket` mutation:
 
 ```graphql
-mutation($input: CreateTicketInput!) {
+mutation ($input: CreateTicketInput!) {
   createTicket(input: $input) {
     result {
       id
@@ -279,20 +278,20 @@ Notice that the `status` attribute is set to `"OPEN"` and not `"open"`. It is im
 This is required by GraphQL enums. AshGraphql will automatically convert the value to the correct case.
 
 The response will look something like this:
-  
-  ```json
-  {
-    "data": {
-      "createTicket": {
-        "result": {
-          "id": "b771e433-0979-4d07-a280-4d12373849aa",
-          "subject": "My Ticket",
-          "status": "OPEN"
-        }
+
+```json
+{
+  "data": {
+    "createTicket": {
+      "result": {
+        "id": "b771e433-0979-4d07-a280-4d12373849aa",
+        "subject": "My Ticket",
+        "status": "OPEN"
       }
     }
   }
-  ```
+}
+```
 
 Again, AshGraphql will automatically convert the `status` value from `:open` to `"OPEN"`.
 

@@ -2,7 +2,7 @@ defmodule AshGraphql.MixProject do
   use Mix.Project
 
   @description """
-  An absinthe-backed graphql extension for Ash
+  The extension for building GraphQL APIs with Ash
   """
 
   @version "1.0.0-rc.5"
@@ -35,7 +35,7 @@ defmodule AshGraphql.MixProject do
 
   defp docs do
     [
-      main: "getting-started-with-graphql",
+      main: "readme",
       source_ref: "v#{@version}",
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
@@ -55,18 +55,20 @@ defmodule AshGraphql.MixProject do
         end
       end,
       extras: [
+        {"README.md", title: "Home"},
         "documentation/tutorials/getting-started-with-graphql.md",
-        "documentation/how_to/authorize-with-graphql.md",
-        "documentation/how_to/handle-errors.md",
-        "documentation/how_to/use-enums-with-graphql.md",
-        "documentation/how_to/use-json-with-graphql.md",
-        "documentation/how_to/use-subscriptions-with-graphql.md",
-        "documentation/how_to/use-unions-with-graphql.md",
-        "documentation/how_to/use-maps-with-graphql.md",
+        "documentation/topics/authorize-with-graphql.md",
+        "documentation/topics/handle-errors.md",
+        "documentation/topics/use-enums-with-graphql.md",
+        "documentation/topics/use-json-with-graphql.md",
+        "documentation/topics/use-subscriptions-with-graphql.md",
+        "documentation/topics/use-unions-with-graphql.md",
+        "documentation/topics/use-maps-with-graphql.md",
         "documentation/topics/monitoring.md",
         "documentation/topics/graphql-generation.md",
         "documentation/topics/modifying-the-resolution.md",
         "documentation/topics/relay.md",
+        "documentation/topics/upgrade.md",
         "documentation/dsls/DSL:-AshGraphql.Domain.md",
         "documentation/dsls/DSL:-AshGraphql.Resource.md"
       ],

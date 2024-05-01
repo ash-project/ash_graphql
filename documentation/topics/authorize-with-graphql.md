@@ -2,9 +2,9 @@
 
 AshGraphql uses three special keys in the `absinthe` context:
 
-* `:actor` - the current actor, to be used for authorization/preparations/changes
-* `:tenant` - a tenant when using [multitenancy](https://ash-hq.org/docs/guides/ash/latest/topics/multitenancy.md).
-* `:ash_context` - a map of arbitrary context to be passed into the changeset/query. Accessible via `changeset.context` and `query.context`
+- `:actor` - the current actor, to be used for authorization/preparations/changes
+- `:tenant` - a tenant when using [multitenancy](https://hexdocs.pm/ash/multitenancy.html).
+- `:ash_context` - a map of arbitrary context to be passed into the changeset/query. Accessible via `changeset.context` and `query.context`
 
 By default, `authorize?` in the domain is set to true. To disable authorization for a given domain in graphql, use:
 
@@ -17,9 +17,7 @@ end
 If you are doing authorization, you'll need to provide an `actor`.
 
 To set the `actor` for authorization, you'll need to add an `actor` key to the
-absinthe context. Typically, you would have a plug that fetches the current user
-and uses `Ash.PlugHelpers.set_actor/2` to set the actor in the `conn` (likewise
-with `Ash.PlugHelpers.set_tenant/2`).
+absinthe context. Typically, you would have a plug that fetches the current user and uses `Ash.PlugHelpers.set_actor/2` to set the actor in the `conn` (likewise with `Ash.PlugHelpers.set_tenant/2`).
 
 Just add `AshGraphql.Plug` somewhere _after_ that in the pipeline and the your
 GraphQL APIs will have the correct authorization.
@@ -77,9 +75,7 @@ config :ash_graphql, :policies, show_policy_breakdowns?: true
         }
       ],
       "message": "MyApp.Authentication.User.read\n\n\n\n\nPolicy Breakdown\n  Policy | ⛔:\n    forbid unless: actor is active | ✓ | ⬇    \n    authorize if: actor is Executive | ✘ | ⬇",
-      "path": [
-        "attendanceRecords"
-      ],
+      "path": ["attendanceRecords"],
       "short_message": "forbidden",
       "vars": {}
     }
