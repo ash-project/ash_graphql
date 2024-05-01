@@ -2,7 +2,7 @@ defmodule AshGraphql.Domain do
   @graphql %Spark.Dsl.Section{
     name: :graphql,
     describe: """
-    Global configuration for graphql
+    Domain level configuration for GraphQL
     """,
     examples: [
       """
@@ -47,7 +47,7 @@ defmodule AshGraphql.Domain do
   @sections [@graphql]
 
   @moduledoc """
-  The entrypoint for adding graphql behavior to an Ash domain
+  The entrypoint for adding GraphQL behavior to an Ash domain
   """
 
   require Ash.Domain.Info
