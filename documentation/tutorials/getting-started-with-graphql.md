@@ -4,7 +4,7 @@
 
 If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html). This assumes that you already have resources set up, and only gives you the steps to _add_ AshGraphql to your resources/domains.
 
-## Bring in the ash_graphql dependency
+## Bring in the `ash_graphql` dependency
 
 ```elixir
 def deps()
@@ -15,9 +15,9 @@ def deps()
 end
 ```
 
-## Add the domain Extension
+## Add the `AshGraphql.Domain` extension
 
-Add the following to your domain module. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
+Add the following to your domain module, which allows AshGraphQl to be configured at the domain. If you don't have one, be sure to start with the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html).
 
 ```elixir
 defmodule Helpdesk.Support do
@@ -33,7 +33,7 @@ defmodule Helpdesk.Support do
 end
 ```
 
-## Add graphql to your resources
+## Add a graphql section to your resource
 
 Some example queries/mutations are shown below. If no queries/mutations are added, nothing will show up in the GraphQL API, so be sure to set one up if you want to try it out.
 
@@ -98,9 +98,7 @@ end
 
 ### Using Phoenix
 
-You will simply want to add some code to your router, like so.
-
-You will also likely want to set up the "playground" for trying things out.
+Add the following code to your Phoenix router. It's useful to set up the Absinthe playground for trying things out, but it's optional.
 
 ```elixir
 pipeline :graphql do
@@ -126,13 +124,13 @@ end
 > This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have _drastic_ impacts on your compile times in certain scenarios.
 
 If you started with `mix new ...` instead of `mix phx.new ...` and you want to
-still use phoenix, the fastest path that way is typically to just create a new
-phoenix application and copy your resources/config over.
+still use Phoenix, the fastest path that way is typically to just create a new
+Phoenix application and copy your resources/config over.
 
 ### Using Plug
 
-If you are unfamiliar with how plug works, this [guide](https://elixirschool.com/en/lessons/specifics/plug/#dependencies) will be helpful for understanding it. It also guides you through
-adding plug to your application.
+If you are unfamiliar with how plug works, this [guide](https://elixirschool.com/en/lessons/specifics/plug/#dependencies)
+will be helpful for understanding it. It also guides you through adding plug to your application.
 
 Then you can use a `Plug.Router` and [forward](https://hexdocs.pm/plug/Plug.Router.html#forward/2) to your plugs similar to how it is done for phoenix:
 
