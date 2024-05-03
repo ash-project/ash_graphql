@@ -11,34 +11,72 @@ defmodule AshGraphql.ErrorsTest do
     end)
   end
 
-  test "errors can be configured to be shown in the root" do
-    resp =
-      """
-      mutation CreatePost($input: CreatePostInput) {
-        createPost(input: $input) {
-          result{
-            text
-          }
-          errors{
-            message
-          }
-        }
-      }
-      """
-      |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
-        variables: %{
-          "input" => %{
-            "text" => "foobar",
-            "confirmation" => "foobar2"
+  describe "when root level errors are enabled" do
+    test "errors that occur are shown at the root level" do
+      resp =
+        """
+        mutation CreatePost($input: CreatePostInput) {
+          createPost(input: $input) {
+            result{
+              text
+            }
+            errors{
+              message
+            }
           }
         }
-      )
+        """
+        |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
+          variables: %{
+            "input" => %{
+              "text" => "foobar",
+              "confirmation" => "foobar2"
+            }
+          }
+        )
 
-    assert {:ok, result} = resp
+      assert {:ok, result} = resp
 
-    assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
+      assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
+      assert message =~ "confirmation did not match value"
+    end
 
-    assert message =~ "confirmation did not match value"
+    test "the root level errors field is not present when no errors occur" do
+      resp =
+        """
+        mutation CreatePost($input: CreatePostInput) {
+          createPost(input: $input) {
+            result{
+              text
+            }
+            errors{
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
+          variables: %{
+            "input" => %{
+              "text" => "foobar",
+              "confirmation" => "foobar"
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      assert %{
+               data: %{
+                 "createPost" => %{
+                   "result" => %{"text" => "foobar"},
+                   "errors" => []
+                 }
+               }
+             } = result
+
+      refute Map.has_key?(result, :errors)
+    end
   end
 
   test "raised errors are by default not shown" do
@@ -354,7 +392,7 @@ defmodule AshGraphql.ErrorsTest do
     assert message =~ "Breakdown"
   end
 
-  test "error items are non-nullable" do
+  test "error items are a non-nullable list of non-nullables" do
     {:ok, %{data: data}} =
       """
       query {
@@ -366,7 +404,10 @@ defmodule AshGraphql.ErrorsTest do
               ofType {
                 kind
                 ofType {
-                  name
+                  kind
+                  ofType {
+                    name
+                  }
                 }
               }
             }
@@ -380,9 +421,19 @@ defmodule AshGraphql.ErrorsTest do
       data["__type"]["fields"]
       |> Enum.find(fn field -> field["name"] == "errors" end)
 
-    assert errors["type"]["kind"] == "LIST"
-    assert errors["type"]["ofType"]["kind"] == "NON_NULL"
-    assert errors["type"]["ofType"]["ofType"]["name"] == "MutationError"
+    assert errors == %{
+             "name" => "errors",
+             "type" => %{
+               "kind" => "NON_NULL",
+               "ofType" => %{
+                 "kind" => "LIST",
+                 "ofType" => %{
+                   "kind" => "NON_NULL",
+                   "ofType" => %{"name" => "MutationError"}
+                 }
+               }
+             }
+           }
   end
 
   test "MutationError fields items are non-nullable" do
