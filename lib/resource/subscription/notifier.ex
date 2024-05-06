@@ -4,10 +4,9 @@ defmodule AshGraphql.Resource.Subscription.Notifier do
 
   @impl Ash.Notifier
   def notify(notification) do
-    dbg()
     pub_sub = Info.subscription_pubsub(notification.resource)
 
-    for subscription <- AshGraphql.Resource.Info.subscriptions(notification.resource) do
+    for subscription <- dbg(AshGraphql.Resource.Info.subscriptions(notification.resource)) do
       Absinthe.Subscription.publish(pub_sub, notification.data, [{subscription.name, "*"}])
     end
   end
