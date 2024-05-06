@@ -24,7 +24,7 @@ defmodule AshGraphql.Resource.Subscription.DefaultConfig do
                alter_source?: true
              ) do
           {:ok, true} ->
-            {:ok, topic: "*", context_id: "global"}
+            dbg({:ok, topic: "*", context_id: "global"})
 
           {:ok, true, filter} ->
             {:ok, topic: "*", context_id: Base.encode64(:erlang.term_to_binary(filter))}

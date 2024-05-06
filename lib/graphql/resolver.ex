@@ -518,9 +518,10 @@ defmodule AshGraphql.Graphql.Resolver do
         resolution
       )
       # > Ash.Query.filter(id == ^args.id)
-      |> Ash.Query.limit(1)
+      # |> Ash.Query.limit(1)
       |> api.read_one(actor: resolution.context[:current_user])
-      |> dbg()
+
+    dbg(result)
 
     resolution
     |> Absinthe.Resolution.put_result(result)
