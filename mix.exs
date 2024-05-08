@@ -70,13 +70,17 @@ defmodule AshGraphql.MixProject do
         "documentation/topics/relay.md",
         "documentation/topics/upgrade.md",
         "documentation/dsls/DSL:-AshGraphql.Domain.md",
-        "documentation/dsls/DSL:-AshGraphql.Resource.md"
+        "documentation/dsls/DSL:-AshGraphql.Resource.md",
+        "CHANGELOG.md"
       ],
       groups_for_extras: [
         Tutorials: ~r'documentation/tutorials',
         "How To": ~r'documentation/how_to',
         Topics: ~r'documentation/topics',
-        DSLs: ~r'documentation/dsls'
+        DSLs: ~r'documentation/dsls',
+        "About AshGraphql": [
+          "CHANGELOG.md"
+        ]
       ],
       groups_for_modules: [
         AshGraphql: [
