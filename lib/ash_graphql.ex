@@ -32,12 +32,22 @@ defmodule AshGraphql do
   end
 
   defmacro __using__(opts) do
+    auto_import_types =
+      if Keyword.get(opts, :auto_import_absinthe_types?, true) do
+        quote do
+          import_types(Absinthe.Type.Custom)
+          import_types(AshGraphql.Types.JSON)
+          import_types(AshGraphql.Types.JSONString)
+        end
+      end
+
     quote bind_quoted: [
             domains: opts[:domains],
             domain: opts[:domain],
             action_middleware: opts[:action_middleware] || [],
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
-            relay_ids?: Keyword.get(opts, :relay_ids?, false)
+            relay_ids?: Keyword.get(opts, :relay_ids?, false),
+            auto_import_types: Macro.escape(auto_import_types)
           ],
           generated: true do
       require Ash.Domain.Info
@@ -219,9 +229,7 @@ defmodule AshGraphql do
         end
 
         if first? do
-          import_types(Absinthe.Type.Custom)
-          import_types(AshGraphql.Types.JSON)
-          import_types(AshGraphql.Types.JSONString)
+          Code.eval_quoted(auto_import_types, [], __ENV__)
         end
 
         @pipeline_modifier Module.concat(domain, AshTypes)
