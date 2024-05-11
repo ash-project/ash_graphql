@@ -1121,7 +1121,7 @@ defmodule AshGraphql.Resource do
 
         true ->
           resource
-          |> Ash.Resource.Info.public_attributes()
+          |> Ash.Resource.Info.attributes()
           |> Enum.filter(fn attribute ->
             AshGraphql.Resource.Info.show_field?(resource, attribute.name) &&
               attribute.name in action.accept && attribute.writable? &&
