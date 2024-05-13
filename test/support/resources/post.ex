@@ -110,6 +110,16 @@ defmodule AshGraphql.Test.Post do
     end
   end
 
+  field_policies do
+    field_policy :* do
+      authorize_if always()
+    end
+
+    field_policy [:private_calculation, :private_attribute] do
+      forbid_if always()
+    end
+  end
+
   graphql do
     type :post
 
@@ -363,6 +373,10 @@ defmodule AshGraphql.Test.Post do
     attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType, public?: true)
     attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested, public?: true)
     attribute(:string_new_type, AshGraphql.Types.StringNewType, public?: true)
+    attribute(:private_attribute, :boolean) do
+      default true
+      public? true
+    end
 
     attribute :required_string, :string do
       allow_nil? false
@@ -375,6 +389,22 @@ defmodule AshGraphql.Test.Post do
 
   calculations do
     calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation, public?: true)
+    calculate(:private_calculation, AshGraphql.Test.Embed, fn records, _ ->
+      records
+      |> Enum.map(
+        fn %{private_attribute: true} ->
+          %AshGraphql.Test.Embed{}
+         %{private_attribute: true} ->
+          nil
+        end
+      )
+    end) do
+       public? true
+       load :private_attribute
+    end
+
+
+
     calculate(:full_text, :string, FullTextCalculation, public?: true)
 
     calculate(:text_1_and_2, :string, expr(text1 <> ^arg(:separator) <> text2)) do
