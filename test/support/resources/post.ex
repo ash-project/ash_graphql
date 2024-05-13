@@ -390,21 +390,20 @@ defmodule AshGraphql.Test.Post do
 
   calculations do
     calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation, public?: true)
+
     calculate(:private_calculation, AshGraphql.Test.Embed, fn records, _ ->
       records
-      |> Enum.map(
-        fn %{private_attribute: true} ->
+      |> Enum.map(fn
+        %{private_attribute: true} ->
           %AshGraphql.Test.Embed{}
-         %{private_attribute: true} ->
+
+        %{private_attribute: true} ->
           nil
-        end
-      )
+      end)
     end) do
-       public? true
-       load :private_attribute
+      public?(true)
+      load(:private_attribute)
     end
-
-
 
     calculate(:full_text, :string, FullTextCalculation, public?: true)
 

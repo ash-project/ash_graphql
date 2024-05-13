@@ -208,9 +208,9 @@ defmodule AliasTest do
     assert %{
              errors: [
                %{
-                 code: "forbidden_field",
+                 code: "forbidden_field"
                }
-             ],
+             ]
            } =
              result
   end
