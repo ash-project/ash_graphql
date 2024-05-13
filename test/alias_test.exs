@@ -171,6 +171,50 @@ defmodule AliasTest do
            } = result
   end
 
+  test "calculation alias works correctly for forbidden field" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create,
+        text: "foo",
+        text1: "hello",
+        text2: "world",
+        published: true,
+        score: 9.8
+      )
+      |> Ash.create!()
+
+    resp =
+      """
+      query Post($id: ID!) {
+        getPost(id: $id) {
+          private_calc: private_calculation {
+            nestedEmbed {
+              name
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert Map.has_key?(result, :errors)
+
+    assert %{
+             errors: [
+               %{
+                 code: "forbidden_field"
+               }
+             ]
+           } =
+             result
+  end
+
   test "aggregate alias works correctly" do
     post =
       AshGraphql.Test.Post
