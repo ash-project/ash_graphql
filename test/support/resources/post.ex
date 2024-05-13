@@ -112,11 +112,11 @@ defmodule AshGraphql.Test.Post do
 
   field_policies do
     field_policy :* do
-      authorize_if always()
+      authorize_if(always())
     end
 
     field_policy [:private_calculation, :private_attribute] do
-      forbid_if always()
+      forbid_if(always())
     end
   end
 
@@ -373,9 +373,10 @@ defmodule AshGraphql.Test.Post do
     attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType, public?: true)
     attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested, public?: true)
     attribute(:string_new_type, AshGraphql.Types.StringNewType, public?: true)
+
     attribute(:private_attribute, :boolean) do
-      default true
-      public? true
+      default(true)
+      public?(true)
     end
 
     attribute :required_string, :string do

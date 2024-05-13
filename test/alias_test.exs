@@ -203,13 +203,16 @@ defmodule AliasTest do
 
     assert {:ok, result} = resp
 
-    refute Map.has_key?(result, :errors)
+    assert Map.has_key?(result, :errors)
 
     assert %{
-             data: %{
-               "getPost" => %{"content" => "helloworld"}
-             }
-           } = result
+             errors: [
+               %{
+                 code: "forbidden_field",
+               }
+             ],
+           } =
+             result
   end
 
   test "aggregate alias works correctly" do
