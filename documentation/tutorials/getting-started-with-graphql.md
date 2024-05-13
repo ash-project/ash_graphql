@@ -163,5 +163,3 @@ How Tos:
 - [Handle Errors](/documentation/topics/handle-errors.md)
 - [Use Enums with GraphQL](/documentation/topics/use-enums-with-graphql.md)
 - [Use JSON with GraphQL](/documentation/topics/use-json-with-graphql.md)
-
-[Monitoring](/documentation/monitoring.md)
