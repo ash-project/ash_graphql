@@ -649,7 +649,7 @@ defmodule AshGraphql do
         [
           AshGraphql.Resource.type_definition(
             embedded_type,
-            Module.concat(embedded_type, ShadowDomain),
+            Ash.EmbeddableType.ShadowDomain,
             schema,
             relay_ids?
           ),
