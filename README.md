@@ -27,7 +27,7 @@ Welcome! This is the extension for building GraphQL APIs with [Ash](https://hexd
 - [Use Enums with GraphQL](documentation/topics/use-enums-with-graphql.md)
 - [Use Maps with GraphQL](documentation/topics/use-maps-with-graphql.md)
 - [Use Unions with GraphQL](documentation/topics/use-unions-with-graphql.md)
-- [Upgrading to 2.0](documentation/topics/upgrade.md)
+- [Upgrading to 1.0](documentation/topics/upgrade.md)
 
 ## Reference
 
