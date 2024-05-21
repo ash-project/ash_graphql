@@ -3662,6 +3662,9 @@ defmodule AshGraphql.Resource do
 
   defp encoded_id(resource, schema, relay_ids?) do
     case Ash.Resource.Info.primary_key(resource) do
+      [] ->
+        []
+
       [field] ->
         attribute = Ash.Resource.Info.attribute(resource, field)
 
