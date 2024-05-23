@@ -142,6 +142,18 @@ defimpl AshGraphql.Error, for: Ash.Error.Forbidden.ForbiddenField do
   end
 end
 
+defimpl AshGraphql.Error, for: Ash.Error.Query.ReadActionRequiresActor do
+  def to_error(_error) do
+    %{
+      message: "forbidden",
+      short_message: "forbidden",
+      vars: %{},
+      code: "forbidden",
+      fields: []
+    }
+  end
+end
+
 defimpl AshGraphql.Error, for: Ash.Error.Invalid.InvalidPrimaryKey do
   def to_error(error) do
     %{
