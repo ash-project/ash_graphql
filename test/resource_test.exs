@@ -73,4 +73,49 @@ defmodule AshGraphql.ResourceTest do
     assert create_post_with_custom_description_mutation["description"] ==
              "Another custom description"
   end
+
+  test "arguments with the same name can generate different types for different mutations" do
+    {:ok, %{data: with_foo}} =
+      """
+      query {
+        __type(name: "CreatePostBarWithFooInput") {
+          name
+          inputFields {
+            name
+            type {
+              name
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    {:ok, %{data: with_baz}} =
+      """
+      query {
+        __type(name: "CreatePostBarWithBazInput") {
+          name
+          inputFields {
+            name
+            type {
+              name
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    bar_with_foo =
+      with_foo["__type"]["inputFields"]
+      |> Enum.find(&(&1["name"] == "bar"))
+
+    bar_with_baz =
+      with_baz["__type"]["inputFields"]
+      |> Enum.find(&(&1["name"] == "bar"))
+
+    assert bar_with_foo["type"] == %{"name" => "BarWithFoo"}
+    assert bar_with_baz["type"] == %{"name" => "BarWithBaz"}
+  end
 end

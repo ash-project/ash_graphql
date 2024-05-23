@@ -3176,7 +3176,6 @@ defmodule AshGraphql.Resource do
           !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []) &&
           define_type?(&1.type, &1.constraints))
     )
-    |> Enum.uniq_by(& &1.name)
   end
 
   @spec define_type?(Ash.Type.t(), Ash.Type.constraints()) :: boolean()
