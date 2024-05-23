@@ -58,6 +58,44 @@ defmodule AfterActionRaiseResourceError do
   end
 end
 
+defmodule BarWithFoo do
+  @moduledoc false
+  use Ash.Type.NewType,
+    subtype_of: :map,
+    constraints: [
+      fields: [
+        foo: [
+          type: :string,
+          allow_nil?: false
+        ]
+      ]
+    ]
+
+  use AshGraphql.Type
+
+  @impl true
+  def graphql_input_type(_), do: :bar_with_foo
+end
+
+defmodule BarWithBaz do
+  @moduledoc false
+  use Ash.Type.NewType,
+    subtype_of: :map,
+    constraints: [
+      fields: [
+        baz: [
+          type: :integer,
+          allow_nil?: false
+        ]
+      ]
+    ]
+
+  use AshGraphql.Type
+
+  @impl true
+  def graphql_input_type(_), do: :bar_with_baz
+end
+
 defmodule RelatedPosts do
   @moduledoc false
   use Ash.Resource.ManualRelationship
@@ -160,6 +198,9 @@ defmodule AshGraphql.Test.Post do
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
 
+      create :create_post_bar_with_foo, :create_bar_with_foo
+      create :create_post_bar_with_baz, :create_bar_with_baz
+
       create :create_post_with_comments, :with_comments
       create :create_post_with_comments_and_tags, :with_comments_and_tags
 
@@ -196,6 +237,14 @@ defmodule AshGraphql.Test.Post do
 
       change(SetMetadata)
       change(set_attribute(:author_id, arg(:author_id)))
+    end
+
+    create :create_bar_with_foo do
+      argument(:bar, BarWithFoo)
+    end
+
+    create :create_bar_with_baz do
+      argument(:bar, BarWithBaz)
     end
 
     create :create_with_error do
