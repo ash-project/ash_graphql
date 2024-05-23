@@ -182,6 +182,9 @@ defmodule AshGraphql do
                     unquote(relay_ids?)
                   )
 
+                global_maps =
+                  AshGraphql.global_maps(unquote(ash_resources), unquote(schema), __ENV__)
+
                 global_enums =
                   AshGraphql.global_enums(unquote(ash_resources), unquote(schema), __ENV__)
 
@@ -199,6 +202,7 @@ defmodule AshGraphql do
                       unquote(define_relay_types?),
                       unquote(relay_ids?)
                     ) ++
+                    global_maps ++
                     global_enums ++
                     global_unions ++
                     embedded_types,
@@ -235,6 +239,12 @@ defmodule AshGraphql do
         @pipeline_modifier Module.concat(domain, AshTypes)
       end
     end
+  end
+
+  def global_maps(resources, schema, env) do
+    resources
+    |> Enum.flat_map(&AshGraphql.Resource.map_definitions(&1, schema, env))
+    |> Enum.uniq_by(& &1.identifier)
   end
 
   def global_enums(resources, schema, env) do
@@ -660,8 +670,7 @@ defmodule AshGraphql do
             schema
           )
         ] ++
-          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__) ++
-          AshGraphql.Resource.map_definitions(embedded_type, schema, __ENV__)
+          AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
       else
         []
       end
