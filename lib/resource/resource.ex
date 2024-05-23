@@ -1700,14 +1700,12 @@ defmodule AshGraphql.Resource do
       List.wrap(page_of(resource, schema)) ++
       List.wrap(relay_page(resource, schema)) ++
       List.wrap(keyset_page_of(resource, schema)) ++
-      map_definitions(resource, schema, __ENV__) ++
       enum_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 
   def no_graphql_types(resource, schema) do
-    map_definitions(resource, schema, __ENV__) ++
-      enum_definitions(resource, schema, __ENV__) ++
+    enum_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
 

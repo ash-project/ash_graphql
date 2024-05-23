@@ -128,6 +128,7 @@ end
 defmodule AshGraphql.Test.Post do
   @moduledoc false
   alias AshGraphql.Test.Comment
+  alias AshGraphql.Test.CommonMap
   alias AshGraphql.Test.SponsoredComment
 
   use Ash.Resource,
@@ -198,6 +199,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post, :create_confirm
       create :upsert_post, :upsert, upsert?: true
 
+      create :create_post_with_common_map, :create_with_common_map
       create :create_post_bar_with_foo, :create_bar_with_foo
       create :create_post_bar_with_baz, :create_bar_with_baz
 
@@ -245,6 +247,10 @@ defmodule AshGraphql.Test.Post do
 
     create :create_bar_with_baz do
       argument(:bar, BarWithBaz)
+    end
+
+    create :create_with_common_map do
+      argument(:common_map_arg, {:array, CommonMap})
     end
 
     create :create_with_error do
@@ -434,11 +440,20 @@ defmodule AshGraphql.Test.Post do
       public?(true)
     end
 
+    attribute :common_map_attribute, CommonMap do
+      public?(true)
+    end
+
     create_timestamp(:created_at, public?: true)
   end
 
   calculations do
     calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation, public?: true)
+
+    calculate :common_map_calculation, CommonMap do
+      public?(true)
+      calculation(fn records, _ -> {:ok, []} end)
+    end
 
     calculate(:private_calculation, AshGraphql.Test.Embed, fn records, _ ->
       records

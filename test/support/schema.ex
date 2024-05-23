@@ -3,7 +3,7 @@ defmodule AshGraphql.Test.Schema do
 
   use Absinthe.Schema
 
-  @domains [AshGraphql.Test.Domain]
+  @domains [AshGraphql.Test.Domain, AshGraphql.Test.OtherDomain]
 
   use AshGraphql, domains: @domains
 
