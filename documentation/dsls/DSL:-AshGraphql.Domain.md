@@ -10,6 +10,17 @@ The entrypoint for adding GraphQL behavior to an Ash domain
 Domain level configuration for GraphQL
 
 
+### Nested DSLs
+ * [queries](#graphql-queries)
+   * get
+   * read_one
+   * list
+   * action
+ * [mutations](#graphql-mutations)
+   * create
+   * update
+   * destroy
+   * action
 
 
 ### Examples
@@ -32,6 +43,406 @@ end
 | [`root_level_errors?`](#graphql-root_level_errors?){: #graphql-root_level_errors? } | `boolean` | `false` | By default, mutation errors are shown in their result object's errors key, but this setting places those errors in the top level errors list |
 | [`error_handler`](#graphql-error_handler){: #graphql-error_handler } | `mfa` | `{AshGraphql.DefaultErrorHandler, :handle_error, []}` | Set an MFA to intercept/handle any errors that are generated. |
 | [`show_raised_errors?`](#graphql-show_raised_errors?){: #graphql-show_raised_errors? } | `boolean` | `false` | For security purposes, if an error is *raised* then Ash simply shows a generic error. If you want to show those errors, set this to true. |
+
+
+## graphql.queries
+Queries to expose for the resource.
+
+
+### Nested DSLs
+ * [get](#graphql-queries-get)
+ * [read_one](#graphql-queries-read_one)
+ * [list](#graphql-queries-list)
+ * [action](#graphql-queries-action)
+
+
+### Examples
+```
+queries do
+  get Post, :get_post, :read
+  read_one User, :current_user, :current_user
+  list Post, :list_posts, :read
+end
+
+```
+
+
+
+
+## graphql.queries.get
+```elixir
+get resource, name, action
+```
+
+
+A query to fetch a record by primary key
+
+
+
+### Examples
+```
+get :get_post, :read
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-queries-get-resource){: #graphql-queries-get-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-queries-get-name){: #graphql-queries-get-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-get-action){: #graphql-queries-get-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`identity`](#graphql-queries-get-identity){: #graphql-queries-get-identity } | `atom` |  | The identity to use for looking up the record. Pass `false` to not use an identity. |
+| [`allow_nil?`](#graphql-queries-get-allow_nil?){: #graphql-queries-get-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
+| [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`type_name`](#graphql-queries-get-type_name){: #graphql-queries-get-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-get-description){: #graphql-queries-get-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`metadata_names`](#graphql-queries-get-metadata_names){: #graphql-queries-get-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
+| [`metadata_types`](#graphql-queries-get-metadata_types){: #graphql-queries-get-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
+| [`show_metadata`](#graphql-queries-get-show_metadata){: #graphql-queries-get-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
+| [`as_mutation?`](#graphql-queries-get-as_mutation?){: #graphql-queries-get-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-get-relay_id_translations){: #graphql-queries-get-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-queries-get-hide_inputs){: #graphql-queries-get-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Query`
+
+## graphql.queries.read_one
+```elixir
+read_one resource, name, action
+```
+
+
+A query to fetch a record
+
+
+
+### Examples
+```
+read_one :current_user, :current_user
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-queries-read_one-resource){: #graphql-queries-read_one-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-queries-read_one-name){: #graphql-queries-read_one-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-read_one-action){: #graphql-queries-read_one-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`allow_nil?`](#graphql-queries-read_one-allow_nil?){: #graphql-queries-read_one-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
+| [`type_name`](#graphql-queries-read_one-type_name){: #graphql-queries-read_one-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-read_one-description){: #graphql-queries-read_one-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`metadata_names`](#graphql-queries-read_one-metadata_names){: #graphql-queries-read_one-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
+| [`metadata_types`](#graphql-queries-read_one-metadata_types){: #graphql-queries-read_one-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
+| [`show_metadata`](#graphql-queries-read_one-show_metadata){: #graphql-queries-read_one-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
+| [`as_mutation?`](#graphql-queries-read_one-as_mutation?){: #graphql-queries-read_one-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-read_one-relay_id_translations){: #graphql-queries-read_one-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-queries-read_one-hide_inputs){: #graphql-queries-read_one-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Query`
+
+## graphql.queries.list
+```elixir
+list resource, name, action
+```
+
+
+A query to fetch a list of records
+
+
+
+### Examples
+```
+list :list_posts, :read
+```
+
+```
+list :list_posts_paginated, :read, relay?: true
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-queries-list-resource){: #graphql-queries-list-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-queries-list-name){: #graphql-queries-list-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-list-action){: #graphql-queries-list-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`relay?`](#graphql-queries-list-relay?){: #graphql-queries-list-relay? } | `boolean` | `false` | If true, the graphql queries/resolvers for this resource will be built to honor the relay specification. See [the relay guide](/documentation/topics/relay.html) for more. |
+| [`paginate_with`](#graphql-queries-list-paginate_with){: #graphql-queries-list-paginate_with } | `:keyset \| :offset \| nil` | `:keyset` | Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used. |
+| [`type_name`](#graphql-queries-list-type_name){: #graphql-queries-list-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-list-description){: #graphql-queries-list-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`metadata_names`](#graphql-queries-list-metadata_names){: #graphql-queries-list-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
+| [`metadata_types`](#graphql-queries-list-metadata_types){: #graphql-queries-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
+| [`show_metadata`](#graphql-queries-list-show_metadata){: #graphql-queries-list-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
+| [`as_mutation?`](#graphql-queries-list-as_mutation?){: #graphql-queries-list-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-list-relay_id_translations){: #graphql-queries-list-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-queries-list-hide_inputs){: #graphql-queries-list-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Query`
+
+## graphql.queries.action
+```elixir
+action resource, name, action
+```
+
+
+Runs a generic action
+
+
+
+### Examples
+```
+action :check_status, :check_status
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-queries-action-resource){: #graphql-queries-action-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-queries-action-name){: #graphql-queries-action-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-action-action){: #graphql-queries-action-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`description`](#graphql-queries-action-description){: #graphql-queries-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`hide_inputs`](#graphql-queries-action-hide_inputs){: #graphql-queries-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
+| [`relay_id_translations`](#graphql-queries-action-relay_id_translations){: #graphql-queries-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Action`
+
+
+## graphql.mutations
+Mutations (create/update/destroy actions) to expose for the resource.
+
+
+### Nested DSLs
+ * [create](#graphql-mutations-create)
+ * [update](#graphql-mutations-update)
+ * [destroy](#graphql-mutations-destroy)
+ * [action](#graphql-mutations-action)
+
+
+### Examples
+```
+mutations do
+  create :create_post, :create
+  update :update_post, :update
+  destroy :destroy_post, :destroy
+end
+
+```
+
+
+
+
+## graphql.mutations.create
+```elixir
+create resource, name, action
+```
+
+
+A mutation to create a record
+
+
+
+### Examples
+```
+create :create_post, :create
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-mutations-create-resource){: #graphql-mutations-create-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-mutations-create-name){: #graphql-mutations-create-name } | `atom` | `:get` | The name to use for the mutation. |
+| [`action`](#graphql-mutations-create-action){: #graphql-mutations-create-action .spark-required} | `atom` |  | The action to use for the mutation. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`description`](#graphql-mutations-create-description){: #graphql-mutations-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
+| [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
+| [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`relay_id_translations`](#graphql-mutations-create-relay_id_translations){: #graphql-mutations-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Mutation`
+
+## graphql.mutations.update
+```elixir
+update resource, name, action
+```
+
+
+A mutation to update a record
+
+
+
+### Examples
+```
+update :update_post, :update
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-mutations-update-resource){: #graphql-mutations-update-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-mutations-update-name){: #graphql-mutations-update-name } | `atom` | `:get` | The name to use for the mutation. |
+| [`action`](#graphql-mutations-update-action){: #graphql-mutations-update-action .spark-required} | `atom` |  | The action to use for the mutation. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`identity`](#graphql-mutations-update-identity){: #graphql-mutations-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
+| [`read_action`](#graphql-mutations-update-read_action){: #graphql-mutations-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
+| [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`relay_id_translations`](#graphql-mutations-update-relay_id_translations){: #graphql-mutations-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Mutation`
+
+## graphql.mutations.destroy
+```elixir
+destroy resource, name, action
+```
+
+
+A mutation to destroy a record
+
+
+
+### Examples
+```
+destroy :destroy_post, :destroy
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-mutations-destroy-resource){: #graphql-mutations-destroy-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-mutations-destroy-name){: #graphql-mutations-destroy-name } | `atom` | `:get` | The name to use for the mutation. |
+| [`action`](#graphql-mutations-destroy-action){: #graphql-mutations-destroy-action .spark-required} | `atom` |  | The action to use for the mutation. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
+| [`identity`](#graphql-mutations-destroy-identity){: #graphql-mutations-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
+| [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`relay_id_translations`](#graphql-mutations-destroy-relay_id_translations){: #graphql-mutations-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Mutation`
+
+## graphql.mutations.action
+```elixir
+action resource, name, action
+```
+
+
+Runs a generic action
+
+
+
+### Examples
+```
+action :check_status, :check_status
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-mutations-action-resource){: #graphql-mutations-action-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-mutations-action-name){: #graphql-mutations-action-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-mutations-action-action){: #graphql-mutations-action-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`description`](#graphql-mutations-action-description){: #graphql-mutations-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`hide_inputs`](#graphql-mutations-action-hide_inputs){: #graphql-mutations-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
+| [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Action`
 
 
 

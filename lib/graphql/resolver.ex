@@ -2650,12 +2650,15 @@ defmodule AshGraphql.Graphql.Resolver do
     child_complexity + 1
   end
 
-  def resolve_node(%{arguments: %{id: id}} = resolution, type_to_domain_and_resource_map) do
+  def resolve_node(
+        %{arguments: %{id: id}} = resolution,
+        {type_to_domain_and_resource_map, all_domains}
+      ) do
     case AshGraphql.Resource.decode_relay_id(id) do
       {:ok, %{type: type, id: primary_key}} ->
         {domain, resource} = Map.fetch!(type_to_domain_and_resource_map, type)
         # We can be sure this returns something since we check this at compile time
-        query = AshGraphql.Resource.primary_key_get_query(resource)
+        query = AshGraphql.Resource.primary_key_get_query(resource, all_domains)
 
         # We pass relay_ids? as false since we pass the already decoded primary key
         put_in(resolution.arguments.id, primary_key)

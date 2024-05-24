@@ -160,6 +160,8 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  def queries, do: [@get, @read_one, @list, @action]
+
   @managed_relationship %Spark.Dsl.Entity{
     name: :managed_relationship,
     schema: ManagedRelationship.schema(),
@@ -259,6 +261,8 @@ defmodule AshGraphql.Resource do
       @action
     ]
   }
+
+  def mutations, do: [@create, @update, @destroy, @action]
 
   @graphql %Spark.Dsl.Section{
     name: :graphql,
@@ -402,10 +406,10 @@ defmodule AshGraphql.Resource do
   use Spark.Dsl.Extension, sections: @sections, transformers: @transformers, verifiers: @verifiers
 
   @deprecated "See `AshGraphql.Resource.Info.queries/1`"
-  defdelegate queries(resource), to: AshGraphql.Resource.Info
+  defdelegate queries(resource, domain \\ []), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
-  defdelegate mutations(resource), to: AshGraphql.Resource.Info
+  defdelegate mutations(resource, domain \\ []), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.managed_relationships/1`"
   defdelegate managed_relationships(resource), to: AshGraphql.Resource.Info
@@ -504,9 +508,17 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def queries(domain, resource, action_middleware, schema, relay_ids?, as_mutations? \\ false) do
+  def queries(
+        domain,
+        all_domains,
+        resource,
+        action_middleware,
+        schema,
+        relay_ids?,
+        as_mutations? \\ false
+      ) do
     resource
-    |> queries()
+    |> queries(all_domains)
     |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
     |> Enum.map(fn
       %{type: :action, name: name, action: action} = query ->
@@ -577,9 +589,9 @@ defmodule AshGraphql.Resource do
 
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
-  def mutations(domain, resource, action_middleware, schema, relay_ids?) do
+  def mutations(domain, all_domains, resource, action_middleware, schema, relay_ids?) do
     resource
-    |> mutations()
+    |> mutations(all_domains)
     |> Enum.map(fn
       %{type: :action, name: name, action: action} = query ->
         query_action =
@@ -733,7 +745,9 @@ defmodule AshGraphql.Resource do
       mutation ->
         update_mutation(resource, schema, mutation, schema, action_middleware, domain, relay_ids?)
     end)
-    |> Enum.concat(queries(domain, resource, action_middleware, schema, relay_ids?, true))
+    |> Enum.concat(
+      queries(domain, all_domains, resource, action_middleware, schema, relay_ids?, true)
+    )
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -887,11 +901,11 @@ defmodule AshGraphql.Resource do
 
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
-  def mutation_types(resource, schema) do
+  def mutation_types(resource, all_domains, schema) do
     resource_type = AshGraphql.Resource.Info.type(resource)
 
     resource
-    |> mutations()
+    |> mutations(all_domains)
     |> Enum.flat_map(fn mutation ->
       unless resource_type do
         raise """
@@ -1690,16 +1704,16 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def type_definitions(resource, domain, schema, relay_ids?) do
+  def type_definitions(resource, domain, all_domains, schema, relay_ids?) do
     List.wrap(calculation_input(resource, schema)) ++
-      List.wrap(type_definition(resource, domain, schema, relay_ids?)) ++
-      List.wrap(query_type_definitions(resource, domain, schema, relay_ids?)) ++
+      List.wrap(type_definition(resource, domain, all_domains, schema, relay_ids?)) ++
+      List.wrap(query_type_definitions(resource, domain, all_domains, schema, relay_ids?)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
-      List.wrap(page_of(resource, schema)) ++
-      List.wrap(relay_page(resource, schema)) ++
-      List.wrap(keyset_page_of(resource, schema)) ++
+      List.wrap(page_of(resource, all_domains, schema)) ++
+      List.wrap(relay_page(resource, all_domains, schema)) ++
+      List.wrap(keyset_page_of(resource, all_domains, schema)) ++
       enum_definitions(resource, schema, __ENV__) ++
       managed_relationship_definitions(resource, schema)
   end
@@ -2759,10 +2773,10 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(type) <> "_sort_field")
   end
 
-  def map_definitions(resource, schema, env) do
+  def map_definitions(resource, all_domains, schema, env) do
     if AshGraphql.Resource.Info.type(resource) do
       resource
-      |> global_maps()
+      |> global_maps(all_domains)
       |> Enum.flat_map(fn attribute ->
         constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
 
@@ -3165,9 +3179,9 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def global_maps(resource) do
+  def global_maps(resource, all_domains) do
     resource
-    |> AshGraphql.all_attributes_and_arguments([], false)
+    |> AshGraphql.all_attributes_and_arguments(all_domains, [], false)
     |> Enum.map(&unnest/1)
     |> Enum.filter(
       &(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map &&
@@ -3196,9 +3210,9 @@ defmodule AshGraphql.Resource do
   defp unnest(other), do: other
 
   @doc false
-  def global_unions(resource) do
+  def global_unions(resource, all_domains) do
     resource
-    |> AshGraphql.all_attributes_and_arguments()
+    |> AshGraphql.all_attributes_and_arguments(all_domains)
     |> Enum.filter(&define_type?(&1.type, &1.constraints))
     |> AshGraphql.only_union_types()
     |> Enum.uniq_by(&elem(&1, 0))
@@ -3222,7 +3236,7 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp relay_page(resource, schema) do
+  defp relay_page(resource, all_domains, schema) do
     type = AshGraphql.Resource.Info.type(resource)
 
     paginatable? =
@@ -3235,12 +3249,12 @@ defmodule AshGraphql.Resource do
     if paginatable? do
       relay? =
         resource
-        |> queries()
+        |> queries(all_domains)
         |> Enum.any?(&Map.get(&1, :relay?))
 
       countable? =
         resource
-        |> queries()
+        |> queries(all_domains)
         |> Enum.any?(fn
           %{relay?: true} = query ->
             action = Ash.Resource.Info.action(resource, query.action)
@@ -3336,12 +3350,12 @@ defmodule AshGraphql.Resource do
   defp add_count_to_page(fields, _, _), do: fields
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp page_of(resource, schema) do
+  defp page_of(resource, all_domains, schema) do
     type = AshGraphql.Resource.Info.type(resource)
 
     paginatable? =
       resource
-      |> queries()
+      |> queries(all_domains)
       |> Enum.any?(fn query ->
         action = Ash.Resource.Info.action(resource, query.action)
         action.type == :read && action.pagination
@@ -3349,7 +3363,7 @@ defmodule AshGraphql.Resource do
 
     countable? =
       resource
-      |> queries()
+      |> queries(all_domains)
       |> Enum.any?(fn query ->
         action = Ash.Resource.Info.action(resource, query.action)
 
@@ -3395,12 +3409,12 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp keyset_page_of(resource, schema) do
+  defp keyset_page_of(resource, all_domains, schema) do
     type = AshGraphql.Resource.Info.type(resource)
 
     paginatable? =
       resource
-      |> queries()
+      |> queries(all_domains)
       |> Enum.any?(fn query ->
         action = Ash.Resource.Info.action(resource, query.action)
         action.type == :read && action.pagination
@@ -3408,7 +3422,7 @@ defmodule AshGraphql.Resource do
 
     countable? =
       resource
-      |> queries()
+      |> queries(all_domains)
       |> Enum.any?(fn query ->
         action = Ash.Resource.Info.action(resource, query.action)
 
@@ -3463,11 +3477,11 @@ defmodule AshGraphql.Resource do
     type.identifier == :node
   end
 
-  def query_type_definitions(resource, domain, schema, relay_ids?) do
+  def query_type_definitions(resource, domain, all_domains, schema, relay_ids?) do
     resource_type = AshGraphql.Resource.Info.type(resource)
 
     resource
-    |> AshGraphql.Resource.Info.queries()
+    |> AshGraphql.Resource.Info.queries(domain)
     |> Enum.filter(&(Map.get(&1, :type_name) && &1.type_name != resource_type))
     |> Enum.map(fn query ->
       relay? = Map.get(query, :relay?)
@@ -3475,7 +3489,7 @@ defmodule AshGraphql.Resource do
       # We can implement the Relay node interface only if the resource has a get
       # query using the primary key as identity
       interfaces =
-        if relay? and primary_key_get_query(resource) != nil do
+        if relay? and primary_key_get_query(resource, all_domains) != nil do
           [:node]
         else
           []
@@ -3493,7 +3507,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  def type_definition(resource, domain, schema, relay_ids?) do
+  def type_definition(resource, domain, all_domains, schema, relay_ids?) do
     actual_resource = Ash.Type.NewType.subtype_of(resource)
 
     if generate_object?(resource) do
@@ -3518,14 +3532,14 @@ defmodule AshGraphql.Resource do
 
       relay? =
         resource
-        |> queries()
+        |> queries(all_domains)
         |> Enum.any?(&Map.get(&1, :relay?))
         |> Kernel.or(relay_ids?)
 
       # We can implement the Relay node interface only if the resource has a get
       # query using the primary key as identity
       interfaces =
-        if relay? and primary_key_get_query(resource) != nil do
+        if relay? and primary_key_get_query(resource, all_domains) != nil do
           [:node]
         else
           []
@@ -4192,10 +4206,10 @@ defmodule AshGraphql.Resource do
     """
   end
 
-  def primary_key_get_query(resource) do
+  def primary_key_get_query(resource, all_domains) do
     # Find the get query with no identities, i.e. the one that uses the primary key
     resource
-    |> AshGraphql.Resource.Info.queries()
+    |> AshGraphql.Resource.Info.queries(all_domains)
     |> Enum.find(&(&1.type == :get and (&1.identity == nil or &1.identity == false)))
   end
 

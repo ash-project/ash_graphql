@@ -1,4 +1,62 @@
 defmodule AshGraphql.Domain do
+  @queries %Spark.Dsl.Section{
+    name: :queries,
+    describe: """
+    Queries to expose for the resource.
+    """,
+    examples: [
+      """
+      queries do
+        get Post, :get_post, :read
+        read_one User, :current_user, :current_user
+        list Post, :list_posts, :read
+      end
+      """
+    ],
+    entities:
+      Enum.map(
+        AshGraphql.Resource.queries(),
+        &%{
+          &1
+          | args: [:resource | &1.args],
+            schema:
+              Keyword.put(&1.schema, :resource,
+                type: {:spark, Ash.Resource},
+                doc: "The resource that the action is defined on"
+              )
+        }
+      )
+  }
+
+  @mutations %Spark.Dsl.Section{
+    name: :mutations,
+    describe: """
+    Mutations (create/update/destroy actions) to expose for the resource.
+    """,
+    examples: [
+      """
+      mutations do
+        create :create_post, :create
+        update :update_post, :update
+        destroy :destroy_post, :destroy
+      end
+      """
+    ],
+    entities:
+      Enum.map(
+        AshGraphql.Resource.mutations(),
+        &%{
+          &1
+          | args: [:resource | &1.args],
+            schema:
+              Keyword.put(&1.schema, :resource,
+                type: {:spark, Ash.Resource},
+                doc: "The resource that the action is defined on"
+              )
+        }
+      )
+  }
+
   @graphql %Spark.Dsl.Section{
     name: :graphql,
     describe: """
@@ -10,6 +68,10 @@ defmodule AshGraphql.Domain do
         authorize? false # To skip authorization for this domain
       end
       """
+    ],
+    sections: [
+      @queries,
+      @mutations
     ],
     schema: [
       authorize?: [
@@ -52,7 +114,13 @@ defmodule AshGraphql.Domain do
 
   require Ash.Domain.Info
 
-  use Spark.Dsl.Extension, sections: @sections
+  use Spark.Dsl.Extension,
+    sections: @sections,
+    transformers: [
+      AshGraphql.Domain.Transformers.RequireKeysetForRelayQueries,
+      AshGraphql.Domain.Transformers.ValidateActions,
+      AshGraphql.Domain.Transformers.ValidateCompatibleNames
+    ]
 
   @deprecated "See `AshGraphql.Domain.Info.authorize?/1`"
   defdelegate authorize?(domain), to: AshGraphql.Domain.Info
@@ -64,33 +132,49 @@ defmodule AshGraphql.Domain do
   defdelegate show_raised_errors?(domain), to: AshGraphql.Domain.Info
 
   @doc false
-  def queries(domain, resources, action_middleware, schema, relay_ids?) do
+  def queries(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
     Enum.flat_map(
       resources,
-      &AshGraphql.Resource.queries(domain, &1, action_middleware, schema, relay_ids?)
+      &AshGraphql.Resource.queries(domain, all_domains, &1, action_middleware, schema, relay_ids?)
     )
   end
 
   @doc false
-  def mutations(domain, resources, action_middleware, schema, relay_ids?) do
+  def mutations(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
     resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
     end)
     |> Enum.flat_map(
-      &AshGraphql.Resource.mutations(domain, &1, action_middleware, schema, relay_ids?)
+      &AshGraphql.Resource.mutations(
+        domain,
+        all_domains,
+        &1,
+        action_middleware,
+        schema,
+        relay_ids?
+      )
     )
   end
 
   @doc false
-  def type_definitions(domain, resources, schema, env, first?, define_relay_types?, relay_ids?) do
+  def type_definitions(
+        domain,
+        all_domains,
+        resources,
+        schema,
+        env,
+        first?,
+        define_relay_types?,
+        relay_ids?
+      ) do
     resource_types =
       resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
-          AshGraphql.Resource.type_definitions(resource, domain, schema, relay_ids?) ++
-            AshGraphql.Resource.mutation_types(resource, schema)
+          AshGraphql.Resource.type_definitions(resource, domain, all_domains, schema, relay_ids?) ++
+            AshGraphql.Resource.mutation_types(resource, all_domains, schema)
         else
           AshGraphql.Resource.no_graphql_types(resource, schema)
         end

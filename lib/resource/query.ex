@@ -6,6 +6,7 @@ defmodule AshGraphql.Resource.Query do
     :type,
     :identity,
     :allow_nil?,
+    :resource,
     :modify_resolution,
     :relay_id_translations,
     :description,

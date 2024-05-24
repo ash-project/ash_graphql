@@ -7,6 +7,13 @@ defmodule AshGraphql.Test.Domain do
     ],
     otp_app: :ash_graphql
 
+  graphql do
+    queries do
+      get AshGraphql.Test.Comment, :get_comment, :read
+      list AshGraphql.Test.Post, :post_score, :score
+    end
+  end
+
   resources do
     resource(AshGraphql.Test.Comment)
     resource(AshGraphql.Test.CompositePrimaryKey)

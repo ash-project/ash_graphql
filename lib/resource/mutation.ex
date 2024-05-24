@@ -6,6 +6,7 @@ defmodule AshGraphql.Resource.Mutation do
     :type,
     :identity,
     :read_action,
+    :resource,
     :upsert?,
     :upsert_identity,
     :modify_resolution,

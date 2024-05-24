@@ -10,7 +10,6 @@ defmodule AshGraphql.Test.Comment do
     type :comment
 
     queries do
-      get :get_comment, :read
       list :list_comments, :read
     end
 

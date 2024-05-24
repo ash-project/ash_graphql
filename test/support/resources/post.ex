@@ -171,7 +171,6 @@ defmodule AshGraphql.Test.Post do
       get :get_post, :read
       get :get_post_with_custom_description, :read, description: "A custom description"
       list :post_library, :library
-      list :post_score, :score
       list :paginated_posts, :paginated
       list :keyset_paginated_posts, :keyset_paginated
       list :paginated_posts_without_limit, :paginated_without_limit

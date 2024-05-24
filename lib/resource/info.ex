@@ -4,13 +4,35 @@ defmodule AshGraphql.Resource.Info do
   alias Spark.Dsl.Extension
 
   @doc "The queries exposed for the resource"
-  def queries(resource) do
-    Extension.get_entities(resource, [:graphql, :queries])
+  def queries(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.queries/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :queries]))
   end
 
   @doc "The mutations exposed for the resource"
-  def mutations(resource) do
-    Extension.get_entities(resource, [:graphql, :mutations]) || []
+  def mutations(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.mutations/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :mutations]) || [])
   end
 
   @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"
