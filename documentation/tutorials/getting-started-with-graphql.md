@@ -10,7 +10,7 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 def deps()
   [
     ...
-    {:ash_graphql, "~> 1.0.1"}
+    {:ash_graphql, "~> 1.1.0"}
   ]
 end
 ```
@@ -37,8 +37,12 @@ end
 
 Some example queries/mutations are shown below. If no queries/mutations are added, nothing will show up in the GraphQL API, so be sure to set one up if you want to try it out.
 
+### Queries & Mutations on the Resource
+
+Here we show queries and mutations being added to the resource, but you can also define them on the _domain_. See below for an equivalent definition
+
 ```elixir
-defmodule Helpdesk.Support.Ticket. do
+defmodule Helpdesk.Support.Ticket do
   use Ash.Resource,
     ...,
     extensions: [
@@ -70,6 +74,49 @@ defmodule Helpdesk.Support.Ticket. do
   end
 
   ...
+end
+```
+
+### Queries & Mutations on the Domain
+
+```elixir
+defmodule Helpdesk.Support.Ticket do
+  use Ash.Resource,
+    ...,
+    extensions: [
+      AshGraphql.Resource
+    ]
+
+  # The resource still determines its type, and any other resource/type-based
+  # configuration
+  graphql do
+    type :ticket
+  end
+
+  ...
+end
+
+defmodule Helpdesk.Support do
+  use Ash.Domain,
+    extensions: [
+      AshGraphql.Domain
+    ]
+
+  graphql do
+    # equivalent queries and mutations, but the first argument
+    # is the resource because the domain can define queries for
+    # any of its resources
+    queries do
+      get Helpdesk.Support.Ticket, :get_ticket, :read
+      read_one Helpdesk.Support.Ticket, :most_important_ticket, :most_important
+      list Helpdesk.Support.Ticket, :list_tickets, :read
+    end
+
+    mutations do
+      create Helpdesk.Support.Ticket, :create_ticket, :create
+      update Helpdesk.Support.Ticket, :update_ticket, :update
+      destroy Helpdesk.Support.Ticket, :destroy_ticket, :destroy
+    end
 end
 ```
 
