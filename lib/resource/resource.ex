@@ -1273,7 +1273,7 @@ defmodule AshGraphql.Resource do
     if relay? do
       String.to_atom("#{type}_connection")
     else
-      case pagination_strategy(query, action) do
+      case query_pagination_strategy(query, action) do
         :keyset ->
           String.to_atom("keyset_page_of_#{type}")
 
@@ -1299,44 +1299,54 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def pagination_strategy(nil, _) do
+  def query_pagination_strategy(nil, _) do
     nil
   end
 
-  def pagination_strategy(_query, %{pagination: pagination}) when pagination in [nil, false] do
+  def query_pagination_strategy(%{paginate_with: strategy}, action) do
+    pagination_strategy(strategy, action)
+  end
+
+  defp pagination_strategy(strategy, action, allow_relay? \\ false)
+
+  defp pagination_strategy(_strategy, %{pagination: pagination}, _allow_relay?)
+       when pagination in [nil, false] do
     nil
   end
 
-  def pagination_strategy(%{paginate_with: strategy}, action) do
-    if action.pagination do
-      strategies =
-        if action.pagination.required? do
-          []
-        else
-          [nil]
-        end
-
-      strategies =
-        if action.pagination.keyset? do
-          [:keyset | strategies]
-        else
-          strategies
-        end
-
-      strategies =
-        if action.pagination.offset? do
-          [:offset | strategies]
-        else
-          strategies
-        end
-
-      if strategy in strategies do
-        strategy
+  defp pagination_strategy(strategy, action, allow_relay?) do
+    strategies =
+      if action.pagination.required? do
+        []
       else
-        Enum.at(strategies, 0)
+        [nil]
       end
+
+    strategies =
+      if action.pagination.keyset? do
+        [:keyset | strategies]
+      else
+        strategies
+      end
+
+    strategies =
+      if action.pagination.offset? do
+        [:offset | strategies]
+      else
+        strategies
+      end
+
+    strategies =
+      if allow_relay? and action.pagination.keyset? do
+        [:relay | strategies]
+      else
+        strategies
+      end
+
+    if strategy in strategies do
+      strategy
     else
-      nil
+      Enum.at(strategies, 0)
     end
   end
 
@@ -1580,7 +1590,7 @@ defmodule AshGraphql.Resource do
   end
 
   defp pagination_args(query, action) do
-    case pagination_strategy(query, action) do
+    case query_pagination_strategy(query, action) do
       nil ->
         []
 

@@ -436,7 +436,7 @@ defmodule AshGraphql.Graphql.Resolver do
                    ),
                  result_fields <-
                    get_result_fields(
-                     AshGraphql.Resource.pagination_strategy(
+                     AshGraphql.Resource.query_pagination_strategy(
                        gql_query,
                        Ash.Resource.Info.action(resource, action)
                      ),
@@ -774,7 +774,7 @@ defmodule AshGraphql.Graphql.Resolver do
   def validate_resolve_opts(resolution, resource, pagination, relay?, opts, args, query, action) do
     action = Ash.Resource.Info.action(resource, action)
 
-    case AshGraphql.Resource.pagination_strategy(query, action) do
+    case AshGraphql.Resource.query_pagination_strategy(query, action) do
       nil ->
         {:ok, opts}
 
@@ -883,10 +883,7 @@ defmodule AshGraphql.Graphql.Resolver do
     []
   end
 
-  defp paginate(
-         _resource,
-         _gql_query,
-         _action,
+  defp paginate_with_keyset(
          %Ash.Page.Keyset{
            results: results,
            more?: more,
@@ -947,69 +944,30 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp paginate(
-         _resource,
-         _gql_query,
-         _action,
-         %Ash.Page.Offset{results: results, count: count, more?: more},
-         true
-       ) do
-    {start_cursor, end_cursor} =
-      case results do
-        [] ->
-          {nil, nil}
-
-        [first] ->
-          {first.__metadata__.keyset, first.__metadata__.keyset}
-
-        [first | rest] ->
-          last = List.last(rest)
-          {first.__metadata__.keyset, last.__metadata__.keyset}
-      end
-
-    has_previous_page = false
-    has_next_page = more
-
-    {
-      :ok,
-      %{
-        page_info: %{
-          start_cursor: start_cursor,
-          end_cursor: end_cursor,
-          has_next_page: has_next_page,
-          has_previous_page: has_previous_page
-        },
-        count: count,
-        edges:
-          Enum.map(results, fn result ->
-            %{
-              cursor: result.__metadata__.keyset,
-              node: result
-            }
-          end)
-      }
-    }
-  end
-
-  defp paginate(
-         _resource,
-         _gql_query,
-         _action,
-         %Ash.Page.Offset{results: results, count: count, more?: more?},
-         _
-       ) do
+  defp paginate_with_offset(%Ash.Page.Offset{results: results, count: count, more?: more?}) do
     {:ok, %{results: results, count: count, more?: more?}}
   end
 
-  defp paginate(resource, query, action, page, relay?) do
-    action =
-      if is_atom(action) do
-        Ash.Resource.Info.action(resource, action)
-      else
-        action
-      end
+  defp paginate(_resource, _gql_query, _action, %Ash.Page.Keyset{} = keyset, relay?) do
+    paginate_with_keyset(keyset, relay?)
+  end
 
-    case AshGraphql.Resource.pagination_strategy(query, action) do
+  defp paginate(resource, query, action, %Ash.Page.Offset{} = offset, relay?) do
+    # If a read action supports both offset and keyset, it will return an offset page by default
+    # Check what strategy we're using and convert the page accordingly
+    pagination_strategy = query_pagination_strategy(query, resource, action)
+
+    if relay? or pagination_strategy == :keyset do
+      offset
+      |> offset_to_keyset()
+      |> paginate_with_keyset(relay?)
+    else
+      paginate_with_offset(offset)
+    end
+  end
+
+  defp paginate(resource, query, action, page, relay?) do
+    case query_pagination_strategy(query, resource, action) do
       nil ->
         {:ok, page}
 
@@ -1039,6 +997,26 @@ defmodule AshGraphql.Graphql.Resolver do
       _ ->
         {:ok, page}
     end
+  end
+
+  defp query_pagination_strategy(query, resource, action) when is_atom(action) do
+    action = Ash.Resource.Info.action(resource, action)
+    query_pagination_strategy(query, resource, action)
+  end
+
+  defp query_pagination_strategy(query, _resource, action) do
+    AshGraphql.Resource.query_pagination_strategy(query, action)
+  end
+
+  defp offset_to_keyset(%Ash.Page.Offset{} = offset) do
+    %Ash.Page.Keyset{
+      results: offset.results,
+      limit: offset.limit,
+      more?: offset.more?,
+      count: offset.count,
+      after: nil,
+      before: nil
+    }
   end
 
   def mutate(%Absinthe.Resolution{state: :resolved} = resolution, _),
