@@ -779,27 +779,32 @@ defmodule AshGraphql.Graphql.Resolver do
         {:ok, opts}
 
       strategy ->
-        with page_opts <-
-               args
-               |> Map.take([:limit, :offset, :first, :after, :before, :last])
-               |> Enum.reject(fn {_, val} -> is_nil(val) end),
-             {:ok, page_opts} <- validate_offset_opts(page_opts, strategy, pagination),
-             {:ok, page_opts} <- validate_keyset_opts(page_opts, strategy, pagination) do
-          type = page_type(resource, strategy, relay?)
-          field_names = resolution |> fields([], type) |> names_only()
-
-          page =
-            if Enum.any?(field_names, &(&1 == :count)) do
-              Keyword.put(page_opts, :count, true)
-            else
-              page_opts
-            end
-
+        with {:ok, page} <- page_opts(resolution, resource, pagination, relay?, args, strategy) do
           {:ok, Keyword.put(opts, :page, page)}
-        else
-          error ->
-            error
         end
+    end
+  end
+
+  defp page_opts(resolution, resource, pagination, relay?, args, strategy, nested \\ []) do
+    page_opts =
+      args
+      |> Map.take([:limit, :offset, :first, :after, :before, :last])
+      |> Enum.reject(fn {_, val} -> is_nil(val) end)
+
+    with {:ok, page_opts} <- validate_offset_opts(page_opts, strategy, pagination),
+         {:ok, page_opts} <- validate_keyset_opts(page_opts, strategy, pagination) do
+      type = page_type(resource, strategy, relay?)
+
+      field_names = resolution |> fields(nested, type) |> names_only()
+
+      page_opts =
+        if Enum.any?(field_names, &(&1 == :count)) do
+          Keyword.put(page_opts, :count, true)
+        else
+          page_opts
+        end
+
+      {:ok, page_opts}
     end
   end
 
@@ -820,7 +825,8 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok, opts}
   end
 
-  defp validate_keyset_opts(opts, :keyset, %{max_page_size: max_page_size}) do
+  defp validate_keyset_opts(opts, strategy, %{max_page_size: max_page_size})
+       when strategy in [:keyset, :relay] do
     case opts |> Keyword.take([:first, :last, :after, :before]) |> Enum.into(%{}) do
       %{first: _first, last: _last} ->
         {:error,
@@ -877,6 +883,10 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp get_result_fields(:offset, _) do
     ["results"]
+  end
+
+  defp get_result_fields(:relay, _) do
+    ["edges", "node"]
   end
 
   defp get_result_fields(_pagination, _) do
@@ -1017,6 +1027,30 @@ defmodule AshGraphql.Graphql.Resolver do
       after: nil,
       before: nil
     }
+  end
+
+  defp paginate_relationship(%Ash.Page.Keyset{} = keyset, strategy) do
+    relay? = strategy == :relay
+    paginate_with_keyset(keyset, relay?)
+  end
+
+  defp paginate_relationship(%Ash.Page.Offset{} = offset, strategy)
+       when strategy in [:relay, :keyset] do
+    # If a read action supports both offset and keyset, it will return an offset page by default,
+    # so we might end up here even with relay or keyset strategy
+    relay? = strategy == :relay
+
+    offset
+    |> offset_to_keyset()
+    |> paginate_with_keyset(relay?)
+  end
+
+  defp paginate_relationship(%Ash.Page.Offset{} = offset, :offset) do
+    paginate_with_offset(offset)
+  end
+
+  defp paginate_relationship(page, _) do
+    {:ok, page}
   end
 
   def mutate(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -1805,15 +1839,49 @@ defmodule AshGraphql.Graphql.Resolver do
             |> Ash.Query.set_tenant(Map.get(context, :tenant))
             |> Ash.Query.set_context(get_context(context))
 
+          pagination_strategy =
+            AshGraphql.Resource.relationship_pagination_strategy(
+              resource,
+              relationship.name,
+              read_action
+            )
+
+          will_paginate? = pagination_strategy != nil
+          relay? = pagination_strategy == :relay
+          result_fields = get_result_fields(pagination_strategy, relay?)
+
+          nested = Enum.map(Enum.reverse([selection | path]), & &1.name)
+
+          related_query =
+            if pagination_strategy do
+              case page_opts(
+                     resolution,
+                     relationship.destination,
+                     read_action.pagination,
+                     relay?,
+                     args,
+                     pagination_strategy,
+                     nested
+                   ) do
+                {:ok, page_opts} ->
+                  Ash.Query.page(related_query, page_opts)
+
+                {:error, error} ->
+                  Ash.Query.add_error(related_query, error)
+              end
+            else
+              related_query
+            end
+
           related_query =
             args
-            |> apply_load_arguments(related_query)
+            |> apply_load_arguments(related_query, will_paginate?)
             |> set_query_arguments(read_action, args)
             |> select_fields(
               relationship.destination,
               resolution,
               nil,
-              Enum.map(Enum.reverse([selection | path]), & &1.name)
+              nested
             )
             |> load_fields(
               load_opts,
@@ -1822,7 +1890,8 @@ defmodule AshGraphql.Graphql.Resolver do
               [
                 selection | path
               ],
-              context
+              context,
+              result_fields
             )
 
           if selection.alias do
@@ -2423,10 +2492,10 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp unwrap_type_and_constraints(other, constraints), do: {other, constraints}
 
-  def resolve_assoc(%Absinthe.Resolution{state: :resolved} = resolution, _),
+  def resolve_assoc_one(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
 
-  def resolve_assoc(
+  def resolve_assoc_one(
         %{source: parent} = resolution,
         {_domain, relationship}
       ) do
@@ -2438,6 +2507,25 @@ defmodule AshGraphql.Graphql.Resolver do
       end
 
     Absinthe.Resolution.put_result(resolution, {:ok, value})
+  end
+
+  def resolve_assoc_many(%Absinthe.Resolution{state: :resolved} = resolution, _),
+    do: resolution
+
+  def resolve_assoc_many(
+        %{source: parent} = resolution,
+        {_domain, relationship, pagination_strategy}
+      ) do
+    page =
+      if resolution.definition.alias do
+        Map.get(parent.calculations, {:__ash_graphql_relationship__, resolution.definition.alias})
+      else
+        Map.get(parent, relationship.name)
+      end
+
+    result = paginate_relationship(page, pagination_strategy)
+
+    Absinthe.Resolution.put_result(resolution, result)
   end
 
   def resolve_id(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -2651,7 +2739,7 @@ defmodule AshGraphql.Graphql.Resolver do
     AshGraphql.Resource.Info.type(resource)
   end
 
-  defp apply_load_arguments(arguments, query, will_paginate? \\ false) do
+  defp apply_load_arguments(arguments, query, will_paginate?) do
     Enum.reduce(arguments, query, fn
       {:limit, limit}, query when not will_paginate? ->
         Ash.Query.limit(query, limit)

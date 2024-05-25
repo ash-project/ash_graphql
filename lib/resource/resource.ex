@@ -320,6 +320,12 @@ defmodule AshGraphql.Resource do
         doc:
           "A list of relationships to include on the created type. Defaults to all public relationships where the destination defines a graphql type."
       ],
+      paginate_relationship_with: [
+        type: :keyword_list,
+        default: [],
+        doc:
+          "A keyword list indicating which kind of pagination should be used for each `has_many` and `many_to_many` relationships, e.g. `related_things: :keyset, other_related_things: :offset`. Valid pagination values are `nil`, `:offset`, `:keyset` and `:relay`."
+      ],
       field_names: [
         type: :keyword_list,
         doc: "A keyword list of name overrides for attributes."
@@ -394,7 +400,8 @@ defmodule AshGraphql.Resource do
 
   @verifiers [
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
-    AshGraphql.Resource.Verifiers.RequirePkeyDelimiter
+    AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
+    AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith
   ]
 
   @sections [@graphql]
@@ -1307,6 +1314,14 @@ defmodule AshGraphql.Resource do
     pagination_strategy(strategy, action)
   end
 
+  @doc false
+  def relationship_pagination_strategy(resource, relationship_name, action) do
+    resource
+    |> AshGraphql.Resource.Info.paginate_relationship_with()
+    |> Keyword.get(relationship_name)
+    |> pagination_strategy(action, true)
+  end
+
   defp pagination_strategy(strategy, action, allow_relay? \\ false)
 
   defp pagination_strategy(_strategy, %{pagination: pagination}, _allow_relay?)
@@ -1545,28 +1560,13 @@ defmodule AshGraphql.Resource do
     args ++ pagination_args(query, action) ++ read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:list_related, resource, action, schema, identity, hide_inputs, _) do
-    args(:list, resource, action, schema, identity, hide_inputs) ++
-      [
-        %Absinthe.Blueprint.Schema.InputValueDefinition{
-          name: "limit",
-          identifier: :limit,
-          type: :integer,
-          description: "The number of records to return.",
-          __reference__: ref(__ENV__)
-        },
-        %Absinthe.Blueprint.Schema.InputValueDefinition{
-          name: "offset",
-          identifier: :offset,
-          type: :integer,
-          description: "The number of records to skip.",
-          __reference__: ref(__ENV__)
-        }
-      ]
-  end
-
   defp args(:one_related, resource, action, schema, _identity, hide_inputs, _) do
     read_args(resource, action, schema, hide_inputs)
+  end
+
+  defp related_list_args(resource, related_resource, relationship_name, action, schema) do
+    args(:list, related_resource, action, schema) ++
+      relationship_pagination_args(resource, relationship_name, action)
   end
 
   defp read_args(resource, action, schema, hide_inputs) do
@@ -1587,6 +1587,42 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
     end)
+  end
+
+  defp relationship_pagination_args(resource, relationship_name, action) do
+    case relationship_pagination_strategy(resource, relationship_name, action) do
+      nil ->
+        default_relationship_pagination_args()
+
+      :keyset ->
+        keyset_pagination_args(action)
+
+      :relay ->
+        # Relay has the same args as keyset
+        keyset_pagination_args(action)
+
+      :offset ->
+        offset_pagination_args(action)
+    end
+  end
+
+  defp default_relationship_pagination_args do
+    [
+      %Absinthe.Blueprint.Schema.InputValueDefinition{
+        name: "limit",
+        identifier: :limit,
+        type: :integer,
+        description: "The number of records to return.",
+        __reference__: ref(__ENV__)
+      },
+      %Absinthe.Blueprint.Schema.InputValueDefinition{
+        name: "offset",
+        identifier: :offset,
+        type: :integer,
+        description: "The number of records to skip.",
+        __reference__: ref(__ENV__)
+      }
+    ]
   end
 
   defp pagination_args(query, action) do
@@ -3756,7 +3792,7 @@ defmodule AshGraphql.Resource do
           description: relationship.description,
           arguments: args(:one_related, relationship.destination, read_action, schema),
           middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {domain, relationship}}
+            {{AshGraphql.Graphql.Resolver, :resolve_assoc_one}, {domain, relationship}}
           ],
           type: type,
           __reference__: ref(__ENV__)
@@ -3774,13 +3810,10 @@ defmodule AshGraphql.Resource do
 
         type = AshGraphql.Resource.Info.type(relationship.destination)
 
-        query_type = %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: %Absinthe.Blueprint.TypeReference.List{
-            of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: type
-            }
-          }
-        }
+        pagination_strategy =
+          relationship_pagination_strategy(resource, relationship.name, read_action)
+
+        query_type = related_list_type(pagination_strategy, type)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
@@ -3789,13 +3822,43 @@ defmodule AshGraphql.Resource do
           description: relationship.description,
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_assoc}, {domain, relationship}}
+            {{AshGraphql.Graphql.Resolver, :resolve_assoc_many},
+             {domain, relationship, pagination_strategy}}
           ],
-          arguments: args(:list_related, relationship.destination, read_action, schema),
+          arguments:
+            related_list_args(
+              resource,
+              relationship.destination,
+              relationship.name,
+              read_action,
+              schema
+            ),
           type: query_type,
           __reference__: ref(__ENV__)
         }
     end)
+  end
+
+  defp related_list_type(nil, type) do
+    %Absinthe.Blueprint.TypeReference.NonNull{
+      of_type: %Absinthe.Blueprint.TypeReference.List{
+        of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+          of_type: type
+        }
+      }
+    }
+  end
+
+  defp related_list_type(:relay, type) do
+    String.to_atom("#{type}_connection")
+  end
+
+  defp related_list_type(:keyset, type) do
+    String.to_atom("keyset_page_of_#{type}")
+  end
+
+  defp related_list_type(:offset, type) do
+    String.to_atom("page_of_#{type}")
   end
 
   defp aggregates(resource, domain, schema) do

@@ -149,6 +149,11 @@ defmodule AshGraphql.Resource.Info do
       resource |> Ash.Resource.Info.public_relationships() |> Enum.map(& &1.name)
   end
 
+  @doc "Pagination configuration for list relationships"
+  def paginate_relationship_with(resource) do
+    Extension.get_opt(resource, [:graphql], :paginate_relationship_with, [])
+  end
+
   @doc "Graphql argument name overrides for the resource"
   def argument_names(resource) do
     Extension.get_opt(resource, [:graphql], :argument_names, [])

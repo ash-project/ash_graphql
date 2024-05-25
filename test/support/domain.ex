@@ -15,12 +15,18 @@ defmodule AshGraphql.Test.Domain do
   end
 
   resources do
+    resource(AshGraphql.Test.Actor)
+    resource(AshGraphql.Test.ActorAgent)
+    resource(AshGraphql.Test.Agent)
+    resource(AshGraphql.Test.Award)
     resource(AshGraphql.Test.Comment)
     resource(AshGraphql.Test.CompositePrimaryKey)
     resource(AshGraphql.Test.CompositePrimaryKeyNotEncoded)
     resource(AshGraphql.Test.DoubleRelRecursive)
     resource(AshGraphql.Test.DoubleRelToRecursiveParentOfEmbed)
     resource(AshGraphql.Test.MapTypes)
+    resource(AshGraphql.Test.Movie)
+    resource(AshGraphql.Test.MovieActor)
     resource(AshGraphql.Test.MultitenantPostTag)
     resource(AshGraphql.Test.MultitenantTag)
     resource(AshGraphql.Test.NoGraphql)
@@ -30,6 +36,7 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.PostTag)
     resource(AshGraphql.Test.RelayPostTag)
     resource(AshGraphql.Test.RelayTag)
+    resource(AshGraphql.Test.Review)
     resource(AshGraphql.Test.SponsoredComment)
     resource(AshGraphql.Test.Tag)
     resource(AshGraphql.Test.User)
