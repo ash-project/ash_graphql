@@ -33,6 +33,8 @@ defmodule AshGraphql.Test.Channel do
   attributes do
     uuid_primary_key(:id)
 
+    attribute(:name, :string, public?: true, allow_nil?: false)
+
     create_timestamp(:created_at, public?: true)
   end
 

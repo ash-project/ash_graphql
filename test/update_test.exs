@@ -325,4 +325,42 @@ defmodule AshGraphql.UpdateTest do
            } =
              resp
   end
+
+  test "an update with a configured read action and no identity works in resource with simple data layer" do
+    channel =
+      AshGraphql.Test.Channel
+      |> Ash.Changeset.for_create(:create, name: "test channel 1")
+      |> Ash.create!()
+
+    resp =
+      """
+      mutation UpdateChannel($channelId: ID!, $input: UpdateChannelInput!) {
+        updateChannel(channelId: $channelId, input: $input) {
+          result{
+            channel {
+              name
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "channelId" => channel.id,
+          "input" => %{"name" => "test channel 2"}
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: %{
+               "updateChannel" => %{"result" => %{"channel" => %{"name" => "test channel 2"}}}
+             }
+           } =
+             result
+  end
 end
