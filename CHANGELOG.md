@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.1.1](https://github.com/ash-project/ash_graphql/compare/v1.1.0...v1.1.1) (2024-06-02)
+
+
+
+
+### Features:
+
+* relationship pagination (#166)
+
+### Bug Fixes:
+
+* honor read_action for update/destroy mutations
+
 ## [v1.1.0](https://github.com/ash-project/ash_graphql/compare/v1.0.1...v1.1.0) (2024-05-24)
 
 ### Features:
