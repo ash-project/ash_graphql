@@ -17,7 +17,7 @@ defmodule AshGraphql.CustpmPaginateTest do
     test "channel record with direct union message records are fetched" do
       channel =
         AshGraphql.Test.Channel
-        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.Changeset.for_create(:create, name: "test channel")
         |> Ash.create!()
 
       text_message =
@@ -88,7 +88,7 @@ defmodule AshGraphql.CustpmPaginateTest do
     test "channel record with page of channel messages record is fetched" do
       channel =
         AshGraphql.Test.Channel
-        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.Changeset.for_create(:create, name: "test channel")
         |> Ash.create!()
 
       text_message =
