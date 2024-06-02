@@ -1242,6 +1242,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   tenant: Map.get(context, :tenant),
                   context: get_context(context) || %{},
                   authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                  read_action: read_action,
                   domain: domain,
                   actor: Map.get(context, :actor),
                   select:
@@ -1403,6 +1404,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
                   return_records?: true,
+                  read_action: read_action,
                   tenant: Map.get(context, :tenant),
                   context: get_context(context) || %{},
                   authorize?: AshGraphql.Domain.Info.authorize?(domain),
