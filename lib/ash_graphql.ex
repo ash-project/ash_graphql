@@ -699,21 +699,24 @@ defmodule AshGraphql do
     end)
     |> Enum.flat_map(fn {source_resource, attribute, embedded_type} ->
       if AshGraphql.Resource.Info.type(embedded_type) do
-        [
-          AshGraphql.Resource.type_definition(
-            embedded_type,
-            Ash.EmbeddableType.ShadowDomain,
-            [Ash.EmbeddableType.ShadowDomain],
-            schema,
-            relay_ids?
-          ),
-          AshGraphql.Resource.embedded_type_input(
-            source_resource,
-            attribute,
-            embedded_type,
-            schema
-          )
-        ] ++
+        Enum.filter(
+          [
+            AshGraphql.Resource.type_definition(
+              embedded_type,
+              Ash.EmbeddableType.ShadowDomain,
+              [Ash.EmbeddableType.ShadowDomain],
+              schema,
+              relay_ids?
+            ),
+            AshGraphql.Resource.embedded_type_input(
+              source_resource,
+              attribute,
+              embedded_type,
+              schema
+            )
+          ],
+          & &1
+        ) ++
           AshGraphql.Resource.enum_definitions(embedded_type, schema, __ENV__)
       else
         []

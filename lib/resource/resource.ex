@@ -1117,15 +1117,17 @@ defmodule AshGraphql.Resource do
         end
       end)
 
-    name = "#{AshGraphql.Resource.Info.type(source_resource)}_#{attribute.name}_input"
+    unless Enum.empty?(fields) do
+      name = "#{AshGraphql.Resource.Info.type(source_resource)}_#{attribute.name}_input"
 
-    %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-      fields: fields,
-      identifier: String.to_atom(name),
-      module: schema,
-      name: Macro.camelize(name),
-      __reference__: ref(__ENV__)
-    }
+      %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+        fields: fields,
+        identifier: String.to_atom(name),
+        module: schema,
+        name: Macro.camelize(name),
+        __reference__: ref(__ENV__)
+      }
+    end
   end
 
   defp mutation_fields(resource, schema, action, type, hide_inputs \\ []) do
@@ -3849,14 +3851,17 @@ defmodule AshGraphql.Resource do
     }
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp related_list_type(:relay, type) do
     String.to_atom("#{type}_connection")
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp related_list_type(:keyset, type) do
     String.to_atom("keyset_page_of_#{type}")
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp related_list_type(:offset, type) do
     String.to_atom("page_of_#{type}")
   end
