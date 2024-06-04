@@ -3543,15 +3543,25 @@ defmodule AshGraphql.Resource do
           []
         end
 
-      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-        description: Ash.Resource.Info.description(resource),
-        interfaces: interfaces,
-        fields: fields(resource, domain, schema, relay_ids?),
-        identifier: type,
-        module: schema,
-        name: Macro.camelize(to_string(type)),
-        __reference__: ref(__ENV__)
-      }
+      case fields(resource, domain, schema, relay_ids?) do
+        [] ->
+          raise """
+          The resource #{inspect(resource)} does not have any visible fields in GraphQL.
+
+          This typically means that there are no public fields on the resource in question.
+          """
+
+        fields ->
+          %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+            description: Ash.Resource.Info.description(resource),
+            interfaces: interfaces,
+            fields: fields,
+            identifier: type,
+            module: schema,
+            name: Macro.camelize(to_string(type)),
+            __reference__: ref(__ENV__)
+          }
+      end
     end
   end
 
@@ -4101,7 +4111,17 @@ defmodule AshGraphql.Resource do
       else
         if Ash.Type.embedded_type?(type) do
           if input? && type(type) do
-            :"#{AshGraphql.Resource.Info.type(resource)}_#{attribute.name}_input"
+            case embedded_type_input(resource, attribute, type, nil) do
+              nil ->
+                IO.warn(
+                  "Embedded type #{inspect(type)} does not have an input type defined, but is accepted as input in at least one location."
+                )
+
+                Application.get_env(:ash_graphql, :json_type) || :json_string
+
+              type ->
+                type.identifier
+            end
           else
             case type(type) do
               nil ->
