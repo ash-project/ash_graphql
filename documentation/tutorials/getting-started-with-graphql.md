@@ -101,7 +101,8 @@ defmodule Helpdesk.Support do
     extensions: [
       AshGraphql.Domain
     ]
-
+  
+  ...
   graphql do
     # equivalent queries and mutations, but the first argument
     # is the resource because the domain can define queries for
