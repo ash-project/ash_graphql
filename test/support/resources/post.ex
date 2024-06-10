@@ -164,6 +164,7 @@ defmodule AshGraphql.Test.Post do
 
     attribute_types integer_as_string_in_domain: :string
     attribute_input_types integer_as_string_in_domain: :string
+    argument_input_types create_bar_with_foo_with_map: [bar: :bar_with_foo]
     field_names text_1_and_2: :text1_and2
     keyset_field :keyset
 
@@ -201,6 +202,7 @@ defmodule AshGraphql.Test.Post do
 
       create :create_post_with_common_map, :create_with_common_map
       create :create_post_bar_with_foo, :create_bar_with_foo
+      create :create_post_bar_with_foo_with_map, :create_bar_with_foo_with_map
       create :create_post_bar_with_baz, :create_bar_with_baz
 
       create :create_post_with_comments, :with_comments
@@ -243,6 +245,10 @@ defmodule AshGraphql.Test.Post do
 
     create :create_bar_with_foo do
       argument(:bar, BarWithFoo)
+    end
+
+    create :create_bar_with_foo_with_map do
+      argument(:bar, :map)
     end
 
     create :create_bar_with_baz do
