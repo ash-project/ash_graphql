@@ -118,4 +118,29 @@ defmodule AshGraphql.ResourceTest do
     assert bar_with_foo["type"] == %{"name" => "BarWithFoo"}
     assert bar_with_baz["type"] == %{"name" => "BarWithBaz"}
   end
+
+  test "arguments can have their types overriden" do
+    {:ok, %{data: with_foo}} =
+      """
+      query {
+        __type(name: "CreatePostBarWithFooWithMapInput") {
+          name
+          inputFields {
+            name
+            type {
+              name
+              kind
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    bar_with_foo =
+      with_foo["__type"]["inputFields"]
+      |> Enum.find(&(&1["name"] == "bar"))
+
+    assert bar_with_foo["type"] == %{"name" => "BarWithFoo", "kind" => "INPUT_OBJECT"}
+  end
 end

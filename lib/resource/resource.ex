@@ -360,6 +360,11 @@ defmodule AshGraphql.Resource do
         doc:
           "A keyword list of input type overrides for attributes. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used."
       ],
+      argument_input_types: [
+        type: :keyword_list,
+        doc:
+          "A keyword list of actions and their input type overrides for arguments. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used."
+      ],
       primary_key_delimiter: [
         type: :string,
         default: "~",
@@ -1185,9 +1190,15 @@ defmodule AshGraphql.Resource do
         case find_manage_change(argument, action, resource) do
           nil ->
             type =
-              argument.type
-              |> field_type(argument, resource, true)
-              |> maybe_wrap_non_null(argument_required?(argument))
+              case AshGraphql.Resource.Info.argument_input_types(resource)[action.name][name] do
+                nil ->
+                  argument.type
+                  |> field_type(argument, resource, true)
+                  |> maybe_wrap_non_null(argument_required?(argument))
+
+                override ->
+                  unwrap_literal_type(override)
+              end
 
             %Absinthe.Blueprint.Schema.FieldDefinition{
               identifier: name,

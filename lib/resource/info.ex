@@ -159,9 +159,14 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :argument_names, [])
   end
 
-  @doc "Graphql type overrides for the resource"
+  @doc "Graphql attribute input type overrides for the resource"
   def attribute_input_types(resource) do
     Extension.get_opt(resource, [:graphql], :attribute_input_types, [])
+  end
+
+  @doc "Graphql argument type overrides for the resource"
+  def argument_input_types(resource) do
+    Extension.get_opt(resource, [:graphql], :argument_input_types, [])
   end
 
   @doc "The delimiter for a resource with a composite primary key"

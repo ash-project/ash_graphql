@@ -3,6 +3,7 @@ spark_locals_without_parens = [
   action: 3,
   action: 4,
   allow_nil?: 1,
+  argument_input_types: 1,
   argument_names: 1,
   as_mutation?: 1,
   attribute_input_types: 1,
