@@ -223,43 +223,45 @@ defmodule AshGraphql.RelationshipPaginationTest do
     assert [%{"name" => "Award 2"} | _] = results
   end
 
-  test "works when nested" do
-    movie =
-      AshGraphql.Test.Movie
-      |> Ash.Changeset.for_create(:create, title: "Movie")
-      |> Ash.create!()
+  describe "works when nested" do
+    test "on return values for queries" do
+      movie =
+        AshGraphql.Test.Movie
+        |> Ash.Changeset.for_create(:create, title: "Movie")
+        |> Ash.create!()
 
-    agents =
-      for i <- 1..4 do
-        AshGraphql.Test.Agent
-        |> Ash.Changeset.for_create(:create, name: "Agent #{i}")
+      agents =
+        for i <- 1..4 do
+          AshGraphql.Test.Agent
+          |> Ash.Changeset.for_create(:create, name: "Agent #{i}")
+          |> Ash.create!()
+        end
+
+      for i <- 1..5 do
+        AshGraphql.Test.Actor
+        |> Ash.Changeset.for_create(:create, name: "Actor #{i}")
+        |> Ash.Changeset.manage_relationship(:movies, movie, type: :append)
+        |> Ash.Changeset.manage_relationship(:agents, agents, type: :append)
         |> Ash.create!()
       end
 
-    for i <- 1..5 do
-      AshGraphql.Test.Actor
-      |> Ash.Changeset.for_create(:create, name: "Actor #{i}")
-      |> Ash.Changeset.manage_relationship(:movies, movie, type: :append)
-      |> Ash.Changeset.manage_relationship(:agents, agents, type: :append)
-      |> Ash.create!()
-    end
-
-    document =
-      """
-      query Movies($first: Int, $after: String) {
-        getMovies(sort: [{field: TITLE}]) {
-          actors(first: 1, sort: [{field: NAME}]) {
-            count
-            edges {
-              cursor
-              node {
-                name
-                agents(first: $first, after: $after, sort: [{field: NAME}]) {
-                  count
-                  edges {
-                    cursor
-                    node {
-                      name
+      document =
+        """
+        query Movies($first: Int, $after: String) {
+          getMovies(sort: [{field: TITLE}]) {
+            actors(first: 1, sort: [{field: NAME}]) {
+              count
+              edges {
+                cursor
+                node {
+                  name
+                  agents(first: $first, after: $after, sort: [{field: NAME}]) {
+                    count
+                    edges {
+                      cursor
+                      node {
+                        name
+                      }
                     }
                   }
                 }
@@ -267,75 +269,262 @@ defmodule AshGraphql.RelationshipPaginationTest do
             }
           }
         }
-      }
-      """
+        """
 
-    resp = Absinthe.run(document, AshGraphql.Test.Schema, variables: %{"first" => 1})
-    assert {:ok, result} = resp
-    refute Map.has_key?(result, :errors)
+      resp = Absinthe.run(document, AshGraphql.Test.Schema, variables: %{"first" => 1})
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
 
-    assert %{
-             data: %{
-               "getMovies" => [
-                 %{
-                   "actors" => %{
-                     "count" => 5,
-                     "edges" => [
-                       %{
-                         "node" => %{
-                           "name" => "Actor 1",
-                           "agents" => %{
-                             "count" => 4,
-                             "edges" => [
-                               %{
-                                 "cursor" => cursor,
-                                 "node" => %{
-                                   "name" => "Agent 1"
+      assert %{
+               data: %{
+                 "getMovies" => [
+                   %{
+                     "actors" => %{
+                       "count" => 5,
+                       "edges" => [
+                         %{
+                           "node" => %{
+                             "name" => "Actor 1",
+                             "agents" => %{
+                               "count" => 4,
+                               "edges" => [
+                                 %{
+                                   "cursor" => cursor,
+                                   "node" => %{
+                                     "name" => "Agent 1"
+                                   }
                                  }
-                               }
-                             ]
+                               ]
+                             }
                            }
                          }
-                       }
-                     ]
+                       ]
+                     }
                    }
-                 }
-               ]
-             }
-           } = result
+                 ]
+               }
+             } = result
 
-    resp =
-      Absinthe.run(document, AshGraphql.Test.Schema,
-        variables: %{"first" => 3, "after" => cursor}
-      )
+      resp =
+        Absinthe.run(document, AshGraphql.Test.Schema,
+          variables: %{"first" => 3, "after" => cursor}
+        )
 
-    assert {:ok, result} = resp
-    refute Map.has_key?(result, :errors)
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
 
-    assert %{
-             data: %{
-               "getMovies" => [
-                 %{
-                   "actors" => %{
-                     "count" => 5,
-                     "edges" => [
-                       %{
-                         "node" => %{
-                           "name" => "Actor 1",
-                           "agents" => %{
-                             "count" => 4,
-                             "edges" => edges
+      assert %{
+               data: %{
+                 "getMovies" => [
+                   %{
+                     "actors" => %{
+                       "count" => 5,
+                       "edges" => [
+                         %{
+                           "node" => %{
+                             "name" => "Actor 1",
+                             "agents" => %{
+                               "count" => 4,
+                               "edges" => edges
+                             }
                            }
                          }
-                       }
-                     ]
+                       ]
+                     }
+                   }
+                 ]
+               }
+             } = result
+
+      assert length(edges) == 3
+      assert [%{"node" => %{"name" => "Agent 2"}} | _] = edges
+    end
+
+    test "on return values for create mutations" do
+      actor1 = Ash.create!(AshGraphql.Test.Actor, %{name: "Actor 1"})
+      actor2 = Ash.create!(AshGraphql.Test.Actor, %{name: "Actor 2"})
+
+      document =
+        """
+        mutation CreateMovie($input: CreateMovieInput!, $first: Int, $after: String) {
+          createMovie(input: $input) {
+            result {
+              title
+              actors(first: $first, after: $after, sort: [{field: NAME}]) {
+                count
+                edges {
+                  cursor
+                  node {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+      variables = %{
+        "input" => %{"title" => "Movie 1", "actorIds" => [actor2.id, actor1.id]},
+        "first" => 1
+      }
+
+      resp = Absinthe.run(document, AshGraphql.Test.Schema, variables: variables)
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "createMovie" => %{
+                   "result" => %{
+                     "title" => "Movie 1",
+                     "actors" => %{
+                       "count" => 2,
+                       "edges" => [
+                         %{
+                           "cursor" => cursor,
+                           "node" => %{
+                             "name" => "Actor 1"
+                           }
+                         }
+                       ]
+                     }
                    }
                  }
-               ]
-             }
-           } = result
+               }
+             } = result
 
-    assert length(edges) == 3
-    assert [%{"node" => %{"name" => "Agent 2"}} | _] = edges
+      variables = %{
+        "input" => %{"title" => "Movie 2", "actorIds" => [actor2.id, actor1.id]},
+        "first" => 2,
+        "after" => cursor
+      }
+
+      resp = Absinthe.run(document, AshGraphql.Test.Schema, variables: variables)
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "createMovie" => %{
+                   "result" => %{
+                     "title" => "Movie 2",
+                     "actors" => %{
+                       "count" => 2,
+                       "edges" => [
+                         %{
+                           "node" => %{
+                             "name" => "Actor 2"
+                           }
+                         }
+                       ]
+                     }
+                   }
+                 }
+               }
+             } = result
+    end
+
+    test "on return values for update mutations" do
+      movie =
+        AshGraphql.Test.Movie
+        |> Ash.Changeset.for_create(:create, title: "Title")
+        |> Ash.create!()
+
+      for i <- 1..5 do
+        AshGraphql.Test.Actor
+        |> Ash.Changeset.for_create(:create, name: "Actor #{i}")
+        |> Ash.Changeset.manage_relationship(:movies, movie, type: :append)
+        |> Ash.create!()
+      end
+
+      document =
+        """
+        mutation UpdateMovie($id: ID!, $input: UpdateMovieInput!, $first: Int, $after: String) {
+          updateMovie(id: $id, input: $input) {
+            result {
+              title
+              actors(first: $first, after: $after, sort: [{field: NAME}]) {
+                count
+                edges {
+                  cursor
+                  node {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+      variables = %{"id" => movie.id, "input" => %{"title" => "Updated Title 1"}, "first" => 1}
+      resp = Absinthe.run(document, AshGraphql.Test.Schema, variables: variables)
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "updateMovie" => %{
+                   "result" => %{
+                     "title" => "Updated Title 1",
+                     "actors" => %{
+                       "count" => 5,
+                       "edges" => [
+                         %{
+                           "cursor" => cursor,
+                           "node" => %{
+                             "name" => "Actor 1"
+                           }
+                         }
+                       ]
+                     }
+                   }
+                 }
+               }
+             } = result
+
+      variables = %{
+        "id" => movie.id,
+        "input" => %{"title" => "Updated Title 2"},
+        "first" => 3,
+        "after" => cursor
+      }
+
+      resp = Absinthe.run(document, AshGraphql.Test.Schema, variables: variables)
+
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "updateMovie" => %{
+                   "result" => %{
+                     "title" => "Updated Title 2",
+                     "actors" => %{
+                       "count" => 5,
+                       "edges" => [
+                         %{
+                           "node" => %{
+                             "name" => "Actor 2"
+                           }
+                         },
+                         %{
+                           "node" => %{
+                             "name" => "Actor 3"
+                           }
+                         },
+                         %{
+                           "node" => %{
+                             "name" => "Actor 4"
+                           }
+                         }
+                       ]
+                     }
+                   }
+                 }
+               }
+             } = result
+    end
   end
 end
