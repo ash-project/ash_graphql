@@ -79,7 +79,15 @@ defmodule AshGraphql.Resource do
 
   defmodule Action do
     @moduledoc "Represents a configured generic action"
-    defstruct [:type, :name, :action, :resource, :description, :relay_id_translations, hide_inputs: []]
+    defstruct [
+      :type,
+      :name,
+      :action,
+      :resource,
+      :description,
+      :relay_id_translations,
+      hide_inputs: []
+    ]
   end
 
   @action %Spark.Dsl.Entity{
