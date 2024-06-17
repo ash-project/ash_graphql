@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.2.0](https://github.com/ash-project/ash_graphql/compare/v1.1.1...v1.2.0) (2024-06-17)
+
+
+
+
+### Features:
+
+* argument_input_types (#176)
+
+* argument_input_types
+
+### Bug Fixes:
+
+* better type handling around empty types
+
+* don't generate empty input objects for embeds
+
 ## [v1.1.1](https://github.com/ash-project/ash_graphql/compare/v1.1.0...v1.1.1) (2024-06-02)
 
 
