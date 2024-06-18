@@ -1937,7 +1937,21 @@ defmodule AshGraphql.Resource do
           "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}'s identity: #{identity}"
 
         field ->
-          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}.#{field.source.action}"
+          action =
+            case field.source.action do
+              %{name: name} -> name
+              name -> name
+            end
+            |> then(fn action ->
+              try do
+                to_string(action)
+              rescue
+                _ ->
+                  inspect(action)
+              end
+            end)
+
+          "#{inspect(format_type(field.field.type))} - from #{inspect(field.source.resource)}.#{action}"
       end)
       |> Enum.uniq()
 
