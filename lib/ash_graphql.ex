@@ -154,7 +154,7 @@ defmodule AshGraphql do
                 all_domains,
                 unquote(resources),
                 action_middleware,
-                __MODULE__,
+                unquote(schema),
                 unquote(relay_ids?)
               )
 
@@ -184,11 +184,31 @@ defmodule AshGraphql do
                 all_domains,
                 unquote(resources),
                 action_middleware,
-                __MODULE__,
+                unquote(schema),
                 unquote(relay_ids?)
               )
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
+              end)
+
+            managed_relationship_types =
+              AshGraphql.Resource.managed_relationship_definitions(
+                Process.get(:managed_relationship_requirements, []),
+                unquote(schema)
+              )
+              |> Enum.reject(fn type ->
+                existing_types =
+                  case blueprint_with_mutations do
+                    %{schema_definitions: [%{type_definitions: type_definitions}]} ->
+                      type_definitions
+
+                    _ ->
+                      []
+                  end
+
+                Enum.any?(existing_types, fn existing_type ->
+                  existing_type.name == type.name
+                end)
               end)
 
             domains = unquote(Enum.map(domains, &elem(&1, 0)))
@@ -262,7 +282,9 @@ defmodule AshGraphql do
               List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
                 %{
                   schema_def
-                  | type_definitions: schema_def.type_definitions ++ type_definitions
+                  | type_definitions:
+                      schema_def.type_definitions ++
+                        type_definitions ++ managed_relationship_types
                 }
               end)
 

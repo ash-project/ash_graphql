@@ -1221,6 +1221,15 @@ defmodule AshGraphql.Resource do
             managed = AshGraphql.Resource.Info.managed_relationship(resource, action, argument)
 
             if managed do
+              current = Process.get(:managed_relationship_requirements, [])
+
+              Process.put(
+                :managed_relationship_requirements,
+                [
+                  {resource, managed, action, argument} | current
+                ]
+              )
+
               type =
                 if managed.type_name do
                   managed.type_name
@@ -1779,46 +1788,30 @@ defmodule AshGraphql.Resource do
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_type_definitions(resource, schema)) ++
-      enum_definitions(resource, schema, __ENV__) ++
-      managed_relationship_definitions(resource, schema)
+      enum_definitions(resource, schema, __ENV__)
   end
 
   def no_graphql_types(resource, schema) do
-    enum_definitions(resource, schema, __ENV__) ++
-      managed_relationship_definitions(resource, schema)
+    enum_definitions(resource, schema, __ENV__)
   end
 
-  defp managed_relationship_definitions(resource, schema) do
-    resource
-    |> Ash.Resource.Info.actions()
-    |> Enum.flat_map(fn action ->
-      action.arguments
-      |> Enum.flat_map(fn argument ->
-        case AshGraphql.Resource.Info.managed_relationship(resource, action, argument) do
-          nil ->
-            []
+  def managed_relationship_definitions(used, schema) do
+    Enum.map(used, fn {resource, managed_relationship, action, argument} ->
+      opts =
+        find_manage_change(argument, action, resource) ||
+          raise """
+          There is no corresponding `change manage_change(...)` for the given argument and action
+          combination.
+          """
 
-          managed_relationship ->
-            [{managed_relationship, argument, action}]
-        end
-      end)
-      |> Enum.map(fn {managed_relationship, argument, action} ->
-        opts =
-          find_manage_change(argument, action, resource) ||
-            raise """
-            There is no corresponding `change manage_change(...)` for the given argument and action
-            combination.
-            """
-
-        managed_relationship_input(
-          resource,
-          action,
-          opts,
-          argument,
-          managed_relationship,
-          schema
-        )
-      end)
+      managed_relationship_input(
+        resource,
+        action,
+        opts,
+        argument,
+        managed_relationship,
+        schema
+      )
     end)
   end
 
