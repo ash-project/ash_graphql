@@ -1280,7 +1280,7 @@ defmodule AshGraphql.Graphql.Resolver do
                           to_errors(
                             [
                               Ash.Error.Query.NotFound.exception(
-                                primary_key: Map.new(filter),
+                                primary_key: Map.new(filter || []),
                                 resource: resource
                               )
                             ],
@@ -1292,7 +1292,7 @@ defmodule AshGraphql.Graphql.Resolver do
                        query,
                        {:error,
                         Ash.Error.Query.NotFound.exception(
-                          primary_key: Map.new(filter),
+                          primary_key: Map.new(filter || []),
                           resource: resource
                         )}
                      ]}
@@ -1445,7 +1445,7 @@ defmodule AshGraphql.Graphql.Resolver do
                           to_errors(
                             [
                               Ash.Error.Query.NotFound.exception(
-                                primary_key: Map.new(filter),
+                                primary_key: Map.new(filter || []),
                                 resource: resource
                               )
                             ],
@@ -1457,7 +1457,7 @@ defmodule AshGraphql.Graphql.Resolver do
                        query,
                        {:error,
                         Ash.Error.Query.NotFound.exception(
-                          primary_key: Map.new(filter),
+                          primary_key: Map.new(filter || []),
                           resource: resource
                         )}
                      ]}
