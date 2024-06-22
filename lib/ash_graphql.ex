@@ -196,6 +196,7 @@ defmodule AshGraphql do
                 Process.get(:managed_relationship_requirements, []),
                 unquote(schema)
               )
+              |> Enum.uniq_by(& &1.identifier)
               |> Enum.reject(fn type ->
                 existing_types =
                   case blueprint_with_mutations do
@@ -207,7 +208,7 @@ defmodule AshGraphql do
                   end
 
                 Enum.any?(existing_types, fn existing_type ->
-                  existing_type.name == type.name
+                  existing_type.identifier == type.identifier
                 end)
               end)
 
