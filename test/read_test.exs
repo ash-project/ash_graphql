@@ -101,7 +101,7 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"currentUserWithMetadata" => %{"bar" => "bar"}}} = result
   end
 
-  test "forbidden fields shows errors for just the forbidden field" do
+  test "forbidden fields show errors for just the forbidden field" do
     user =
       AshGraphql.Test.User
       |> Ash.Changeset.for_create(:create,
