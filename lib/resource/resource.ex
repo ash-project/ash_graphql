@@ -1781,8 +1781,7 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def type_definitions(resource, domain, all_domains, schema, relay_ids?) do
-    List.wrap(calculation_input(resource, schema)) ++
-      List.wrap(type_definition(resource, domain, all_domains, schema, relay_ids?)) ++
+    List.wrap(type_definition(resource, domain, all_domains, schema, relay_ids?)) ++
       List.wrap(query_type_definitions(resource, domain, all_domains, schema, relay_ids?)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
@@ -2242,7 +2241,9 @@ defmodule AshGraphql.Resource do
   end
 
   defp filter_field_types(resource, schema) do
-    filter_attribute_types(resource, schema) ++ filter_aggregate_types(resource, schema)
+    filter_attribute_types(resource, schema) ++
+      filter_aggregate_types(resource, schema) ++
+      List.wrap(calculation_filter_inputs(resource, schema))
   end
 
   defp filter_attribute_types(resource, schema) do
@@ -2563,7 +2564,7 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp calculation_input(resource, schema) do
+  defp calculation_filter_inputs(resource, schema) do
     resource
     |> Ash.Resource.Info.public_calculations()
     |> Enum.flat_map(fn %{calculation: {module, _}} = calculation ->
@@ -2772,6 +2773,59 @@ defmodule AshGraphql.Resource do
   end
 
   defp filterable?(_, _), do: false
+
+  defp sortable?(%Ash.Resource.Aggregate{} = aggregate, resource) do
+    attribute =
+      with field when not is_nil(field) <- aggregate.field,
+           related when not is_nil(related) <-
+             Ash.Resource.Info.related(resource, aggregate.relationship_path),
+           attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
+        attr
+      end
+
+    field_type =
+      if attribute do
+        attribute.type
+      end
+
+    field_constraints =
+      if attribute do
+        attribute.constraints
+      end
+
+    {:ok, type, constraints} =
+      Aggregate.kind_to_type(aggregate.kind, field_type, field_constraints)
+
+    sortable?(
+      %Ash.Resource.Attribute{name: aggregate.name, type: type, constraints: constraints},
+      resource
+    )
+  end
+
+  defp sortable?(%{type: {:array, _}}, _), do: false
+  defp sortable?(%{sortable?: false}, _), do: false
+  defp sortable?(%{type: Ash.Type.Union}, _), do: false
+
+  defp sortable?(%Ash.Resource.Calculation{type: type, calculation: {module, _opts}}, _) do
+    !embedded?(type) && function_exported?(module, :expression, 2)
+  end
+
+  defp sortable?(%{type: type} = attribute, resource) do
+    if Ash.Type.NewType.new_type?(type) do
+      sortable?(
+        %{
+          attribute
+          | constraints: Ash.Type.NewType.constraints(type, attribute.constraints),
+            type: Ash.Type.NewType.subtype_of(type)
+        },
+        resource
+      )
+    else
+      !embedded?(type)
+    end
+  end
+
+  defp sortable?(_, _), do: false
 
   defp relationship_filter_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
@@ -3298,7 +3352,7 @@ defmodule AshGraphql.Resource do
     |> Enum.concat(Ash.Resource.Info.public_calculations(resource))
     |> Enum.concat(Ash.Resource.Info.public_aggregates(resource))
     |> Enum.filter(
-      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && sortable?(&1, resource))
     )
     |> Enum.map(& &1.name)
     |> Enum.uniq()
