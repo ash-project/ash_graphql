@@ -15,13 +15,12 @@ defmodule AshGraphql.Resource.Transformers.Subscription do
       _ ->
         {:ok,
          dsl
-         |> Transformer.set_option(
-           [:resource],
+         |> Transformer.persist(
            :simple_notifiers,
            [
              AshGraphql.Resource.Subscription.Notifier
            ] ++
-             Transformer.get_option(dsl, [:resource], :simple_notifiers, [])
+             Transformer.get_persisted(dsl, :simple_notifiers, [])
          )}
     end
   end
