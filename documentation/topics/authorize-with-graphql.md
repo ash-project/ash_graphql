@@ -84,3 +84,21 @@ config :ash_graphql, :policies, show_policy_breakdowns?: true
 ```
 
 Be careful, as this can be an attack vector in some systems (i.e "here is exactly what you need to make true to do what you want to do").
+
+## Field Policies
+
+Field policies in AshGraphql work by producing a `null` value for any forbidden field, as well as an error in the errors list.
+
+> ### nullability {: .warning}
+>
+> Any fields with field policies on them should be nullable. If they are not nullable, the _parent_ object will also be `null` (and considered in an error state), because `null` is not a valid type for that field.
+
+To make fields as nullable even if it is not nullable by its definition, use the `nullable_fields` option.
+
+```elixir
+graphql do
+  type :post
+
+  nullable_fields [:foo, :bar, :baz]
+end
+```

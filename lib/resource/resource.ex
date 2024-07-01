@@ -396,6 +396,11 @@ defmodule AshGraphql.Resource do
         required: false,
         doc:
           "A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created."
+      ],
+      nullable_fields: [
+        type: {:wrap_list, :atom},
+        doc:
+          "Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more."
       ]
     ],
     sections: [
@@ -3728,7 +3733,9 @@ defmodule AshGraphql.Resource do
         field_type =
           attribute.type
           |> field_type(attribute, resource)
-          |> maybe_wrap_non_null(not attribute.allow_nil?)
+          |> maybe_wrap_non_null(
+            not (nullable_field?(resource, attribute.name) or attribute.allow_nil?)
+          )
 
         name = attribute_names[attribute.name] || attribute.name
 
@@ -3868,7 +3875,9 @@ defmodule AshGraphql.Resource do
         type =
           relationship.destination
           |> AshGraphql.Resource.Info.type()
-          |> maybe_wrap_non_null(!relationship.allow_nil?)
+          |> maybe_wrap_non_null(
+            not (nullable_field?(resource, relationship.name) or relationship.allow_nil?)
+          )
 
         read_action =
           if relationship.read_action do
@@ -3905,7 +3914,7 @@ defmodule AshGraphql.Resource do
         pagination_strategy =
           relationship_pagination_strategy(resource, relationship.name, read_action)
 
-        query_type = related_list_type(pagination_strategy, type)
+        query_type = related_list_type(pagination_strategy, type, resource, relationship)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: relationship.name,
@@ -3931,29 +3940,63 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp related_list_type(nil, type) do
-    %Absinthe.Blueprint.TypeReference.NonNull{
-      of_type: %Absinthe.Blueprint.TypeReference.List{
-        of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: type
-        }
+  defp related_list_type(nil, type, resource, relationship) do
+    inner_type = %Absinthe.Blueprint.TypeReference.List{
+      of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: type
       }
     }
+
+    if nullable_field?(resource, relationship.name) do
+      inner_type
+    else
+      %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: inner_type
+      }
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp related_list_type(:relay, type) do
-    String.to_atom("#{type}_connection")
+  defp related_list_type(:relay, type, resource, relationship) do
+    inner_type = String.to_atom("#{type}_connection")
+
+    if nullable_field?(resource, relationship.name) do
+      inner_type
+    else
+      %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: inner_type
+      }
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp related_list_type(:keyset, type) do
-    String.to_atom("keyset_page_of_#{type}")
+  defp related_list_type(:keyset, type, resource, relationship) do
+    inner_type = String.to_atom("keyset_page_of_#{type}")
+
+    if nullable_field?(resource, relationship.name) do
+      inner_type
+    else
+      %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: inner_type
+      }
+    end
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp related_list_type(:offset, type) do
-    String.to_atom("page_of_#{type}")
+  defp related_list_type(:offset, type, resource, relationship) do
+    inner_type = String.to_atom("page_of_#{type}")
+
+    if nullable_field?(resource, relationship.name) do
+      inner_type
+    else
+      %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: inner_type
+      }
+    end
+  end
+
+  defp nullable_field?(resource, field) do
+    field in AshGraphql.Resource.Info.nullable_fields(resource)
   end
 
   defp aggregates(resource, domain, schema) do
@@ -3982,7 +4025,8 @@ defmodule AshGraphql.Resource do
       attribute = field || Map.put(aggregate, :constraints, constraints)
 
       type =
-        if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) do
+        if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) ||
+             nullable_field?(resource, attribute.name) do
           resource =
             if field do
               Ash.Resource.Info.related(resource, aggregate.relationship_path)
@@ -4070,7 +4114,9 @@ defmodule AshGraphql.Resource do
     calculation.type
     |> Ash.Type.get_type()
     |> field_type(calculation, resource)
-    |> maybe_wrap_non_null(not calculation.allow_nil?)
+    |> maybe_wrap_non_null(
+      not (nullable_field?(resource, calculation.name) or calculation.allow_nil?)
+    )
   end
 
   defp calculation_args(calculation, resource, schema) do

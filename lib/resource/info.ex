@@ -115,6 +115,11 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :attribute_types, [])
   end
 
+  @doc "Graphql nullability overrides for the resource"
+  def nullable_fields(resource) do
+    Extension.get_opt(resource, [:graphql], :nullable_fields, [])
+  end
+
   @doc "The field name to place the keyset of a result in"
   def keyset_field(resource) do
     Extension.get_opt(resource, [:graphql], :keyset_field, nil)

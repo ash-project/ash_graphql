@@ -10,6 +10,8 @@ defmodule AshGraphql.Test.User do
   graphql do
     type :user
 
+    nullable_fields([:secret])
+
     queries do
       read_one(:current_user, :current_user)
 
