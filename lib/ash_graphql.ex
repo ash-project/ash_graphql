@@ -207,22 +207,15 @@ defmodule AshGraphql do
               )
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
-
-                blueprint_with_subscriptions =
-                  api
-                  |> AshGraphql.Api.subscriptions(
-                    unquote(resources),
-                    action_middleware,
-                    __MODULE__
-                  )
-                  |> Enum.reduce(blueprint_with_queries, fn subscription, blueprint ->
-                    Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", mutation)
-                  end)
               end)
 
             blueprint_with_subscriptions =
-              api
-              |> AshGraphql.Api.subscriptions(unquote(resources), action_middleware, __MODULE__)
+              domain
+              |> AshGraphql.Domain.subscriptions(
+                unquote(resources),
+                action_middleware,
+                __MODULE__
+              )
               |> Enum.reduce(blueprint_with_mutations, fn subscription, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", subscription)
               end)
