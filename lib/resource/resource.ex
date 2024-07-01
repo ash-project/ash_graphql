@@ -4160,7 +4160,7 @@ defmodule AshGraphql.Resource do
         else
           if Spark.implements_behaviour?(type, Ash.Type.Enum) do
             if function_exported?(type, :graphql_type, 1) do
-              type.graphql_type(attribute.constraints)
+              type.graphql_type(constraints)
             else
               :string
             end
