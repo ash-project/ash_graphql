@@ -2,7 +2,7 @@ defmodule AshGraphql.Resource do
   alias Ash.Changeset.ManagedRelationshipHelpers
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
-  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query}
+  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query, Subscription}
 
   @get %Spark.Dsl.Entity{
     name: :get,
@@ -272,6 +272,41 @@ defmodule AshGraphql.Resource do
 
   def mutations, do: [@create, @update, @destroy, @action]
 
+  @subscribe %Spark.Dsl.Entity{
+    name: :subscribe,
+    args: [:name],
+    describe: "A query to fetch a record by primary key",
+    examples: [
+      "get :get_post, :read"
+    ],
+    schema: Subscription.schema(),
+    target: Subscription
+  }
+
+  @subscriptions %Spark.Dsl.Section{
+    name: :subscriptions,
+    schema: [
+      pubsub: [
+        type: :module,
+        required: true,
+        doc: "The pubsub module to use for the subscription"
+      ]
+    ],
+    describe: """
+    Subscriptions (notifications) to expose for the resource.
+    """,
+    examples: [
+      """
+      subscriptions do
+        subscribe :subscription_name, fn notifications -> ... end
+      end
+      """
+    ],
+    entities: [
+      @subscribe
+    ]
+  }
+
   @graphql %Spark.Dsl.Section{
     name: :graphql,
     imports: [AshGraphql.Resource.Helpers],
@@ -406,6 +441,7 @@ defmodule AshGraphql.Resource do
     sections: [
       @queries,
       @mutations,
+      @subscriptions,
       @managed_relationships
     ]
   }
@@ -413,7 +449,8 @@ defmodule AshGraphql.Resource do
   @transformers [
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
-    AshGraphql.Resource.Transformers.ValidateCompatibleNames
+    AshGraphql.Resource.Transformers.ValidateCompatibleNames,
+    AshGraphql.Resource.Transformers.Subscription
   ]
 
   @verifiers [
@@ -435,6 +472,9 @@ defmodule AshGraphql.Resource do
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
   defdelegate mutations(resource, domain \\ []), to: AshGraphql.Resource.Info
+
+  @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
+  defdelegate subscriptions(resource), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.managed_relationships/1`"
   defdelegate managed_relationships(resource), to: AshGraphql.Resource.Info
@@ -1078,6 +1118,36 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
+  @doc false
+  def subscriptions(api, resource, action_middleware, schema) do
+    resource
+    |> subscriptions()
+    |> Enum.map(fn %Subscription{name: name} = subscription ->
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        arguments:
+          args(:subscription, resource, nil, schema, nil)
+          |> IO.inspect(label: "args"),
+        identifier: name,
+        name: to_string(name),
+        config:
+          AshGraphql.Resource.Subscription.DefaultConfig.create_config(
+            subscription,
+            api,
+            resource
+          ),
+        module: schema,
+        middleware:
+          action_middleware ++
+            [
+              {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, subscription, true}}
+            ],
+        type: AshGraphql.Resource.Info.type(resource),
+        __reference__: ref(__ENV__)
+      }
+    end)
+  end
+
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
   def embedded_type_input(source_resource, attribute, resource, schema) do
@@ -1597,6 +1667,28 @@ defmodule AshGraphql.Resource do
 
   defp args(:one_related, resource, action, schema, _identity, hide_inputs, _) do
     read_args(resource, action, schema, hide_inputs)
+  end
+
+  defp args(:subscription, resource, _action, schema, _identity, _hide_inputs, _query) do
+    if AshGraphql.Resource.Info.derive_filter?(resource) do
+      case resource_filter_fields(resource, schema) do
+        [] ->
+          []
+
+        _ ->
+          [
+            %Absinthe.Blueprint.Schema.InputValueDefinition{
+              name: "filter",
+              identifier: :filter,
+              type: resource_filter_type(resource),
+              description: "A filter to limit the results",
+              __reference__: ref(__ENV__)
+            }
+          ]
+      end
+    else
+      []
+    end
   end
 
   defp related_list_args(resource, related_resource, relationship_name, action, schema) do

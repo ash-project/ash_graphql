@@ -3,6 +3,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   require Logger
   import Ash.Expr
+  require Ash.Query
   import AshGraphql.TraceHelpers
   import AshGraphql.ContextHelpers
 
@@ -503,6 +504,33 @@ defmodule AshGraphql.Graphql.Resolver do
       else
         something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
+  end
+
+  def resolve(
+        %{arguments: arguments, context: context, root_value: data} = resolution,
+        {api, resource, %AshGraphql.Resource.Subscription{}, _input?}
+      ) do
+    query =
+      AshGraphql.Subscription.query_for_subscription(
+        resource
+        |> Ash.Query.new(),
+        api,
+        resolution
+      )
+
+    query =
+      Ash.Resource.Info.primary_key(resource)
+      |> Enum.reduce(query, fn key, query ->
+        value = Map.get(data, key)
+        Ash.Query.filter(query, ^ref(key) == ^value)
+      end)
+
+    result =
+      query
+      |> api.read_one(actor: resolution.context[:current_user])
+
+    resolution
+    |> Absinthe.Resolution.put_result(result)
   end
 
   defp read_one_query(resource, args) do
