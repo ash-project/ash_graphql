@@ -371,11 +371,11 @@ defmodule AshGraphql.Test.Post do
     end
 
     read :best_post do
-      manual fn query, _, _ ->
+      manual(fn query, _, _ ->
         __MODULE__
         |> Ash.Query.filter(best == true)
         |> Ash.read()
-      end
+      end)
     end
 
     read :best_post_arg do

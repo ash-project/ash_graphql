@@ -24,6 +24,11 @@ defmodule AshGraphql.Test.User do
     mutations do
       create :create_user, :create
 
+      update :authenticate_with_token, :authenticate_with_token do
+        identity false
+        read_action :get_by_token
+      end
+
       destroy :delete_current_user, :destroy_current_user do
         identity false
       end
@@ -51,6 +56,39 @@ defmodule AshGraphql.Test.User do
              Ash.Resource.put_metadata(result, :foo, "bar")
            end)}
         end)
+      end)
+    end
+
+    update :authenticate_with_token do
+      require_atomic?(false)
+      metadata(:jwt, :string, allow_nil?: false)
+
+      change(fn changeset, _struct ->
+        changeset
+        |> Ash.Changeset.after_action(fn changeset, customer ->
+          {:ok, Ash.Resource.put_metadata(customer, :jwt, "dummy-jwt")}
+        end)
+      end)
+    end
+
+    read :get_by_token do
+      get?(true)
+      argument(:token, :string, allow_nil?: false)
+
+      prepare(fn query, _ ->
+        token = query.arguments.token
+
+        case token do
+          "valid-" <> _ ->
+            # For testing, we'll allow this action to return whatever customer is found
+            query
+
+          _ ->
+            Ash.Query.after_action(query, fn _query, _results ->
+              error = %Ash.Error.Query.InvalidQuery{message: "test error"}
+              {:error, error}
+            end)
+        end
       end)
     end
 
