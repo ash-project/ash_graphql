@@ -365,7 +365,8 @@ defmodule AshGraphql.UpdateTest do
   end
 
   test "authenticateWithToken" do
-    _user = AshGraphql.Test.User
+    _user =
+      AshGraphql.Test.User
       |> Ash.Changeset.for_create(:create, %{name: "Name"})
       |> Ash.create!(authorize?: false)
 
@@ -384,7 +385,14 @@ defmodule AshGraphql.UpdateTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema, variables: %{"token" => "invalid-token"})
 
-
-    assert {:ok, %{data: %{"authenticateWithToken" => %{"errors" => [%{"message" => "test error"}], "result" => nil}}}} = resp
+    assert {:ok,
+            %{
+              data: %{
+                "authenticateWithToken" => %{
+                  "errors" => [%{"message" => "test error"}],
+                  "result" => nil
+                }
+              }
+            }} = resp
   end
 end

@@ -69,6 +69,7 @@ end
 | [`depth_limit`](#graphql-depth_limit){: #graphql-depth_limit } | `integer` |  | A simple way to prevent massive queries. |
 | [`generate_object?`](#graphql-generate_object?){: #graphql-generate_object? } | `boolean` | `true` | Whether or not to create the GraphQL object, this allows you to manually create the GraphQL object. |
 | [`filterable_fields`](#graphql-filterable_fields){: #graphql-filterable_fields } | `list(atom)` |  | A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created. |
+| [`nullable_fields`](#graphql-nullable_fields){: #graphql-nullable_fields } | `atom \| list(atom)` |  | Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more. |
 
 
 ## graphql.queries
