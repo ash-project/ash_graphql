@@ -16,6 +16,17 @@ mix igniter.install ash_graphql
 
 ### Manual
 
+#### Bring in the `ash_graphql` dependency
+
+```elixir
+def deps()
+  [
+    ...
+    {:ash_graphql, "~> 1.2.0"}
+  ]
+end
+```
+
 #### Setting up your schema
 
 If you don't have an absinthe schema, you can create one just for ash. Replace `helpdesk` in the examples with your own application name.
@@ -102,18 +113,6 @@ forward "/playground",
 ```
 
 For information on why we are using `Module.concat/1`, see the note above in the Phoenix section.
-
-
-#### Bring in the `ash_graphql` dependency
-
-```elixir
-def deps()
-  [
-    ...
-    {:ash_graphql, "~> 1.2.0"}
-  ]
-end
-```
 
 <!-- tabs-close -->
 
