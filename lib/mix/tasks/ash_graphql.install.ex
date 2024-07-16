@@ -48,14 +48,14 @@ defmodule Mix.Tasks.AshGraphql.Install do
           """
             pipe_through [:graphql]
 
-            forward "/",
-              Absinthe.Plug,
-              schema: Module.concat(["#{inspect(schema_name)}"])
-
             forward "/playground",
                     Absinthe.Plug.GraphiQL,
                     schema: Module.concat(["#{inspect(schema_name)}"]),
                     interface: :playground
+
+            forward "/",
+              Absinthe.Plug,
+              schema: Module.concat(["#{inspect(schema_name)}"])
           """,
           router: router
         )
