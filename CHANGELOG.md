@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.2.1](https://github.com/ash-project/ash_graphql/compare/v1.2.0...v1.2.1) (2024-07-18)
+
+
+
+
+### Bug Fixes:
+
+* upgrade ash dependency for bulk action bug fix
+
+* use checked constraints (#187)
+
+* don't assume `filter` is non-nil for gets
+
+* properly interpolate action in conflict messages
+
+* add resource query to action struct (#178)
+
+### Improvements:
+
+* add extension installation code
+
+* add igniter-backed installer
+
+* add `nullable_fields?` for easily marking fields as nullable
+
+* only define `managed_relationship` mutations when necessary
+
 ## [v1.2.0](https://github.com/ash-project/ash_graphql/compare/v1.1.1...v1.2.0) (2024-06-17)
 
 

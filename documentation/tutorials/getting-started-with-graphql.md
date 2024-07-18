@@ -22,7 +22,7 @@ mix igniter.install ash_graphql
 def deps()
   [
     ...
-    {:ash_graphql, "~> 1.2.0"}
+    {:ash_graphql, "~> 1.2.1"}
   ]
 end
 ```
