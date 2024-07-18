@@ -100,14 +100,17 @@ defmodule AshGraphql.Igniter do
 
     placeholder_query =
       unless any_queries? do
+        ~S'''
+        @desc """
+        Hello! This is a sample query to verify that AshGraphql has been set up correctly.
+        Remove me once you have a query of your own!
         """
-        @desc "Remove me once you have a query of your own!"
-        field :remove_me, :string do
+        field :say_hello, :string do
           resolve fn _, _, _ ->
-            {:ok, "Remove me!"}
+            {:ok, "Hello from AshGraphql!"}
           end
         end
-        """
+        '''
       end
 
     igniter
@@ -118,12 +121,12 @@ defmodule AshGraphql.Igniter do
       use AshGraphql, domains: #{inspect(domains)}
 
       query do
-        # Custom absinthe queries can be placed here
+        # Custom Absinthe queries can be placed here
         #{placeholder_query}
       end
 
       mutation do
-        # Custom absinthe mutations can be placed here
+        # Custom Absinthe mutations can be placed here
       end
       """,
       fn zipper ->
@@ -141,10 +144,10 @@ defmodule AshGraphql.Igniter do
       {igniter, nil} ->
         igniter
         |> Igniter.add_warning("""
-        No Phoenix router found, skipping phoenix installation.
+        No Phoenix router found, skipping Phoenix installation.
 
-        See the getting started guide for instructions on installing AshGraphql with `plug`.
-        If you have yet to set up phoenix, you'll have to do that manually and then rerun this installer.
+        See the Getting Started guide for instructions on installing AshGraphql with `plug`.
+        If you have yet to set up Phoenix, you'll have to do that manually and then rerun this installer.
         """)
 
       {igniter, router} ->
