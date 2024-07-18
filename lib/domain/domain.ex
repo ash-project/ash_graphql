@@ -122,6 +122,58 @@ defmodule AshGraphql.Domain do
       AshGraphql.Domain.Transformers.ValidateCompatibleNames
     ]
 
+  def install(igniter, module, Ash.Domain, _path, _argv) do
+    igniter
+    |> Spark.Igniter.add_extension(
+      module,
+      Ash.Domain,
+      :extensions,
+      AshGraphql.Domain
+    )
+    |> add_to_graphql_schema(module)
+  end
+
+  defp add_to_graphql_schema(igniter, domain) do
+    case AshGraphql.Igniter.find_schema(igniter, domain) do
+      {:ok, igniter, _} ->
+        igniter
+
+      {:error, igniter, []} ->
+        AshGraphql.Igniter.setup_absinthe_schema(igniter)
+
+      {:error, igniter, all_schemas} ->
+        schema =
+          case all_schemas do
+            [schema] ->
+              schema
+
+            schemas ->
+              Owl.IO.select(
+                schemas,
+                label: "Multiple Ash.Graphql modules found. Please select one to use:",
+                render_as: &inspect/1
+              )
+          end
+
+        Igniter.Code.Module.find_and_update_module!(igniter, schema, fn zipper ->
+          with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, AshGraphql),
+               {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+               {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :domains),
+               {:ok, zipper} <- Igniter.Code.List.append_to_list(zipper, domain) do
+            {:ok, zipper}
+          else
+            _ ->
+              {:warning,
+               """
+               Could not add #{inspect(domain)} to the list of domains in #{inspect(schema)}.
+
+               Please make that change manually.
+               """}
+          end
+        end)
+    end
+  end
+
   @deprecated "See `AshGraphql.Domain.Info.authorize?/1`"
   defdelegate authorize?(domain), to: AshGraphql.Domain.Info
 

@@ -452,6 +452,34 @@ defmodule AshGraphql.Resource do
     %{module: __MODULE__, location: %{file: env.file, line: env.line}}
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
+  def install(igniter, module, Ash.Resource, _path, _argv) do
+    type =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Macro.underscore()
+      |> String.to_atom()
+
+    igniter =
+      case Ash.Resource.Igniter.domain(igniter, module) do
+        {:ok, igniter, domain} ->
+          AshGraphql.Domain.install(igniter, domain, Ash.Domain, nil, nil)
+
+        {:error, igniter} ->
+          igniter
+      end
+
+    igniter
+    |> Spark.Igniter.add_extension(
+      module,
+      Ash.Resource,
+      :extensions,
+      AshGraphql.Resource
+    )
+    |> Spark.Igniter.set_option(module, [:graphql, :type], type)
+  end
+
   def encode_id(record, relay_ids?) do
     if relay_ids? do
       encode_relay_id(record)
