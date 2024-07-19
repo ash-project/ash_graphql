@@ -16,6 +16,9 @@ defmodule AshGraphql.Resource.Verifiers.RequirePkeyDelimiter do
         |> Enum.filter(& &1.primary_key?)
 
       case primary_key do
+        [] ->
+          :ok
+
         [_single] ->
           :ok
 
