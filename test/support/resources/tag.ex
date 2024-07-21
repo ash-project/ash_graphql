@@ -9,6 +9,8 @@ defmodule AshGraphql.Test.Tag do
   graphql do
     type(:tag)
 
+    filterable_fields [:name]
+
     queries do
       get :get_tag, :read
       list :get_tags, :read

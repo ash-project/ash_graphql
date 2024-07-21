@@ -190,9 +190,9 @@ defmodule AshGraphql.Resource.Info do
   end
 
   @doc "May the specified field be filtered on?"
-  def filterable_field?(resource, field) do
+  def filterable_field?(resource, field_name) do
     filterable_fields = AshGraphql.Resource.Info.filterable_fields(resource)
 
-    is_nil(filterable_fields) or field.name in filterable_fields
+    is_nil(filterable_fields) or field_name in filterable_fields
   end
 end
