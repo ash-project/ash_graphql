@@ -80,3 +80,35 @@ defmodule AshGraphql.DefaultErrorHandler do
   end
 end
 ```
+
+## Custom Errors
+
+If you created your own Errors as described in the [Ash Docs](https://hexdocs.pm/ash/error-handling.html#using-a-custom-exception) you also need to implement
+the protocol for it to be displayed in the Api.
+
+```elixir
+defmodule Ash.Error.Action.InvalidArgument do
+  @moduledoc "Used when an invalid value is provided for an action argument"
+  use Splode.Error, fields: [:field, :message, :value], class: :invalid
+
+  def message(error) do
+    """
+    Invalid value provided#{for_field(error)}#{do_message(error)}
+
+    #{inspect(error.value)}
+    """
+  end
+  
+  defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidArgument do
+    def to_error(error) do
+      %{
+        message: error.message,
+        short_message: error.message,
+        code: "invalid_argument",
+        vars: Map.new(error.vars),
+        fields: [error.field]
+      }
+    end
+  end
+end
+```
