@@ -4391,6 +4391,8 @@ defmodule AshGraphql.Resource do
     type || get_specific_field_type(Ash.Type.Map, %{constraints: constraints}, resource, input?)
   end
 
+  defp get_specific_field_type(Ash.Type.File, _, _, _), do: :upload
+
   defp get_specific_field_type(type, attribute, resource, _) do
     raise """
     Could not determine graphql field type for #{inspect(type)} on #{inspect(resource)}.#{attribute.name}
