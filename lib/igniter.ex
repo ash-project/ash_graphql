@@ -120,6 +120,8 @@ defmodule AshGraphql.Igniter do
       use Absinthe.Schema
       use AshGraphql, domains: #{inspect(domains)}
 
+      import_types Absinthe.Plug.Types
+
       query do
         # Custom Absinthe queries can be placed here
         #{placeholder_query}
@@ -152,6 +154,7 @@ defmodule AshGraphql.Igniter do
 
       {igniter, router} ->
         igniter
+        |> update_endpoints(router)
         |> Igniter.Libs.Phoenix.add_pipeline(:graphql, "plug AshGraphql.Plug", router: router)
         |> Igniter.Libs.Phoenix.add_scope(
           "/gql",
@@ -177,5 +180,67 @@ defmodule AshGraphql.Igniter do
     Igniter.Code.Module.find_all_matching_modules(igniter, fn _name, zipper ->
       match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, AshGraphql))
     end)
+  end
+
+  defp update_endpoints(igniter, router) do
+    {igniter, endpoints_that_need_parser} =
+      Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
+
+    Enum.reduce(endpoints_that_need_parser, igniter, fn endpoint, igniter ->
+      Igniter.Code.Module.find_and_update_module!(igniter, endpoint, fn zipper ->
+        case Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :plug,
+               2,
+               &Igniter.Code.Function.argument_equals?(&1, 0, Plug.Parsers)
+             ) do
+          {:ok, zipper} ->
+            with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+                 {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :parsers),
+                 {:ok, zipper} <-
+                   Igniter.Code.List.append_new_to_list(zipper, Absinthe.Plug.Parser) do
+              {:ok, zipper}
+            else
+              _ ->
+                {:warning,
+                 "Could not add `Absinthe.Plug.Parser` to parsers in endpoint #{endpoint}. Please make this change manually."}
+            end
+
+          :error ->
+            case parser_location(zipper) do
+              {:ok, zipper} ->
+                {:ok,
+                 Igniter.Code.Common.add_code(zipper, """
+                 plug Plug.Parsers,
+                   parsers: [:urlencoded, :multipart, :json, Absinthe.Plug.Parser],
+                   pass: ["*/*"],
+                   json_decoder: Jason
+                 """)}
+
+              _ ->
+                {:warning,
+                 "Could not add `Absinthe.Plug.Parser` to parsers in endpoint #{endpoint}. Please make this change manually."}
+            end
+        end
+      end)
+    end)
+  end
+
+  defp parser_location(zipper) do
+    with :error <-
+           Igniter.Code.Function.move_to_function_call_in_current_scope(
+             zipper,
+             :plug,
+             [1, 2],
+             &Igniter.Code.Function.argument_equals?(&1, 0, Plug.Telemetry)
+           ),
+         :error <-
+           Igniter.Code.Function.move_to_function_call_in_current_scope(
+             zipper,
+             :plug,
+             [1, 2]
+           ) do
+      Igniter.Code.Module.move_to_use(zipper, Phoenix.Endpoint)
+    end
   end
 end
