@@ -102,6 +102,8 @@ defmodule AshGraphql do
       ash_resources = @ash_resources
       @all_domains Enum.map(domains, &elem(&1, 0))
 
+      Enum.each(ash_resources, &Code.ensure_compiled!/1)
+
       schema = __MODULE__
       schema_env = __ENV__
 
