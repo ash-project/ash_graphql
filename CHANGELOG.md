@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.3.0](https://github.com/ash-project/ash_graphql/compare/v1.2.1...v1.3.0) (2024-08-01)
+
+
+
+
+### Features:
+
+* `Ash.Type.File` compatibility (#202)
+
+### Bug Fixes:
+
+* try to resolve compilation issues w/ `Code.ensure_compiled!`
+
 ## [v1.2.1](https://github.com/ash-project/ash_graphql/compare/v1.2.0...v1.2.1) (2024-07-18)
 
 
