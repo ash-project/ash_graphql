@@ -2787,7 +2787,7 @@ defmodule AshGraphql.Resource do
   defp filterable?(%{type: Ash.Type.Union}, _), do: false
 
   defp filterable?(%Ash.Resource.Calculation{type: type, calculation: {module, _opts}}, _) do
-    !embedded?(type) && function_exported?(module, :expression, 2)
+    !embedded?(type) && module.has_expression?()
   end
 
   defp filterable?(%{type: type} = attribute, resource) do
@@ -2840,7 +2840,7 @@ defmodule AshGraphql.Resource do
   defp sortable?(%{type: Ash.Type.Union}, _), do: false
 
   defp sortable?(%Ash.Resource.Calculation{type: type, calculation: {module, _opts}}, _) do
-    !embedded?(type) && function_exported?(module, :expression, 2)
+    !embedded?(type) && module.has_expression?()
   end
 
   defp sortable?(%{type: type} = attribute, resource) do
