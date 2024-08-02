@@ -24,10 +24,13 @@ defmodule AshGraphql.DefaultErrorHandler do
 
     Enum.reduce(vars, string, fn {key, value}, acc ->
       if String.contains?(acc, "%{#{key}}") do
-        String.replace(acc, "%{#{key}}", to_string(value))
+        String.replace(acc, "%{#{key}}", stringified_value(value))
       else
         acc
       end
     end)
   end
+
+  def stringified_value(value) when is_list(value), do: "[#{value |> Enum.map(&stringified_value(&1)) |> Enum.join(", ")}]"
+  def stringified_value(value), do: to_string(value)
 end
