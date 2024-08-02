@@ -31,6 +31,6 @@ defmodule AshGraphql.DefaultErrorHandler do
     end)
   end
 
-  def stringified_value(value) when is_list(value), do: "[#{value |> Enum.map(&to_string(&1)) |> Enum.join(", ")}]"
+  def stringified_value(value) when is_list(value), do: "[#{value |> Enum.map(&stringified_value(&1)) |> Enum.join(", ")}]"
   def stringified_value(value), do: to_string(value)
 end
