@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.3.1](https://github.com/ash-project/ash_graphql/compare/v1.3.0...v1.3.1) (2024-08-02)
+
+
+
+
+### Bug Fixes:
+
+* use `.has_expression?/0` instead of `function_exported?/3`
+
+* error handling list of atoms (#204)
+
+* error handling list of atoms
+
 ## [v1.3.0](https://github.com/ash-project/ash_graphql/compare/v1.2.1...v1.3.0) (2024-08-01)
 
 
