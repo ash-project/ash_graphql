@@ -46,7 +46,7 @@ defmodule AshGraphql.Endpoint do
       defp is_forbidden(%{errors: errors}) do
         errors
         |> List.wrap()
-        |> Enum.any?(fn error -> Map.get(error, :code) == "forbidden" end)
+        |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found"] end)
       end
 
       defp is_forbidden(_), do: false
