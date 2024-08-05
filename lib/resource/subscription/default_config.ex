@@ -29,7 +29,7 @@ defmodule AshGraphql.Resource.Subscription.DefaultConfig do
             dbg(filter)
             {:ok, topic: "*", context_id: dbg(Base.encode64(:erlang.term_to_binary(filter)))}
 
-          e ->
+          _ ->
             {:error, "unauthorized"}
         end
       end

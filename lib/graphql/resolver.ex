@@ -508,12 +508,15 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: _arguments, context: context, root_value: data} = resolution,
-        {domain, resource, %AshGraphql.Resource.Subscription{}, _input?}
+        {domain, resource, %AshGraphql.Resource.Subscription{read_action: read_action}, _input?}
       ) do
+    read_action =
+      read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+
     query =
       AshGraphql.Subscription.query_for_subscription(
         resource
-        |> Ash.Query.for_read(:read, %{}, actor: Map.get(context, :actor)),
+        |> Ash.Query.for_read(read_action, %{}, actor: Map.get(context, :actor)),
         domain,
         resolution
       )
