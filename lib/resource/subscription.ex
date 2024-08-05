@@ -10,6 +10,10 @@ defmodule AshGraphql.Resource.Subscription do
     name: [
       type: :atom,
       doc: "The name to use for the subscription."
+    ],
+    read_action: [
+      type: :atom,
+      doc: "The read action to use for reading data"
     ]
   ]
 
