@@ -513,7 +513,7 @@ defmodule AshGraphql.Graphql.Resolver do
     query =
       AshGraphql.Subscription.query_for_subscription(
         resource
-        |> Ash.Query.new(),
+        |> Ash.Query.for_read(:read, %{}, actor: Map.get(context, :actor)),
         domain,
         resolution
       )
@@ -525,7 +525,14 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Query.filter(query, ^ref(key) == ^value)
       end)
 
-    case query |> domain.read_one(actor: resolution.context[:current_user]) do
+    case query |> domain.read_one() do
+      # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
+      {:ok, nil} ->
+        resolution
+        |> Absinthe.Resolution.put_result(
+          {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+        )
+
       {:ok, result} ->
         resolution
         |> Absinthe.Resolution.put_result({:ok, result})
