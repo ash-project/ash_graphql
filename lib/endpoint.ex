@@ -3,6 +3,8 @@ defmodule AshGraphql.Endpoint do
     quote do
       use Absinthe.Phoenix.Endpoint
 
+      alias Absinthe.Pipeline.BatchResolver
+
       require Logger
 
       def run_docset(pubsub, docs_and_topics, mutation_result) do
