@@ -3,7 +3,6 @@ defmodule AshGraphql.Resource.Subscription.DefaultConfig do
 
   def create_config(%Subscription{} = subscription, _domain, resource) do
     config_module = String.to_atom(Macro.camelize(Atom.to_string(subscription.name)) <> ".Config")
-    dbg()
 
     defmodule config_module do
       require Ash.Query
@@ -15,16 +14,18 @@ defmodule AshGraphql.Resource.Subscription.DefaultConfig do
           @subscription.read_action || Ash.Resource.Info.primary_action!(@resource, :read).name
 
         case Ash.can(
-               Ash.Query.for_read(@resource, read_action)
-               |> Ash.Query.filter(id == "test"),
+               Ash.Query.for_read(@resource, read_action),
                context[:actor],
                run_queries?: false,
                alter_source?: true
              ) do
           {:ok, true} ->
-            dbg({:ok, topic: "*", context_id: "global"})
+            {:ok, topic: "*", context_id: "global"}
 
           {:ok, true, filter} ->
+            # context_id is exposed to the client so we might need to encrypt it
+            # or save it in ets or something and send generate a hash or something
+            # as the context_id
             {:ok, topic: "*", context_id: Base.encode64(:erlang.term_to_binary(filter))}
 
           _ ->

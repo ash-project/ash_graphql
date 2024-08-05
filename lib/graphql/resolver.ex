@@ -507,14 +507,14 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
-        %{arguments: arguments, context: context, root_value: data} = resolution,
-        {api, resource, %AshGraphql.Resource.Subscription{}, _input?}
+        %{arguments: _arguments, context: context, root_value: data} = resolution,
+        {domain, resource, %AshGraphql.Resource.Subscription{}, _input?}
       ) do
     query =
       AshGraphql.Subscription.query_for_subscription(
         resource
         |> Ash.Query.new(),
-        api,
+        domain,
         resolution
       )
 
@@ -525,12 +525,15 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Query.filter(query, ^ref(key) == ^value)
       end)
 
-    result =
-      query
-      |> api.read_one(actor: resolution.context[:current_user])
+    case query |> domain.read_one(actor: resolution.context[:current_user]) do
+      {:ok, result} ->
+        resolution
+        |> Absinthe.Resolution.put_result({:ok, result})
 
-    resolution
-    |> Absinthe.Resolution.put_result(result)
+      {:error, error} ->
+        resolution
+        |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+    end
   end
 
   defp read_one_query(resource, args) do
