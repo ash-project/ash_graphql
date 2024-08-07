@@ -9,31 +9,43 @@ defmodule AshGraphql.Subscription.Config do
 
       @subscription subscription
       @resource resource
-      def config(_args, %{context: context}) do
+      def config(args, %{context: context}) do
         read_action =
           @subscription.read_action || Ash.Resource.Info.primary_action!(@resource, :read).name
 
+        actor =
+          if is_function(@subscription.actor) do
+            @subscription.actor.(context[:actor])
+          else
+            context[:actor]
+          end
+
+        # check with Ash.can? to make sure the user is able to read the resource
+        # otherwise we return an error here instead of just never sending something
+        # in the subscription
         case Ash.can(
-               Ash.Query.for_read(@resource, read_action),
-               context[:actor],
+               @resource
+               |> Ash.Query.new()
+               |> Ash.Query.set_tenant(context[:tenant])
+               |> Ash.Query.for_read(read_action),
+               actor,
+               tenant: context[:tenant],
                run_queries?: false,
                alter_source?: true
              ) do
           {:ok, true} ->
-            {:ok, topic: "*", context_id: "global"}
+            {:ok, topic: "*", context_id: create_context_id(args, actor, context[:tenant])}
 
-          {:ok, true, filter} ->
-            # context_id is exposed to the client so we might need to encrypt it
-            # or save it in ets or something and send generate a hash or something
-            # as the context_id
-            dbg(filter, structs: false)
-
-            {:ok,
-             topic: "*", context_id: dbg(Base.encode64(:erlang.term_to_binary(filter.filter)))}
+          {:ok, true, _} ->
+            {:ok, topic: "*", context_id: create_context_id(args, actor, context[:tenant])}
 
           _ ->
             {:error, "unauthorized"}
         end
+      end
+
+      def create_context_id(args, actor, tenant) do
+        Base.encode64(:crypto.hash(:sha256, :erlang.term_to_binary({args, actor, tenant})))
       end
     end
 

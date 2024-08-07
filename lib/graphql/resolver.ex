@@ -516,7 +516,10 @@ defmodule AshGraphql.Graphql.Resolver do
     query =
       AshGraphql.Subscription.query_for_subscription(
         resource
-        |> Ash.Query.for_read(read_action, %{}, actor: Map.get(context, :actor)),
+        |> Ash.Query.for_read(read_action, %{},
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant)
+        ),
         domain,
         resolution
       )
@@ -527,8 +530,6 @@ defmodule AshGraphql.Graphql.Resolver do
         value = Map.get(data, key)
         Ash.Query.filter(query, ^ref(key) == ^value)
       end)
-
-    dbg()
 
     case query |> Ash.read_one() do
       # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
