@@ -1169,7 +1169,7 @@ defmodule AshGraphql.Resource do
         identifier: name,
         name: to_string(name),
         config:
-          AshGraphql.Resource.Subscription.DefaultConfig.create_config(
+          AshGraphql.Subscription.Config.create_config(
             subscription,
             api,
             resource
