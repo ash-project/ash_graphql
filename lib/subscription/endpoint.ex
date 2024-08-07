@@ -7,13 +7,11 @@ defmodule AshGraphql.Subscription.Endpoint do
 
       require Logger
 
-      def run_docset(pubsub, docs_and_topics, mutation_result) do
-        dbg(mutation_result, structs: false)
-
+      def run_docset(pubsub, docs_and_topics, notification) do
         for {topic, key_strategy, doc} <- docs_and_topics do
           try do
             pipeline =
-              Absinthe.Subscription.Local.pipeline(doc, mutation_result.data)
+              Absinthe.Subscription.Local.pipeline(doc, notification)
 
             {:ok, %{result: data}, _} = Absinthe.Pipeline.run(doc.source, pipeline)
 
@@ -43,12 +41,12 @@ defmodule AshGraphql.Subscription.Endpoint do
         # return any data we do not send the error to the client
         # because it would just expose unnecessary information
         # and the user can not really do anything usefull with it
-        errors
-        |> List.wrap()
-        |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found"] end)
+        not (errors
+             |> List.wrap()
+             |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found"] end))
       end
 
-      defp is_forbidden(_), do: false
+      defp should_send?(_), do: true
 
       defp get_filter(topic) do
         [_, rest] = String.split(topic, "__absinthe__:doc:")
