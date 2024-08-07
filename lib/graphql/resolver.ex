@@ -507,15 +507,28 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
-        %{arguments: _arguments, context: context, root_value: data} = resolution,
+        %{arguments: arguments, context: context, root_value: notification} = resolution,
         {domain, resource, %AshGraphql.Resource.Subscription{read_action: read_action}, _input?}
       ) do
+    dbg(NOTIFICATION: notification)
+    data = notification.data
+
     read_action =
       read_action || Ash.Resource.Info.primary_action!(resource, :read).name
 
     query =
+      Ash.Resource.Info.primary_key(resource)
+      |> Enum.reduce(resource, fn key, query ->
+        value = Map.get(data, key)
+        Ash.Query.filter(query, ^ref(key) == ^value)
+      end)
+
+    query =
+      Ash.Query.do_filter(query, massage_filter(query.resource, Map.get(arguments, :filter)))
+
+    query =
       AshGraphql.Subscription.query_for_subscription(
-        resource
+        query
         |> Ash.Query.for_read(read_action, %{},
           actor: Map.get(context, :actor),
           tenant: Map.get(context, :tenant)
@@ -523,13 +536,6 @@ defmodule AshGraphql.Graphql.Resolver do
         domain,
         resolution
       )
-
-    query =
-      Ash.Resource.Info.primary_key(resource)
-      |> Enum.reduce(query, fn key, query ->
-        value = Map.get(data, key)
-        Ash.Query.filter(query, ^ref(key) == ^value)
-      end)
 
     case query |> Ash.read_one() do
       # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
@@ -1641,9 +1647,9 @@ defmodule AshGraphql.Graphql.Resolver do
      end)}
   end
 
-  defp massage_filter(_resource, nil), do: nil
+  def massage_filter(_resource, nil), do: nil
 
-  defp massage_filter(resource, filter) when is_map(filter) do
+  def massage_filter(resource, filter) when is_map(filter) do
     Map.new(filter, fn {key, value} ->
       cond do
         rel = Ash.Resource.Info.relationship(resource, key) ->
@@ -1658,7 +1664,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp massage_filter(_resource, other), do: other
+  def massage_filter(_resource, other), do: other
 
   defp calc_input(key, value) do
     case Map.fetch(value, :input) do

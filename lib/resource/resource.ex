@@ -1163,9 +1163,7 @@ defmodule AshGraphql.Resource do
     |> subscriptions()
     |> Enum.map(fn %Subscription{name: name} = subscription ->
       %Absinthe.Blueprint.Schema.FieldDefinition{
-        arguments:
-          args(:subscription, resource, nil, schema, nil)
-          |> IO.inspect(label: "args"),
+        arguments: args(:subscription, resource, nil, schema, nil),
         identifier: name,
         name: to_string(name),
         config:
