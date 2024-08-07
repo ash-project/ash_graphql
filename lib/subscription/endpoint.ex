@@ -14,12 +14,6 @@ defmodule AshGraphql.Subscription.Endpoint do
           try do
             pipeline =
               Absinthe.Subscription.Local.pipeline(doc, mutation_result.data)
-              # why though?
-              |> List.flatten()
-              |> Absinthe.Pipeline.insert_before(
-                Absinthe.Phase.Document.OverrideRoot,
-                {Absinthe.Phase.Document.Context, context: %{ash_filter: get_filter(topic)}}
-              )
 
             {:ok, %{result: data}, _} = Absinthe.Pipeline.run(doc.source, pipeline)
 
@@ -30,9 +24,8 @@ defmodule AshGraphql.Subscription.Endpoint do
             Data: #{inspect(data)}
             """)
 
-            case is_forbidden(data) do
+            case should_send?(data) do
               true ->
-                # do not send anything to the client if he is not allowed to see it
                 :ok
 
               false ->
@@ -45,7 +38,11 @@ defmodule AshGraphql.Subscription.Endpoint do
         end
       end
 
-      defp is_forbidden(%{errors: errors}) do
+      defp should_send?(%{errors: errors}) do
+        # if the user is not allowed to see the data or the query didn't
+        # return any data we do not send the error to the client
+        # because it would just expose unnecessary information
+        # and the user can not really do anything usefull with it
         errors
         |> List.wrap()
         |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found"] end)
