@@ -8,12 +8,23 @@ defmodule AshGraphql.Subscription do
   @doc """
   Produce a query that will load the correct data for a subscription.
   """
-  def query_for_subscription(query, domain, %{context: context} = resolution) do
+  def query_for_subscription(
+        query,
+        domain,
+        %{context: context} = resolution,
+        type_override \\ nil,
+        nested \\ []
+      ) do
     query
     |> Ash.Query.new()
     |> Ash.Query.set_tenant(Map.get(context, :tenant))
     |> Ash.Query.set_context(get_context(context))
-    |> AshGraphql.Graphql.Resolver.select_fields(query.resource, resolution, nil)
+    |> AshGraphql.Graphql.Resolver.select_fields(
+      query.resource,
+      resolution,
+      type_override,
+      nested
+    )
     |> AshGraphql.Graphql.Resolver.load_fields(
       [
         domain: domain,

@@ -209,6 +209,15 @@ defmodule AshGraphql.Domain do
     )
   end
 
+  def subscriptions(api, resources, action_middleware, schema) do
+    resources
+    |> IO.inspect(label: :subscriptions)
+    |> Enum.filter(fn resource ->
+      AshGraphql.Resource in Spark.extensions(resource)
+    end)
+    |> Enum.flat_map(&AshGraphql.Resource.subscriptions(api, &1, action_middleware, schema))
+  end
+
   @doc false
   def type_definitions(
         domain,
@@ -226,7 +235,8 @@ defmodule AshGraphql.Domain do
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
           AshGraphql.Resource.type_definitions(resource, domain, all_domains, schema, relay_ids?) ++
-            AshGraphql.Resource.mutation_types(resource, all_domains, schema)
+            AshGraphql.Resource.mutation_types(resource, all_domains, schema) ++
+            AshGraphql.Resource.subscription_types(resource, all_domains, schema)
         else
           AshGraphql.Resource.no_graphql_types(resource, schema)
         end

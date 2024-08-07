@@ -7,6 +7,10 @@ defmodule AshGraphql.Test.Schema do
 
   use AshGraphql, domains: @domains
 
+  alias AshGraphql.Test.Post
+
+  require Ash.Query
+
   query do
   end
 
@@ -26,5 +30,25 @@ defmodule AshGraphql.Test.Schema do
   enum :status do
     value(:open, description: "The post is open")
     value(:closed, description: "The post is closed")
+  end
+
+  subscription do
+    field :subscribable_created, :subscribable do
+      config(fn
+        _args, _info ->
+          {:ok, topic: "*"}
+      end)
+
+      resolve(fn args, _, resolution ->
+        # loads all the data you need
+        AshGraphql.Subscription.query_for_subscription(
+          Post,
+          Api,
+          resolution
+        )
+        |> Ash.Query.filter(id == ^args.id)
+        |> Ash.read(actor: resolution.context.current_user)
+      end)
+    end
   end
 end

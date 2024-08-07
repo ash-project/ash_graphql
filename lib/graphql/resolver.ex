@@ -3,6 +3,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   require Logger
   import Ash.Expr
+  require Ash.Query
   import AshGraphql.TraceHelpers
   import AshGraphql.ContextHelpers
 
@@ -503,6 +504,63 @@ defmodule AshGraphql.Graphql.Resolver do
       else
         something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
+  end
+
+  def resolve(
+        %{arguments: arguments, context: context, root_value: notification} = resolution,
+        {domain, resource,
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name} = subscription,
+         _input?}
+      ) do
+    dbg(NOTIFICATION: notification)
+    data = notification.data
+
+    read_action =
+      read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+
+    query =
+      Ash.Resource.Info.primary_key(resource)
+      |> Enum.reduce(resource, fn key, query ->
+        value = Map.get(data, key)
+        Ash.Query.filter(query, ^ref(key) == ^value)
+      end)
+
+    query =
+      Ash.Query.do_filter(query, massage_filter(query.resource, Map.get(arguments, :filter)))
+
+    query =
+      AshGraphql.Subscription.query_for_subscription(
+        query
+        |> Ash.Query.for_read(read_action, %{},
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant)
+        ),
+        domain,
+        resolution,
+        "#{name}_result",
+        [to_string(notification.action.type) <> "d"]
+      )
+
+    case query |> Ash.read_one() do
+      # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
+      {:ok, nil} ->
+        resolution
+        |> Absinthe.Resolution.put_result(
+          {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+        )
+
+      {:ok, result} ->
+        dbg(result)
+
+        resolution
+        |> Absinthe.Resolution.put_result(
+          {:ok, %{String.to_existing_atom(to_string(notification.action.type) <> "d") => result}}
+        )
+
+      {:error, error} ->
+        resolution
+        |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+    end
   end
 
   defp read_one_query(resource, args) do
@@ -1597,9 +1655,9 @@ defmodule AshGraphql.Graphql.Resolver do
      end)}
   end
 
-  defp massage_filter(_resource, nil), do: nil
+  def massage_filter(_resource, nil), do: nil
 
-  defp massage_filter(resource, filter) when is_map(filter) do
+  def massage_filter(resource, filter) when is_map(filter) do
     Map.new(filter, fn {key, value} ->
       cond do
         rel = Ash.Resource.Info.relationship(resource, key) ->
@@ -1614,7 +1672,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp massage_filter(_resource, other), do: other
+  def massage_filter(_resource, other), do: other
 
   defp calc_input(key, value) do
     case Map.fetch(value, :input) do
@@ -2210,6 +2268,10 @@ defmodule AshGraphql.Graphql.Resolver do
     String.to_atom("#{mutation_name}_result")
   end
 
+  defp subscription_result_type(subscription_name) do
+    String.to_atom("#{subscription_name}_result")
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
   defp page_type(resource, strategy, relay?) do
     type = AshGraphql.Resource.Info.type(resource)
@@ -2227,8 +2289,16 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   @doc false
-  def select_fields(query_or_changeset, resource, resolution, type_override, nested \\ []) do
+  def select_fields(
+        query_or_changeset,
+        resource,
+        resolution,
+        type_override,
+        nested \\ []
+      ) do
     subfields = get_select(resource, resolution, type_override, nested)
+
+    dbg(type_override: type_override, subfields: subfields, nested: nested)
 
     case query_or_changeset do
       %Ash.Query{} = query ->
@@ -2267,8 +2337,12 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp fields(%Absinthe.Resolution{} = resolution, [], type) do
+    dbg("FIELDS")
+    dbg(type)
+
     resolution
-    |> Absinthe.Resolution.project(type)
+    |> Absinthe.Resolution.project()
+    |> dbg()
   end
 
   defp fields(%Absinthe.Resolution{} = resolution, names, _type) do

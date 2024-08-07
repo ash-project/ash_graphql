@@ -146,6 +146,11 @@ defmodule AshGraphql do
           @dialyzer {:nowarn_function, {:run, 2}}
           def run(blueprint, _opts) do
             domain = unquote(domain)
+            # IO.inspect(
+            #   blueprint.schema_definitions
+            #   |> Enum.find(&(&1.name == "RootSubscriptionType").fields)
+            # )
+
             action_middleware = unquote(action_middleware)
 
             all_domains = unquote(Enum.map(domains, &elem(&1, 0)))
@@ -193,6 +198,17 @@ defmodule AshGraphql do
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
               end)
 
+            blueprint_with_subscriptions =
+              domain
+              |> AshGraphql.Domain.subscriptions(
+                unquote(resources),
+                action_middleware,
+                __MODULE__
+              )
+              |> Enum.reduce(blueprint_with_mutations, fn subscription, blueprint ->
+                Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", subscription)
+              end)
+
             managed_relationship_types =
               AshGraphql.Resource.managed_relationship_definitions(
                 Process.get(:managed_relationship_requirements, []),
@@ -201,7 +217,7 @@ defmodule AshGraphql do
               |> Enum.uniq_by(& &1.identifier)
               |> Enum.reject(fn type ->
                 existing_types =
-                  case blueprint_with_mutations do
+                  case blueprint_with_subscriptions do
                     %{schema_definitions: [%{type_definitions: type_definitions}]} ->
                       type_definitions
 
@@ -282,7 +298,7 @@ defmodule AshGraphql do
               end
 
             new_defs =
-              List.update_at(blueprint_with_mutations.schema_definitions, 0, fn schema_def ->
+              List.update_at(blueprint_with_subscriptions.schema_definitions, 0, fn schema_def ->
                 %{
                   schema_def
                   | type_definitions:
@@ -291,7 +307,7 @@ defmodule AshGraphql do
                 }
               end)
 
-            {:ok, %{blueprint_with_mutations | schema_definitions: new_defs}}
+            {:ok, %{blueprint_with_subscriptions | schema_definitions: new_defs}}
           end
         end
 
