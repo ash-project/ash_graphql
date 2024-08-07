@@ -508,7 +508,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context, root_value: notification} = resolution,
-        {domain, resource, %AshGraphql.Resource.Subscription{read_action: read_action}, _input?}
+        {domain, resource,
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name} = subscription,
+         _input?}
       ) do
     dbg(NOTIFICATION: notification)
     data = notification.data
@@ -534,7 +536,9 @@ defmodule AshGraphql.Graphql.Resolver do
           tenant: Map.get(context, :tenant)
         ),
         domain,
-        resolution
+        resolution,
+        "#{name}_result",
+        [to_string(notification.action.type) <> "d"]
       )
 
     case query |> Ash.read_one() do
@@ -546,8 +550,12 @@ defmodule AshGraphql.Graphql.Resolver do
         )
 
       {:ok, result} ->
+        dbg(result)
+
         resolution
-        |> Absinthe.Resolution.put_result({:ok, result})
+        |> Absinthe.Resolution.put_result(
+          {:ok, %{String.to_existing_atom(to_string(notification.action.type) <> "d") => result}}
+        )
 
       {:error, error} ->
         resolution
@@ -2260,6 +2268,10 @@ defmodule AshGraphql.Graphql.Resolver do
     String.to_atom("#{mutation_name}_result")
   end
 
+  defp subscription_result_type(subscription_name) do
+    String.to_atom("#{subscription_name}_result")
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
   defp page_type(resource, strategy, relay?) do
     type = AshGraphql.Resource.Info.type(resource)
@@ -2277,8 +2289,16 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   @doc false
-  def select_fields(query_or_changeset, resource, resolution, type_override, nested \\ []) do
+  def select_fields(
+        query_or_changeset,
+        resource,
+        resolution,
+        type_override,
+        nested \\ []
+      ) do
     subfields = get_select(resource, resolution, type_override, nested)
+
+    dbg(type_override: type_override, subfields: subfields, nested: nested)
 
     case query_or_changeset do
       %Ash.Query{} = query ->
@@ -2317,8 +2337,12 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp fields(%Absinthe.Resolution{} = resolution, [], type) do
+    dbg("FIELDS")
+    dbg(type)
+
     resolution
-    |> Absinthe.Resolution.project(type)
+    |> Absinthe.Resolution.project()
+    |> dbg()
   end
 
   defp fields(%Absinthe.Resolution{} = resolution, names, _type) do

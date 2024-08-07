@@ -1110,6 +1110,46 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  def subscription_types(resource, _all_domains, schema) do
+    resource
+    |> subscriptions()
+    |> Enum.map(fn %Subscription{name: name} ->
+      resource_type = AshGraphql.Resource.Info.type(resource)
+
+      result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
+
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        module: schema,
+        identifier: result_type,
+        name: name |> to_string() |> then(&(&1 <> "_result")) |> Macro.camelize(),
+        fields: [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            __reference__: ref(__ENV__),
+            identifier: :created,
+            module: schema,
+            name: "created",
+            type: resource_type
+          },
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            __reference__: ref(__ENV__),
+            identifier: :updated,
+            module: schema,
+            name: "updated",
+            type: resource_type
+          },
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            __reference__: ref(__ENV__),
+            identifier: :destroyed,
+            module: schema,
+            name: "destroyed",
+            type: resource_type
+          }
+        ],
+        __reference__: ref(__ENV__)
+      }
+    end)
+  end
+
   defp id_translation_middleware(relay_id_translations, true) do
     [{{AshGraphql.Graphql.IdTranslator, :translate_relay_ids}, relay_id_translations}]
   end
@@ -1162,6 +1202,8 @@ defmodule AshGraphql.Resource do
     resource
     |> subscriptions()
     |> Enum.map(fn %Subscription{name: name} = subscription ->
+      result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
         arguments: args(:subscription, resource, nil, schema, nil),
         identifier: name,
@@ -1178,7 +1220,7 @@ defmodule AshGraphql.Resource do
             [
               {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, subscription, true}}
             ],
-        type: AshGraphql.Resource.Info.type(resource),
+        type: result_type,
         __reference__: ref(__ENV__)
       }
     end)
