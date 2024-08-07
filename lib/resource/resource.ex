@@ -1933,8 +1933,14 @@ defmodule AshGraphql.Resource do
   end
 
   defp raise_conflicts!(conflicts, managed_relationship, resource) do
+    action_name =
+      case managed_relationship.action do
+        name when is_atom(name) -> name
+        %{name: name} -> name
+      end
+
     raise """
-    #{inspect(resource)}: #{managed_relationship.action}.#{managed_relationship.argument}
+    #{inspect(resource)}: #{action_name}.#{managed_relationship.argument}
 
     Error while deriving managed relationship input object type: type conflict.
 
