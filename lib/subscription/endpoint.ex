@@ -22,11 +22,13 @@ defmodule AshGraphql.Subscription.Endpoint do
             Data: #{inspect(data)}
             """)
 
+            dbg(DATA: data)
+
             case should_send?(data) do
-              true ->
+              false ->
                 :ok
 
-              false ->
+              true ->
                 :ok = pubsub.publish_subscription(topic, data)
             end
           rescue
