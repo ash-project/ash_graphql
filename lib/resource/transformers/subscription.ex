@@ -18,7 +18,7 @@ defmodule AshGraphql.Resource.Transformers.Subscription do
          |> Transformer.persist(
            :simple_notifiers,
            [
-             AshGraphql.Resource.Subscription.Notifier
+             AshGraphql.Subscription.Notifier
            ] ++
              Transformer.get_persisted(dsl, :simple_notifiers, [])
          )}

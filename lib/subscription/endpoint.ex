@@ -1,4 +1,4 @@
-defmodule AshGraphql.Endpoint do
+defmodule AshGraphql.Subscription.Endpoint do
   defmacro __using__(_opts) do
     quote do
       use Absinthe.Phoenix.Endpoint
@@ -8,10 +8,12 @@ defmodule AshGraphql.Endpoint do
       require Logger
 
       def run_docset(pubsub, docs_and_topics, mutation_result) do
+        dbg(mutation_result, structs: false)
+
         for {topic, key_strategy, doc} <- docs_and_topics do
           try do
             pipeline =
-              Absinthe.Subscription.Local.pipeline(doc, mutation_result)
+              Absinthe.Subscription.Local.pipeline(doc, mutation_result.data)
               # why though?
               |> List.flatten()
               |> Absinthe.Pipeline.insert_before(

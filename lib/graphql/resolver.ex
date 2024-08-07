@@ -528,7 +528,9 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Query.filter(query, ^ref(key) == ^value)
       end)
 
-    case query |> domain.read_one() do
+    dbg()
+
+    case query |> Ash.read_one() do
       # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
       {:ok, nil} ->
         resolution

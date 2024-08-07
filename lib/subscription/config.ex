@@ -1,4 +1,4 @@
-defmodule AshGraphql.Resource.Subscription.DefaultConfig do
+defmodule AshGraphql.Subscription.Config do
   alias AshGraphql.Resource.Subscription
 
   def create_config(%Subscription{} = subscription, _domain, resource) do
@@ -26,8 +26,10 @@ defmodule AshGraphql.Resource.Subscription.DefaultConfig do
             # context_id is exposed to the client so we might need to encrypt it
             # or save it in ets or something and send generate a hash or something
             # as the context_id
-            dbg(filter)
-            {:ok, topic: "*", context_id: dbg(Base.encode64(:erlang.term_to_binary(filter)))}
+            dbg(filter, structs: false)
+
+            {:ok,
+             topic: "*", context_id: dbg(Base.encode64(:erlang.term_to_binary(filter.filter)))}
 
           _ ->
             {:error, "unauthorized"}
