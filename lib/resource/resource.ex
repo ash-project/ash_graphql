@@ -3108,9 +3108,14 @@ defmodule AshGraphql.Resource do
       {types, fields} =
         Enum.reduce(constraints[:fields], {[], []}, fn {name, attribute}, {types, fields} ->
           map_type? =
-            attribute[:type] in [:map, Ash.Type.Map] ||
+            attribute[:type] in [:map, Ash.Type.Map, :struct, Ash.Type.Struct] ||
               (Ash.Type.NewType.new_type?(attribute[:type]) &&
-                 Ash.Type.NewType.subtype_of(attribute[:type]) in [:map, Ash.Type.Map])
+                 Ash.Type.NewType.subtype_of(attribute[:type]) in [
+                   :map,
+                   Ash.Type.Map,
+                   :struct,
+                   Ash.Type.Struct
+                 ])
 
           if map_type? && attribute[:constraints] not in [nil, []] do
             nested_type_name =
@@ -3354,7 +3359,7 @@ defmodule AshGraphql.Resource do
     |> AshGraphql.all_attributes_and_arguments(all_domains, [], false)
     |> Enum.map(&unnest/1)
     |> Enum.filter(
-      &(Ash.Type.NewType.subtype_of(&1.type) == Ash.Type.Map &&
+      &(Ash.Type.NewType.subtype_of(&1.type) in [Ash.Type.Map, Ash.Type.Struct] &&
           !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []) &&
           define_type?(&1.type, &1.constraints))
     )

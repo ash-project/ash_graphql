@@ -129,6 +129,7 @@ defmodule AshGraphql.Test.Post do
   @moduledoc false
   alias AshGraphql.Test.Comment
   alias AshGraphql.Test.CommonMap
+  alias AshGraphql.Test.CommonMapStruct
   alias AshGraphql.Test.SponsoredComment
 
   use Ash.Resource,
@@ -461,6 +462,10 @@ defmodule AshGraphql.Test.Post do
     end
 
     attribute :common_map_attribute, CommonMap do
+      public?(true)
+    end
+
+    attribute :common_map_struct_attribute, CommonMapStruct do
       public?(true)
     end
 

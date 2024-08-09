@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.OtherResource do
   @moduledoc false
 
   alias AshGraphql.Test.CommonMap
+  alias AshGraphql.Test.CommonMapStruct
 
   use Ash.Resource,
     domain: AshGraphql.Test.OtherDomain,
@@ -35,6 +36,10 @@ defmodule AshGraphql.Test.OtherResource do
     uuid_primary_key(:id)
 
     attribute :common_map_attribute, CommonMap do
+      public?(true)
+    end
+
+    attribute :common_map_struct_attribute, CommonMapStruct do
       public?(true)
     end
   end
