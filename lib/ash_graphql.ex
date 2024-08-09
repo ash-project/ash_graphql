@@ -680,12 +680,26 @@ defmodule AshGraphql do
         }
 
         case attribute.type do
-          Ash.Type.Map ->
-            if attribute.constraints[:fields] do
-              {source_resource, attribute}
+          type when type in [Ash.Type.Map, Ash.Type.Keyword, Ash.Type.Struct] ->
+            if fields = attribute.constraints[:fields] do
+              Enum.flat_map(fields, fn {name, config} ->
+                if AshGraphql.Resource.embedded?(config[:type]) do
+                  [
+                    {source_resource,
+                     %{
+                       attribute
+                       | type: config[:type],
+                         constraints: config[:constraints],
+                         name: :"#{attribute.name}_#{name}"
+                     }}
+                  ]
+                else
+                  []
+                end
+              end)
+            else
+              []
             end
-
-            []
 
           Ash.Type.Union ->
             attribute.constraints[:types]
