@@ -40,6 +40,7 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_entities(resource, [:graphql, :subscriptions]) || []
   end
 
+  @doc "The pubsub module used for subscriptions"
   def subscription_pubsub(resource) do
     Extension.get_opt(resource, [:graphql, :subscriptions], :pubsub)
   end

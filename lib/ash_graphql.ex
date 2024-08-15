@@ -157,10 +157,6 @@ defmodule AshGraphql do
           @dialyzer {:nowarn_function, {:run, 2}}
           def run(blueprint, _opts) do
             domain = unquote(domain)
-            # IO.inspect(
-            #   blueprint.schema_definitions
-            #   |> Enum.find(&(&1.name == "RootSubscriptionType").fields)
-            # )
 
             action_middleware = unquote(action_middleware)
 

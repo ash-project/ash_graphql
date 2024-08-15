@@ -22,8 +22,6 @@ defmodule AshGraphql.Subscription.Endpoint do
             Data: #{inspect(data)}
             """)
 
-            dbg(DATA: data)
-
             case should_send?(data) do
               false ->
                 :ok

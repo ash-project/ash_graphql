@@ -298,7 +298,10 @@ defmodule AshGraphql.Resource do
     examples: [
       """
       subscriptions do
-        subscribe :subscription_name, fn notifications -> ... end
+        subscribe :bucket_created do
+          actions :create
+          read_action :read
+        end
       end
       """
     ],

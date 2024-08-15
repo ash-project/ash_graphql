@@ -6,6 +6,7 @@ defmodule AshGraphql.Subscription.Config do
 
     defmodule config_module do
       require Ash.Query
+      alias AshGraphql.Graphql.Resolver
 
       @subscription subscription
       @resource resource
@@ -13,13 +14,15 @@ defmodule AshGraphql.Subscription.Config do
         read_action =
           @subscription.read_action || Ash.Resource.Info.primary_action!(@resource, :read).name
 
+        dbg(@subscription)
+
         actor =
-          if is_function(@subscription.actor) do
-            # might be nice to also pass in the subscription, that way you could potentially
-            # deduplicate on an action basis as well if you wanted to
-            @subscription.actor.(context[:actor])
-          else
-            context[:actor]
+          case @subscription.actor do
+            {module, opts} ->
+              module.actor(context[:actor], opts)
+
+            _ ->
+              context[:actor]
           end
 
         # check with Ash.can? to make sure the user is able to read the resource
@@ -29,9 +32,7 @@ defmodule AshGraphql.Subscription.Config do
                @resource
                |> Ash.Query.new()
                # not sure if we need this here
-               |> Ash.Query.do_filter(
-                 AshGraphql.Graphql.Resolver.massage_filter(@resource, Map.get(args, :filter))
-               )
+               |> Ash.Query.do_filter(Resolver.massage_filter(@resource, Map.get(args, :filter)))
                |> Ash.Query.set_tenant(context[:tenant])
                |> Ash.Query.for_read(read_action),
                actor,

@@ -561,7 +561,7 @@ defmodule AshGraphql.Graphql.Resolver do
               |> Ash.Query.for_read(read_action, %{}, opts),
               domain,
               resolution,
-              "#{name}_result",
+              subscription_result_type(name),
               [subcription_field_from_action_type(notification.action.type)]
             )
 
@@ -2304,6 +2304,7 @@ defmodule AshGraphql.Graphql.Resolver do
     String.to_atom("#{mutation_name}_result")
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp subscription_result_type(subscription_name) do
     String.to_atom("#{subscription_name}_result")
   end
@@ -2333,8 +2334,6 @@ defmodule AshGraphql.Graphql.Resolver do
         nested \\ []
       ) do
     subfields = get_select(resource, resolution, type_override, nested)
-
-    dbg(type_override: type_override, subfields: subfields, nested: nested)
 
     case query_or_changeset do
       %Ash.Query{} = query ->
@@ -2373,12 +2372,8 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp fields(%Absinthe.Resolution{} = resolution, [], type) do
-    dbg("FIELDS")
-    dbg(type)
-
     resolution
-    |> Absinthe.Resolution.project()
-    |> dbg()
+    |> Absinthe.Resolution.project(type)
   end
 
   defp fields(%Absinthe.Resolution{} = resolution, names, _type) do
