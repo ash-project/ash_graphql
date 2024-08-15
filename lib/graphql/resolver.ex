@@ -537,56 +537,70 @@ defmodule AshGraphql.Graphql.Resolver do
             tenant: Map.get(context, :tenant)
           ]
 
-          data = notification.data
+          cond do
+            notification.action.type in [:create, :update] ->
+              data = notification.data
 
-          read_action =
-            read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+              read_action =
+                read_action || Ash.Resource.Info.primary_action!(resource, :read).name
 
-          query =
-            Ash.Resource.Info.primary_key(resource)
-            |> Enum.reduce(resource, fn key, query ->
-              value = Map.get(data, key)
-              Ash.Query.filter(query, ^ref(key) == ^value)
-            end)
+              query =
+                Ash.Resource.Info.primary_key(resource)
+                |> Enum.reduce(resource, fn key, query ->
+                  value = Map.get(data, key)
+                  Ash.Query.filter(query, ^ref(key) == ^value)
+                end)
 
-          query =
-            Ash.Query.do_filter(
-              query,
-              massage_filter(query.resource, Map.get(args, :filter))
-            )
+              query =
+                Ash.Query.do_filter(
+                  query,
+                  massage_filter(query.resource, Map.get(args, :filter))
+                )
 
-          query =
-            AshGraphql.Subscription.query_for_subscription(
-              query
-              |> Ash.Query.for_read(read_action, %{}, opts),
-              domain,
-              resolution,
-              subscription_result_type(name),
-              [subcription_field_from_action_type(notification.action.type)]
-            )
+              query =
+                AshGraphql.Subscription.query_for_subscription(
+                  query
+                  |> Ash.Query.for_read(read_action, %{}, opts),
+                  domain,
+                  resolution,
+                  subscription_result_type(name),
+                  [subcription_field_from_action_type(notification.action.type)]
+                )
 
-          case query |> Ash.read_one() do
-            # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
-            {:ok, nil} ->
-              resolution
-              |> Absinthe.Resolution.put_result(
-                {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
-              )
+              case query |> Ash.read_one() do
+                # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
+                {:ok, nil} ->
+                  resolution
+                  |> Absinthe.Resolution.put_result(
+                    {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+                  )
 
-            {:ok, result} ->
+                {:ok, result} ->
+                  resolution
+                  |> Absinthe.Resolution.put_result(
+                    {:ok,
+                     %{
+                       String.to_existing_atom(
+                         subcription_field_from_action_type(notification.action.type)
+                       ) => result
+                     }}
+                  )
+
+                {:error, error} ->
+                  resolution
+                  |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+              end
+
+            notification.action.type in [:destroy] ->
               resolution
               |> Absinthe.Resolution.put_result(
                 {:ok,
                  %{
                    String.to_existing_atom(
                      subcription_field_from_action_type(notification.action.type)
-                   ) => result
+                   ) => AshGraphql.Resource.encode_id(notification.data, false)
                  }}
               )
-
-            {:error, error} ->
-              resolution
-              |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
           end
         end
 

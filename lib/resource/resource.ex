@@ -1154,7 +1154,7 @@ defmodule AshGraphql.Resource do
             identifier: :destroyed,
             module: schema,
             name: "destroyed",
-            type: resource_type
+            type: :id
           }
         ],
         __reference__: ref(__ENV__)
