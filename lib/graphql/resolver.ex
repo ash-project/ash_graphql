@@ -507,61 +507,97 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
-        %{arguments: arguments, context: context, root_value: notification} = resolution,
+        %{arguments: args, context: context, root_value: notification} = resolution,
         {domain, resource,
-         %AshGraphql.Resource.Subscription{read_action: read_action, name: name} = subscription,
-         _input?}
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, _input?}
       ) do
-    dbg(NOTIFICATION: notification)
-    data = notification.data
-
-    read_action =
-      read_action || Ash.Resource.Info.primary_action!(resource, :read).name
-
-    query =
-      Ash.Resource.Info.primary_key(resource)
-      |> Enum.reduce(resource, fn key, query ->
-        value = Map.get(data, key)
-        Ash.Query.filter(query, ^ref(key) == ^value)
-      end)
-
-    query =
-      Ash.Query.do_filter(query, massage_filter(query.resource, Map.get(arguments, :filter)))
-
-    query =
-      AshGraphql.Subscription.query_for_subscription(
-        query
-        |> Ash.Query.for_read(read_action, %{},
+    case handle_arguments(resource, read_action, args) do
+      {:ok, args} ->
+        metadata = %{
+          domain: domain,
+          resource: resource,
+          resource_short_name: Ash.Resource.Info.short_name(resource),
           actor: Map.get(context, :actor),
-          tenant: Map.get(context, :tenant)
-        ),
-        domain,
-        resolution,
-        "#{name}_result",
-        [to_string(notification.action.type) <> "d"]
-      )
+          tenant: Map.get(context, :tenant),
+          action: read_action,
+          source: :graphql,
+          subscription: name,
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
+        }
 
-    case query |> Ash.read_one() do
-      # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
-      {:ok, nil} ->
-        resolution
-        |> Absinthe.Resolution.put_result(
-          {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
-        )
+        trace domain,
+              resource,
+              :gql_subscription,
+              name,
+              metadata do
+          opts = [
+            actor: Map.get(context, :actor),
+            action: read_action,
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
+            tenant: Map.get(context, :tenant)
+          ]
 
-      {:ok, result} ->
-        dbg(result)
+          data = notification.data
 
-        resolution
-        |> Absinthe.Resolution.put_result(
-          {:ok, %{String.to_existing_atom(to_string(notification.action.type) <> "d") => result}}
-        )
+          read_action =
+            read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+
+          query =
+            Ash.Resource.Info.primary_key(resource)
+            |> Enum.reduce(resource, fn key, query ->
+              value = Map.get(data, key)
+              Ash.Query.filter(query, ^ref(key) == ^value)
+            end)
+
+          query =
+            Ash.Query.do_filter(
+              query,
+              massage_filter(query.resource, Map.get(args, :filter))
+            )
+
+          query =
+            AshGraphql.Subscription.query_for_subscription(
+              query
+              |> Ash.Query.for_read(read_action, %{}, opts),
+              domain,
+              resolution,
+              "#{name}_result",
+              [subcription_field_from_action_type(notification.action.type)]
+            )
+
+          case query |> Ash.read_one() do
+            # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
+            {:ok, nil} ->
+              resolution
+              |> Absinthe.Resolution.put_result(
+                {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+              )
+
+            {:ok, result} ->
+              resolution
+              |> Absinthe.Resolution.put_result(
+                {:ok,
+                 %{
+                   String.to_existing_atom(
+                     subcription_field_from_action_type(notification.action.type)
+                   ) => result
+                 }}
+              )
+
+            {:error, error} ->
+              resolution
+              |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+          end
+        end
 
       {:error, error} ->
-        resolution
-        |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+        {:error, error}
     end
   end
+
+  defp subcription_field_from_action_type(:create), do: "created"
+  defp subcription_field_from_action_type(:update), do: "updated"
+  defp subcription_field_from_action_type(:destroy), do: "destroyed"
 
   defp read_one_query(resource, args) do
     case Map.fetch(args, :filter) do

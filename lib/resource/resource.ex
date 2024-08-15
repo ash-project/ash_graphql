@@ -1110,18 +1110,27 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
   def subscription_types(resource, _all_domains, schema) do
     resource
     |> subscriptions()
     |> Enum.map(fn %Subscription{name: name} ->
       resource_type = AshGraphql.Resource.Info.type(resource)
 
-      result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
+      result_type_name =
+        name
+        |> to_string()
+        |> then(&(&1 <> "_result"))
+
+      result_type =
+        result_type_name
+        |> String.to_atom()
 
       %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
         module: schema,
         identifier: result_type,
-        name: name |> to_string() |> then(&(&1 <> "_result")) |> Macro.camelize(),
+        name: result_type_name,
         fields: [
           %Absinthe.Blueprint.Schema.FieldDefinition{
             __reference__: ref(__ENV__),
