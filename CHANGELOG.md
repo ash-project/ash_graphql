@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.3.2](https://github.com/ash-project/ash_graphql/compare/v1.3.1...v1.3.2) (2024-08-16)
+
+
+
+
+### Bug Fixes:
+
+* match on action in error message properly
+
+### Improvements:
+
+* add schema codegen features & guide
+
+* support new struct types in type generation
+
+* support new struct fields constraint
+
+* Set up GraphQL schema file in the web module namespace (#205)
+
 ## [v1.3.1](https://github.com/ash-project/ash_graphql/compare/v1.3.0...v1.3.1) (2024-08-02)
 
 
