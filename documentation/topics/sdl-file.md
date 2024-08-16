@@ -1,7 +1,13 @@
 # Using the SDL File
 
-By passing the `generate_sdl_file` to `use AshGraphql.Schema`, AshGraphql will generate
-a schema file when you run `mix ash.codegen`.
+By passing the `generate_sdl_file` to `use AshGraphql`, AshGraphql will generate
+a schema file when you run `mix ash.codegen`. For example:
+
+```elixir
+use AshGraphql,
+  domains: [Domain1, Domain2],
+  generate_sdl_file: "priv/schema.graphql"
+```
 
 > ### Ensure your schema is up to date, gitignored, or not generated {: .info}
 >

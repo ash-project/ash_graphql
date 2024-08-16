@@ -43,8 +43,7 @@ defmodule Helpdesk.GraphqlSchema do
 
   # Add your domains here
   use AshGraphql,
-    domains: [Your.Domains],
-    generate_sdl_file: "priv/schema.graphql"
+    domains: [Your.Domains]
 
   query do
     # Custom absinthe queries can be placed here

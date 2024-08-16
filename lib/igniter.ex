@@ -120,8 +120,7 @@ defmodule AshGraphql.Igniter do
       use Absinthe.Schema
 
       use AshGraphql,
-        domains: #{inspect(domains)},
-        generate_sdl_file: "priv/schema.graphql"
+        domains: #{inspect(domains)}
 
       import_types Absinthe.Plug.Types
 
