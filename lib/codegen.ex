@@ -1,6 +1,7 @@
 defmodule AshGraphql.Codegen do
   @moduledoc false
 
+  # sobelow_skip ["Traversal.FileModule"]
   def generate_sdl_file(schema, opts) do
     target = schema.generate_sdl_file()
 
