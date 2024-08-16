@@ -16,6 +16,9 @@ use AshGraphql,
 > to your `.gitignore`, or you can remove the `generate_sdl_file` option to skip
 > generating the file.
 
+With the `generate_sdl_file` option, calls to `mix ash.codegen <name>` will generate
+a `.graphql` file at the specified path.
+
 Some things that you can use this SDL file for:
 
 ## Documentation
