@@ -5,7 +5,7 @@ defmodule AshGraphql.Test.Schema do
 
   @domains [AshGraphql.Test.Domain, AshGraphql.Test.OtherDomain]
 
-  use AshGraphql, domains: @domains
+  use AshGraphql, domains: @domains, generate_sdl_file: "priv/schema.graphql"
 
   query do
   end

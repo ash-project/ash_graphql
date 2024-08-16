@@ -452,6 +452,16 @@ defmodule AshGraphql.Resource do
     %{module: __MODULE__, location: %{file: env.file, line: env.line}}
   end
 
+  def codegen(argv) do
+    schemas = AshGraphql.Codegen.schemas()
+
+    check? = "--check" in argv
+
+    for schema <- schemas, schema.generate_sdl_file() do
+      AshGraphql.Codegen.generate_sdl_file(schema, check?: check?)
+    end
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
   def install(igniter, module, Ash.Resource, _path, _argv) do
     type =

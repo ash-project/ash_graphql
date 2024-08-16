@@ -29,7 +29,11 @@ end
 
 #### Setting up your schema
 
-If you don't have an absinthe schema, you can create one just for ash. Replace `helpdesk` in the examples with your own application name.
+If you don't have an absinthe schema, you can create one just for ash.
+Replace `helpdesk` in the examples with your own application name.
+
+See [the SDL file guide](/documentation/topics/sdl-file.md) for more information on using the SDL file,
+or remove the `generate_sdl_file` option to skip generating it on calls to `mix ash.codegen`.
 
 in `lib/helpdesk/schema.ex`
 
@@ -38,7 +42,9 @@ defmodule Helpdesk.GraphqlSchema do
   use Absinthe.Schema
 
   # Add your domains here
-  use AshGraphql, domains: [Your.Domains]
+  use AshGraphql,
+    domains: [Your.Domains],
+    generate_sdl_file: "priv/schema.graphql"
 
   query do
     # Custom absinthe queries can be placed here
@@ -55,7 +61,6 @@ defmodule Helpdesk.GraphqlSchema do
   end
 end
 ```
-
 
 #### Connect your schema
 

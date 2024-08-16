@@ -5,7 +5,7 @@ defmodule AshGraphql.Test.RelayIds.Schema do
 
   @domains [AshGraphql.Test.RelayIds.Domain]
 
-  use AshGraphql, domains: @domains, relay_ids?: true
+  use AshGraphql, domains: @domains, relay_ids?: true, generate_sdl_file: "priv/relay_ids.graphql"
 
   query do
   end

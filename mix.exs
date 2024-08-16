@@ -59,6 +59,7 @@ defmodule AshGraphql.MixProject do
         "documentation/tutorials/getting-started-with-graphql.md",
         "documentation/topics/authorize-with-graphql.md",
         "documentation/topics/handle-errors.md",
+        "documentation/topics/sdl-file.md",
         "documentation/topics/use-enums-with-graphql.md",
         "documentation/topics/use-json-with-graphql.md",
         "documentation/topics/use-subscriptions-with-graphql.md",

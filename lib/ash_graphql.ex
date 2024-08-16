@@ -44,6 +44,7 @@ defmodule AshGraphql do
     quote bind_quoted: [
             domains: opts[:domains],
             domain: opts[:domain],
+            generate_sdl_file: opts[:generate_sdl_file],
             action_middleware: opts[:action_middleware] || [],
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
             relay_ids?: Keyword.get(opts, :relay_ids?, false),
@@ -97,6 +98,16 @@ defmodule AshGraphql do
         |> elem(0)
         |> Enum.reverse()
         |> List.update_at(0, fn {domain, resources, _} -> {domain, resources, true} end)
+
+      @generate_sdl_file generate_sdl_file
+
+      @doc false
+      def generate_sdl_file do
+        @generate_sdl_file
+      end
+
+      @doc false
+      def ash_graphql_schema?, do: true
 
       @ash_resources Enum.flat_map(domains, &elem(&1, 1))
       ash_resources = @ash_resources

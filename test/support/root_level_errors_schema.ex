@@ -5,7 +5,7 @@ defmodule AshGraphql.Test.RootLevelErrorsSchema do
 
   @domains [AshGraphql.Test.RootLevelErrorsDomain]
 
-  use AshGraphql, domains: @domains
+  use AshGraphql, domains: @domains, generate_sdl_file: "priv/root_level_errors.graphql"
 
   query do
   end
