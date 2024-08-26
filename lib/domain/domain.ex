@@ -159,7 +159,7 @@ defmodule AshGraphql.Domain do
           with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, AshGraphql),
                {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
                {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :domains),
-               {:ok, zipper} <- Igniter.Code.List.append_to_list(zipper, domain) do
+               {:ok, zipper} <- Igniter.Code.List.append_new_to_list(zipper, domain) do
             {:ok, zipper}
           else
             _ ->
