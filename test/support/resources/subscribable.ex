@@ -1,6 +1,7 @@
 defmodule AshGraphql.Test.Subscribable do
   @moduledoc false
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
@@ -18,21 +19,21 @@ defmodule AshGraphql.Test.Subscribable do
     end
 
     subscriptions do
-      subscribe(:subscribable_created, fn _, _ ->
-        IO.inspect("bucket_created")
-        {:ok, topic: "*"}
-      end)
+      pubsub(AshGraphql.Test.PubSub)
+
+      subscribe(:subscribable_created)
     end
   end
 
   actions do
+    default_accept(:*)
     defaults([:create, :read, :update, :destroy])
   end
 
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:text, :string)
+    attribute(:text, :string, public?: true)
     create_timestamp(:created_at)
     update_timestamp(:updated_at)
   end

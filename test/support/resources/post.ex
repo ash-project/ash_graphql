@@ -136,7 +136,6 @@ defmodule AshGraphql.Test.Post do
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     authorizers: [Ash.Policy.Authorizer],
-    simple_notifiers: [AshGraphql.Resource.Notifier],
     extensions: [AshGraphql.Resource]
 
   require Ash.Query

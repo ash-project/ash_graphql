@@ -14,8 +14,6 @@ defmodule AshGraphql.Subscription.Config do
         read_action =
           @subscription.read_action || Ash.Resource.Info.primary_action!(@resource, :read).name
 
-        dbg(@subscription)
-
         actor =
           case @subscription.actor do
             {module, opts} ->

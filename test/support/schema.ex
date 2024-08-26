@@ -7,10 +7,6 @@ defmodule AshGraphql.Test.Schema do
 
   use AshGraphql, domains: @domains, generate_sdl_file: "priv/schema.graphql"
 
-  alias AshGraphql.Test.Post
-
-  require Ash.Query
-
   query do
   end
 
@@ -33,22 +29,5 @@ defmodule AshGraphql.Test.Schema do
   end
 
   subscription do
-    field :subscribable_created, :subscribable do
-      config(fn
-        _args, _info ->
-          {:ok, topic: "*"}
-      end)
-
-      resolve(fn args, _, resolution ->
-        # loads all the data you need
-        AshGraphql.Subscription.query_for_subscription(
-          Post,
-          Api,
-          resolution
-        )
-        |> Ash.Query.filter(id == ^args.id)
-        |> Ash.read(actor: resolution.context.current_user)
-      end)
-    end
   end
 end

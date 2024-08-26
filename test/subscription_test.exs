@@ -5,7 +5,7 @@ defmodule AshGraphql.SubscriptionTest do
   alias AshGraphql.Test.Schema
 
   setup do
-    Application.put_env(PubSub, :notifier_test_pid, self() |> IO.inspect(label: :test_process))
+    Application.put_env(PubSub, :notifier_test_pid, self())
     {:ok, _} = PubSub.start_link()
     {:ok, _} = Absinthe.Subscription.start_link(PubSub)
     :ok
@@ -13,25 +13,30 @@ defmodule AshGraphql.SubscriptionTest do
 
   @query """
   subscription {
-    subscribableCreated { id }
+    subscribableCreated {
+      created {
+        id
+      }
+    }
   }
   """
   @tag :wip
-  test "subscription triggers work" do
+  test "can subscribe to a resource" do
     id = "1"
 
     assert {:ok, %{"subscribed" => topic}} =
-             run_subscription(
+             Absinthe.run(
                @query,
                Schema,
                variables: %{"userId" => id},
-               context: %{pubsub: PubSub, actor: %{id: id}}
+               context: %{actor: %{id: id}, pubsub: PubSub}
              )
 
     mutation = """
     mutation CreateSubscribable($input: CreateSubscribableInput) {
         createSubscribable(input: $input) {
           result{
+            id
             text
           }
           errors{
@@ -41,28 +46,14 @@ defmodule AshGraphql.SubscriptionTest do
       }
     """
 
-    IO.inspect(self())
-
     assert {:ok, %{data: data}} =
-             run_subscription(mutation, Schema,
-               variables: %{"input" => %{"text" => "foo"}},
-               context: %{pubsub: PubSub}
-             )
+             Absinthe.run(mutation, Schema, variables: %{"input" => %{"text" => "foo"}})
 
-    assert_receive({:broadcast, absinthe_proxy, data, fields})
-  end
+    assert Enum.empty?(data["createSubscribable"]["errors"])
 
-  defp run_subscription(query, schema, opts) do
-    opts = Keyword.update(opts, :context, %{pubsub: PubSub}, &Map.put(&1, :pubsub, PubSub))
+    assert_receive({^topic, data})
 
-    case Absinthe.run(query, schema, opts) do
-      #  |> IO.inspect(label: :absinthe_run) do
-      {:ok, %{"subscribed" => topic}} = val ->
-        PubSub.subscribe(topic)
-        val
-
-      val ->
-        val
-    end
+    assert data["createSubscribable"]["result"]["id"] ==
+             data["subscribableCreated"]["created"]["id"]
   end
 end

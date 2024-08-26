@@ -12,5 +12,7 @@ defmodule AshGraphql.Subscription.Notifier do
         Absinthe.Subscription.publish(pub_sub, notification, [{subscription.name, "*"}])
       end
     end
+
+    :ok
   end
 end
