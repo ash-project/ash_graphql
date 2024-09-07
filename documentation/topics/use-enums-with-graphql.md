@@ -11,7 +11,7 @@ defmodule AshPostgres.Test.Types.Status do
   @moduledoc false
   use Ash.Type.Enum, values: [:open, :closed]
 
-  def graphql_type, do: :ticket_status
+  def graphql_type(_), do: :ticket_status
 
   # Optionally, remap the names used in GraphQL, for instance if you have a value like `:"10"`
   # that value is not compatible with GraphQL
