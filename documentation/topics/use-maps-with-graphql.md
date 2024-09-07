@@ -18,7 +18,7 @@ defmodule MyApp.Types.Metadata do
     ]
   ]
 
-  def graphql_type, do: :metadata
+  def graphql_type(_), do: :metadata
 end
 
 ```
