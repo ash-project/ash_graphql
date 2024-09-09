@@ -4405,6 +4405,7 @@ defmodule AshGraphql.Resource do
   defp get_specific_field_type(Ash.Type.Time, _, _, _), do: :time
 
   defp get_specific_field_type(Ash.Type.UUID, _, _, _), do: :id
+  defp get_specific_field_type(Ash.Type.UUIDv7, _, _, _), do: :id
   defp get_specific_field_type(Ash.Type.Float, _, _, _), do: :float
 
   defp get_specific_field_type(Ash.Type.Struct, %{constraints: constraints}, resource, input?) do
