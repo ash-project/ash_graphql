@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.3.4](https://github.com/ash-project/ash_graphql/compare/v1.3.3...v1.3.4) (2024-09-10)
+
+
+
+
+### Bug Fixes:
+
+* add UUIDv7 to map the type to :id
+
+### Improvements:
+
+* update to latest igniter functions & dependency
+
 ## [v1.3.3](https://github.com/ash-project/ash_graphql/compare/v1.3.2...v1.3.3) (2024-08-26)
 
 
