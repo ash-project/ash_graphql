@@ -11,7 +11,7 @@ defmodule Mix.Tasks.AshGraphql.Install do
       |> Spark.Igniter.prepend_to_section_order(:"Ash.Resource", [:graphql])
       |> Spark.Igniter.prepend_to_section_order(:"Ash.Domain", [:graphql])
 
-    schema_name = Igniter.Libs.Phoenix.web_module_name("GraphqlSchema")
+    schema_name = Igniter.Libs.Phoenix.web_module_name(igniter, "GraphqlSchema")
 
     {igniter, candidate_ash_graphql_schemas} =
       AshGraphql.Igniter.ash_graphql_schemas(igniter)

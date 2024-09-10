@@ -143,8 +143,9 @@ defmodule AshGraphql.MixProject do
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:jason, "~> 1.2"},
-      {:igniter, "~> 0.3"},
+      {:igniter, "~> 0.3 and >= 0.3.34"},
       {:spark, "~> 2.2 and >= 2.2.10"},
+      {:owl, "~> 0.11"},
       # dev/test dependencies
       {:ex_doc, github: "elixir-lang/ex_doc", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.12", only: [:dev, :test]},

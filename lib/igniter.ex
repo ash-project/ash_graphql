@@ -33,7 +33,7 @@ defmodule AshGraphql.Igniter do
 
   @doc "Sets up an absinthe schema for AshGraphql"
   def setup_absinthe_schema(igniter, schema_name \\ nil) do
-    schema_name = schema_name || Igniter.Code.Module.module_name("GraphqlSchema")
+    schema_name = schema_name || Igniter.Code.Module.module_name(igniter, "GraphqlSchema")
 
     {igniter, domains} = Ash.Domain.Igniter.list_domains(igniter)
 
@@ -142,7 +142,7 @@ defmodule AshGraphql.Igniter do
 
   @doc "Sets up the phoenix module for AshGraphql"
   def setup_phoenix(igniter, schema_name \\ nil) do
-    schema_name = schema_name || Igniter.Code.Module.module_name("GraphqlSchema")
+    schema_name = schema_name || Igniter.Code.Module.module_name(igniter, "GraphqlSchema")
 
     case Igniter.Libs.Phoenix.select_router(igniter) do
       {igniter, nil} ->
