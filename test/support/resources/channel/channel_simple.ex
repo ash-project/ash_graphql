@@ -60,11 +60,12 @@ defmodule AshGraphql.Test.ChannelSimple do
       change(fn changeset, _ ->
         name = Ash.Changeset.get_argument(changeset, :name)
 
-        changeset.data.channel
-        |> Ash.Changeset.for_update(:update, name: name)
-        |> Ash.update!()
+        channel =
+          changeset.data.channel
+          |> Ash.Changeset.for_update(:update, name: name)
+          |> Ash.update!()
 
-        changeset
+        %{changeset | data: %{changeset.data | channel: channel}}
       end)
     end
   end
