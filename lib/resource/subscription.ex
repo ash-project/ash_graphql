@@ -14,8 +14,8 @@ defmodule AshGraphql.Resource.Subscription do
     ],
     actor: [
       type:
-        {:spark_function_behaviour, AshGraphql.Resource.Subscription.Actor,
-         {AshGraphql.Resource.Subscription.ActorFunction, 1}},
+        {:spark_function_behaviour, AshGraphql.Subscription.Actor,
+         {AshGraphql.Subscription.ActorFunction, 1}},
       doc: "The actor to use for authorization."
     ],
     actions: [

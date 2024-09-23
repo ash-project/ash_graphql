@@ -1,4 +1,4 @@
-defmodule AshGraphql.Resource.Subscription.ActorFunction do
+defmodule AshGraphql.Subscription.ActorFunction do
   @moduledoc false
 
   @behaviour AshGraphql.Resource.Subscription.Actor
