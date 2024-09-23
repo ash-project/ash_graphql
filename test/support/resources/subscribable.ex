@@ -16,12 +16,16 @@ defmodule AshGraphql.Test.Subscribable do
 
     mutations do
       create :create_subscribable, :create
+      update :update_subscribable, :update
+      destroy :destroy_subscribable, :destroy
     end
 
     subscriptions do
       pubsub(AshGraphql.Test.PubSub)
 
-      subscribe(:subscribable_created)
+      subscribe(:subscribable_events) do
+        actions([:create, :update, :destroy])
+      end
     end
   end
 
