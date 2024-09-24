@@ -39,7 +39,7 @@ defmodule AshGraphql.Subscription.Runner do
     # and the user can not really do anything usefull with it
     not (errors
          |> List.wrap()
-         |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found"] end))
+         |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found", nil] end))
   end
 
   defp should_send?(_), do: true
