@@ -1,7 +1,7 @@
 defmodule AshGraphql.Subscription.ActorFunction do
   @moduledoc false
 
-  @behaviour AshGraphql.Resource.Subscription.Actor
+  @behaviour AshGraphql.Subscription.Actor
 
   @impl true
   def actor(actor, [{:fun, {m, f, a}}]) do
