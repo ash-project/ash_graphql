@@ -579,7 +579,7 @@ defmodule AshGraphql.Graphql.Resolver do
                      [] <- query.authorize_results,
                      {:ok, true} <-
                        Ash.Expr.eval(query.filter,
-                         record: dbg(data),
+                         record: data,
                          unknown_on_unknown_refs?: true
                        ) do
                   Ash.load(data, query)
