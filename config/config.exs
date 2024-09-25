@@ -9,6 +9,8 @@ config :logger, level: :warning
 config :ash, :pub_sub, debug?: true
 config :logger, level: :info
 
+config :ash_graphql, :subscriptions, true
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,

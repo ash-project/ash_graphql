@@ -459,7 +459,8 @@ defmodule AshGraphql.Resource do
   @verifiers [
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
     AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
-    AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith
+    AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
+    AshGraphql.Resource.Verifiers.VerifySubscriptionOptIn
   ]
 
   @sections [@graphql]
