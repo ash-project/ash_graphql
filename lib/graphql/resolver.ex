@@ -567,7 +567,28 @@ defmodule AshGraphql.Graphql.Resolver do
                   [subcription_field_from_action_type(notification.action.type)]
                 )
 
-              case query |> Ash.read_one() do
+              result =
+                with {:ok, true, query} <-
+                       Ash.can(
+                         query,
+                         opts[:actor],
+                         tenant: opts[:tenant],
+                         run_queries?: false,
+                         alter_source?: true
+                       ),
+                     [] <- query.authorize_results,
+                     {:ok, true} <-
+                       Ash.Expr.eval(query.filter,
+                         record: dbg(data),
+                         unknown_on_unknown_refs?: true
+                       ) do
+                  Ash.load(data, query)
+                else
+                  _ ->
+                    query |> Ash.read_one()
+                end
+
+              case result do
                 # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
                 {:ok, nil} ->
                   resolution
