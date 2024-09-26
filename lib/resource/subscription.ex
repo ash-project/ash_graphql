@@ -3,6 +3,7 @@ defmodule AshGraphql.Resource.Subscription do
   defstruct [
     :name,
     :actions,
+    :action_types,
     :read_action,
     :actor
   ]
@@ -20,7 +21,11 @@ defmodule AshGraphql.Resource.Subscription do
     ],
     actions: [
       type: {:or, [{:list, :atom}, :atom]},
-      doc: "The create/update/destroy actions the subsciption should listen to. Defaults to all."
+      doc: "The create/update/destroy actions the subsciption should listen to."
+    ],
+    action_types: [
+      type: {:or, [{:list, :atom}, :atom]},
+      doc: "The type of actions the subsciption should listen to."
     ],
     read_action: [
       type: :atom,

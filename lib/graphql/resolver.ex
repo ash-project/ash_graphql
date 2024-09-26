@@ -540,6 +540,7 @@ defmodule AshGraphql.Graphql.Resolver do
           cond do
             notification.action.type in [:create, :update] ->
               data = notification.data
+              {filter, args} = Map.pop(args, :filter)
 
               read_action =
                 read_action || Ash.Resource.Info.primary_action!(resource, :read).name
@@ -554,13 +555,13 @@ defmodule AshGraphql.Graphql.Resolver do
               query =
                 Ash.Query.do_filter(
                   query,
-                  massage_filter(query.resource, Map.get(args, :filter))
+                  massage_filter(query.resource, filter)
                 )
 
               query =
                 AshGraphql.Subscription.query_for_subscription(
                   query
-                  |> Ash.Query.for_read(read_action, %{}, opts),
+                  |> Ash.Query.for_read(read_action, args, opts),
                   domain,
                   resolution,
                   subscription_result_type(name),

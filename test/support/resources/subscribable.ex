@@ -25,7 +25,7 @@ defmodule AshGraphql.Test.Subscribable do
       pubsub(AshGraphql.Test.PubSub)
 
       subscribe(:subscribable_events) do
-        actions([:create, :update, :destroy])
+        action_types([:create, :update, :destroy])
       end
 
       subscribe(:deduped_subscribable_events) do
@@ -35,6 +35,11 @@ defmodule AshGraphql.Test.Subscribable do
         actor(fn _ ->
           %{id: -1, role: :deduped_actor}
         end)
+      end
+
+      subscribe(:subscribable_events_with_arguments) do
+        read_action(:read_with_arg)
+        actions([:create])
       end
     end
   end
@@ -48,7 +53,7 @@ defmodule AshGraphql.Test.Subscribable do
       authorize_if(expr(actor_id == ^actor(:id)))
     end
 
-    policy action(:open_read) do
+    policy action([:open_read, :read_with_arg]) do
       authorize_if(always())
     end
   end
@@ -58,12 +63,21 @@ defmodule AshGraphql.Test.Subscribable do
     defaults([:create, :read, :update, :destroy])
 
     read(:open_read)
+
+    read :read_with_arg do
+      argument(:topic, :string) do
+        allow_nil? false
+      end
+
+      filter(expr(topic == ^arg(:topic)))
+    end
   end
 
   attributes do
     uuid_primary_key(:id)
 
     attribute(:text, :string, public?: true)
+    attribute(:topic, :string, public?: true)
     attribute(:actor_id, :integer, public?: true)
     create_timestamp(:created_at)
     update_timestamp(:updated_at)

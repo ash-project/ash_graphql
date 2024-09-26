@@ -7,8 +7,8 @@ defmodule AshGraphql.Subscription.Notifier do
     pub_sub = Info.subscription_pubsub(notification.resource)
 
     for subscription <- AshGraphql.Resource.Info.subscriptions(notification.resource) do
-      if is_nil(subscription.actions) or
-           notification.action.name in List.wrap(subscription.actions) do
+      if notification.action.name in List.wrap(subscription.actions) or
+           notification.action.type in List.wrap(subscription.action_types) do
         Absinthe.Subscription.publish(pub_sub, notification, [{subscription.name, "*"}])
       end
     end

@@ -1217,8 +1217,12 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn %Subscription{name: name} = subscription ->
       result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
 
+      action =
+        Ash.Resource.Info.action(resource, subscription.read_action) ||
+          Ash.Resource.Info.primary_action(resource, :read)
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
-        arguments: args(:subscription, resource, nil, schema, nil),
+        arguments: args(:subscription, resource, action, schema, nil),
         identifier: name,
         name: to_string(name),
         config:
@@ -1760,26 +1764,29 @@ defmodule AshGraphql.Resource do
     read_args(resource, action, schema, hide_inputs)
   end
 
-  defp args(:subscription, resource, _action, schema, _identity, _hide_inputs, _query) do
-    if AshGraphql.Resource.Info.derive_filter?(resource) do
-      case resource_filter_fields(resource, schema) do
-        [] ->
-          []
+  defp args(:subscription, resource, action, schema, _identity, hide_inputs, _query) do
+    args =
+      if AshGraphql.Resource.Info.derive_filter?(resource) do
+        case resource_filter_fields(resource, schema) do
+          [] ->
+            []
 
-        _ ->
-          [
-            %Absinthe.Blueprint.Schema.InputValueDefinition{
-              name: "filter",
-              identifier: :filter,
-              type: resource_filter_type(resource),
-              description: "A filter to limit the results",
-              __reference__: ref(__ENV__)
-            }
-          ]
+          _ ->
+            [
+              %Absinthe.Blueprint.Schema.InputValueDefinition{
+                name: "filter",
+                identifier: :filter,
+                type: resource_filter_type(resource),
+                description: "A filter to limit the results",
+                __reference__: ref(__ENV__)
+              }
+            ]
+        end
+      else
+        []
       end
-    else
-      []
-    end
+
+    args ++ read_args(resource, action, schema, hide_inputs)
   end
 
   defp related_list_args(resource, related_resource, relationship_name, action, schema) do
