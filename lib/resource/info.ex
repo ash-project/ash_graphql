@@ -36,8 +36,19 @@ defmodule AshGraphql.Resource.Info do
   end
 
   @doc "The subscriptions exposed for the resource"
-  def subscriptions(resource) do
-    Extension.get_entities(resource, [:graphql, :subscriptions]) || []
+  def subscriptions(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.subscriptions/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :subscriptions]) || [])
   end
 
   @doc "The pubsub module used for subscriptions"

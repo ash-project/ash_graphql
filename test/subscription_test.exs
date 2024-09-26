@@ -300,4 +300,47 @@ defmodule AshGraphql.SubscriptionTest do
     assert subscribable.id ==
              subscription_data["subscribableEventsWithArguments"]["created"]["id"]
   end
+
+  @tag :wip
+  test "can subscribe on the domain" do
+    actor1 = %{
+      id: 1,
+      role: :user
+    }
+
+    subscription = """
+    subscription {
+      subscribedOnDomain {
+        created {
+          id
+          text
+        }
+        updated {
+          id
+          text
+        }
+        destroyed
+      }
+    }
+    """
+
+    assert {:ok, %{"subscribed" => topic1}} =
+             Absinthe.run(
+               subscription,
+               Schema,
+               context: %{actor: actor1, pubsub: PubSub}
+             )
+
+    subscribable =
+      Subscribable
+      |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: 1},
+        actor: @admin
+      )
+      |> Ash.create!()
+
+    assert_receive {^topic1, %{data: subscription_data}}
+
+    assert subscribable.id ==
+             subscription_data["subscribedOnDomain"]["created"]["id"]
+  end
 end

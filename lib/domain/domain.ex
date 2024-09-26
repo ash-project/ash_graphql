@@ -36,15 +36,44 @@ defmodule AshGraphql.Domain do
     examples: [
       """
       mutations do
-        create :create_post, :create
-        update :update_post, :update
-        destroy :destroy_post, :destroy
+        create Post, :create_post, :create
+        update Post, :update_post, :update
+        destroy Post, :destroy_post, :destroy
       end
       """
     ],
     entities:
       Enum.map(
         AshGraphql.Resource.mutations(),
+        &%{
+          &1
+          | args: [:resource | &1.args],
+            schema:
+              Keyword.put(&1.schema, :resource,
+                type: {:spark, Ash.Resource},
+                doc: "The resource that the action is defined on"
+              )
+        }
+      )
+  }
+
+  @subscriptions %Spark.Dsl.Section{
+    name: :subscriptions,
+    describe: """
+    Subscriptions to expose for the resource.
+    """,
+    examples: [
+      """
+      subscription do
+        subscribe Post, :post_created do
+          action_types(:create)
+        end
+      end
+      """
+    ],
+    entities:
+      Enum.map(
+        AshGraphql.Resource.subscriptions(),
         &%{
           &1
           | args: [:resource | &1.args],
@@ -71,7 +100,8 @@ defmodule AshGraphql.Domain do
     ],
     sections: [
       @queries,
-      @mutations
+      @mutations,
+      @subscriptions
     ],
     schema: [
       authorize?: [
@@ -209,12 +239,21 @@ defmodule AshGraphql.Domain do
     )
   end
 
-  def subscriptions(api, resources, action_middleware, schema) do
+  def subscriptions(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
     resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
     end)
-    |> Enum.flat_map(&AshGraphql.Resource.subscriptions(api, &1, action_middleware, schema))
+    |> Enum.flat_map(
+      &AshGraphql.Resource.subscriptions(
+        domain,
+        all_domains,
+        &1,
+        action_middleware,
+        schema,
+        relay_ids?
+      )
+    )
   end
 
   @doc false

@@ -275,9 +275,13 @@ defmodule AshGraphql.Resource do
   @subscribe %Spark.Dsl.Entity{
     name: :subscribe,
     args: [:name],
-    describe: "A query to fetch a record by primary key",
+    describe: "A subscription to listen for changes on the resource",
     examples: [
-      "get :get_post, :read"
+      """
+      subscribe :post_created do
+        action_types(:create)
+      end
+      """
     ],
     schema: Subscription.schema(),
     target: Subscription
@@ -309,6 +313,8 @@ defmodule AshGraphql.Resource do
       @subscribe
     ]
   }
+
+  def subscriptions, do: [@subscribe]
 
   @graphql %Spark.Dsl.Section{
     name: :graphql,
@@ -478,7 +484,7 @@ defmodule AshGraphql.Resource do
   defdelegate mutations(resource, domain \\ []), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
-  defdelegate subscriptions(resource), to: AshGraphql.Resource.Info
+  defdelegate subscriptions(resource, domain \\ []), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.managed_relationships/1`"
   defdelegate managed_relationships(resource), to: AshGraphql.Resource.Info
@@ -1116,9 +1122,10 @@ defmodule AshGraphql.Resource do
 
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
-  def subscription_types(resource, _all_domains, schema) do
+
+  def subscription_types(resource, all_domains, schema) do
     resource
-    |> subscriptions()
+    |> subscriptions(all_domains)
     |> Enum.map(fn %Subscription{name: name} ->
       resource_type = AshGraphql.Resource.Info.type(resource)
 
@@ -1211,9 +1218,10 @@ defmodule AshGraphql.Resource do
 
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
-  def subscriptions(api, resource, action_middleware, schema) do
+
+  def subscriptions(domain, all_domains, resource, action_middleware, schema, _relay_ids?) do
     resource
-    |> subscriptions()
+    |> subscriptions(all_domains)
     |> Enum.map(fn %Subscription{name: name} = subscription ->
       result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
 
@@ -1228,14 +1236,15 @@ defmodule AshGraphql.Resource do
         config:
           AshGraphql.Subscription.Config.create_config(
             subscription,
-            api,
+            domain,
             resource
           ),
         module: schema,
         middleware:
           action_middleware ++
+            domain_middleware(domain) ++
             [
-              {{AshGraphql.Graphql.Resolver, :resolve}, {api, resource, subscription, true}}
+              {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, subscription, true}}
             ],
         type: result_type,
         __reference__: ref(__ENV__)

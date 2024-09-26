@@ -2,10 +2,12 @@ defmodule AshGraphql.Resource.Subscription do
   @moduledoc "Represents a configured query on a resource"
   defstruct [
     :name,
+    :resource,
     :actions,
     :action_types,
     :read_action,
-    :actor
+    :actor,
+    :hide_input
   ]
 
   @subscription_schema [
@@ -30,6 +32,11 @@ defmodule AshGraphql.Resource.Subscription do
     read_action: [
       type: :atom,
       doc: "The read action to use for reading data"
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "A list of inputs to hide from the mutation.",
+      default: []
     ]
   ]
 
