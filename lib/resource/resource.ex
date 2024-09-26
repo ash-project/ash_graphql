@@ -1231,7 +1231,7 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
 
-  def subscriptions(domain, all_domains, resource, action_middleware, schema, _relay_ids?) do
+  def subscriptions(domain, all_domains, resource, action_middleware, schema) do
     resource
     |> subscriptions(all_domains)
     |> Enum.map(fn %Subscription{name: name} = subscription ->
