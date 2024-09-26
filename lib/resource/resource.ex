@@ -466,6 +466,7 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
     AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
     AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
+    AshGraphql.Resource.Verifiers.VerifySubscriptionActions,
     AshGraphql.Resource.Verifiers.VerifySubscriptionOptIn
   ]
 
