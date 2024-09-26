@@ -1126,8 +1126,15 @@ defmodule AshGraphql.Resource do
   def subscription_types(resource, all_domains, schema) do
     resource
     |> subscriptions(all_domains)
-    |> Enum.map(fn %Subscription{name: name} ->
+    |> Enum.map(fn %Subscription{name: name, actions: actions, action_types: action_types} ->
       resource_type = AshGraphql.Resource.Info.type(resource)
+
+      action_types =
+        Ash.Resource.Info.actions(resource)
+        |> Stream.filter(&(&1.name in List.wrap(actions)))
+        |> Stream.map(& &1.name)
+        |> Stream.concat(List.wrap(action_types))
+        |> Enum.uniq()
 
       result_type_name =
         name
@@ -1142,29 +1149,34 @@ defmodule AshGraphql.Resource do
         module: schema,
         identifier: result_type,
         name: result_type_name,
-        fields: [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            __reference__: ref(__ENV__),
-            identifier: :created,
-            module: schema,
-            name: "created",
-            type: resource_type
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            __reference__: ref(__ENV__),
-            identifier: :updated,
-            module: schema,
-            name: "updated",
-            type: resource_type
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            __reference__: ref(__ENV__),
-            identifier: :destroyed,
-            module: schema,
-            name: "destroyed",
-            type: :id
-          }
-        ],
+        fields:
+          [
+            :create in action_types &&
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                __reference__: ref(__ENV__),
+                identifier: :created,
+                module: schema,
+                name: "created",
+                type: resource_type
+              },
+            :update in action_types &&
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                __reference__: ref(__ENV__),
+                identifier: :updated,
+                module: schema,
+                name: "updated",
+                type: resource_type
+              },
+            :destroy in action_types &&
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                __reference__: ref(__ENV__),
+                identifier: :destroyed,
+                module: schema,
+                name: "destroyed",
+                type: :id
+              }
+          ]
+          |> Enum.filter(&(&1 != false)),
         __reference__: ref(__ENV__)
       }
     end)

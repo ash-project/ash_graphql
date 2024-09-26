@@ -271,11 +271,6 @@ defmodule AshGraphql.SubscriptionTest do
           id
           text
         }
-        updated {
-          id
-          text
-        }
-        destroyed
       }
     }
     """
@@ -301,7 +296,6 @@ defmodule AshGraphql.SubscriptionTest do
              subscription_data["subscribableEventsWithArguments"]["created"]["id"]
   end
 
-  @tag :wip
   test "can subscribe on the domain" do
     actor1 = %{
       id: 1,
@@ -315,11 +309,6 @@ defmodule AshGraphql.SubscriptionTest do
           id
           text
         }
-        updated {
-          id
-          text
-        }
-        destroyed
       }
     }
     """
