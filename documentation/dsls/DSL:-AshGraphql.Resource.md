@@ -21,6 +21,8 @@ Configuration for a given resource in graphql
    * update
    * destroy
    * action
+ * [subscriptions](#graphql-subscriptions)
+   * subscribe
  * [managed_relationships](#graphql-managed_relationships)
    * managed_relationship
 
@@ -462,6 +464,80 @@ action :check_status, :check_status
 ### Introspection
 
 Target: `AshGraphql.Resource.Action`
+
+
+## graphql.subscriptions
+Subscriptions (notifications) to expose for the resource.
+
+
+### Nested DSLs
+ * [subscribe](#graphql-subscriptions-subscribe)
+
+
+### Examples
+```
+subscriptions do
+  subscribe :bucket_created do
+    actions :create
+    read_action :read
+  end
+end
+
+```
+
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`pubsub`](#graphql-subscriptions-pubsub){: #graphql-subscriptions-pubsub .spark-required} | `module` |  | The pubsub module to use for the subscription |
+
+
+
+## graphql.subscriptions.subscribe
+```elixir
+subscribe name
+```
+
+
+A subscription to listen for changes on the resource
+
+
+
+### Examples
+```
+subscribe :post_created do
+  action_types(:create)
+end
+
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-subscriptions-subscribe-name){: #graphql-subscriptions-subscribe-name } | `atom` |  | The name to use for the subscription. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`actor`](#graphql-subscriptions-subscribe-actor){: #graphql-subscriptions-subscribe-actor } | `(any -> any) \| module` |  | The actor to use for authorization. |
+| [`actions`](#graphql-subscriptions-subscribe-actions){: #graphql-subscriptions-subscribe-actions } | `list(atom) \| atom` |  | The create/update/destroy actions the subsciption should listen to. |
+| [`action_types`](#graphql-subscriptions-subscribe-action_types){: #graphql-subscriptions-subscribe-action_types } | `list(atom) \| atom` |  | The type of actions the subsciption should listen to. |
+| [`read_action`](#graphql-subscriptions-subscribe-read_action){: #graphql-subscriptions-subscribe-read_action } | `atom` |  | The read action to use for reading data |
+| [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Subscription`
 
 
 ## graphql.managed_relationships
