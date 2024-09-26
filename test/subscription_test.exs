@@ -275,7 +275,7 @@ defmodule AshGraphql.SubscriptionTest do
     }
     """
 
-    assert {:ok, %{"subscribed" => topic1}} =
+    assert {:ok, %{"subscribed" => topic}} =
              Absinthe.run(
                subscription,
                Schema,
@@ -290,7 +290,7 @@ defmodule AshGraphql.SubscriptionTest do
       )
       |> Ash.create!()
 
-    assert_receive {^topic1, %{data: subscription_data}}
+    assert_receive {^topic, %{data: subscription_data}}
 
     assert subscribable.id ==
              subscription_data["subscribableEventsWithArguments"]["created"]["id"]
@@ -313,7 +313,7 @@ defmodule AshGraphql.SubscriptionTest do
     }
     """
 
-    assert {:ok, %{"subscribed" => topic1}} =
+    assert {:ok, %{"subscribed" => topic}} =
              Absinthe.run(
                subscription,
                Schema,
@@ -327,7 +327,7 @@ defmodule AshGraphql.SubscriptionTest do
       )
       |> Ash.create!()
 
-    assert_receive {^topic1, %{data: subscription_data}}
+    assert_receive {^topic, %{data: subscription_data}}
 
     assert subscribable.id ==
              subscription_data["subscribedOnDomain"]["created"]["id"]
