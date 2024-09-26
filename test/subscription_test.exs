@@ -332,4 +332,42 @@ defmodule AshGraphql.SubscriptionTest do
     assert subscribable.id ==
              subscription_data["subscribedOnDomain"]["created"]["id"]
   end
+
+  test "can not see forbidden field" do
+    actor1 = %{
+      id: 1,
+      role: :user
+    }
+
+    subscription = """
+    subscription {
+      subscribedOnDomain {
+        created {
+          id
+          text
+          hiddenField
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               subscription,
+               Schema,
+               context: %{actor: actor1, pubsub: PubSub}
+             )
+
+    Subscribable
+    |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: 1},
+      actor: @admin
+    )
+    |> Ash.create!()
+
+    assert_receive {^topic, %{data: subscription_data, errors: errors}}
+
+    assert is_nil(subscription_data["subscribedOnDomain"]["created"])
+    refute Enum.empty?(errors)
+    assert [%{code: "forbidden_field"}] = errors
+  end
 end

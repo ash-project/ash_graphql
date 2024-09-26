@@ -58,6 +58,16 @@ defmodule AshGraphql.Test.Subscribable do
     end
   end
 
+  field_policies do
+    field_policy :hidden_field do
+      authorize_if(actor_attribute_equals(:role, :admin))
+    end
+
+    field_policy :* do
+      authorize_if(always())
+    end
+  end
+
   actions do
     default_accept(:*)
     defaults([:create, :read, :update, :destroy])
@@ -75,6 +85,12 @@ defmodule AshGraphql.Test.Subscribable do
 
   attributes do
     uuid_primary_key(:id)
+
+    attribute(:hidden_field, :string) do
+      public?(true)
+      default("hidden")
+      allow_nil?(false)
+    end
 
     attribute(:text, :string, public?: true)
     attribute(:topic, :string, public?: true)
