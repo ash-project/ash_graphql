@@ -1,4 +1,7 @@
 defmodule AshGraphql.Subscription.Notifier do
+  @moduledoc """
+  AshNotifier that triggers absinthe if subscriptions are listening
+  """
   alias AshGraphql.Resource.Info
   use Ash.Notifier
 

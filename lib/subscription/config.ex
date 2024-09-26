@@ -1,4 +1,9 @@
 defmodule AshGraphql.Subscription.Config do
+  @moduledoc """
+  Creates a config function used for the absinthe subscription definition
+
+  See https://github.com/absinthe-graphql/absinthe/blob/3d0823bd71c2ebb94357a5588c723e053de8c66a/lib/absinthe/schema/notation.ex#L58
+  """
   alias AshGraphql.Resource.Subscription
 
   def create_config(%Subscription{} = subscription, _domain, resource) do

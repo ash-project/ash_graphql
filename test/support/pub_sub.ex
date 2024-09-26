@@ -1,11 +1,14 @@
 defmodule AshGraphql.Test.PubSub do
+  @moduledoc """
+  PubSub mock implementation for subscription tests
+  """
   @behaviour Absinthe.Subscription.Pubsub
 
-  def start_link() do
+  def start_link do
     Registry.start_link(keys: :duplicate, name: __MODULE__)
   end
 
-  def node_name() do
+  def node_name do
     Atom.to_string(node())
   end
 
