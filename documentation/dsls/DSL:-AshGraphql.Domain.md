@@ -21,6 +21,8 @@ Domain level configuration for GraphQL
    * update
    * destroy
    * action
+ * [subscriptions](#graphql-subscriptions)
+   * subscribe
 
 
 ### Examples
@@ -269,9 +271,9 @@ Mutations (create/update/destroy actions) to expose for the resource.
 ### Examples
 ```
 mutations do
-  create :create_post, :create
-  update :update_post, :update
-  destroy :destroy_post, :destroy
+  create Post, :create_post, :create
+  update Post, :update_post, :update
+  destroy Post, :destroy_post, :destroy
 end
 
 ```
@@ -443,6 +445,72 @@ action :check_status, :check_status
 ### Introspection
 
 Target: `AshGraphql.Resource.Action`
+
+
+## graphql.subscriptions
+Subscriptions to expose for the resource.
+
+
+### Nested DSLs
+ * [subscribe](#graphql-subscriptions-subscribe)
+
+
+### Examples
+```
+subscription do
+  subscribe Post, :post_created do
+    action_types(:create)
+  end
+end
+
+```
+
+
+
+
+## graphql.subscriptions.subscribe
+```elixir
+subscribe resource, name
+```
+
+
+A subscription to listen for changes on the resource
+
+
+
+### Examples
+```
+subscribe :post_created do
+  action_types(:create)
+end
+
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`resource`](#graphql-subscriptions-subscribe-resource){: #graphql-subscriptions-subscribe-resource } | `module` |  | The resource that the action is defined on |
+| [`name`](#graphql-subscriptions-subscribe-name){: #graphql-subscriptions-subscribe-name } | `atom` |  | The name to use for the subscription. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`actor`](#graphql-subscriptions-subscribe-actor){: #graphql-subscriptions-subscribe-actor } | `(any -> any) \| module` |  | The actor to use for authorization. |
+| [`actions`](#graphql-subscriptions-subscribe-actions){: #graphql-subscriptions-subscribe-actions } | `list(atom) \| atom` |  | The create/update/destroy actions the subsciption should listen to. |
+| [`action_types`](#graphql-subscriptions-subscribe-action_types){: #graphql-subscriptions-subscribe-action_types } | `list(atom) \| atom` |  | The type of actions the subsciption should listen to. |
+| [`read_action`](#graphql-subscriptions-subscribe-read_action){: #graphql-subscriptions-subscribe-read_action } | `atom` |  | The read action to use for reading data |
+| [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the subscription, usable if the read action has arguments. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Subscription`
 
 
 

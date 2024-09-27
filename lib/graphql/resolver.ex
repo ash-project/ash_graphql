@@ -3,6 +3,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   require Logger
   import Ash.Expr
+  require Ash.Query
   import AshGraphql.TraceHelpers
   import AshGraphql.ContextHelpers
 
@@ -504,6 +505,135 @@ defmodule AshGraphql.Graphql.Resolver do
         something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
   end
+
+  def resolve(
+        %{arguments: args, context: context, root_value: notification} = resolution,
+        {domain, resource,
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, _input?}
+      ) do
+    case handle_arguments(resource, read_action, args) do
+      {:ok, args} ->
+        metadata = %{
+          domain: domain,
+          resource: resource,
+          resource_short_name: Ash.Resource.Info.short_name(resource),
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant),
+          action: read_action,
+          source: :graphql,
+          subscription: name,
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
+        }
+
+        trace domain,
+              resource,
+              :gql_subscription,
+              name,
+              metadata do
+          opts = [
+            actor: Map.get(context, :actor),
+            action: read_action,
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
+            tenant: Map.get(context, :tenant)
+          ]
+
+          cond do
+            notification.action.type in [:create, :update] ->
+              data = notification.data
+              {filter, args} = Map.pop(args, :filter)
+
+              read_action =
+                read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+
+              query =
+                Ash.Resource.Info.primary_key(resource)
+                |> Enum.reduce(resource, fn key, query ->
+                  value = Map.get(data, key)
+                  Ash.Query.filter(query, ^ref(key) == ^value)
+                end)
+
+              query =
+                Ash.Query.do_filter(
+                  query,
+                  massage_filter(query.resource, filter)
+                )
+
+              query =
+                AshGraphql.Subscription.query_for_subscription(
+                  query
+                  |> Ash.Query.for_read(read_action, args, opts),
+                  domain,
+                  resolution,
+                  subscription_result_type(name),
+                  [subcription_field_from_action_type(notification.action.type)]
+                )
+
+              result =
+                with {:ok, true, query} <-
+                       Ash.can(
+                         query,
+                         opts[:actor],
+                         tenant: opts[:tenant],
+                         run_queries?: false,
+                         alter_source?: true
+                       ),
+                     [] <- query.authorize_results,
+                     {:ok, true} <-
+                       Ash.Expr.eval(query.filter,
+                         record: data,
+                         unknown_on_unknown_refs?: true
+                       ) do
+                  Ash.load(data, query)
+                else
+                  _ ->
+                    query |> Ash.read_one()
+                end
+
+              case result do
+                # should only happen if a resource is created/updated and the subscribed user is not allowed to see it
+                {:ok, nil} ->
+                  resolution
+                  |> Absinthe.Resolution.put_result(
+                    {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+                  )
+
+                {:ok, result} ->
+                  resolution
+                  |> Absinthe.Resolution.put_result(
+                    {:ok,
+                     %{
+                       String.to_existing_atom(
+                         subcription_field_from_action_type(notification.action.type)
+                       ) => result
+                     }}
+                  )
+
+                {:error, error} ->
+                  resolution
+                  |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+              end
+
+            notification.action.type in [:destroy] ->
+              resolution
+              |> Absinthe.Resolution.put_result(
+                {:ok,
+                 %{
+                   String.to_existing_atom(
+                     subcription_field_from_action_type(notification.action.type)
+                   ) => AshGraphql.Resource.encode_id(notification.data, false)
+                 }}
+              )
+          end
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp subcription_field_from_action_type(:create), do: "created"
+  defp subcription_field_from_action_type(:update), do: "updated"
+  defp subcription_field_from_action_type(:destroy), do: "destroyed"
 
   defp read_one_query(resource, args) do
     case Map.fetch(args, :filter) do
@@ -1597,9 +1727,9 @@ defmodule AshGraphql.Graphql.Resolver do
      end)}
   end
 
-  defp massage_filter(_resource, nil), do: nil
+  def massage_filter(_resource, nil), do: nil
 
-  defp massage_filter(resource, filter) when is_map(filter) do
+  def massage_filter(resource, filter) when is_map(filter) do
     Map.new(filter, fn {key, value} ->
       cond do
         rel = Ash.Resource.Info.relationship(resource, key) ->
@@ -1614,7 +1744,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp massage_filter(_resource, other), do: other
+  def massage_filter(_resource, other), do: other
 
   defp calc_input(key, value) do
     case Map.fetch(value, :input) do
@@ -2211,6 +2341,11 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
+  defp subscription_result_type(subscription_name) do
+    String.to_atom("#{subscription_name}_result")
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
   defp page_type(resource, strategy, relay?) do
     type = AshGraphql.Resource.Info.type(resource)
 
@@ -2227,7 +2362,13 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   @doc false
-  def select_fields(query_or_changeset, resource, resolution, type_override, nested \\ []) do
+  def select_fields(
+        query_or_changeset,
+        resource,
+        resolution,
+        type_override,
+        nested \\ []
+      ) do
     subfields = get_select(resource, resolution, type_override, nested)
 
     case query_or_changeset do

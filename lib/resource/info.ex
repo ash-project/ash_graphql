@@ -35,6 +35,27 @@ defmodule AshGraphql.Resource.Info do
     |> Enum.concat(Extension.get_entities(resource, [:graphql, :mutations]) || [])
   end
 
+  @doc "The subscriptions exposed for the resource"
+  def subscriptions(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.subscriptions/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :subscriptions]) || [])
+  end
+
+  @doc "The pubsub module used for subscriptions"
+  def subscription_pubsub(resource) do
+    Extension.get_opt(resource, [:graphql, :subscriptions], :pubsub)
+  end
+
   @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"
   def encode_primary_key?(resource) do
     Extension.get_opt(resource, [:graphql], :encode_primary_key?, true)

@@ -2,7 +2,7 @@ defmodule AshGraphql.Resource do
   alias Ash.Changeset.ManagedRelationshipHelpers
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
-  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query}
+  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query, Subscription}
 
   @get %Spark.Dsl.Entity{
     name: :get,
@@ -272,6 +272,50 @@ defmodule AshGraphql.Resource do
 
   def mutations, do: [@create, @update, @destroy, @action]
 
+  @subscribe %Spark.Dsl.Entity{
+    name: :subscribe,
+    args: [:name],
+    describe: "A subscription to listen for changes on the resource",
+    examples: [
+      """
+      subscribe :post_created do
+        action_types(:create)
+      end
+      """
+    ],
+    schema: Subscription.schema(),
+    target: Subscription
+  }
+
+  @subscriptions %Spark.Dsl.Section{
+    name: :subscriptions,
+    schema: [
+      pubsub: [
+        type: :module,
+        required: true,
+        doc: "The pubsub module to use for the subscription"
+      ]
+    ],
+    describe: """
+    Subscriptions (notifications) to expose for the resource.
+    """,
+    examples: [
+      """
+      subscriptions do
+        subscribe :bucket_created do
+          actions :create
+          read_action :read
+        end
+      end
+      """
+    ],
+    entities: [
+      @subscribe
+    ]
+  }
+
+  def subscriptions, do: [@subscribe]
+
   @graphql %Spark.Dsl.Section{
     name: :graphql,
     imports: [AshGraphql.Resource.Helpers],
@@ -406,6 +450,7 @@ defmodule AshGraphql.Resource do
     sections: [
       @queries,
       @mutations,
+      @subscriptions,
       @managed_relationships
     ]
   }
@@ -413,13 +458,15 @@ defmodule AshGraphql.Resource do
   @transformers [
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
-    AshGraphql.Resource.Transformers.ValidateCompatibleNames
+    AshGraphql.Resource.Transformers.ValidateCompatibleNames,
+    AshGraphql.Resource.Transformers.Subscription
   ]
 
   @verifiers [
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
     AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
-    AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith
+    AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
+    AshGraphql.Resource.Verifiers.VerifySubscriptionOptIn
   ]
 
   @sections [@graphql]
@@ -435,6 +482,9 @@ defmodule AshGraphql.Resource do
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
   defdelegate mutations(resource, domain \\ []), to: AshGraphql.Resource.Info
+
+  @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
+  defdelegate subscriptions(resource, domain \\ []), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.managed_relationships/1`"
   defdelegate managed_relationships(resource), to: AshGraphql.Resource.Info
@@ -1070,6 +1120,68 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+
+  def subscription_types(resource, all_domains, schema) do
+    resource
+    |> subscriptions(all_domains)
+    |> Enum.map(fn %Subscription{name: name, actions: actions, action_types: action_types} ->
+      resource_type = AshGraphql.Resource.Info.type(resource)
+
+      action_types =
+        Ash.Resource.Info.actions(resource)
+        |> Stream.filter(&(&1.name in List.wrap(actions)))
+        |> Stream.map(& &1.name)
+        |> Stream.concat(List.wrap(action_types))
+        |> Enum.uniq()
+
+      result_type_name =
+        name
+        |> to_string()
+        |> then(&(&1 <> "_result"))
+
+      result_type =
+        result_type_name
+        |> String.to_atom()
+
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        module: schema,
+        identifier: result_type,
+        name: result_type_name,
+        fields:
+          [
+            :create in action_types &&
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                __reference__: ref(__ENV__),
+                identifier: :created,
+                module: schema,
+                name: "created",
+                type: resource_type
+              },
+            :update in action_types &&
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                __reference__: ref(__ENV__),
+                identifier: :updated,
+                module: schema,
+                name: "updated",
+                type: resource_type
+              },
+            :destroy in action_types &&
+              %Absinthe.Blueprint.Schema.FieldDefinition{
+                __reference__: ref(__ENV__),
+                identifier: :destroyed,
+                module: schema,
+                name: "destroyed",
+                type: :id
+              }
+          ]
+          |> Enum.filter(&(&1 != false)),
+        __reference__: ref(__ENV__)
+      }
+    end)
+  end
+
   defp id_translation_middleware(relay_id_translations, true) do
     [{{AshGraphql.Graphql.IdTranslator, :translate_relay_ids}, relay_id_translations}]
   end
@@ -1114,6 +1226,42 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
     end
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  @doc false
+
+  def subscriptions(domain, all_domains, resource, action_middleware, schema) do
+    resource
+    |> subscriptions(all_domains)
+    |> Enum.map(fn %Subscription{name: name, hide_inputs: hide_inputs} = subscription ->
+      result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
+
+      action =
+        Ash.Resource.Info.action(resource, subscription.read_action) ||
+          Ash.Resource.Info.primary_action(resource, :read)
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        arguments: args(:subscription, resource, action, schema, nil, hide_inputs),
+        identifier: name,
+        name: to_string(name),
+        config:
+          AshGraphql.Subscription.Config.create_config(
+            subscription,
+            domain,
+            resource
+          ),
+        module: schema,
+        middleware:
+          action_middleware ++
+            domain_middleware(domain) ++
+            [
+              {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, subscription, true}}
+            ],
+        type: result_type,
+        __reference__: ref(__ENV__)
+      }
+    end)
   end
 
   @doc false
@@ -1635,6 +1783,31 @@ defmodule AshGraphql.Resource do
 
   defp args(:one_related, resource, action, schema, _identity, hide_inputs, _) do
     read_args(resource, action, schema, hide_inputs)
+  end
+
+  defp args(:subscription, resource, action, schema, _identity, hide_inputs, _query) do
+    args =
+      if AshGraphql.Resource.Info.derive_filter?(resource) do
+        case resource_filter_fields(resource, schema) do
+          [] ->
+            []
+
+          _ ->
+            [
+              %Absinthe.Blueprint.Schema.InputValueDefinition{
+                name: "filter",
+                identifier: :filter,
+                type: resource_filter_type(resource),
+                description: "A filter to limit the results",
+                __reference__: ref(__ENV__)
+              }
+            ]
+        end
+      else
+        []
+      end
+
+    args ++ read_args(resource, action, schema, hide_inputs)
   end
 
   defp related_list_args(resource, related_resource, relationship_name, action, schema) do

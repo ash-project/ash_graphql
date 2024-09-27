@@ -34,12 +34,16 @@ defmodule AshGraphql.Domain.Info do
 
   @doc "The queries exposed by the domain"
   def queries(resource) do
-    Extension.get_entities(resource, [:graphql, :queries])
+    Extension.get_entities(resource, [:graphql, :queries]) || []
   end
 
   @doc "The mutations exposed by the domain"
   def mutations(resource) do
     Extension.get_entities(resource, [:graphql, :mutations]) || []
+  end
+
+  def subscriptions(resource) do
+    Extension.get_entities(resource, [:graphql, :subscriptions]) || []
   end
 
   @doc "Whether or not to render raised errors in the GraphQL response"

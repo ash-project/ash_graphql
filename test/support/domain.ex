@@ -12,6 +12,12 @@ defmodule AshGraphql.Test.Domain do
       get AshGraphql.Test.Comment, :get_comment, :read
       list AshGraphql.Test.Post, :post_score, :score
     end
+
+    subscriptions do
+      subscribe AshGraphql.Test.Subscribable, :subscribed_on_domain do
+        action_types(:create)
+      end
+    end
   end
 
   resources do
@@ -45,5 +51,6 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.Message)
     resource(AshGraphql.Test.TextMessage)
     resource(AshGraphql.Test.ImageMessage)
+    resource(AshGraphql.Test.Subscribable)
   end
 end

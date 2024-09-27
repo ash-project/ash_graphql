@@ -36,15 +36,44 @@ defmodule AshGraphql.Domain do
     examples: [
       """
       mutations do
-        create :create_post, :create
-        update :update_post, :update
-        destroy :destroy_post, :destroy
+        create Post, :create_post, :create
+        update Post, :update_post, :update
+        destroy Post, :destroy_post, :destroy
       end
       """
     ],
     entities:
       Enum.map(
         AshGraphql.Resource.mutations(),
+        &%{
+          &1
+          | args: [:resource | &1.args],
+            schema:
+              Keyword.put(&1.schema, :resource,
+                type: {:spark, Ash.Resource},
+                doc: "The resource that the action is defined on"
+              )
+        }
+      )
+  }
+
+  @subscriptions %Spark.Dsl.Section{
+    name: :subscriptions,
+    describe: """
+    Subscriptions to expose for the resource.
+    """,
+    examples: [
+      """
+      subscription do
+        subscribe Post, :post_created do
+          action_types(:create)
+        end
+      end
+      """
+    ],
+    entities:
+      Enum.map(
+        AshGraphql.Resource.subscriptions(),
         &%{
           &1
           | args: [:resource | &1.args],
@@ -71,7 +100,8 @@ defmodule AshGraphql.Domain do
     ],
     sections: [
       @queries,
-      @mutations
+      @mutations,
+      @subscriptions
     ],
     schema: [
       authorize?: [
@@ -209,6 +239,22 @@ defmodule AshGraphql.Domain do
     )
   end
 
+  def subscriptions(domain, all_domains, resources, action_middleware, schema) do
+    resources
+    |> Enum.filter(fn resource ->
+      AshGraphql.Resource in Spark.extensions(resource)
+    end)
+    |> Enum.flat_map(
+      &AshGraphql.Resource.subscriptions(
+        domain,
+        all_domains,
+        &1,
+        action_middleware,
+        schema
+      )
+    )
+  end
+
   @doc false
   def type_definitions(
         domain,
@@ -226,7 +272,8 @@ defmodule AshGraphql.Domain do
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
           AshGraphql.Resource.type_definitions(resource, domain, all_domains, schema, relay_ids?) ++
-            AshGraphql.Resource.mutation_types(resource, all_domains, schema)
+            AshGraphql.Resource.mutation_types(resource, all_domains, schema) ++
+            AshGraphql.Resource.subscription_types(resource, all_domains, schema)
         else
           AshGraphql.Resource.no_graphql_types(resource, schema)
         end
