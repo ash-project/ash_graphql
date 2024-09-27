@@ -529,7 +529,7 @@ end
 | [`actions`](#graphql-subscriptions-subscribe-actions){: #graphql-subscriptions-subscribe-actions } | `list(atom) \| atom` |  | The create/update/destroy actions the subsciption should listen to. |
 | [`action_types`](#graphql-subscriptions-subscribe-action_types){: #graphql-subscriptions-subscribe-action_types } | `list(atom) \| atom` |  | The type of actions the subsciption should listen to. |
 | [`read_action`](#graphql-subscriptions-subscribe-read_action){: #graphql-subscriptions-subscribe-read_action } | `atom` |  | The read action to use for reading data |
-| [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the subscription, usable if the read action has arguments. |
 
 
 

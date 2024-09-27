@@ -466,7 +466,6 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
     AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
     AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
-    AshGraphql.Resource.Verifiers.VerifySubscriptionActions,
     AshGraphql.Resource.Verifiers.VerifySubscriptionOptIn
   ]
 
@@ -1235,7 +1234,7 @@ defmodule AshGraphql.Resource do
   def subscriptions(domain, all_domains, resource, action_middleware, schema) do
     resource
     |> subscriptions(all_domains)
-    |> Enum.map(fn %Subscription{name: name} = subscription ->
+    |> Enum.map(fn %Subscription{name: name, hide_inputs: hide_inputs} = subscription ->
       result_type = name |> to_string() |> then(&(&1 <> "_result")) |> String.to_atom()
 
       action =
@@ -1243,7 +1242,7 @@ defmodule AshGraphql.Resource do
           Ash.Resource.Info.primary_action(resource, :read)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
-        arguments: args(:subscription, resource, action, schema, nil),
+        arguments: args(:subscription, resource, action, schema, nil, hide_inputs),
         identifier: name,
         name: to_string(name),
         config:

@@ -7,7 +7,7 @@ defmodule AshGraphql.Resource.Subscription do
     :action_types,
     :read_action,
     :actor,
-    :hide_input
+    :hide_inputs
   ]
 
   @subscription_schema [
@@ -35,7 +35,8 @@ defmodule AshGraphql.Resource.Subscription do
     ],
     hide_inputs: [
       type: {:list, :atom},
-      doc: "A list of inputs to hide from the mutation.",
+      doc:
+        "A list of inputs to hide from the subscription, usable if the read action has arguments.",
       default: []
     ]
   ]

@@ -142,6 +142,7 @@ defmodule AshGraphql.MixProject do
       {:ash, ash_version("~> 3.0 and >= 3.2.3")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
+      {:absinthe_phoenix, "~> 2.0.0", optional: true},
       {:jason, "~> 1.2"},
       {:igniter, "~> 0.3 and >= 0.3.34"},
       {:spark, "~> 2.2 and >= 2.2.10"},
