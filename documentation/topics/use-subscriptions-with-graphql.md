@@ -72,7 +72,7 @@ For further Details checkout the DSL docs for [resource](/documentation/dsls/DSL
 
 ### Deduplication
 
-By default, AshGraphql will deduplicate subscriptions based on the `context_id`.
+By default, Absinthe will deduplicate subscriptions based on the `context_id`.
 We use the some of the context like actor and tenant to create a `context_id` for you.
 
 If you want to customize the deduplication you can do so by adding a actor function to your subscription.
