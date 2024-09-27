@@ -1,6 +1,6 @@
 # Using Subscriptions
 
-You can do this with Absinthe direclty, and use `AshGraphql.Subscription.query_for_subscription/3`. Here is an example of how you could do this for a subscription for a single record. This example could be extended to support lists of records as well.
+You can do this with Absinthe directly, and use `AshGraphql.Subscription.query_for_subscription/3`. Here is an example of how you could do this for a subscription for a single record. This example could be extended to support lists of records as well.
 
 ```elixir
 # in your absinthe schema file
