@@ -389,7 +389,7 @@ defmodule AshGraphql.SubscriptionTest do
 
   test "it aggregates multiple messages" do
     stop_supervised(AshGraphql.Subscription.Batcher)
-    start_supervised({AshGraphql.Subscription.Batcher, [async_threshold: 0]})
+    start_supervised({AshGraphql.Subscription.Batcher, [send_immediately_threshold: 0]})
 
     Application.put_env(:ash_graphql, :simulate_subscription_processing_time, 1000)
 
@@ -442,8 +442,10 @@ defmodule AshGraphql.SubscriptionTest do
                context: %{actor: @admin}
              )
 
-    assert GenServer.call(AshGraphql.Subscription.Batcher, :dump_state, :infinity).total_count ==
-             2
+    state = GenServer.call(AshGraphql.Subscription.Batcher, :dump_state, :infinity)
+    assert state.total_count == 2
+
+    assert Enum.count(state.batches) == 1
 
     assert Enum.empty?(mutation_result["createSubscribable"]["errors"])
 
