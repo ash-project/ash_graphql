@@ -442,13 +442,13 @@ defmodule AshGraphql.SubscriptionTest do
                context: %{actor: @admin}
              )
 
-    assert GenServer.call(AshGraphql.Subscription.Batcher, :dump_state, :infinity).total_count == 2
+    assert GenServer.call(AshGraphql.Subscription.Batcher, :dump_state, :infinity).total_count ==
+             2
 
     assert Enum.empty?(mutation_result["createSubscribable"]["errors"])
 
     subscribable_id2 = mutation_result["createSubscribable"]["result"]["id"]
     refute is_nil(subscribable_id)
-
 
     assert_receive({^topic, %{data: subscription_data}})
     assert_receive({^topic, %{data: subscription_data2}})

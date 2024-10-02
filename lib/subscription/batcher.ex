@@ -6,10 +6,10 @@ defmodule AshGraphql.Subscription.Batcher do
   require Logger
   @compile {:inline, simulate_slowness: 0}
 
-  defstruct [batches: %{}, total_count: 0, async_limit: 100, async_threshold: 50]
+  defstruct batches: %{}, total_count: 0, async_limit: 100, async_threshold: 50
 
   defmodule Batch do
-    defstruct [notifications: [], count: 0, pubsub: nil, key_strategy: nil, doc: nil, timer: nil]
+    defstruct notifications: [], count: 0, pubsub: nil, key_strategy: nil, doc: nil, timer: nil
 
     def add(batch, item) do
       %{batch | notifications: [item | batch.notifications], count: batch.count + 1}
@@ -25,16 +25,25 @@ defmodule AshGraphql.Subscription.Batcher do
   end
 
   def publish(topic, notification, pubsub, key_strategy, doc) do
-    case GenServer.call(__MODULE__, {:publish, topic, notification, pubsub, key_strategy, doc}, :infinity) do
+    case GenServer.call(
+           __MODULE__,
+           {:publish, topic, notification, pubsub, key_strategy, doc},
+           :infinity
+         ) do
       :handled ->
         :ok
+
       :backpressure_sync ->
         do_send(topic, [notification], pubsub, key_strategy, doc)
     end
   end
 
   def init(config) do
-    {:ok, %__MODULE__{async_limit: config[:async_limit] || 100, async_threshold: config[:async_threshold] || 50}}
+    {:ok,
+     %__MODULE__{
+       async_limit: config[:async_limit] || 100,
+       async_threshold: config[:async_threshold] || 50
+     }}
   end
 
   def handle_call(:drain, _from, state) do
@@ -76,19 +85,23 @@ defmodule AshGraphql.Subscription.Batcher do
   end
 
   def handle_info({_task, {:sent, topic, count, _res}}, state) do
-    {:noreply, %{state | total_count: state.total_count - count, batches: Map.delete(state.batches, topic)}}
+    {:noreply,
+     %{state | total_count: state.total_count - count, batches: Map.delete(state.batches, topic)}}
   end
 
   def handle_info({:send_batch, topic}, state) do
     batch = state.batches[topic]
+
     Task.async(fn ->
-      {:sent, topic, batch.count, do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
+      {:sent, topic, batch.count,
+       do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
     end)
 
     {:noreply, state}
   end
 
   defp eagerly_build_batches(state, 0), do: state
+
   defp eagerly_build_batches(state, count) do
     receive do
       {:"$gen_call", {:publish, topic, notification, pubsub, key_strategy, doc}, from} ->
@@ -99,7 +112,7 @@ defmodule AshGraphql.Subscription.Batcher do
         |> eagerly_build_batches(count - 1)
     after
       0 ->
-         state
+        state
     end
   end
 
@@ -118,6 +131,7 @@ defmodule AshGraphql.Subscription.Batcher do
       if batch.timer do
         Process.cancel_timer(batch.timer)
       end
+
       do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)
     end)
 
@@ -158,7 +172,9 @@ defmodule AshGraphql.Subscription.Batcher do
 
   defp put_notification(state, topic, pubsub, key_strategy, doc, notification) do
     state.batches
-    |> Map.put_new_lazy(topic, fn -> %Batch{key_strategy: key_strategy, doc: doc, pubsub: pubsub} end)
+    |> Map.put_new_lazy(topic, fn ->
+      %Batch{key_strategy: key_strategy, doc: doc, pubsub: pubsub}
+    end)
     |> Map.update!(topic, &Batch.add(&1, notification))
     |> then(&%{state | batches: &1, total_count: state.total_count + 1})
   end
