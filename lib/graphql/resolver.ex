@@ -507,6 +507,166 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
+        %{root_value: {:pre_resolved, item}} = resolution,
+        {_, _, %AshGraphql.Resource.Subscription{}, _}
+      ) do
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:ok, item}
+    )
+  end
+
+  def resolve(
+        %{arguments: args, context: context, root_value: notifications} = resolution,
+        {domain, resource,
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, _input?}
+      )
+      when is_list(notifications) do
+    case handle_arguments(resource, read_action, args) do
+      {:ok, args} ->
+        metadata = %{
+          domain: domain,
+          resource: resource,
+          resource_short_name: Ash.Resource.Info.short_name(resource),
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant),
+          action: read_action,
+          source: :graphql,
+          subscription: name,
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
+        }
+
+        trace domain,
+              resource,
+              :gql_subscription,
+              name,
+              metadata do
+          opts = [
+            actor: Map.get(context, :actor),
+            action: read_action,
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
+            tenant: Map.get(context, :tenant)
+          ]
+
+          subscription_events =
+            notifications
+            |> Enum.group_by(& &1.action.type)
+            |> Enum.map(fn {type, notifications} ->
+              subscription_field = subcription_field_from_action_type(type)
+              key = String.to_existing_atom(subscription_field)
+
+              if type in [:create, :update] do
+                data = Enum.map(notifications, & &1.data)
+                {filter, args} = Map.pop(args, :filter)
+
+                read_action =
+                  read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+
+                # read the records that were just created/updated
+                query =
+                  resource
+                  |> Ash.Query.do_filter(massage_filter(resource, filter))
+                  |> Ash.Query.for_read(read_action, args, opts)
+                  |> AshGraphql.Subscription.query_for_subscription(
+                    domain,
+                    resolution,
+                    subscription_result_type(name),
+                    [subscription_field]
+                  )
+
+                query_with_authorization_rules =
+                  Ash.can(
+                    query,
+                    opts[:actor],
+                    tenant: opts[:tenant],
+                    run_queries?: false,
+                    alter_source?: true
+                  )
+
+                current_filter = query.filter
+
+                {known_results, need_refetch} =
+                  case query_with_authorization_rules do
+                    {:ok, true, %{authorize_results: [], filter: nil} = query} ->
+                      {data, []}
+
+                    {:ok, true,
+                     %{authorize_results: [], filter: %Ash.Filter{expression: nil}} = query} ->
+                      {data, []}
+
+                    {:ok, true, %{authorize_results: []} = query} ->
+                      Enum.reduce(data, {[], []}, fn record, {known, refetch} ->
+                        case Ash.Expr.eval(query.filter,
+                               record: data,
+                               unknown_on_unknown_refs?: true
+                             ) do
+                          {:ok, true} ->
+                            {[record | known], refetch}
+
+                          {:ok, false} ->
+                            {known, refetch}
+
+                          _ ->
+                            {known, [record | refetch]}
+                        end
+                      end)
+
+                    {:error, false, _} ->
+                      {[], []}
+
+                    _ ->
+                      {[], data}
+                  end
+
+                primary_key = Ash.Resource.Info.primary_key(resource)
+
+                primary_key_matches =
+                  Enum.map(need_refetch, fn record ->
+                    Map.take(record, primary_key)
+                  end)
+
+                with {:ok, known_results} <- Ash.load(known_results, query),
+                     {:ok, need_refetch} <- do_refetch(query, primary_key_matches) do
+                  known_results
+                  |> Stream.concat(need_refetch)
+                  |> Enum.map(fn record ->
+                    %{key => record}
+                  end)
+                else
+                  {:error, error} ->
+                    # caught by the batch resolver
+                    raise Ash.Error.to_error_class(error)
+                end
+              else
+                Enum.map(notifications, fn notification ->
+                  %{type => AshGraphql.Resource.encode_id(notification.data, false)}
+                end)
+              end
+            end)
+
+          case List.flatten(subscription_events) do
+            [] ->
+              Absinthe.Resolution.put_result(
+                resolution,
+                {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+              )
+
+            [first | rest] ->
+              Process.put(:batch_resolved, rest)
+
+              Absinthe.Resolution.put_result(
+                resolution,
+                {:ok, first}
+              )
+          end
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  def resolve(
         %{arguments: args, context: context, root_value: notification} = resolution,
         {domain, resource,
          %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, _input?}
@@ -629,6 +789,14 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, error} ->
         {:error, error}
     end
+  end
+
+  defp do_refetch(_query, []) do
+    {:ok, []}
+  end
+
+  defp do_refetch(query, primary_key_matches) do
+    Ash.read(Ash.Query.do_filter(query, or: primary_key_matches))
   end
 
   defp subcription_field_from_action_type(:create), do: "created"

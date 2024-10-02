@@ -6,17 +6,23 @@ defmodule AshGraphql.Subscription.Batcher do
   require Logger
   @compile {:inline, simulate_slowness: 0}
 
-  defstruct batches: %{}, total_count: 0, async_limit: 100, async_threshold: 50
+  defstruct batches: %{}, total_count: 0, async_limit: 100, send_immediately_threshold: 50
 
   defmodule Batch do
-    defstruct notifications: [], count: 0, pubsub: nil, key_strategy: nil, doc: nil, timer: nil
+    defstruct notifications: [],
+              count: 0,
+              pubsub: nil,
+              key_strategy: nil,
+              doc: nil,
+              timer: nil,
+              task: nil
 
     def add(batch, item) do
       %{batch | notifications: [item | batch.notifications], count: batch.count + 1}
     end
   end
 
-  def start_link(opts) do
+  def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
   end
 
@@ -42,62 +48,84 @@ defmodule AshGraphql.Subscription.Batcher do
     {:ok,
      %__MODULE__{
        async_limit: config[:async_limit] || 100,
-       async_threshold: config[:async_threshold] || 50
+       send_immediately_threshold: config[:send_immediately_threshold] || 50
      }}
   end
 
   def handle_call(:drain, _from, state) do
-    {:reply, :done, send_all_batches(state)}
+    {:reply, :done, send_all_batches(state, false)}
   end
 
   def handle_call(:dump_state, _from, state) do
     {:reply, state, state}
   end
 
-  def handle_call({:publish, topic, notification, pubsub, key_strategy, doc}, from, state) do
-    simulate_slowness()
-
+  def handle_call({:publish, topic, notification, pubsub, key_strategy, doc}, _from, state) do
     if state.total_count >= state.async_limit do
       {:reply, :backpressure_sync, state}
     else
-      GenServer.reply(from, :handled)
-      simulate_slowness()
-      state = put_notification(state, topic, pubsub, key_strategy, doc, notification)
+      {:reply, :handled, state,
+       {:continue, {:publish, topic, notification, pubsub, key_strategy, doc}}}
+    end
+  end
 
-      # if we have less than async threshold, we can process it eagerly
-      if state.total_count < state.async_threshold do
-        # so we eagerly process current_calls
-        state = eagerly_build_batches(state, state.async_threshold - state.total_count)
+  def handle_continue({:publish, topic, notification, pubsub, key_strategy, doc}, state) do
+    state = put_notification(state, topic, pubsub, key_strategy, doc, notification)
 
-        # and if we still have less than the async threshold
-        if state.total_count < state.async_threshold do
-          # then we send all of our batches
-          {:noreply, send_all_batches(state)}
-        else
-          # otherwise we wait on the regularly scheduled push
-          {:noreply, ensure_timer(state, topic)}
-        end
+    # if we have less than async threshold, we can process it eagerly
+    if state.total_count < state.send_immediately_threshold do
+      # so we eagerly process current_calls
+      state = eagerly_build_batches(state, state.send_immediately_threshold - state.total_count)
+
+      # and if we still have less than the async threshold
+      if state.total_count < state.send_immediately_threshold do
+        # then we send all of our batches
+        {:noreply, send_all_batches(state, true)}
       else
         # otherwise we wait on the regularly scheduled push
         {:noreply, ensure_timer(state, topic)}
       end
+    else
+      # otherwise we wait on the regularly scheduled push
+      {:noreply, ensure_timer(state, topic)}
     end
   end
 
-  def handle_info({_task, {:sent, topic, count, _res}}, state) do
+  def handle_info({_task, {:sent, topic, _res}}, state) do
+    case state.batches[topic] do
+      %{timer: timer} when not is_nil(timer) ->
+        Process.cancel_timer(timer)
+
+      _ ->
+        :ok
+    end
+
     {:noreply,
-     %{state | total_count: state.total_count - count, batches: Map.delete(state.batches, topic)}}
+     %{
+       state
+       | total_count: state.total_count - Map.get(state.batches[topic] || %{}, :count, 0),
+         batches: Map.delete(state.batches, topic)
+     }}
+  end
+
+  def handle_info({:DOWN, _, _, _, :normal}, state) do
+    {:noreply, state}
   end
 
   def handle_info({:send_batch, topic}, state) do
     batch = state.batches[topic]
 
-    Task.async(fn ->
-      {:sent, topic, batch.count,
-       do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
-    end)
+    if batch do
+      task =
+        Task.async(fn ->
+          {:sent, topic,
+           do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
+        end)
 
-    {:noreply, state}
+      {:noreply, put_in(state.batches[topic].task, task)}
+    else
+      {:noreply, state}
+    end
   end
 
   defp eagerly_build_batches(state, 0), do: state
@@ -126,48 +154,97 @@ defmodule AshGraphql.Subscription.Batcher do
     end
   end
 
-  defp send_all_batches(state) do
-    Enum.each(state.batches, fn {topic, batch} ->
+  defp send_all_batches(state, async?) do
+    state.batches
+    |> Enum.reject(fn {_, batch} ->
+      batch.task
+    end)
+    |> Enum.reduce(state, fn {topic, batch}, state ->
       if batch.timer do
         Process.cancel_timer(batch.timer)
       end
 
-      do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)
-    end)
+      if async? do
+        task =
+          Task.async(fn ->
+            {:sent, topic,
+             do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
+          end)
 
-    %{state | batches: %{}, total_count: 0}
+        put_in(state.batches[topic].task, task)
+      else
+        do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)
+
+        %{
+          state
+          | batches: Map.delete(state.batches, topic),
+            total_count: state.total_count - batch.count
+        }
+      end
+    end)
   end
 
   defp do_send(topic, notifications, pubsub, key_strategy, doc) do
-    # Refactor to do batch resolution
-    notifications
-    |> Enum.reverse()
-    |> Enum.each(fn notification ->
-      try do
-        pipeline =
-          Absinthe.Subscription.Local.pipeline(doc, notification)
+    # This is a temporary and very hacky way of doing this
+    # we pass in the notifications as a list as the root data
+    # The resolver then returns the *first* one, and puts a list
+    # of notifications in the process dictionary. Those will be
+    # passed in *again* to the resolution step, to be returned
+    # as-is. Its gross, and I hate it, but it is better than forcing
+    # individual resolution :)
 
-        {:ok, %{result: data}, _} = Absinthe.Pipeline.run(doc.source, pipeline)
+    simulate_slowness()
 
-        Logger.debug("""
-        Absinthe Subscription Publication
-        Field Topic: #{inspect(key_strategy)}
-        Subscription id: #{inspect(topic)}
-        Data: #{inspect(data)}
-        """)
+    pipeline =
+      Absinthe.Subscription.Local.pipeline(doc, notifications)
 
-        case should_send?(data) do
-          false ->
-            :ok
+    first_results =
+      case Absinthe.Pipeline.run(doc.source, pipeline) do
+        {:ok, %{result: data}, _} ->
+          if should_send?(data) do
+            [List.wrap(data)]
+          else
+            []
+          end
 
-          true ->
-            :ok = pubsub.publish_subscription(topic, data)
-        end
-      rescue
-        e ->
-          BatchResolver.pipeline_error(e, __STACKTRACE__)
+        {:error, error} ->
+          raise Ash.Error.to_error_class(error)
       end
-    end)
+
+    result =
+      case List.wrap(Process.get(:batch_resolved)) do
+        [] ->
+          first_results
+
+        batch ->
+          batch =
+            Enum.map(batch, fn item ->
+              pipeline =
+                Absinthe.Subscription.Local.pipeline(doc, {:pre_resolved, item})
+
+              {:ok, %{result: data}, _} = Absinthe.Pipeline.run(doc.source, pipeline)
+
+              data
+            end)
+
+          [batch] ++ first_results
+      end
+
+    Logger.debug("""
+    Absinthe Subscription Publication
+    Field Topic: #{inspect(key_strategy)}
+    Subscription id: #{inspect(topic)}
+    Notification Count: #{Enum.count(notifications)}
+    """)
+
+    for batch <- result, record <- batch, not is_nil(record) do
+      :ok = pubsub.publish_subscription(topic, record)
+    end
+  rescue
+    e ->
+      BatchResolver.pipeline_error(e, __STACKTRACE__)
+  after
+    Process.delete(:batch_resolved)
   end
 
   defp put_notification(state, topic, pubsub, key_strategy, doc, notification) do
@@ -197,7 +274,9 @@ defmodule AshGraphql.Subscription.Batcher do
     # and the user can not really do anything usefull with it
     not (errors
          |> List.wrap()
-         |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found", nil] end))
+         |> Enum.any?(fn error ->
+           Map.get(error, :code) in ["forbidden", "not_found", nil]
+         end))
   end
 
   defp should_send?(_), do: true

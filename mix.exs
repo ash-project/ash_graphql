@@ -156,7 +156,8 @@ defmodule AshGraphql.MixProject do
       {:git_ops, "~> 2.5", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:simple_sat, ">= 0.0.0", only: :test},
-      {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false}
+      {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:benchee, "~> 1.1", only: [:dev, :test]}
     ]
   end
 
