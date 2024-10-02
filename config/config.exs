@@ -11,6 +11,10 @@ config :logger, level: :info
 
 config :ash_graphql, :subscriptions, true
 
+if Mix.env() == :test do
+  config :ash_graphql, :simulate_subscription_slowness?, true
+end
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,
