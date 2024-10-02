@@ -15,9 +15,11 @@ defmodule AshGraphql.SubscriptionTest do
     Application.put_env(PubSub, :notifier_test_pid, self())
     {:ok, pubsub} = PubSub.start_link()
     {:ok, absinthe_sub} = Absinthe.Subscription.start_link(PubSub)
+    start_supervised(AshGraphql.Subscription.Batcher, [])
     :ok
 
     on_exit(fn ->
+      Application.delete_env(:ash_graphql, :simulate_subscription_processing_time)
       Process.exit(pubsub, :normal)
       Process.exit(absinthe_sub, :normal)
       # block until the processes have exited
@@ -105,6 +107,8 @@ defmodule AshGraphql.SubscriptionTest do
 
     assert Enum.empty?(mutation_result["updateSubscribable"]["errors"])
 
+    AshGraphql.Subscription.Batcher.drain()
+
     assert_receive({^topic, %{data: subscription_data}})
 
     assert subscription_data["subscribableEvents"]["updated"]["text"] == "bar"
@@ -127,6 +131,8 @@ defmodule AshGraphql.SubscriptionTest do
                variables: %{"id" => subscribable_id},
                context: %{actor: @admin}
              )
+
+    AshGraphql.Subscription.Batcher.drain()
 
     assert Enum.empty?(mutation_result["destroySubscribable"]["errors"])
 
@@ -195,6 +201,8 @@ defmodule AshGraphql.SubscriptionTest do
       |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
       |> Ash.create!()
 
+    AshGraphql.Subscription.Batcher.drain()
+
     # actor1 will get data because it can see the resource
     assert_receive {^topic1, %{data: subscription_data}}
     # actor 2 will not get data because it cannot see the resource
@@ -252,6 +260,8 @@ defmodule AshGraphql.SubscriptionTest do
       |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
       |> Ash.create!()
 
+    AshGraphql.Subscription.Batcher.drain()
+
     assert_receive {^topic1, %{data: subscription_data}}
 
     assert subscribable.id ==
@@ -290,6 +300,8 @@ defmodule AshGraphql.SubscriptionTest do
       )
       |> Ash.create!()
 
+    AshGraphql.Subscription.Batcher.drain()
+
     assert_receive {^topic, %{data: subscription_data}}
 
     assert subscribable.id ==
@@ -326,6 +338,8 @@ defmodule AshGraphql.SubscriptionTest do
         actor: @admin
       )
       |> Ash.create!()
+
+    AshGraphql.Subscription.Batcher.drain()
 
     assert_receive {^topic, %{data: subscription_data}}
 
@@ -364,10 +378,86 @@ defmodule AshGraphql.SubscriptionTest do
     )
     |> Ash.create!()
 
+    AshGraphql.Subscription.Batcher.drain()
+
     assert_receive {^topic, %{data: subscription_data, errors: errors}}
 
     assert is_nil(subscription_data["subscribedOnDomain"]["created"])
     refute Enum.empty?(errors)
     assert [%{code: "forbidden_field"}] = errors
+  end
+
+  test "it aggregates multiple messages" do
+    stop_supervised(AshGraphql.Subscription.Batcher)
+    start_supervised({AshGraphql.Subscription.Batcher, [async_threshold: 0]})
+
+    Application.put_env(:ash_graphql, :simulate_subscription_processing_time, 1000)
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEvents {
+                   created {
+                     id
+                     text
+                   }
+                   updated {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateSubscribable($input: CreateSubscribableInput) {
+        createSubscribable(input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    subscribable_id = mutation_result["createSubscribable"]["result"]["id"]
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    assert GenServer.call(AshGraphql.Subscription.Batcher, :dump_state, :infinity).total_count == 2
+
+    assert Enum.empty?(mutation_result["createSubscribable"]["errors"])
+
+    subscribable_id2 = mutation_result["createSubscribable"]["result"]["id"]
+    refute is_nil(subscribable_id)
+
+
+    assert_receive({^topic, %{data: subscription_data}})
+    assert_receive({^topic, %{data: subscription_data2}})
+    refute_received({^topic, _})
+
+    assert subscribable_id ==
+             subscription_data["subscribableEvents"]["created"]["id"]
+
+    assert subscribable_id2 ==
+             subscription_data2["subscribableEvents"]["created"]["id"]
   end
 end
