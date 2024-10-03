@@ -38,8 +38,28 @@ config :ash_graphql, :policies, show_policy_breakdowns?: true
 
 First you'll need to do some setup, follow the the [setup guide](https://hexdocs.pm/absinthe/subscriptions.html#absinthe-phoenix-setup)
 in the absinthe docs, but instead of using `Absinthe.Pheonix.Endpoint` use `AshGraphql.Subscription.Endpoint`.
+Next, you need to also add the `AshGraphql.Subscription.Batcher` to your supervision tree.
 
-Afterwards add an empty subscription block to your schema module.
+```elixir
+  @impl true
+  def start(_type, _args) do
+    children = [
+      ...,
+      {Absinthe.Subscription, MyAppWeb.Endpoint},
+      AshGraphql.Subscription.Batcher
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: MyAppWeb.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+```
+
+This allows AshGrapqhl to decouple the publishing of subscriptions from resolving the mutation and resolve
+multiple subscripions in one batch.
+
+Afterwards, add an empty subscription block to your schema module.
 
 ```elixir
 defmodule MyAppWeb.Schema do
