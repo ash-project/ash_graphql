@@ -43,6 +43,11 @@ By default subscriptions are resolved synchronously as part of the mutation. Thi
 is not deduplicated. If you have a lot of subscribers you can add the `AshGraphql.Subscription.Batcher` to your supervision tree, which
 batches up notifications and runs subscription resolution out-of-band.
 
+> ### Subscription response order {: .warning}
+>
+> The order in which the responses are sent to the client is not guaranteed to be the
+> same as the order in which the mutations were executed.
+
 ```elixir
   @impl true
   def start(_type, _args) do
