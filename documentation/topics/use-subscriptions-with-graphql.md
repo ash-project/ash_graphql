@@ -32,6 +32,11 @@ end
 
 The subscription DSL is currently in beta and before using it you have to enable them in your config.
 
+> ### Subscription response order {: .warning}
+>
+> The order in which the subscription responses are sent to the client is not guaranteed to be the
+> same as the order in which the mutations were executed.
+
 ```elixir
 config :ash_graphql, :policies, show_policy_breakdowns?: true
 ```
@@ -42,11 +47,6 @@ in the absinthe docs, but instead of using `Absinthe.Pheonix.Endpoint` use `AshG
 By default subscriptions are resolved synchronously as part of the mutation. This means that a resolver is run for every subscriber that
 is not deduplicated. If you have a lot of subscribers you can add the `AshGraphql.Subscription.Batcher` to your supervision tree, which
 batches up notifications and runs subscription resolution out-of-band.
-
-> ### Subscription response order {: .warning}
->
-> The order in which the responses are sent to the client is not guaranteed to be the
-> same as the order in which the mutations were executed.
 
 ```elixir
   @impl true
@@ -63,9 +63,6 @@ batches up notifications and runs subscription resolution out-of-band.
     Supervisor.start_link(children, opts)
   end
 ```
-
-This allows AshGrapqhl to decouple the publishing of subscriptions from resolving the mutation and resolve
-multiple subscripions in one batch.
 
 Afterwards, add an empty subscription block to your schema module.
 
