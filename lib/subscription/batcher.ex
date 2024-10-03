@@ -2,6 +2,7 @@ defmodule AshGraphql.Subscription.Batcher do
   use GenServer
 
   alias Absinthe.Pipeline.BatchResolver
+  alias AshGraphql.Subscription.Runner
 
   require Logger
   @compile {:inline, simulate_slowness: 0}
@@ -201,7 +202,7 @@ defmodule AshGraphql.Subscription.Batcher do
     first_results =
       case Absinthe.Pipeline.run(doc.source, pipeline) do
         {:ok, %{result: data}, _} ->
-          if should_send?(data) do
+          if Runner.should_send?(data) do
             [List.wrap(data)]
           else
             []
@@ -266,18 +267,4 @@ defmodule AshGraphql.Subscription.Batcher do
       put_in(state.batches[topic].timer, timer)
     end
   end
-
-  defp should_send?(%{errors: errors}) do
-    # if the user is not allowed to see the data or the query didn't
-    # return any data we do not send the error to the client
-    # because it would just expose unnecessary information
-    # and the user can not really do anything usefull with it
-    not (errors
-         |> List.wrap()
-         |> Enum.any?(fn error ->
-           Map.get(error, :code) in ["forbidden", "not_found", nil]
-         end))
-  end
-
-  defp should_send?(_), do: true
 end

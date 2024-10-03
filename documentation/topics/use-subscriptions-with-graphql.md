@@ -38,7 +38,10 @@ config :ash_graphql, :policies, show_policy_breakdowns?: true
 
 First you'll need to do some setup, follow the the [setup guide](https://hexdocs.pm/absinthe/subscriptions.html#absinthe-phoenix-setup)
 in the absinthe docs, but instead of using `Absinthe.Pheonix.Endpoint` use `AshGraphql.Subscription.Endpoint`.
-Next, you need to also add the `AshGraphql.Subscription.Batcher` to your supervision tree.
+
+By default subscriptions are resolved synchronously as part of the mutation. This means that a resolver is run for every subscriber that
+is not deduplicated. If you have a lot of subscribers you can add the `AshGraphql.Subscription.Batcher` to your supervision tree, which
+batches up notifications and runs subscription resolution out-of-band.
 
 ```elixir
   @impl true
