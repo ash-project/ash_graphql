@@ -796,7 +796,7 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp do_refetch(query, primary_key_matches) do
-    Ash.read(Ash.Query.do_filter(query, or: primary_key_matches))
+    Ash.read(Ash.Query.do_filter(query, and: primary_key_matches))
   end
 
   defp subcription_field_from_action_type(:create), do: "created"
