@@ -1019,6 +1019,14 @@ defmodule AshGraphql.Resource do
 
     resource
     |> mutations(all_domains)
+    |> Enum.map(fn mutation ->
+      %{
+        mutation
+        | action:
+            Ash.Resource.Info.action(resource, mutation.action) ||
+              raise("No such action #{mutation.action} for #{inspect(resource)}")
+      }
+    end)
     |> Enum.flat_map(fn mutation ->
       unless resource_type do
         raise """
@@ -1028,13 +1036,6 @@ defmodule AshGraphql.Resource do
         You should define the type of your resource with `type :my_resource_type`.
         """
       end
-
-      mutation = %{
-        mutation
-        | action:
-            Ash.Resource.Info.action(resource, mutation.action) ||
-              raise("No such action #{mutation.action} for #{inspect(resource)}")
-      }
 
       description =
         if mutation.type == :destroy do
@@ -1087,14 +1088,21 @@ defmodule AshGraphql.Resource do
           fields
         end
 
-      result = %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
-        description: "The result of the #{inspect(mutation.name)} mutation",
-        fields: fields,
-        identifier: String.to_atom("#{mutation.name}_result"),
-        module: schema,
-        name: Macro.camelize("#{mutation.name}_result"),
-        __reference__: ref(__ENV__)
-      }
+      result =
+        if mutation.action.type == :action do
+          []
+        else
+          [
+            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+              description: "The result of the #{inspect(mutation.name)} mutation",
+              fields: fields,
+              identifier: String.to_atom("#{mutation.name}_result"),
+              module: schema,
+              name: Macro.camelize("#{mutation.name}_result"),
+              __reference__: ref(__ENV__)
+            }
+          ]
+        end
 
       case mutation_fields(
              resource,
@@ -1104,7 +1112,7 @@ defmodule AshGraphql.Resource do
              mutation.hide_inputs
            ) do
         [] ->
-          [result] ++ List.wrap(metadata_object_type)
+          result ++ List.wrap(metadata_object_type)
 
         fields ->
           input = %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
@@ -1115,7 +1123,7 @@ defmodule AshGraphql.Resource do
             __reference__: ref(__ENV__)
           }
 
-          [input, result] ++ List.wrap(metadata_object_type)
+          [input | result] ++ List.wrap(metadata_object_type)
       end
     end)
   end
