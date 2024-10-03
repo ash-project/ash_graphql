@@ -639,7 +639,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 end
               else
                 Enum.map(notifications, fn notification ->
-                  %{type => AshGraphql.Resource.encode_id(notification.data, false)}
+                  %{key => AshGraphql.Resource.encode_id(notification.data, false)}
                 end)
               end
             end)
