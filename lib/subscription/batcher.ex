@@ -162,7 +162,7 @@ defmodule AshGraphql.Subscription.Batcher do
           state
 
         _ ->
-          :ok
+          state
       end
 
     {:noreply, state}
@@ -228,7 +228,7 @@ defmodule AshGraphql.Subscription.Batcher do
       if async? do
         task =
           Task.async(fn ->
-            {:sent, topic,
+            {:sent, topic, batch.notifications,
              do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
           end)
 
