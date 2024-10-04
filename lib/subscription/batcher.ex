@@ -2,7 +2,6 @@ defmodule AshGraphql.Subscription.Batcher do
   @moduledoc """
   If started as a GenServer, this module will batch notifications and send them in bulk.
   Otherwise, it will send them immediately.
-
   """
   use GenServer
 
