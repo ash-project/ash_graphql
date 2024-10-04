@@ -1,4 +1,20 @@
 defmodule AshGraphql.Subscription.Batcher do
+  @moduledoc """
+  If started as a GenServer, this module will batch notifications and send them in bulk.
+  Otherwise, it will send them immediately.
+
+  The Batcher can be configured during compile time using the following settings:
+
+  ```elixir
+  config :ash_graphql, :subscription_batch_settings,
+    # if there are more than 100 `async_limit` notifications, we will start to backpressure
+    async_limit: 100,
+    # if there are less then 50 `send_immediately_threshold` notifications, we will send them immediately
+    send_immediately_threshold: 50,
+    # the interval in milliseconds the batcher waits for new notifications before sending them
+    subscription_batch_interval: 1000
+  ```
+  """
   use GenServer
 
   alias Absinthe.Pipeline.BatchResolver
@@ -6,9 +22,16 @@ defmodule AshGraphql.Subscription.Batcher do
   require Logger
   @compile {:inline, simulate_slowness: 0}
 
-  defstruct batches: %{}, total_count: 0, async_limit: 100, send_immediately_threshold: 50
+  settings = Application.compile_env(:ash_graphql, :subscription_batch_settings, [])
+
+  defstruct batches: %{},
+            total_count: 0,
+            async_limit: Keyword.get(settings, :async_limit, 100),
+            send_immediately_threshold: Keyword.get(settings, :send_immediately_threshold, 50),
+            subscription_batch_interval: Keyword.get(settings, :subscription_batch_interval, 1000)
 
   defmodule Batch do
+    @moduledoc false
     defstruct notifications: [],
               count: 0,
               pubsub: nil,
@@ -260,12 +283,19 @@ defmodule AshGraphql.Subscription.Batcher do
     |> then(&%{state | batches: &1, total_count: state.total_count + 1})
   end
 
-  defp ensure_timer(%{batches: batches} = state, topic) do
+  defp ensure_timer(
+         %{batches: batches, subscription_batch_interval: subscription_batch_interval} = state,
+         topic
+       ) do
     if batches[topic].timer do
       state
     else
-      # TODO: this interval should be configurable
-      timer = Process.send_after(self(), {:send_batch, topic}, 1000)
+      timer =
+        Process.send_after(
+          self(),
+          {:send_batch, topic},
+          subscription_batch_interval
+        )
 
       put_in(state.batches[topic].timer, timer)
     end
