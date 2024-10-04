@@ -447,7 +447,12 @@ defmodule AshGraphql do
         |> Ash.Resource.Info.actions()
         |> Enum.filter(&(&1.type == :action && &1.returns))
         |> Enum.map(fn action ->
-          %{type: action.returns, constraints: action.constraints, name: action.name}
+          %{
+            type: action.returns,
+            constraints: action.constraints,
+            name: action.name,
+            from_generic_action?: true
+          }
         end)
       )
       |> Enum.reduce({[], already_checked}, fn %{type: type} = attr, {acc, already_checked} ->
@@ -463,7 +468,14 @@ defmodule AshGraphql do
         end
       end)
       |> then(fn {attrs, checked} ->
-        attrs = Enum.filter(attrs, &AshGraphql.Resource.Info.show_field?(resource, &1.name))
+        attrs =
+          Enum.filter(attrs, fn attr ->
+            if Map.get(attr, :from_generic_action?) do
+              true
+            else
+              AshGraphql.Resource.Info.show_field?(resource, attr.name)
+            end
+          end)
 
         if return_new_checked? do
           {attrs, checked}
