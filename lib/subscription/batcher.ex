@@ -222,7 +222,7 @@ defmodule AshGraphql.Subscription.Batcher do
       # as the current task might not send out
       # all notifications, if new notifications
       # were added after the task was started
-      # they will still be sent out later on 
+      # they will still be sent out later on
       # because the when the task is done, it
       # will add a new timer for the rest
       batch.task
