@@ -5,7 +5,7 @@ config :ash, :validate_domain_resource_inclusion?, false
 config :ash, :validate_domain_config_inclusion?, false
 
 config :ash, :pub_sub, debug?: true
-config :logger, level: :info
+config :logger, level: :debug
 
 config :ash_graphql, :subscriptions, true
 

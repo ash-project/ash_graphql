@@ -22,13 +22,11 @@ defmodule AshGraphql.Subscription.Batcher do
   require Logger
   @compile {:inline, simulate_slowness: 0}
 
-  settings = Application.compile_env(:ash_graphql, :subscription_batch_settings, [])
-
   defstruct batches: %{},
             total_count: 0,
-            async_limit: Keyword.get(settings, :async_limit, 100),
-            send_immediately_threshold: Keyword.get(settings, :send_immediately_threshold, 50),
-            subscription_batch_interval: Keyword.get(settings, :subscription_batch_interval, 1000)
+            async_limit: 100,
+            send_immediately_threshold: 50,
+            subscription_batch_interval: 1000
 
   defmodule Batch do
     @moduledoc false
@@ -43,6 +41,16 @@ defmodule AshGraphql.Subscription.Batcher do
     def add(batch, item) do
       %{batch | notifications: [item | batch.notifications], count: batch.count + 1}
     end
+
+    def remove(batch, items) when is_list(items) do
+      %{
+        batch
+        | notifications: Enum.reject(batch.notifications, &(&1 in items)),
+          count: batch.count - length(items)
+      }
+    end
+
+    def remove(batch, item), do: remove(batch, [item])
   end
 
   def start_link(opts \\ []) do
@@ -54,28 +62,28 @@ defmodule AshGraphql.Subscription.Batcher do
   end
 
   def publish(topic, notification, pubsub, key_strategy, doc) do
-    if is_nil(Process.whereis(__MODULE__)) do
-      do_send(topic, [notification], pubsub, key_strategy, doc)
-    else
-      case GenServer.call(
-             __MODULE__,
-             {:publish, topic, notification, pubsub, key_strategy, doc},
-             :infinity
-           ) do
-        :handled ->
-          :ok
+    case GenServer.call(
+           __MODULE__,
+           {:publish, topic, notification, pubsub, key_strategy, doc},
+           :infinity
+         ) do
+      :handled ->
+        :ok
 
-        :backpressure_sync ->
-          do_send(topic, [notification], pubsub, key_strategy, doc)
-      end
+      :backpressure_sync ->
+        do_send(topic, [notification], pubsub, key_strategy, doc)
     end
+  catch
+    :exit, {:noproc, _} ->
+      do_send(topic, [notification], pubsub, key_strategy, doc)
   end
 
   def init(config) do
     {:ok,
      %__MODULE__{
        async_limit: config[:async_limit] || 100,
-       send_immediately_threshold: config[:send_immediately_threshold] || 50
+       send_immediately_threshold: config[:send_immediately_threshold] || 50,
+       subscription_batch_interval: config[:send_immediately_threshold] || 1000
      }}
   end
 
@@ -118,21 +126,46 @@ defmodule AshGraphql.Subscription.Batcher do
     end
   end
 
-  def handle_info({_task, {:sent, topic, _res}}, state) do
-    case state.batches[topic] do
-      %{timer: timer} when not is_nil(timer) ->
-        Process.cancel_timer(timer)
+  def handle_info({_task, {:sent, topic, notifications, _res}}, state) do
+    batch = state.batches[topic]
 
-      _ ->
-        :ok
-    end
+    # remove the notifications that where sent from the batch
+    batch =
+      %{
+        batch
+        | notifications: Enum.reject(batch.notifications, &(&1 in notifications)),
+          count: batch.count - length(notifications),
+          task: nil
+      }
 
-    {:noreply,
-     %{
-       state
-       | total_count: state.total_count - Map.get(state.batches[topic] || %{}, :count, 0),
-         batches: Map.delete(state.batches, topic)
-     }}
+    state =
+      %{
+        state
+        | total_count: state.total_count - length(notifications),
+          # if there are no more notifications in the batch, remove it
+          batches:
+            if Enum.empty?(batch.notifications) do
+              Map.delete(state.batches, topic)
+            else
+              Map.put(state.batches, topic, batch)
+            end
+      }
+
+    state =
+      case batch do
+        %{notifications: [_n | _rest]} ->
+          # start a new timer if there are still notifications in the batch
+          ensure_timer(state, topic)
+
+        %{timer: timer} when not is_nil(timer) ->
+          Process.cancel_timer(timer)
+          state
+
+        _ ->
+          :ok
+      end
+
+    {:noreply, state}
   end
 
   def handle_info({:DOWN, _, _, _, :normal}, state) do
@@ -142,10 +175,11 @@ defmodule AshGraphql.Subscription.Batcher do
   def handle_info({:send_batch, topic}, state) do
     batch = state.batches[topic]
 
-    if batch do
+    # only run one task per topic at a time
+    if batch && is_nil(batch.task) do
       task =
         Task.async(fn ->
-          {:sent, topic,
+          {:sent, topic, batch.notifications,
            do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
         end)
 
@@ -287,7 +321,7 @@ defmodule AshGraphql.Subscription.Batcher do
          %{batches: batches, subscription_batch_interval: subscription_batch_interval} = state,
          topic
        ) do
-    if batches[topic].timer do
+    if not is_nil(batches[topic].timer) and Process.read_timer(batches[topic].timer) do
       state
     else
       timer =
