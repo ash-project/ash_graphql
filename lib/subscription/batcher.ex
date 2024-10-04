@@ -3,17 +3,6 @@ defmodule AshGraphql.Subscription.Batcher do
   If started as a GenServer, this module will batch notifications and send them in bulk.
   Otherwise, it will send them immediately.
 
-  The Batcher can be configured during compile time using the following settings:
-
-  ```elixir
-  config :ash_graphql, :subscription_batch_settings,
-    # if there are more than 100 `async_limit` notifications, we will start to backpressure
-    async_limit: 100,
-    # if there are less then 50 `send_immediately_threshold` notifications, we will send them immediately
-    send_immediately_threshold: 50,
-    # the interval in milliseconds the batcher waits for new notifications before sending them
-    subscription_batch_interval: 1000
-  ```
   """
   use GenServer
 
@@ -78,6 +67,18 @@ defmodule AshGraphql.Subscription.Batcher do
       do_send(topic, [notification], pubsub, key_strategy, doc)
   end
 
+  @doc """
+  Config options
+
+  `async_limit` (default 100):
+   if there are more than `async_limit` notifications, we will start to backpressure
+
+  `send_immediately_threshold` (default 50): 
+   if there are less then `send_immediately_threshold` notifications, we will send them immediately
+
+  `subscription_batch_interval` (default 1000):
+   the interval in milliseconds the batcher waits for new notifications before sending them
+  """
   def init(config) do
     {:ok,
      %__MODULE__{
