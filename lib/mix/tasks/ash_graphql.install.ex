@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.AshGraphql.Install do
-  @moduledoc "Installs AshGraphql. Should be run with `mix igniter.install ash_postgres`"
+  @moduledoc "Installs AshGraphql. Should be run with `mix igniter.install ash_graphql`"
   @shortdoc @moduledoc
   require Igniter.Code.Common
   use Igniter.Mix.Task
@@ -7,7 +7,9 @@ defmodule Mix.Tasks.AshGraphql.Install do
   def igniter(igniter, _argv) do
     igniter =
       igniter
+      |> Igniter.Project.Formatter.import_dep(:absinthe)
       |> Igniter.Project.Formatter.import_dep(:ash_graphql)
+      |> Igniter.Project.Formatter.add_formatter_plugin(Absinthe.Formatter)
       |> Spark.Igniter.prepend_to_section_order(:"Ash.Resource", [:graphql])
       |> Spark.Igniter.prepend_to_section_order(:"Ash.Domain", [:graphql])
 
