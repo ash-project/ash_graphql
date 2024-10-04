@@ -218,6 +218,10 @@ defmodule AshGraphql.Subscription.Batcher do
   defp send_all_batches(state, async?) do
     state.batches
     |> Enum.reject(fn {_, batch} ->
+      # we might need to do a bit more here
+      # as the current task might not send out
+      # all notifications, if new notifications
+      # were added after the task was started
       batch.task
     end)
     |> Enum.reduce(state, fn {topic, batch}, state ->
