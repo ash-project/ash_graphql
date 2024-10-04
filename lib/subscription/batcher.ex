@@ -134,12 +134,9 @@ defmodule AshGraphql.Subscription.Batcher do
     # the tasks processed the batch, so we need to remove only
     # the notifications that where sent
     batch =
-      %{
-        batch
-        | notifications: Enum.reject(batch.notifications, &(&1 in notifications)),
-          count: batch.count - length(notifications),
-          task: nil
-      }
+      batch
+      |> Batch.remove(notifications)
+      |> Map.put(:task, nil)
 
     state =
       %{
