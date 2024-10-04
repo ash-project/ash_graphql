@@ -130,6 +130,9 @@ defmodule AshGraphql.Subscription.Batcher do
     batch = state.batches[topic]
 
     # remove the notifications that where sent from the batch
+    # it is possible that new notifications where added while
+    # the tasks processed the batch, so we need to remove only
+    # the notifications that where sent
     batch =
       %{
         batch
