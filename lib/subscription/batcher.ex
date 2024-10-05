@@ -11,6 +11,7 @@ defmodule AshGraphql.Subscription.Batcher do
   @compile {:inline, simulate_slowness: 0}
 
   defstruct batches: %{},
+            in_progress_batches: %{},
             total_count: 0,
             async_limit: 100,
             send_immediately_threshold: 50,
@@ -23,8 +24,7 @@ defmodule AshGraphql.Subscription.Batcher do
               pubsub: nil,
               key_strategy: nil,
               doc: nil,
-              timer: nil,
-              task: nil
+              timer: nil
 
     def add(batch, item) do
       %{batch | notifications: [item | batch.notifications], count: batch.count + 1}
@@ -126,44 +126,24 @@ defmodule AshGraphql.Subscription.Batcher do
     end
   end
 
-  def handle_info({_task, {:sent, topic, notifications, _res}}, state) do
-    batch = state.batches[topic]
-
-    # remove the notifications that where sent from the batch
-    # it is possible that new notifications where added while
-    # the tasks processed the batch, so we need to remove only
-    # the notifications that where sent
-    batch =
-      batch
-      |> Batch.remove(notifications)
-      |> Map.put(:task, nil)
+  def handle_info({task, {:sent, _topic, _res}}, state) do
+    batch = state.in_progress_batches[task]
 
     state =
       %{
         state
-        | total_count: state.total_count - length(notifications),
-          # if there are no more notifications in the batch, remove it
-          batches:
-            if Enum.empty?(batch.notifications) do
-              Map.delete(state.batches, topic)
-            else
-              Map.put(state.batches, topic, batch)
-            end
+        | total_count: state.total_count - batch.count,
+          in_progress_batches: Map.delete(state.in_progress_batches, task)
       }
 
-    state =
-      case batch do
-        %{notifications: [_n | _rest]} ->
-          # start a new timer if there are still notifications in the batch
-          ensure_timer(state, topic)
+    case batch do
+      %{timer: timer} when not is_nil(timer) ->
+        Process.cancel_timer(timer)
+        :ok
 
-        %{timer: timer} when not is_nil(timer) ->
-          Process.cancel_timer(timer)
-          state
-
-        _ ->
-          state
-      end
+      _ ->
+        :ok
+    end
 
     {:noreply, state}
   end
@@ -176,14 +156,19 @@ defmodule AshGraphql.Subscription.Batcher do
     batch = state.batches[topic]
 
     # only run one task per topic at a time
-    if batch && is_nil(batch.task) do
+    if batch do
       task =
         Task.async(fn ->
-          {:sent, topic, batch.notifications,
+          {:sent, topic,
            do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
         end)
 
-      {:noreply, put_in(state.batches[topic].task, task)}
+      {:noreply,
+       %{
+         state
+         | batches: Map.delete(state.batches, topic),
+           in_progress_batches: Map.put(state.in_progress_batches, task.ref, batch)
+       }}
     else
       {:noreply, state}
     end
@@ -217,16 +202,6 @@ defmodule AshGraphql.Subscription.Batcher do
 
   defp send_all_batches(state, async?) do
     state.batches
-    |> Enum.reject(fn {_, batch} ->
-      # we might need to do a bit more here
-      # as the current task might not send out
-      # all notifications, if new notifications
-      # were added after the task was started
-      # they will still be sent out later on
-      # because the when the task is done, it
-      # will add a new timer for the rest
-      batch.task
-    end)
     |> Enum.reduce(state, fn {topic, batch}, state ->
       if batch.timer do
         Process.cancel_timer(batch.timer)
@@ -235,11 +210,15 @@ defmodule AshGraphql.Subscription.Batcher do
       if async? do
         task =
           Task.async(fn ->
-            {:sent, topic, batch.notifications,
+            {:sent, topic,
              do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
           end)
 
-        put_in(state.batches[topic].task, task)
+        %{
+          state
+          | batches: Map.delete(state.batches, topic),
+            in_progress_batches: Map.put(state.in_progress_batches, task.ref, batch)
+        }
       else
         do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)
 
