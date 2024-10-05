@@ -452,8 +452,9 @@ defmodule AshGraphql.SubscriptionTest do
     subscribable_id2 = mutation_result["createSubscribable"]["result"]["id"]
     refute is_nil(subscribable_id)
 
-    assert_receive({^topic, %{data: subscription_data}})
-    assert_receive({^topic, %{data: subscription_data2}})
+    # wait for 2 seconds (process timer + simulated processing time)
+    assert_receive({^topic, %{data: subscription_data}}, 2000)
+    assert_receive({^topic, %{data: subscription_data2}}, 2000)
     refute_received({^topic, _})
 
     assert subscribable_id ==
@@ -461,5 +462,60 @@ defmodule AshGraphql.SubscriptionTest do
 
     assert subscribable_id2 ==
              subscription_data2["subscribableEvents"]["created"]["id"]
+  end
+
+  test "subscription is resolved synchronously" do
+    stop_supervised(AshGraphql.Subscription.Batcher)
+
+    assert is_nil(Process.whereis(AshGraphql.Subscription.Batcher))
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEvents {
+                   created {
+                     id
+                     text
+                   }
+                   updated {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateSubscribable($input: CreateSubscribableInput) {
+        createSubscribable(input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    subscribable_id = mutation_result["createSubscribable"]["result"]["id"]
+
+    assert_receive({^topic, %{data: subscription_data}})
+    refute_received({^topic, _})
+
+    assert subscribable_id ==
+             subscription_data["subscribableEvents"]["created"]["id"]
   end
 end

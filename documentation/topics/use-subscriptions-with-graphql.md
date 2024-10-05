@@ -32,6 +32,11 @@ end
 
 The subscription DSL is currently in beta and before using it you have to enable them in your config.
 
+> ### Subscription response order {: .warning}
+>
+> The order in which the subscription responses are sent to the client is not guaranteed to be the
+> same as the order in which the mutations were executed.
+
 ```elixir
 config :ash_graphql, :policies, show_policy_breakdowns?: true
 ```
@@ -39,7 +44,27 @@ config :ash_graphql, :policies, show_policy_breakdowns?: true
 First you'll need to do some setup, follow the the [setup guide](https://hexdocs.pm/absinthe/subscriptions.html#absinthe-phoenix-setup)
 in the absinthe docs, but instead of using `Absinthe.Pheonix.Endpoint` use `AshGraphql.Subscription.Endpoint`.
 
-Afterwards add an empty subscription block to your schema module.
+By default subscriptions are resolved synchronously as part of the mutation. This means that a resolver is run for every subscriber that
+is not deduplicated. If you have a lot of subscribers you can add the `AshGraphql.Subscription.Batcher` to your supervision tree, which
+batches up notifications and runs subscription resolution out-of-band.
+
+```elixir
+  @impl true
+  def start(_type, _args) do
+    children = [
+      ...,
+      {Absinthe.Subscription, MyAppWeb.Endpoint},
+      AshGraphql.Subscription.Batcher
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: MyAppWeb.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+```
+
+Afterwards, add an empty subscription block to your schema module.
 
 ```elixir
 defmodule MyAppWeb.Schema do

@@ -1,4 +1,8 @@
 defmodule AshGraphql.Subscription.Batcher do
+  @moduledoc """
+  If started as a GenServer, this module will batch notifications and send them in bulk.
+  Otherwise, it will send them immediately.
+  """
   use GenServer
 
   alias Absinthe.Pipeline.BatchResolver
@@ -6,20 +10,35 @@ defmodule AshGraphql.Subscription.Batcher do
   require Logger
   @compile {:inline, simulate_slowness: 0}
 
-  defstruct batches: %{}, total_count: 0, async_limit: 100, send_immediately_threshold: 50
+  defstruct batches: %{},
+            in_progress_batches: %{},
+            total_count: 0,
+            async_limit: 100,
+            send_immediately_threshold: 50,
+            subscription_batch_interval: 1000
 
   defmodule Batch do
+    @moduledoc false
     defstruct notifications: [],
               count: 0,
               pubsub: nil,
               key_strategy: nil,
               doc: nil,
-              timer: nil,
-              task: nil
+              timer: nil
 
     def add(batch, item) do
       %{batch | notifications: [item | batch.notifications], count: batch.count + 1}
     end
+
+    def remove(batch, items) when is_list(items) do
+      %{
+        batch
+        | notifications: Enum.reject(batch.notifications, &(&1 in items)),
+          count: batch.count - length(items)
+      }
+    end
+
+    def remove(batch, item), do: remove(batch, [item])
   end
 
   def start_link(opts \\ []) do
@@ -42,13 +61,29 @@ defmodule AshGraphql.Subscription.Batcher do
       :backpressure_sync ->
         do_send(topic, [notification], pubsub, key_strategy, doc)
     end
+  catch
+    :exit, {:noproc, _} ->
+      do_send(topic, [notification], pubsub, key_strategy, doc)
   end
 
+  @doc """
+  Config options
+
+  `async_limit` (default 100):
+   if there are more than `async_limit` notifications, we will start to backpressure
+
+  `send_immediately_threshold` (default 50): 
+   if there are less then `send_immediately_threshold` notifications, we will send them immediately
+
+  `subscription_batch_interval` (default 1000):
+   the interval in milliseconds the batcher waits for new notifications before sending them
+  """
   def init(config) do
     {:ok,
      %__MODULE__{
        async_limit: config[:async_limit] || 100,
-       send_immediately_threshold: config[:send_immediately_threshold] || 50
+       send_immediately_threshold: config[:send_immediately_threshold] || 50,
+       subscription_batch_interval: config[:send_immediately_threshold] || 1000
      }}
   end
 
@@ -91,21 +126,26 @@ defmodule AshGraphql.Subscription.Batcher do
     end
   end
 
-  def handle_info({_task, {:sent, topic, _res}}, state) do
-    case state.batches[topic] do
+  def handle_info({task, {:sent, _topic, _res}}, state) do
+    batch = state.in_progress_batches[task]
+
+    state =
+      %{
+        state
+        | total_count: state.total_count - batch.count,
+          in_progress_batches: Map.delete(state.in_progress_batches, task)
+      }
+
+    case batch do
       %{timer: timer} when not is_nil(timer) ->
         Process.cancel_timer(timer)
+        :ok
 
       _ ->
         :ok
     end
 
-    {:noreply,
-     %{
-       state
-       | total_count: state.total_count - Map.get(state.batches[topic] || %{}, :count, 0),
-         batches: Map.delete(state.batches, topic)
-     }}
+    {:noreply, state}
   end
 
   def handle_info({:DOWN, _, _, _, :normal}, state) do
@@ -115,6 +155,7 @@ defmodule AshGraphql.Subscription.Batcher do
   def handle_info({:send_batch, topic}, state) do
     batch = state.batches[topic]
 
+    # only run one task per topic at a time
     if batch do
       task =
         Task.async(fn ->
@@ -122,7 +163,12 @@ defmodule AshGraphql.Subscription.Batcher do
            do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
         end)
 
-      {:noreply, put_in(state.batches[topic].task, task)}
+      {:noreply,
+       %{
+         state
+         | batches: Map.delete(state.batches, topic),
+           in_progress_batches: Map.put(state.in_progress_batches, task.ref, batch)
+       }}
     else
       {:noreply, state}
     end
@@ -156,9 +202,6 @@ defmodule AshGraphql.Subscription.Batcher do
 
   defp send_all_batches(state, async?) do
     state.batches
-    |> Enum.reject(fn {_, batch} ->
-      batch.task
-    end)
     |> Enum.reduce(state, fn {topic, batch}, state ->
       if batch.timer do
         Process.cancel_timer(batch.timer)
@@ -171,7 +214,11 @@ defmodule AshGraphql.Subscription.Batcher do
              do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)}
           end)
 
-        put_in(state.batches[topic].task, task)
+        %{
+          state
+          | batches: Map.delete(state.batches, topic),
+            in_progress_batches: Map.put(state.in_progress_batches, task.ref, batch)
+        }
       else
         do_send(topic, batch.notifications, batch.pubsub, batch.key_strategy, batch.doc)
 
@@ -256,12 +303,19 @@ defmodule AshGraphql.Subscription.Batcher do
     |> then(&%{state | batches: &1, total_count: state.total_count + 1})
   end
 
-  defp ensure_timer(%{batches: batches} = state, topic) do
-    if batches[topic].timer do
+  defp ensure_timer(
+         %{batches: batches, subscription_batch_interval: subscription_batch_interval} = state,
+         topic
+       ) do
+    if not is_nil(batches[topic].timer) and Process.read_timer(batches[topic].timer) do
       state
     else
-      # TODO: this interval should be configurable
-      timer = Process.send_after(self(), {:send_batch, topic}, 1000)
+      timer =
+        Process.send_after(
+          self(),
+          {:send_batch, topic},
+          subscription_batch_interval
+        )
 
       put_in(state.batches[topic].timer, timer)
     end
@@ -274,9 +328,7 @@ defmodule AshGraphql.Subscription.Batcher do
     # and the user can not really do anything usefull with it
     not (errors
          |> List.wrap()
-         |> Enum.any?(fn error ->
-           Map.get(error, :code) in ["forbidden", "not_found", nil]
-         end))
+         |> Enum.any?(fn error -> Map.get(error, :code) in ["forbidden", "not_found", nil] end))
   end
 
   defp should_send?(_), do: true
