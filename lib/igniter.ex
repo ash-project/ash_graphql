@@ -7,7 +7,8 @@ defmodule AshGraphql.Igniter do
 
     modules
     |> Enum.find(fn module ->
-      with {:ok, {_igniter, _source, zipper}} <- Igniter.Code.Module.find_module(igniter, module),
+      with {:ok, {_igniter, _source, zipper}} <-
+             Igniter.Project.Module.find_module(igniter, module),
            {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, AshGraphql),
            {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
            {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :domains),
@@ -33,7 +34,7 @@ defmodule AshGraphql.Igniter do
 
   @doc "Sets up an absinthe schema for AshGraphql"
   def setup_absinthe_schema(igniter, schema_name \\ nil) do
-    schema_name = schema_name || Igniter.Code.Module.module_name(igniter, "GraphqlSchema")
+    schema_name = schema_name || Igniter.Project.Module.module_name(igniter, "GraphqlSchema")
 
     {igniter, domains} = Ash.Domain.Igniter.list_domains(igniter)
 
@@ -59,7 +60,7 @@ defmodule AshGraphql.Igniter do
         {igniter, false},
         fn {mod, arities}, {igniter, false} ->
           with {:ok, {igniter, _source, zipper}} <-
-                 Igniter.Code.Module.find_module(igniter, mod),
+                 Igniter.Project.Module.find_module(igniter, mod),
                {:ok, zipper} <-
                  Igniter.Code.Function.move_to_function_call_in_current_scope(
                    zipper,
@@ -114,7 +115,7 @@ defmodule AshGraphql.Igniter do
       end
 
     igniter
-    |> Igniter.Code.Module.find_and_update_or_create_module(
+    |> Igniter.Project.Module.find_and_update_or_create_module(
       schema_name,
       """
       use Absinthe.Schema
@@ -132,6 +133,10 @@ defmodule AshGraphql.Igniter do
       mutation do
         # Custom Absinthe mutations can be placed here
       end
+
+      subscription do
+        # Custom Absinthe subscriptions can be placed here
+      end
       """,
       fn zipper ->
         # Should never get here
@@ -142,7 +147,7 @@ defmodule AshGraphql.Igniter do
 
   @doc "Sets up the phoenix module for AshGraphql"
   def setup_phoenix(igniter, schema_name \\ nil) do
-    schema_name = schema_name || Igniter.Code.Module.module_name(igniter, "GraphqlSchema")
+    schema_name = schema_name || Igniter.Project.Module.module_name(igniter, "GraphqlSchema")
 
     case Igniter.Libs.Phoenix.select_router(igniter) do
       {igniter, nil} ->
@@ -179,7 +184,7 @@ defmodule AshGraphql.Igniter do
 
   @doc "Returns all modules that `use AshGraphql`"
   def ash_graphql_schemas(igniter) do
-    Igniter.Code.Module.find_all_matching_modules(igniter, fn _name, zipper ->
+    Igniter.Project.Module.find_all_matching_modules(igniter, fn _name, zipper ->
       match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, AshGraphql))
     end)
   end
@@ -189,7 +194,7 @@ defmodule AshGraphql.Igniter do
       Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
 
     Enum.reduce(endpoints_that_need_parser, igniter, fn endpoint, igniter ->
-      Igniter.Code.Module.find_and_update_module!(igniter, endpoint, fn zipper ->
+      Igniter.Project.Module.find_and_update_module!(igniter, endpoint, fn zipper ->
         case Igniter.Code.Function.move_to_function_call_in_current_scope(
                zipper,
                :plug,
