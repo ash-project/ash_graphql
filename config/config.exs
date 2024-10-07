@@ -4,12 +4,14 @@ config :ash, :disable_async?, true
 config :ash, :validate_domain_resource_inclusion?, false
 config :ash, :validate_domain_config_inclusion?, false
 
-config :logger, level: :warning
-
 config :ash, :pub_sub, debug?: true
 config :logger, level: :info
 
 config :ash_graphql, :subscriptions, true
+
+if Mix.env() == :test do
+  config :ash_graphql, :simulate_subscription_slowness?, true
+end
 
 if Mix.env() == :dev do
   config :git_ops,

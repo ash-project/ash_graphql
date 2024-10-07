@@ -15,9 +15,11 @@ defmodule AshGraphql.SubscriptionTest do
     Application.put_env(PubSub, :notifier_test_pid, self())
     {:ok, pubsub} = PubSub.start_link()
     {:ok, absinthe_sub} = Absinthe.Subscription.start_link(PubSub)
+    start_supervised(AshGraphql.Subscription.Batcher, [])
     :ok
 
     on_exit(fn ->
+      Application.delete_env(:ash_graphql, :simulate_subscription_processing_time)
       Process.exit(pubsub, :normal)
       Process.exit(absinthe_sub, :normal)
       # block until the processes have exited
@@ -369,5 +371,137 @@ defmodule AshGraphql.SubscriptionTest do
     assert is_nil(subscription_data["subscribedOnDomain"]["created"])
     refute Enum.empty?(errors)
     assert [%{code: "forbidden_field"}] = errors
+  end
+
+  test "it aggregates multiple messages" do
+    stop_supervised(AshGraphql.Subscription.Batcher)
+    start_supervised({AshGraphql.Subscription.Batcher, [send_immediately_threshold: 0]})
+
+    Application.put_env(:ash_graphql, :simulate_subscription_processing_time, 1000)
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEvents {
+                   created {
+                     id
+                     text
+                   }
+                   updated {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateSubscribable($input: CreateSubscribableInput) {
+        createSubscribable(input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    subscribable_id = mutation_result["createSubscribable"]["result"]["id"]
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    state = GenServer.call(AshGraphql.Subscription.Batcher, :dump_state, :infinity)
+    assert state.total_count == 2
+
+    assert Enum.count(state.batches) == 1
+
+    assert Enum.empty?(mutation_result["createSubscribable"]["errors"])
+
+    subscribable_id2 = mutation_result["createSubscribable"]["result"]["id"]
+    refute is_nil(subscribable_id)
+
+    # wait for up to 3 seconds (process timer + simulated processing time + wiggle room)
+    assert_receive({^topic, %{data: subscription_data}}, 3000)
+    assert_receive({^topic, %{data: subscription_data2}}, 3000)
+    refute_received({^topic, _})
+
+    assert subscribable_id ==
+             subscription_data["subscribableEvents"]["created"]["id"]
+
+    assert subscribable_id2 ==
+             subscription_data2["subscribableEvents"]["created"]["id"]
+  end
+
+  test "subscription is resolved synchronously" do
+    stop_supervised(AshGraphql.Subscription.Batcher)
+
+    assert is_nil(Process.whereis(AshGraphql.Subscription.Batcher))
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEvents {
+                   created {
+                     id
+                     text
+                   }
+                   updated {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateSubscribable($input: CreateSubscribableInput) {
+        createSubscribable(input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    subscribable_id = mutation_result["createSubscribable"]["result"]["id"]
+
+    assert_receive({^topic, %{data: subscription_data}})
+    refute_received({^topic, _})
+
+    assert subscribable_id ==
+             subscription_data["subscribableEvents"]["created"]["id"]
   end
 end
