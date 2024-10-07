@@ -185,7 +185,7 @@ defmodule AshGraphql.Domain do
               )
           end
 
-        Igniter.Code.Module.find_and_update_module!(igniter, schema, fn zipper ->
+        Igniter.Project.Module.find_and_update_module!(igniter, schema, fn zipper ->
           with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, AshGraphql),
                {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
                {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :domains),
