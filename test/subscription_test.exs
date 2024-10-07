@@ -107,8 +107,6 @@ defmodule AshGraphql.SubscriptionTest do
 
     assert Enum.empty?(mutation_result["updateSubscribable"]["errors"])
 
-    AshGraphql.Subscription.Batcher.drain()
-
     assert_receive({^topic, %{data: subscription_data}})
 
     assert subscription_data["subscribableEvents"]["updated"]["text"] == "bar"
@@ -131,8 +129,6 @@ defmodule AshGraphql.SubscriptionTest do
                variables: %{"id" => subscribable_id},
                context: %{actor: @admin}
              )
-
-    AshGraphql.Subscription.Batcher.drain()
 
     assert Enum.empty?(mutation_result["destroySubscribable"]["errors"])
 
@@ -201,8 +197,6 @@ defmodule AshGraphql.SubscriptionTest do
       |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
       |> Ash.create!()
 
-    AshGraphql.Subscription.Batcher.drain()
-
     # actor1 will get data because it can see the resource
     assert_receive {^topic1, %{data: subscription_data}}
     # actor 2 will not get data because it cannot see the resource
@@ -260,8 +254,6 @@ defmodule AshGraphql.SubscriptionTest do
       |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
       |> Ash.create!()
 
-    AshGraphql.Subscription.Batcher.drain()
-
     assert_receive {^topic1, %{data: subscription_data}}
 
     assert subscribable.id ==
@@ -300,8 +292,6 @@ defmodule AshGraphql.SubscriptionTest do
       )
       |> Ash.create!()
 
-    AshGraphql.Subscription.Batcher.drain()
-
     assert_receive {^topic, %{data: subscription_data}}
 
     assert subscribable.id ==
@@ -339,8 +329,6 @@ defmodule AshGraphql.SubscriptionTest do
       )
       |> Ash.create!()
 
-    AshGraphql.Subscription.Batcher.drain()
-
     assert_receive {^topic, %{data: subscription_data}}
 
     assert subscribable.id ==
@@ -377,8 +365,6 @@ defmodule AshGraphql.SubscriptionTest do
       actor: @admin
     )
     |> Ash.create!()
-
-    AshGraphql.Subscription.Batcher.drain()
 
     assert_receive {^topic, %{data: subscription_data, errors: errors}}
 
