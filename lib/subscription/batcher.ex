@@ -29,16 +29,6 @@ defmodule AshGraphql.Subscription.Batcher do
     def add(batch, item) do
       %{batch | notifications: [item | batch.notifications], count: batch.count + 1}
     end
-
-    def remove(batch, items) when is_list(items) do
-      %{
-        batch
-        | notifications: Enum.reject(batch.notifications, &(&1 in items)),
-          count: batch.count - length(items)
-      }
-    end
-
-    def remove(batch, item), do: remove(batch, [item])
   end
 
   def start_link(opts \\ []) do
