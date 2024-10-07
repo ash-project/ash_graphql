@@ -1,8 +1,8 @@
 alias AshGraphql.Test.PubSub
 alias AshGraphql.Test.Schema
 
-{:ok, pubsub} = PubSub.start_link()
-{:ok, absinthe_sub} = Absinthe.Subscription.start_link(PubSub)
+{:ok, _pubsub} = PubSub.start_link()
+{:ok, _absinthe_sub} = Absinthe.Subscription.start_link(PubSub)
 
 # Application.put_env(:ash_graphql, :simulate_subscription_processing_time, 1000)
 :ok
@@ -46,7 +46,7 @@ Benchee.run(
   after_scenario: fn _ ->
     count = fn counter ->
       receive do
-        msg ->
+        _msg ->
           1 + counter.(counter)
       after
         0 -> 0
@@ -67,7 +67,7 @@ Benchee.run(
           role: :admin
         }
 
-        {:ok, %{"subscribed" => topic}} =
+        {:ok, %{"subscribed" => _topic}} =
           Absinthe.run(
             """
             subscription {
@@ -97,7 +97,7 @@ Benchee.run(
           role: :admin
         }
 
-        {:ok, %{"subscribed" => topic}} =
+        {:ok, %{"subscribed" => _topic}} =
           Absinthe.run(
             """
             subscription {

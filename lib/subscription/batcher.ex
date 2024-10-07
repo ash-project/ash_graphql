@@ -83,7 +83,7 @@ defmodule AshGraphql.Subscription.Batcher do
      %__MODULE__{
        async_limit: config[:async_limit] || 100,
        send_immediately_threshold: config[:send_immediately_threshold] || 50,
-       subscription_batch_interval: config[:send_immediately_threshold] || 1000
+       subscription_batch_interval: config[:subscription_batch_interval] || 1000
      }}
   end
 

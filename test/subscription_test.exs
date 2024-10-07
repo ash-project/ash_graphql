@@ -452,9 +452,9 @@ defmodule AshGraphql.SubscriptionTest do
     subscribable_id2 = mutation_result["createSubscribable"]["result"]["id"]
     refute is_nil(subscribable_id)
 
-    # wait for 2 seconds (process timer + simulated processing time)
-    assert_receive({^topic, %{data: subscription_data}}, 2000)
-    assert_receive({^topic, %{data: subscription_data2}}, 2000)
+    # wait for up to 3 seconds (process timer + simulated processing time + wiggle room)
+    assert_receive({^topic, %{data: subscription_data}}, 3000)
+    assert_receive({^topic, %{data: subscription_data2}}, 3000)
     refute_received({^topic, _})
 
     assert subscribable_id ==
