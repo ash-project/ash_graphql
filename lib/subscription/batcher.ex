@@ -244,7 +244,10 @@ defmodule AshGraphql.Subscription.Batcher do
             []
           end
 
-        {:error, error} ->
+        {:error, {_method, error}, _phase} ->
+          raise Ash.Error.to_error_class(error)
+
+        {:error, error, _phase} ->
           raise Ash.Error.to_error_class(error)
       end
 
