@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.0](https://github.com/ash-project/ash_graphql/compare/v1.3.4...v1.4.0) (2024-10-09)
+
+
+
+
+### Features:
+
+* Add absinthe dependency and plugin in formatter of installer (#222)
+
+* subscription dsl (#97)
+
+### Bug Fixes:
+
+* dyalizer and igniter deprecations (#224)
+
+* don't generate result types for generic mutations
+
+* detect generated types properly in generic actions
+
+### Improvements:
+
+* add error handling tooling for custom queries
+
+* add `AshGraphql.load_fields/3` helper, and test showing its usage
+
+* implement a subscription notification batcher (#217)
+
 ## [v1.3.4](https://github.com/ash-project/ash_graphql/compare/v1.3.3...v1.3.4) (2024-09-10)
 
 
