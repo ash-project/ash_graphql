@@ -13,8 +13,22 @@ defmodule AshGraphql.Test.Schema do
 
       resolve(fn %{id: post_id}, resolution ->
         with {:ok, post} when not is_nil(post) <- Ash.get(AshGraphql.Test.Post, post_id) do
-          AshGraphql.load_fields(post, AshGraphql.Test.Post, resolution)
+          post
+          |> AshGraphql.load_fields(AshGraphql.Test.Post, resolution)
         end
+        |> AshGraphql.handle_errors(AshGraphql.Test.Post, resolution)
+      end)
+    end
+
+    field :custom_get_post_query, :post do
+      arg(:id, non_null(:id))
+
+      resolve(fn %{id: post_id}, resolution ->
+        AshGraphql.Test.Post
+        |> Ash.Query.do_filter(id: post_id)
+        |> AshGraphql.load_fields_on_query(resolution)
+        |> Ash.read_one(not_found_error?: true)
+        |> AshGraphql.handle_errors(AshGraphql.Test.Post, resolution)
       end)
     end
   end

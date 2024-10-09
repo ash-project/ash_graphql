@@ -668,6 +668,70 @@ defmodule AshGraphql.ReadTest do
     assert result[:data]["customGetPost"]["latestCommentAt"]
   end
 
+  test "custom queries can load fields with `load_fields_on_query`" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "foo",
+      published: true,
+      score: 9.8
+    )
+    |> Ash.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> Ash.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> Ash.create!()
+
+    resp =
+      """
+      query Post($id: ID!) {
+        customGetPostQuery(id: $id) {
+          latestCommentAt
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+    assert result[:data]["customGetPostQuery"]["latestCommentAt"]
+  end
+
+  test "custom queries can handle errors" do
+    resp =
+      """
+      query Post($id: ID!) {
+        customGetPost(id: $id) {
+          id
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => Ash.UUID.generate()
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert [
+             %{
+               code: "not_found",
+               message: "could not be found",
+               path: ["customGetPost"],
+               short_message: "could not be found"
+             }
+           ] = result[:errors]
+  end
+
   test "a read with custom types works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create,

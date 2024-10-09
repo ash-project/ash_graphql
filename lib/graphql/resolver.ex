@@ -3082,9 +3082,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp to_resolution({:ok, value}, _context, _domain), do: {:ok, value}
+  @doc false
+  def to_resolution({:ok, value}, _context, _domain), do: {:ok, value}
 
-  defp to_resolution({:error, error}, context, domain) do
+  def to_resolution({:error, error}, context, domain) do
     {:error,
      error
      |> unwrap_errors()

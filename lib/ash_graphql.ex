@@ -621,6 +621,27 @@ defmodule AshGraphql do
           {:ok, input} | {:error, term()}
         when input: Ash.Resource.record() | list(Ash.Resource.record()) | Ash.Page.page()
   def load_fields(data, resource, resolution, opts \\ []) do
+    Ash.load(data, load_fields_on_query(resource, resolution, opts), resource: resource)
+  end
+
+  @doc """
+  The same as `load_fields/4`, but modifies the provided query to load the required fields.
+
+  This allows doing the loading in a single query rather than two separate queries.
+  """
+  @spec load_fields_on_query(
+          query :: Ash.Query.t() | Ash.Resource.t(),
+          Absinthe.Resolution.t(),
+          Keyword.t()
+        ) ::
+          Ash.Query.t()
+  def load_fields_on_query(query, resolution, opts \\ []) do
+    query =
+      query
+      |> Ash.Query.new()
+
+    resource = query.resource
+
     domain =
       opts[:domain] || Ash.Resource.Info.domain(resource) ||
         raise ArgumentError,
@@ -630,32 +651,61 @@ defmodule AshGraphql do
     authorize? = Keyword.get(opts, :authorize?, AshGraphql.Domain.Info.authorize?(domain))
     actor = Keyword.get(opts, :actor, Map.get(resolution.context, :actor))
 
-    query =
-      resource
-      |> Ash.Query.new()
-      |> Ash.Query.set_tenant(tenant)
-      |> Ash.Query.set_context(AshGraphql.ContextHelpers.get_context(resolution.context))
-      |> AshGraphql.Graphql.Resolver.select_fields(
-        resource,
-        resolution,
-        nil,
-        opts[:path] || []
-      )
-      |> AshGraphql.Graphql.Resolver.load_fields(
-        [
-          domain: domain,
-          tenant: tenant,
-          authorize?: authorize?,
-          actor: actor
-        ],
-        resource,
-        resolution,
-        resolution.path,
-        resolution.context
-      )
-
-    Ash.load(data, query, resource: resource)
+    query
+    |> Ash.Query.set_tenant(tenant)
+    |> Ash.Query.set_context(AshGraphql.ContextHelpers.get_context(resolution.context))
+    |> AshGraphql.Graphql.Resolver.select_fields(
+      resource,
+      resolution,
+      nil,
+      opts[:path] || []
+    )
+    |> AshGraphql.Graphql.Resolver.load_fields(
+      [
+        domain: domain,
+        tenant: tenant,
+        authorize?: authorize?,
+        actor: actor
+      ],
+      resource,
+      resolution,
+      resolution.path,
+      resolution.context
+    )
   end
+
+  @doc """
+  Applies AshGraphql's error handling logic if the value is an `{:error, error}` tuple, otherwise returns the value
+
+  Useful for automatically handling errors in custom queries
+
+  ## Options
+
+  - `domain`: The domain to use when loading the fields. Determined from the resource by default.
+  """
+  @spec handle_errors(
+          result :: term,
+          resource :: Ash.Resource.t(),
+          resolution :: Absinthe.Resolution.t(),
+          opts :: Keyword.t()
+        ) ::
+          term()
+  def handle_errors(result, resource, resolution, opts \\ [])
+
+  def handle_errors({:error, error}, resource, resolution, opts) do
+    domain =
+      Ash.Resource.Info.domain(resource) || opts[:domain] ||
+        raise ArgumentError,
+              "Could not determine domain for #{inspect(resource)}. Please specify the `domain` option."
+
+    AshGraphql.Graphql.Resolver.to_resolution(
+      {:error, List.wrap(error)},
+      resolution.context,
+      domain
+    )
+  end
+
+  def handle_errors(result, _, _, _), do: result
 
   @doc false
   def only_union_types(attributes) do
