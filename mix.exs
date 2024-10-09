@@ -69,6 +69,7 @@ defmodule AshGraphql.MixProject do
         "documentation/topics/graphql-generation.md",
         "documentation/topics/modifying-the-resolution.md",
         "documentation/topics/relay.md",
+        "documentation/topics/custom-queries-and-mutations.md",
         "documentation/topics/upgrade.md",
         "documentation/dsls/DSL:-AshGraphql.Domain.md",
         "documentation/dsls/DSL:-AshGraphql.Resource.md",
