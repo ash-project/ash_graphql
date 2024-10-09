@@ -6,6 +6,7 @@ defmodule AshGraphql.Subscription.Config do
   """
   alias AshGraphql.Resource.Subscription
 
+  # sobelow_skip ["DOS.StringToAtom"]
   def create_config(%Subscription{} = subscription, _domain, resource) do
     config_module = String.to_atom(Macro.camelize(Atom.to_string(subscription.name)) <> ".Config")
 
