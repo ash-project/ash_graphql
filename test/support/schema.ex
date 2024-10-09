@@ -8,6 +8,15 @@ defmodule AshGraphql.Test.Schema do
   use AshGraphql, domains: @domains, generate_sdl_file: "priv/schema.graphql"
 
   query do
+    field :custom_get_post, :post do
+      arg(:id, non_null(:id))
+
+      resolve(fn %{id: post_id}, resolution ->
+        with {:ok, post} when not is_nil(post) <- Ash.get(AshGraphql.Test.Post, post_id) do
+          AshGraphql.load_fields(post, AshGraphql.Test.Post, resolution)
+        end
+      end)
+    end
   end
 
   mutation do

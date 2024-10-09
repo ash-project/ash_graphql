@@ -5,6 +5,7 @@ defmodule AshGraphql do
   For more information, see the [getting started guide](/documentation/tutorials/getting-started-with-graphql.md)
   """
 
+  @doc false
   defmacro mutation(do: block) do
     empty? = !match?({:__block__, _, []}, block)
 
@@ -328,12 +329,14 @@ defmodule AshGraphql do
     end
   end
 
+  @doc false
   def global_maps(resources, all_domains, schema, env) do
     resources
     |> Enum.flat_map(&AshGraphql.Resource.map_definitions(&1, all_domains, schema, env))
     |> Enum.uniq_by(& &1.identifier)
   end
 
+  @doc false
   def global_enums(resources, all_domains, schema, env) do
     resources
     |> Enum.flat_map(&all_attributes_and_arguments(&1, all_domains))
@@ -393,6 +396,7 @@ defmodule AshGraphql do
     end
   end
 
+  @doc false
   def global_unions(resources, all_domains, schema, env) do
     resources
     |> Enum.flat_map(fn resource ->
@@ -486,6 +490,7 @@ defmodule AshGraphql do
     end
   end
 
+  @doc false
   def relay_queries(domains_with_resources, all_domains, schema, env) do
     type_to_domain_and_resource_map =
       domains_with_resources
@@ -574,12 +579,82 @@ defmodule AshGraphql do
     end
   end
 
+  @doc false
   def get_embed(type) do
     if Ash.Type.NewType.new_type?(type) do
       Ash.Type.NewType.subtype_of(type)
     else
       type
     end
+  end
+
+  @doc """
+  Use this to load any requested fields for a result when it is returned
+  from a custom resolver or mutation.
+
+  ## Determining required fields
+
+  If you have a custom query/mutation that returns the record at a "path" in
+  the response, then specify the path. In the example below, `path` would be
+  `["record"]`. This is how we know what fields to load.
+
+  ```elixir
+  query something() {
+    result {
+      record { # <- this is the instance
+        id
+        name
+      }
+    }
+  }
+  ```
+
+  ## Options
+
+  - `path`: The path to the record(s) in the response
+  - `domain`: The domain to use when loading the fields. Determined from the resource by default.
+  - `authorize?`: Whether to authorize access to fields. Defaults to the domain's setting (which defaults to `true`).
+  - `actor`: The actor to use when authorizing access to fields. Defaults to the actor in the resolution context.
+  - `tenant`: The tenant to use when authorizing access to fields. Defaults to the tenant in the resolution context.
+  """
+  @spec load_fields(input, Ash.Resource.t(), Absinthe.Resolution.t(), opts :: Keyword.t()) ::
+          {:ok, input} | {:error, term()}
+        when input: Ash.Resource.record() | list(Ash.Resource.record()) | Ash.Page.page()
+  def load_fields(data, resource, resolution, opts \\ []) do
+    domain =
+      opts[:domain] || Ash.Resource.Info.domain(resource) ||
+        raise ArgumentError,
+              "Could not determine domain for #{inspect(resource)}. Please specify the `domain` option."
+
+    tenant = Keyword.get(opts, :tenant, Map.get(resolution.context, :tenant))
+    authorize? = Keyword.get(opts, :authorize?, AshGraphql.Domain.Info.authorize?(domain))
+    actor = Keyword.get(opts, :actor, Map.get(resolution.context, :actor))
+
+    query =
+      resource
+      |> Ash.Query.new()
+      |> Ash.Query.set_tenant(tenant)
+      |> Ash.Query.set_context(AshGraphql.ContextHelpers.get_context(resolution.context))
+      |> AshGraphql.Graphql.Resolver.select_fields(
+        resource,
+        resolution,
+        nil,
+        opts[:path] || []
+      )
+      |> AshGraphql.Graphql.Resolver.load_fields(
+        [
+          domain: domain,
+          tenant: tenant,
+          authorize?: authorize?,
+          actor: actor
+        ],
+        resource,
+        resolution,
+        resolution.path,
+        resolution.context
+      )
+
+    Ash.load(data, query, resource: resource)
   end
 
   @doc false
@@ -689,6 +764,7 @@ defmodule AshGraphql do
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
+  @doc false
   def get_embedded_types(all_resources, all_domains, schema, relay_ids?) do
     all_resources
     |> Enum.flat_map(fn resource ->
@@ -858,10 +934,5 @@ defmodule AshGraphql do
     |> Enum.flat_map(fn {attribute, embedded} ->
       [{embedded_type, attribute, embedded}] ++ get_nested_embedded_types(embedded)
     end)
-  end
-
-  @deprecated "add_context is no longer necessary"
-  def add_context(ctx, _domains, _options \\ []) do
-    ctx
   end
 end

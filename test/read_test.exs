@@ -631,6 +631,43 @@ defmodule AshGraphql.ReadTest do
     assert result[:data]["getPost"]["latestCommentAt"]
   end
 
+  test "custom queries can load fields" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "foo",
+      published: true,
+      score: 9.8
+    )
+    |> Ash.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> Ash.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> Ash.create!()
+
+    resp =
+      """
+      query Post($id: ID!) {
+        customGetPost(id: $id) {
+          latestCommentAt
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+    assert result[:data]["customGetPost"]["latestCommentAt"]
+  end
+
   test "a read with custom types works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create,
