@@ -31,6 +31,12 @@ defmodule AshGraphql.Subscription.Batcher do
     end
   end
 
+  defmodule Notification do
+    @moduledoc false
+
+    defstruct [:action_type, :data]
+  end
+
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
   end
