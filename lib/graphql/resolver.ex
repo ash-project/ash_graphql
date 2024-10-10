@@ -550,7 +550,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
           subscription_events =
             notifications
-            |> Enum.group_by(& &1.action.type)
+            |> Enum.group_by(& &1.action_type)
             |> Enum.map(fn {type, notifications} ->
               subscription_field = subcription_field_from_action_type(type)
               key = String.to_existing_atom(subscription_field)
@@ -698,7 +698,7 @@ defmodule AshGraphql.Graphql.Resolver do
           ]
 
           cond do
-            notification.action.type in [:create, :update] ->
+            notification.action_type in [:create, :update] ->
               data = notification.data
               {filter, args} = Map.pop(args, :filter)
 
@@ -725,7 +725,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   domain,
                   resolution,
                   subscription_result_type(name),
-                  [subcription_field_from_action_type(notification.action.type)]
+                  [subcription_field_from_action_type(notification.action_type)]
                 )
 
               result =
@@ -763,7 +763,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     {:ok,
                      %{
                        String.to_existing_atom(
-                         subcription_field_from_action_type(notification.action.type)
+                         subcription_field_from_action_type(notification.action_type)
                        ) => result
                      }}
                   )
@@ -773,13 +773,13 @@ defmodule AshGraphql.Graphql.Resolver do
                   |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
               end
 
-            notification.action.type in [:destroy] ->
+            notification.action_type in [:destroy] ->
               resolution
               |> Absinthe.Resolution.put_result(
                 {:ok,
                  %{
                    String.to_existing_atom(
-                     subcription_field_from_action_type(notification.action.type)
+                     subcription_field_from_action_type(notification.action_type)
                    ) => AshGraphql.Resource.encode_id(notification.data, false)
                  }}
               )

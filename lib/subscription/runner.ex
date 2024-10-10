@@ -7,18 +7,9 @@ defmodule AshGraphql.Subscription.Runner do
   """
   require Logger
 
-  alias AshGraphql.Subscription.Batcher
-  alias Ash.Notifier
-
-  def run_docset(pubsub, docs_and_topics, %Notifier.Notification{} = notification) do
+  def run_docset(pubsub, docs_and_topics, notification) do
     for {topic, key_strategy, doc} <- docs_and_topics do
-      Batcher.publish(
-        topic,
-        %Batcher.Notification{action: notification.action, data: notification.data},
-        pubsub,
-        key_strategy,
-        doc
-      )
+      AshGraphql.Subscription.Batcher.publish(topic, notification, pubsub, key_strategy, doc)
     end
   end
 end
