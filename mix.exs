@@ -5,7 +5,7 @@ defmodule AshGraphql.MixProject do
   The extension for building GraphQL APIs with Ash
   """
 
-  @version "1.4.0"
+  @version "1.4.1"
 
   def project do
     [

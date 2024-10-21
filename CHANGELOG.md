@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.1](https://github.com/ash-project/ash_graphql/compare/v1.4.0...v1.4.1) (2024-10-21)
+
+
+
+
+### Bug Fixes:
+
+* honor argument_names configuration for read & generic actions
+
+### Improvements:
+
+* remove unused data in subscription batcher (#227)
+
 ## [v1.4.0](https://github.com/ash-project/ash_graphql/compare/v1.3.4...v1.4.0) (2024-10-09)
 
 
