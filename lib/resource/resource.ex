@@ -993,9 +993,13 @@ defmodule AshGraphql.Resource do
           read_action
       end
 
+    argument_names = AshGraphql.Resource.Info.argument_names(resource)
+
     read_action.arguments
     |> Enum.filter(& &1.public?)
     |> Enum.map(fn argument ->
+      name = argument_names[read_action.name][argument.name] || argument.name
+
       type =
         argument.type
         |> field_type(argument, resource, true)
@@ -1004,7 +1008,7 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: argument.name,
         module: schema,
-        name: to_string(argument.name),
+        name: to_string(name),
         description: argument.description,
         type: type,
         __reference__: ref(__ENV__)
@@ -1656,6 +1660,8 @@ defmodule AshGraphql.Resource do
   end
 
   defp generic_action_args(action, resource, schema) do
+    argument_names = AshGraphql.Resource.Info.argument_names(resource)
+
     action.arguments
     |> Enum.filter(& &1.public?)
     |> Enum.map(fn argument ->
@@ -1664,10 +1670,12 @@ defmodule AshGraphql.Resource do
         |> field_type(argument, resource, true)
         |> maybe_wrap_non_null(argument_required?(argument))
 
+      name = argument_names[action.name][argument.name] || argument.name
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: argument.name,
         module: schema,
-        name: to_string(argument.name),
+        name: to_string(name),
         description: argument.description,
         type: type,
         __reference__: ref(__ENV__)
@@ -1824,9 +1832,13 @@ defmodule AshGraphql.Resource do
   end
 
   defp read_args(resource, action, schema, hide_inputs) do
+    argument_names = AshGraphql.Resource.Info.argument_names(resource)
+
     action.arguments
     |> Enum.filter(&(&1.public? && &1.name not in hide_inputs))
     |> Enum.map(fn argument ->
+      name = argument_names[action.name][argument.name] || argument.name
+
       type =
         argument.type
         |> field_type(argument, resource, true)
@@ -1835,7 +1847,7 @@ defmodule AshGraphql.Resource do
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: argument.name,
         module: schema,
-        name: to_string(argument.name),
+        name: to_string(name),
         description: argument.description,
         type: type,
         __reference__: ref(__ENV__)
