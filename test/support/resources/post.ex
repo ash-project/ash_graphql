@@ -166,6 +166,28 @@ defmodule AshGraphql.Test.Post do
     attribute_types integer_as_string_in_domain: :string
     attribute_input_types integer_as_string_in_domain: :string
     argument_input_types create_bar_with_foo_with_map: [bar: :bar_with_foo]
+
+    argument_names create_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   update_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   destroy_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   read_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   custom_action_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ]
+
     field_names text_1_and_2: :text1_and2
     keyset_field :keyset
 
@@ -178,7 +200,13 @@ defmodule AshGraphql.Test.Post do
       list :other_keyset_paginated_posts, :keyset_and_offset_paginated, paginate_with: :keyset
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
+      list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
       action(:post_count, :count)
+
+      action(
+        :post_custom_action_with_invalid_arguments_names,
+        :custom_action_with_invalid_arguments_names
+      )
     end
 
     managed_relationships do
@@ -212,6 +240,8 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_custom_description, :create,
         description: "Another custom description"
 
+      create :create_post_with_invalid_arguments_names, :create_with_invalid_arguments_names
+
       update :update_post, :update
       update :update_post_with_comments, :update_with_comments
       update :update_post_confirm, :update_confirm
@@ -222,10 +252,14 @@ defmodule AshGraphql.Test.Post do
         hide_inputs([:score])
       end
 
+      update :update_post_with_invalid_arguments_names, :update_with_invalid_arguments_names
+
       destroy :archive_post, :archive
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
       destroy :delete_post_with_error, :destroy_with_error
+
+      destroy :delete_post_with_invalid_arguments_names, :destroy_with_invalid_arguments_names
 
       # this is a mutation just for testing
       action(:random_post, :random)
@@ -268,10 +302,22 @@ defmodule AshGraphql.Test.Post do
       change(ReturnResourceError)
     end
 
+    create :create_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
     create :upsert do
       argument(:id, :uuid)
 
       change(AshGraphql.Test.ForceChangeId)
+    end
+
+    action :custom_action_with_invalid_arguments_names, :atom do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+
+      run(fn _input, _ -> :ok end)
     end
 
     action :count, :integer do
@@ -387,6 +433,11 @@ defmodule AshGraphql.Test.Post do
       end)
     end
 
+    read :read_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
     update :update, primary?: true
 
     update :update_with_comments do
@@ -403,6 +454,11 @@ defmodule AshGraphql.Test.Post do
       validate(confirm(:text, :confirmation))
     end
 
+    update :update_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
     destroy(:destroy, primary?: true)
 
     destroy :archive do
@@ -413,6 +469,11 @@ defmodule AshGraphql.Test.Post do
     destroy :destroy_with_error do
       require_atomic?(false)
       change(AfterActionRaiseResourceError)
+    end
+
+    destroy :destroy_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
     end
   end
 
