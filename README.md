@@ -31,5 +31,5 @@ Welcome! This is the extension for building GraphQL APIs with [Ash](https://hexd
 
 ## Reference
 
-- [AshGraphql.Resource DSL](documentation/dsls/DSL:-AshGraphql.Resource.md)
-- [AshGraphql.Domain DSL](documentation/dsls/DSL:-AshGraphql.Domain.md)
+- [AshGraphql.Resource DSL](documentation/dsls/DSL-AshGraphql.Resource.md)
+- [AshGraphql.Domain DSL](documentation/dsls/DSL-AshGraphql.Domain.md)

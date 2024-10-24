@@ -93,7 +93,7 @@ defmodule MyApp.Resource do
 end
 ```
 
-For further Details checkout the DSL docs for [resource](/documentation/dsls/DSL:-AshGraphql.Resource.md#graphql-subscriptions) and [domain](/documentation/dsls/DSL:-AshGraphql.Domain.md#graphql-subscriptions)
+For further Details checkout the DSL docs for [resource](/documentation/dsls/DSL-AshGraphql.Resource.md#graphql-subscriptions) and [domain](/documentation/dsls/DSL-AshGraphql.Domain.md#graphql-subscriptions)
 
 ### Deduplication
 

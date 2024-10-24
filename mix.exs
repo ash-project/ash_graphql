@@ -72,8 +72,8 @@ defmodule AshGraphql.MixProject do
         "documentation/topics/relay.md",
         "documentation/topics/custom-queries-and-mutations.md",
         "documentation/topics/upgrade.md",
-        "documentation/dsls/DSL:-AshGraphql.Domain.md",
-        "documentation/dsls/DSL:-AshGraphql.Resource.md",
+        "documentation/dsls/DSL-AshGraphql.Domain.md",
+        "documentation/dsls/DSL-AshGraphql.Resource.md",
         "CHANGELOG.md"
       ],
       groups_for_extras: [
