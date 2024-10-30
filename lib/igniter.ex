@@ -170,12 +170,12 @@ defmodule AshGraphql.Igniter do
 
             forward "/playground",
                     Absinthe.Plug.GraphiQL,
-                    schema: Module.concat(["#{inspect(schema_name)}"]),
+                    schema: Module.safe_concat(["#{inspect(schema_name)}"]),
                     interface: :playground
 
             forward "/",
               Absinthe.Plug,
-              schema: Module.concat(["#{inspect(schema_name)}"])
+              schema: Module.safe_concat(["#{inspect(schema_name)}"])
           """,
           router: router
         )

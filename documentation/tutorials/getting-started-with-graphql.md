@@ -77,18 +77,18 @@ scope "/gql" do
 
   forward "/",
     Absinthe.Plug,
-    schema: Module.concat(["Helpdesk.GraphqlSchema"])
+    schema: Module.safe_concat(["Helpdesk.GraphqlSchema"])
 
   forward "/playground",
           Absinthe.Plug.GraphiQL,
-          schema: Module.concat(["Helpdesk.GraphqlSchema"]),
+          schema: Module.safe_concat(["Helpdesk.GraphqlSchema"]),
           interface: :playground
 end
 ```
 
-> ### Whats up with `Module.concat/1`? {: .info}
+> ### Whats up with `Module.safe_concat/1`? {: .info}
 >
-> This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have _drastic_ impacts on your compile times in certain scenarios.
+> This `Module.safe_concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have _drastic_ impacts on your compile times in certain scenarios.
 
 If you started with `mix new ...` instead of `mix phx.new ...` and you want to
 still use Phoenix, the fastest path that way is typically to just create a new
@@ -106,17 +106,17 @@ plug AshGraphql.Plug
 
 forward "/gql",
   to: Absinthe.Plug,
-  init_opts: [schema: Module.concat(["Helpdesk.GraphqlSchema"])]
+  init_opts: [schema: Module.safe_concat(["Helpdesk.GraphqlSchema"])]
 
 forward "/playground",
   to: Absinthe.Plug.GraphiQL,
   init_opts: [
-    schema: Module.concat(["Helpdesk.GraphqlSchema"]),
+    schema: Module.safe_concat(["Helpdesk.GraphqlSchema"]),
     interface: :playground
   ]
 ```
 
-For information on why we are using `Module.concat/1`, see the note above in the Phoenix section.
+For information on why we are using `Module.safe_concat/1`, see the note above in the Phoenix section.
 
 <!-- tabs-close -->
 
