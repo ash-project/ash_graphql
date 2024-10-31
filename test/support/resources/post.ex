@@ -331,7 +331,7 @@ defmodule AshGraphql.Test.Post do
             __MODULE__
           end
 
-        input.domain.count(query)
+        Ash.count(query)
       end)
     end
 
