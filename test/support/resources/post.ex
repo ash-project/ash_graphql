@@ -101,8 +101,8 @@ defmodule RelatedPosts do
   use Ash.Resource.ManualRelationship
   require Ash.Query
 
-  def load(posts, _opts, %{domain: domain}) do
-    posts = domain.load!(posts, :tags)
+  def load(posts, _opts, _context) do
+    posts = Ash.load!(posts, :tags)
 
     {
       :ok,
@@ -343,7 +343,7 @@ defmodule AshGraphql.Test.Post do
       run(fn input, _ ->
         __MODULE__
         |> Ash.Query.limit(1)
-        |> input.domain.read_one()
+        |> Ash.read_one()
       end)
     end
 
