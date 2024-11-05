@@ -604,6 +604,13 @@ defmodule AshGraphql.Test.Post do
       attribute_writable?(true)
     end
 
+    belongs_to(:author_that_is_actor, AshGraphql.Test.User) do
+      source_attribute(:author_id)
+      define_attribute?(false)
+      public?(true)
+      filter(expr(id == ^actor(:id)))
+    end
+
     has_many(:comments, AshGraphql.Test.Comment, public?: true)
     has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment, public?: true)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated, public?: true)

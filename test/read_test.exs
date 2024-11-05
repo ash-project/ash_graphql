@@ -803,6 +803,66 @@ defmodule AshGraphql.ReadTest do
             }} == Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
   end
 
+  test "a read with a relationship filtered by an actor" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> Ash.create!()
+
+    user2 =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> Ash.create!()
+
+    user_id = user.id
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          author_id: user.id,
+          text: "a",
+          published: true
+        }
+      )
+      |> Ash.create!()
+
+    doc = """
+    query {
+      getPost(id: "#{post.id}") {
+        authorThatIsActor{
+          id
+        }
+      }
+    }
+    """
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{
+                  "authorThatIsActor" => %{
+                    "id" => ^user_id
+                  }
+                }
+              }
+            }} = Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{
+                  "authorThatIsActor" => nil
+                }
+              }
+            }} = Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user2})
+  end
+
   test "a multitenant object can be read if tenant is set" do
     tenant = "Some Tenant"
 
