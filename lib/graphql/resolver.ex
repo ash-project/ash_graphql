@@ -328,6 +328,11 @@ defmodule AshGraphql.Graphql.Resolver do
           |> Ash.Query.set_context(get_context(context))
           |> set_query_arguments(action, args)
           |> select_fields(resource, resolution, type_name)
+          |> Ash.Query.for_read(action, %{},
+            actor: opts[:actor],
+            domain: domain,
+            authorize?: AshGraphql.Domain.Info.authorize?(domain)
+          )
           |> load_fields(
             [
               domain: domain,
@@ -343,13 +348,7 @@ defmodule AshGraphql.Graphql.Resolver do
           )
 
         result =
-          query
-          |> Ash.Query.for_read(action, %{},
-            actor: opts[:actor],
-            domain: domain,
-            authorize?: AshGraphql.Domain.Info.authorize?(domain)
-          )
-          |> Ash.read_one(opts)
+          Ash.read_one(query, opts)
 
         result =
           add_read_metadata(
@@ -443,15 +442,22 @@ defmodule AshGraphql.Graphql.Resolver do
                      ),
                      relay?
                    ),
-                 initial_query <-
+                 query <-
                    query
                    |> Ash.Query.set_tenant(Map.get(context, :tenant))
                    |> Ash.Query.set_context(get_context(context))
                    |> set_query_arguments(action, args)
                    |> select_fields(resource, resolution, type_name, result_fields),
                  query <-
+                   query
+                   |> Ash.Query.for_read(action, %{},
+                     actor: Map.get(context, :actor),
+                     domain: domain,
+                     authorize?: AshGraphql.Domain.Info.authorize?(domain)
+                   ),
+                 query <-
                    load_fields(
-                     initial_query,
+                     query,
                      [
                        domain: domain,
                        tenant: Map.get(context, :tenant),
@@ -465,14 +471,7 @@ defmodule AshGraphql.Graphql.Resolver do
                      context,
                      result_fields
                    ),
-                 {:ok, page} <-
-                   query
-                   |> Ash.Query.for_read(action, %{},
-                     actor: Map.get(context, :actor),
-                     domain: domain,
-                     authorize?: AshGraphql.Domain.Info.authorize?(domain)
-                   )
-                   |> Ash.read(opts) do
+                 {:ok, page} <- Ash.read(query, opts) do
               result = paginate(resource, gql_query, action, page, relay?)
               {result, [query, result]}
             else
