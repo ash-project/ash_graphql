@@ -183,9 +183,14 @@ defmodule AshGraphql.Graphql.Resolver do
           {result, modify_args} =
             case filter do
               {:ok, filter} ->
-                query =
+                query = Ash.Query.do_filter(query, filter)
+
+                result =
                   query
-                  |> Ash.Query.do_filter(filter)
+                  |> Ash.Query.for_read(action, %{},
+                    actor: opts[:actor],
+                    authorize?: AshGraphql.Domain.Info.authorize?(domain)
+                  )
                   |> load_fields(
                     [
                       domain: domain,
@@ -198,13 +203,6 @@ defmodule AshGraphql.Graphql.Resolver do
                     resolution,
                     resolution.path,
                     context
-                  )
-
-                result =
-                  query
-                  |> Ash.Query.for_read(action, %{},
-                    actor: opts[:actor],
-                    authorize?: AshGraphql.Domain.Info.authorize?(domain)
                   )
                   |> Ash.read_one(opts)
 
