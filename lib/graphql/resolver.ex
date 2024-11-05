@@ -189,7 +189,9 @@ defmodule AshGraphql.Graphql.Resolver do
                   query
                   |> Ash.Query.for_read(action, %{},
                     actor: opts[:actor],
-                    authorize?: AshGraphql.Domain.Info.authorize?(domain)
+                    authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                    tenant: Map.get(context, :tenant),
+                    tracer: AshGraphql.Domain.Info.tracer(domain)
                   )
                   |> load_fields(
                     [
