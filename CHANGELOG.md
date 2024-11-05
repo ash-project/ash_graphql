@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.2](https://github.com/ash-project/ash_graphql/compare/v1.4.1...v1.4.2) (2024-11-05)
+
+
+
+
+### Bug Fixes:
+
+* call `for_read` before adding calculations
+
+* load fields after building query for action
+
 ## [v1.4.1](https://github.com/ash-project/ash_graphql/compare/v1.4.0...v1.4.1) (2024-10-21)
 
 
