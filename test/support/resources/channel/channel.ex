@@ -69,13 +69,34 @@ defmodule AshGraphql.Test.Channel do
         default(10)
       end
     end
+
+    calculate :filter_by_actor_channel_messages,
+              AshGraphql.Test.PageOfFilterByActorChannelMessages,
+              AshGraphql.Test.PageOfFilterByActorChannelMessagesCalculation do
+      public?(true)
+
+      argument :offset, :integer do
+        default(0)
+      end
+
+      argument :limit, :integer do
+        default(10)
+      end
+    end
   end
 
   aggregates do
     count(:channel_message_count, :messages, public?: true)
+
+    count(:filter_by_user_channel_message_count, :filter_by_actor_messages, public?: true)
   end
 
   relationships do
     has_many(:messages, AshGraphql.Test.Message, public?: true)
+
+    has_many(:filter_by_actor_messages, AshGraphql.Test.Message,
+      public?: true,
+      filter: expr(exists(message_users, user_id == ^actor(:id)))
+    )
   end
 end

@@ -49,6 +49,7 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.Channel)
     resource(AshGraphql.Test.ChannelSimple)
     resource(AshGraphql.Test.Message)
+    resource(AshGraphql.Test.MessageViewableUser)
     resource(AshGraphql.Test.TextMessage)
     resource(AshGraphql.Test.ImageMessage)
     resource(AshGraphql.Test.Subscribable)

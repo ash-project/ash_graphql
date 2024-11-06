@@ -164,4 +164,89 @@ defmodule AshGraphql.CustpmPaginateTest do
       }
     end
   end
+
+  test "loading relationships with filter by actor works" do
+    user_1 =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create)
+      |> Ash.create!(authorize?: false)
+
+    user_2 =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create)
+      |> Ash.create!(authorize?: false)
+
+    channel =
+      AshGraphql.Test.Channel
+      |> Ash.Changeset.for_create(:create, name: "test channel")
+      |> Ash.create!()
+
+    text_message =
+      AshGraphql.Test.TextMessage
+      |> Ash.Changeset.for_create(:create, text: "test text message")
+      |> Ash.Changeset.manage_relationship(:channel, channel, type: :append_and_remove)
+      |> Ash.create!()
+
+    AshGraphql.Test.MessageViewableUser
+    |> Ash.Changeset.for_create(:create, %{user_id: user_1.id, message_id: text_message.id})
+    |> Ash.create!()
+
+    image_message =
+      AshGraphql.Test.ImageMessage
+      |> Ash.Changeset.for_create(:create, text: "test image message")
+      |> Ash.Changeset.manage_relationship(:channel, channel, type: :append_and_remove)
+      |> Ash.create!()
+
+    AshGraphql.Test.MessageViewableUser
+    |> Ash.Changeset.for_create(:create, %{user_id: user_2.id, message_id: image_message.id})
+    |> Ash.create!()
+
+    resp =
+      """
+      query ChannelWithUnionFilterByActorChannelMessages($id: ID!) {
+        channel(id: $id) {
+          id
+          filterByActorChannelMessages {
+            count
+            hasNextPage
+            results {
+              ...on TextMessage {
+                __typename
+                id
+                text
+                type
+              }
+              ...on ImageMessage {
+                __typename
+                id
+                text
+                type
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"id" => channel.id},
+        context: %{actor: user_1}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    %{
+      "channel" => %{
+        "id" => _,
+        "filterByActorChannelMessages" => %{
+          "count" => count,
+          "hasNextPage" => _,
+          "results" => results
+        }
+      }
+    } = result.data
+
+    refute count != Enum.count(results)
+  end
 end

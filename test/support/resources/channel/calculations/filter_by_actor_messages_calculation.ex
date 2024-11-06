@@ -1,14 +1,14 @@
-defmodule AshGraphql.Test.PageOfChannelMessagesCalculation do
+defmodule AshGraphql.Test.PageOfFilterByActorChannelMessagesCalculation do
   @moduledoc false
   use Ash.Resource.Calculation
 
   def load(_, _, context) do
-    limit = context.arguments.limit || 100
+    limit = context.arguments.limit || 10
     offset = context.arguments.offset || 0
 
     [
-      :channel_message_count,
-      messages:
+      :filter_by_user_channel_message_count,
+      filter_by_actor_messages:
         AshGraphql.Test.Message
         |> Ash.Query.limit(limit)
         |> Ash.Query.offset(offset)
@@ -17,16 +17,16 @@ defmodule AshGraphql.Test.PageOfChannelMessagesCalculation do
   end
 
   def calculate([channel], _, context) do
-    limit = context.arguments.limit || 100
+    limit = context.arguments.limit || 10
     offset = context.arguments.offset || 0
 
     {:ok,
      [
        %{
-         count: channel.channel_message_count,
-         has_next_page: channel.channel_message_count > offset + limit,
+         count: channel.filter_by_user_channel_message_count,
+         has_next_page: channel.filter_by_user_channel_message_count > offset + limit,
          results:
-           channel.messages
+           channel.filter_by_actor_messages
            |> Enum.map(
              &%Ash.Union{type: AshGraphql.Test.MessageUnion.struct_to_name(&1), value: &1}
            )

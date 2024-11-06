@@ -5,8 +5,6 @@ defmodule AshGraphql.Test.Message do
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets
 
-  # extensions: [AshGraphql.Resource]
-
   ets do
     table(:message)
   end
@@ -30,9 +28,9 @@ defmodule AshGraphql.Test.Message do
 
   relationships do
     belongs_to(:channel, AshGraphql.Test.Channel, public?: true)
-  end
 
-  # graphql do
-  #   type :message
-  # end
+    has_many(:message_users, AshGraphql.Test.MessageViewableUser,
+      destination_attribute: :message_id
+    )
+  end
 end
