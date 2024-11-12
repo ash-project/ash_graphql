@@ -3,8 +3,6 @@ defmodule AshGraphql.Test.Changes.CreateMessageUser do
   use Ash.Resource.Change
 
   def change(changeset, _, context) do
-    IO.inspect(context: context)
-
     changeset
     |> Ash.Changeset.after_action(fn _, result ->
       case AshGraphql.Test.MessageUser
