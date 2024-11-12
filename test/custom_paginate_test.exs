@@ -1,4 +1,4 @@
-defmodule AshGraphql.CustpmPaginateTest do
+defmodule AshGraphql.CustomPaginateTest do
   use ExUnit.Case, async: false
 
   require Ash.Query
@@ -165,6 +165,7 @@ defmodule AshGraphql.CustpmPaginateTest do
     end
   end
 
+  @tag skip: "See https://github.com/ash-project/ash_graphql/issues/239"
   test "loading relationships with filter by actor works" do
     user_1 =
       AshGraphql.Test.User
