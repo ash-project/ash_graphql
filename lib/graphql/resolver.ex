@@ -55,6 +55,9 @@ defmodule AshGraphql.Graphql.Resolver do
             |> Ash.ActionInput.for_action(action.name, arguments)
             |> Ash.run_action(opts)
             |> case do
+              :ok ->
+                {:ok, true}
+
               {:ok, result} ->
                 load_opts =
                   [
