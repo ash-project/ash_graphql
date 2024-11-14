@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.3](https://github.com/ash-project/ash_graphql/compare/v1.4.2...v1.4.3) (2024-11-14)
+
+
+
+
+### Improvements:
+
+* Implement `AshGraphql.Error` for AshAuthentication errors. (#237)
+
+* Support generic actions without a return type. (#238)
+
 ## [v1.4.2](https://github.com/ash-project/ash_graphql/compare/v1.4.1...v1.4.2) (2024-11-05)
 
 
