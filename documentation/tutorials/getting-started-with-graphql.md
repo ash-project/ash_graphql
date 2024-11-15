@@ -75,14 +75,14 @@ end
 scope "/gql" do
   pipe_through [:graphql]
 
-  forward "/",
-    Absinthe.Plug,
-    schema: Module.concat(["Helpdesk.GraphqlSchema"])
-
   forward "/playground",
           Absinthe.Plug.GraphiQL,
           schema: Module.concat(["Helpdesk.GraphqlSchema"]),
           interface: :playground
+
+  forward "/",
+    Absinthe.Plug,
+    schema: Module.concat(["Helpdesk.GraphqlSchema"])
 end
 ```
 
