@@ -670,7 +670,8 @@ defmodule AshGraphql do
       resource,
       resolution,
       resolution.path,
-      resolution.context
+      resolution.context,
+      nil
     )
   end
 

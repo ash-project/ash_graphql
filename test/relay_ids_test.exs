@@ -1,7 +1,7 @@
 defmodule AshGraphql.RelayIdsTest do
   use ExUnit.Case, async: false
 
-  alias AshGraphql.Test.RelayIds.{Post, ResourceWithNoPrimaryKeyGet, Schema, User}
+  alias AshGraphql.Test.RelayIds.{Comment, Post, ResourceWithNoPrimaryKeyGet, Schema, User}
 
   setup do
     on_exit(fn ->
@@ -184,6 +184,95 @@ defmodule AshGraphql.RelayIdsTest do
                  "node" => %{
                    "__typename" => "User",
                    "name" => "fred"
+                 }
+               }
+             } = result
+    end
+
+    test "allow loading nested relationships and calculations" do
+      user =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "fred"})
+        |> Ash.create!()
+
+      commenter =
+        User
+        |> Ash.Changeset.for_create(:create, %{name: "george"})
+        |> Ash.create!()
+
+      post =
+        Post
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            author_id: user.id,
+            text: "foo"
+          }
+        )
+        |> Ash.create!()
+
+      Comment
+      |> Ash.Changeset.for_create(:create, %{
+        text: "nice",
+        author_id: commenter.id,
+        post_id: post.id
+      })
+      |> Ash.create!()
+
+      post_relay_id = AshGraphql.Resource.encode_relay_id(post)
+
+      document =
+        """
+          query Node($id: ID!) {
+          node(id: $id) {
+            __typename
+
+            ... on Post {
+              text
+              author {
+                name
+              }
+              comments {
+                text
+                author {
+                  name
+                  nameTwice
+                }
+              }
+            }
+          }
+        }
+        """
+
+      resp =
+        document
+        |> Absinthe.run(Schema,
+          variables: %{
+            "id" => post_relay_id
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "node" => %{
+                   "__typename" => "Post",
+                   "text" => "foo",
+                   "author" => %{
+                     "name" => "fred"
+                   },
+                   "comments" => [
+                     %{
+                       "text" => "nice",
+                       "author" => %{
+                         "name" => "george",
+                         "nameTwice" => "george george"
+                       }
+                     }
+                   ]
                  }
                }
              } = result

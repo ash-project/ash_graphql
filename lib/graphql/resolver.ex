@@ -207,7 +207,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     resource,
                     resolution,
                     resolution.path,
-                    context
+                    context,
+                    type_name
                   )
                   |> Ash.read_one(opts)
 
@@ -232,7 +233,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     resource,
                     resolution,
                     resolution.path,
-                    context
+                    context,
+                    type_name
                   )
 
                 {{:error, error}, [query, {:error, error}]}
@@ -347,7 +349,8 @@ defmodule AshGraphql.Graphql.Resolver do
             resource,
             resolution,
             resolution.path,
-            context
+            context,
+            type_name
           )
 
         result =
@@ -472,6 +475,7 @@ defmodule AshGraphql.Graphql.Resolver do
                      resolution,
                      resolution.path,
                      context,
+                     type_name,
                      result_fields
                    ),
                  {:ok, page} <- Ash.read(query, opts) do
@@ -1428,6 +1432,7 @@ defmodule AshGraphql.Graphql.Resolver do
               resolution,
               resolution.path,
               context,
+              type_name,
               ["result"]
             )
 
@@ -1562,6 +1567,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       resolution,
                       resolution.path,
                       context,
+                      mutation_result_type(mutation_name),
                       ["result"]
                     )
                 )
@@ -1727,6 +1733,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       resolution,
                       resolution.path,
                       context,
+                      mutation_result_type(mutation_name),
                       ["result"]
                     )
                 )
@@ -1934,9 +1941,11 @@ defmodule AshGraphql.Graphql.Resolver do
         resolution,
         path,
         context,
+        type_override,
         nested \\ []
       ) do
-    load = get_loads(load_opts, resource, resolution, path, context, nested)
+    load =
+      get_loads(load_opts, resource, resolution, path, context, type_override, nested)
 
     case query_or_changeset do
       %Ash.Query{} = query ->
@@ -1954,26 +1963,37 @@ defmodule AshGraphql.Graphql.Resolver do
         resolution,
         path,
         context,
+        type_override,
         nested \\ []
       ) do
-    {fields, path} = nested_fields_and_path(resolution, path, nested)
+    type_override = type_override || AshGraphql.Resource.Info.type(resource)
+
+    {fields, path} = nested_fields_and_path(resolution, path, nested, type_override)
 
     resource_loads(fields, resource, resolution, load_opts, path, context)
   end
 
-  defp nested_fields_and_path(resolution, path, []) do
+  defp nested_fields_and_path(resolution, path, nested, type \\ nil)
+
+  defp nested_fields_and_path(resolution, path, [], type) do
     base = Enum.at(path, 0) || resolution
 
     selections =
       case base do
         %Absinthe.Resolution{} ->
-          Absinthe.Resolution.project(resolution)
+          if type do
+            Absinthe.Resolution.project(resolution, type)
+          else
+            Absinthe.Resolution.project(resolution)
+          end
 
         %Absinthe.Blueprint.Document.Field{selections: selections} ->
+          projection_type = type || base.schema_node.type
+
           {fields, _} =
             selections
             |> Absinthe.Resolution.Projector.project(
-              Absinthe.Schema.lookup_type(resolution.schema, base.schema_node.type),
+              Absinthe.Schema.lookup_type(resolution.schema, projection_type),
               path,
               %{},
               resolution
@@ -1985,7 +2005,7 @@ defmodule AshGraphql.Graphql.Resolver do
     {selections, path}
   end
 
-  defp nested_fields_and_path(resolution, path, [nested | rest]) do
+  defp nested_fields_and_path(resolution, path, [nested | rest], _type) do
     base = Enum.at(path, 0) || resolution
 
     selections =
@@ -2193,6 +2213,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 selection | path
               ],
               context,
+              nil,
               result_fields
             )
 

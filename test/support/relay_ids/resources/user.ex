@@ -42,4 +42,8 @@ defmodule AshGraphql.Test.RelayIds.User do
       public?: true
     )
   end
+
+  calculations do
+    calculate(:name_twice, :string, expr(name <> " " <> name), public?: true)
+  end
 end
