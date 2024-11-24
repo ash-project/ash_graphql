@@ -52,5 +52,7 @@ defmodule AshGraphql.Test.RelayIds.Post do
       public?(true)
       attribute_writable?(true)
     end
+
+    has_many(:comments, AshGraphql.Test.RelayIds.Comment, public?: true)
   end
 end

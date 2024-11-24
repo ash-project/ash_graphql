@@ -35,7 +35,8 @@ defmodule AshGraphql.Subscription do
       query.resource,
       resolution,
       resolution.path,
-      context
+      context,
+      type_override
     )
   end
 end
