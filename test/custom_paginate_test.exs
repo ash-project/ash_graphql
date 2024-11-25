@@ -165,7 +165,6 @@ defmodule AshGraphql.CustomPaginateTest do
     end
   end
 
-  @tag skip: "See https://github.com/ash-project/ash_graphql/issues/239"
   test "loading relationships with filter by actor works" do
     user_1 =
       AshGraphql.Test.User
