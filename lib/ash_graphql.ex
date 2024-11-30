@@ -32,6 +32,32 @@ defmodule AshGraphql do
     end
   end
 
+  defmacro subscription(do: block) do
+    empty? = !match?({:__block__, _, []}, block)
+
+    quote bind_quoted: [empty?: empty?, block: Macro.escape(block)], location: :keep do
+      require Absinthe.Schema
+
+      if empty? ||
+           Enum.any?(
+             @ash_resources,
+             fn resource ->
+               !Enum.empty?(AshGraphql.Resource.Info.subscriptions(resource, @all_domains))
+             end
+           ) do
+        Code.eval_quoted(
+          quote do
+            Absinthe.Schema.subscription do
+              unquote(block)
+            end
+          end,
+          [],
+          __ENV__
+        )
+      end
+    end
+  end
+
   defmacro __using__(opts) do
     auto_import_types =
       if Keyword.get(opts, :auto_import_absinthe_types?, true) do
@@ -57,12 +83,14 @@ defmodule AshGraphql do
 
       import Absinthe.Schema,
         except: [
-          mutation: 1
+          mutation: 1,
+          subscription: 1
         ]
 
       import AshGraphql,
         only: [
-          mutation: 1
+          mutation: 1,
+          subscription: 1
         ]
 
       domains =
