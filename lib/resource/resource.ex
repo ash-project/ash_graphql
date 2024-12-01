@@ -1564,8 +1564,12 @@ defmodule AshGraphql.Resource do
 
   defp pagination_strategy(strategy, action, allow_relay?) do
     strategies =
-      if action.pagination.required? do
-        []
+      if Application.get_env(:ash_graphql, :required_pagination_extends_to_relationships, false) do
+        if action.pagination.required? do
+          []
+        else
+          [nil]
+        end
       else
         [nil]
       end
