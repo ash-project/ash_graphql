@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.4](https://github.com/ash-project/ash_graphql/compare/v1.4.3...v1.4.4) (2024-12-02)
+
+
+
+
+### Bug Fixes:
+
+* don't assume required pagination in actions means relationships are paginated
+
+* define `subscription` to handle case where no subscriptions exist
+
+* load relationships and calculations in fragments (#246)
+
 ## [v1.4.3](https://github.com/ash-project/ash_graphql/compare/v1.4.2...v1.4.3) (2024-11-14)
 
 
