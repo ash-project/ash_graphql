@@ -72,6 +72,11 @@ defmodule AshGraphql.Resource.Mutation do
       doc: "The action to use for the mutation.",
       required: true
     ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
     identity: [
       type: :atom,
       doc: """
@@ -106,6 +111,11 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc: "The action to use for the mutation.",
       required: true
+    ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
     ],
     read_action: [
       type: :atom,
