@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.6](https://github.com/ash-project/ash_graphql/compare/v1.4.5...v1.4.6) (2024-12-11)
+
+
+
+
+### Bug Fixes:
+
+* fix docs & return type for generic actions
+
 ## [v1.4.5](https://github.com/ash-project/ash_graphql/compare/v1.4.4...v1.4.5) (2024-12-11)
 
 ### Improvements:
