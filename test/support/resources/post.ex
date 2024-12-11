@@ -202,6 +202,7 @@ defmodule AshGraphql.Test.Post do
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
       list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
       action(:post_count, :count)
+      action(:post_count_with_errors, :count, error_location: :in_result)
 
       action(
         :post_custom_action_with_invalid_arguments_names,

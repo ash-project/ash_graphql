@@ -68,6 +68,12 @@ defmodule AshGraphql.Resource do
       doc: "Inputs to hide in the mutation/query",
       default: []
     ],
+    error_location: [
+      type: {:one_of, [:in_result, :top_level]},
+      doc:
+        "If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key",
+      default: :top_level
+    ],
     relay_id_translations: [
       type: :keyword_list,
       doc: """
@@ -86,6 +92,7 @@ defmodule AshGraphql.Resource do
       :resource,
       :description,
       :relay_id_translations,
+      :error_location,
       hide_inputs: []
     ]
   end
@@ -653,7 +660,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(name),
           description: query.description || query_action.description,
-          type: generic_action_type(query_action, resource),
+          type: generic_action_type(query_action, resource, domain, query),
           __reference__: ref(__ENV__)
         }
 
@@ -742,7 +749,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(name),
           description: query.description || query_action.description,
-          type: generic_action_type(query_action, resource),
+          type: generic_action_type(query_action, resource, domain, query),
           __reference__: ref(__ENV__)
         }
 
@@ -1018,7 +1025,7 @@ defmodule AshGraphql.Resource do
 
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
-  def mutation_types(resource, all_domains, schema) do
+  def mutation_types(resource, domain, all_domains, schema) do
     resource_type = AshGraphql.Resource.Info.type(resource)
 
     resource
@@ -1032,15 +1039,6 @@ defmodule AshGraphql.Resource do
       }
     end)
     |> Enum.flat_map(fn mutation ->
-      unless resource_type do
-        raise """
-        Resource #{inspect(resource)} is trying to define the mutation #{inspect(mutation.name)}
-        which requires a GraphQL type to be defined.
-
-        You should define the type of your resource with `type :my_resource_type`.
-        """
-      end
-
       description =
         if mutation.type == :destroy do
           "The record that was successfully deleted"
@@ -1048,30 +1046,63 @@ defmodule AshGraphql.Resource do
           "The successful result of the mutation"
         end
 
-      fields = [
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: description,
-          identifier: :result,
-          module: schema,
-          name: "result",
-          type: resource_type,
-          __reference__: ref(__ENV__)
-        },
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          description: "Any errors generated, if the mutation failed",
-          identifier: :errors,
-          module: schema,
-          name: "errors",
-          type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: %Absinthe.Blueprint.TypeReference.List{
-              of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-                of_type: :mutation_error
+      fields =
+        [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "Any errors generated, if the mutation failed",
+            identifier: :errors,
+            module: schema,
+            name: "errors",
+            type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: %Absinthe.Blueprint.TypeReference.List{
+                of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: :mutation_error
+                }
               }
+            },
+            __reference__: ref(__ENV__)
+          }
+        ]
+
+      fields =
+        if mutation.type == :action do
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: description,
+              identifier: :result,
+              module: schema,
+              name: "result",
+              type:
+                generic_action_type(mutation.action, resource, domain, %{
+                  mutation
+                  | error_location: :top_level
+                }),
+              __reference__: ref(__ENV__)
             }
-          },
-          __reference__: ref(__ENV__)
-        }
-      ]
+            | fields
+          ]
+        else
+          unless resource_type do
+            raise """
+            Resource #{inspect(resource)} is trying to define the mutation #{inspect(mutation.name)}
+            which requires a GraphQL type to be defined.
+
+            You should define the type of your resource with `type :my_resource_type`.
+            """
+          end
+
+          [
+            %Absinthe.Blueprint.Schema.FieldDefinition{
+              description: description,
+              identifier: :result,
+              module: schema,
+              name: "result",
+              type: resource_type,
+              __reference__: ref(__ENV__)
+            }
+            | fields
+          ]
+        end
 
       metadata_object_type = metadata_field(resource, mutation, schema)
 
@@ -1093,7 +1124,7 @@ defmodule AshGraphql.Resource do
         end
 
       result =
-        if mutation.action.type == :action do
+        if mutation.action.type == :action && mutation.error_location == :top_level do
           []
         else
           [
@@ -1129,6 +1160,62 @@ defmodule AshGraphql.Resource do
 
           [input | result] ++ List.wrap(metadata_object_type)
       end
+    end)
+  end
+
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+  def query_types(resource, domain, all_domains, schema) do
+    resource
+    |> queries(all_domains)
+    |> Enum.filter(&(&1.type == :action && &1.error_location == :in_result))
+    |> Enum.map(fn mutation ->
+      mutation =
+        %{
+          mutation
+          | action:
+              Ash.Resource.Info.action(resource, mutation.action) ||
+                raise("No such action #{mutation.action} for #{inspect(resource)}")
+        }
+
+      fields =
+        [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "The successful result of the query",
+            identifier: :result,
+            module: schema,
+            name: "result",
+            type:
+              generic_action_type(mutation.action, resource, domain, %{
+                mutation
+                | error_location: :top_level
+              }),
+            __reference__: ref(__ENV__)
+          },
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            description: "Any errors generated, if the mutation failed",
+            identifier: :errors,
+            module: schema,
+            name: "errors",
+            type: %Absinthe.Blueprint.TypeReference.NonNull{
+              of_type: %Absinthe.Blueprint.TypeReference.List{
+                of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+                  of_type: :mutation_error
+                }
+              }
+            },
+            __reference__: ref(__ENV__)
+          }
+        ]
+
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        description: "The result of the #{inspect(mutation.name)} query",
+        fields: fields,
+        identifier: String.to_atom("#{mutation.name}_result"),
+        module: schema,
+        name: Macro.camelize("#{mutation.name}_result"),
+        __reference__: ref(__ENV__)
+      }
     end)
   end
 
@@ -1646,7 +1733,14 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp generic_action_type(action, resource) do
+  defp generic_action_type(_action, _resource, domain, %{name: name, error_location: :in_result}) do
+    type = String.to_atom("#{name}_result")
+    root_level_errors? = AshGraphql.Domain.Info.root_level_errors?(domain)
+
+    maybe_wrap_non_null(type, not root_level_errors?)
+  end
+
+  defp generic_action_type(action, resource, _domain, _gql_action) do
     fake_attribute = %{
       type: action.returns || Ash.Type.Boolean,
       constraints: action.constraints,

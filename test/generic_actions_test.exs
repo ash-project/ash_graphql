@@ -25,6 +25,28 @@ defmodule AshGraphql.GenericActionsTest do
     assert %{data: %{"postCount" => 0}} = result
   end
 
+  test "generic action queries can request errors in the response" do
+    resp =
+      """
+      query {
+        postCountWithErrors {
+          result
+          errors {
+            message
+            fields
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema, context: %{actor: %{id: "an-actor"}})
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postCountWithErrors" => %{"result" => 0, "errors" => []}}} = result
+  end
+
   test "generic action that have policies return forbidden if no actor is present" do
     resp =
       """

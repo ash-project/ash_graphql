@@ -12,7 +12,12 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve(
         %{arguments: arguments, context: context} = resolution,
-        {domain, resource, %AshGraphql.Resource.Action{name: query_name, action: action}, input?}
+        {domain, resource,
+         %AshGraphql.Resource.Action{
+           name: query_name,
+           action: action,
+           error_location: error_location
+         }, input?}
       ) do
     arguments =
       if input? do
@@ -105,6 +110,19 @@ defmodule AshGraphql.Graphql.Resolver do
 
               {:error, error} ->
                 {:error, error}
+            end
+
+          result =
+            if error_location == :in_result do
+              case result do
+                {:ok, result} ->
+                  {:ok, %{result: result, errors: []}}
+
+                {:error, errors} ->
+                  {:ok, %{result: nil, errors: to_errors(errors, context, domain)}}
+              end
+            else
+              result
             end
 
           resolution
