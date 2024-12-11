@@ -5,204 +5,173 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.5](https://github.com/ash-project/ash_graphql/compare/v1.4.4...v1.4.5) (2024-12-11)
+
+### Improvements:
+
+- support `error_location` option on generic actions
+
+- add description to update and destroy mutations (#250)
+
 ## [v1.4.4](https://github.com/ash-project/ash_graphql/compare/v1.4.3...v1.4.4) (2024-12-02)
-
-
-
 
 ### Bug Fixes:
 
-* don't assume required pagination in actions means relationships are paginated
+- don't assume required pagination in actions means relationships are paginated
 
-* define `subscription` to handle case where no subscriptions exist
+- define `subscription` to handle case where no subscriptions exist
 
-* load relationships and calculations in fragments (#246)
+- load relationships and calculations in fragments (#246)
 
 ## [v1.4.3](https://github.com/ash-project/ash_graphql/compare/v1.4.2...v1.4.3) (2024-11-14)
 
-
-
-
 ### Improvements:
 
-* Implement `AshGraphql.Error` for AshAuthentication errors. (#237)
+- Implement `AshGraphql.Error` for AshAuthentication errors. (#237)
 
-* Support generic actions without a return type. (#238)
+- Support generic actions without a return type. (#238)
 
 ## [v1.4.2](https://github.com/ash-project/ash_graphql/compare/v1.4.1...v1.4.2) (2024-11-05)
 
-
-
-
 ### Bug Fixes:
 
-* call `for_read` before adding calculations
+- call `for_read` before adding calculations
 
-* load fields after building query for action
+- load fields after building query for action
 
 ## [v1.4.1](https://github.com/ash-project/ash_graphql/compare/v1.4.0...v1.4.1) (2024-10-21)
 
-
-
-
 ### Bug Fixes:
 
-* honor argument_names configuration for read & generic actions
+- honor argument_names configuration for read & generic actions
 
 ### Improvements:
 
-* remove unused data in subscription batcher (#227)
+- remove unused data in subscription batcher (#227)
 
 ## [v1.4.0](https://github.com/ash-project/ash_graphql/compare/v1.3.4...v1.4.0) (2024-10-09)
 
-
-
-
 ### Features:
 
-* Add absinthe dependency and plugin in formatter of installer (#222)
+- Add absinthe dependency and plugin in formatter of installer (#222)
 
-* subscription dsl (#97)
+- subscription dsl (#97)
 
 ### Bug Fixes:
 
-* dyalizer and igniter deprecations (#224)
+- dyalizer and igniter deprecations (#224)
 
-* don't generate result types for generic mutations
+- don't generate result types for generic mutations
 
-* detect generated types properly in generic actions
+- detect generated types properly in generic actions
 
 ### Improvements:
 
-* add error handling tooling for custom queries
+- add error handling tooling for custom queries
 
-* add `AshGraphql.load_fields/3` helper, and test showing its usage
+- add `AshGraphql.load_fields/3` helper, and test showing its usage
 
-* implement a subscription notification batcher (#217)
+- implement a subscription notification batcher (#217)
 
 ## [v1.3.4](https://github.com/ash-project/ash_graphql/compare/v1.3.3...v1.3.4) (2024-09-10)
 
-
-
-
 ### Bug Fixes:
 
-* add UUIDv7 to map the type to :id
+- add UUIDv7 to map the type to :id
 
 ### Improvements:
 
-* update to latest igniter functions & dependency
+- update to latest igniter functions & dependency
 
 ## [v1.3.3](https://github.com/ash-project/ash_graphql/compare/v1.3.2...v1.3.3) (2024-08-26)
 
-
-
-
 ### Bug Fixes:
 
-* append new domain to list when extending
+- append new domain to list when extending
 
 ## [v1.3.2](https://github.com/ash-project/ash_graphql/compare/v1.3.1...v1.3.2) (2024-08-16)
 
-
-
-
 ### Bug Fixes:
 
-* match on action in error message properly
+- match on action in error message properly
 
 ### Improvements:
 
-* add schema codegen features & guide
+- add schema codegen features & guide
 
-* support new struct types in type generation
+- support new struct types in type generation
 
-* support new struct fields constraint
+- support new struct fields constraint
 
-* Set up GraphQL schema file in the web module namespace (#205)
+- Set up GraphQL schema file in the web module namespace (#205)
 
 ## [v1.3.1](https://github.com/ash-project/ash_graphql/compare/v1.3.0...v1.3.1) (2024-08-02)
 
-
-
-
 ### Bug Fixes:
 
-* use `.has_expression?/0` instead of `function_exported?/3`
+- use `.has_expression?/0` instead of `function_exported?/3`
 
-* error handling list of atoms (#204)
+- error handling list of atoms (#204)
 
-* error handling list of atoms
+- error handling list of atoms
 
 ## [v1.3.0](https://github.com/ash-project/ash_graphql/compare/v1.2.1...v1.3.0) (2024-08-01)
 
-
-
-
 ### Features:
 
-* `Ash.Type.File` compatibility (#202)
+- `Ash.Type.File` compatibility (#202)
 
 ### Bug Fixes:
 
-* try to resolve compilation issues w/ `Code.ensure_compiled!`
+- try to resolve compilation issues w/ `Code.ensure_compiled!`
 
 ## [v1.2.1](https://github.com/ash-project/ash_graphql/compare/v1.2.0...v1.2.1) (2024-07-18)
 
-
-
-
 ### Bug Fixes:
 
-* upgrade ash dependency for bulk action bug fix
+- upgrade ash dependency for bulk action bug fix
 
-* use checked constraints (#187)
+- use checked constraints (#187)
 
-* don't assume `filter` is non-nil for gets
+- don't assume `filter` is non-nil for gets
 
-* properly interpolate action in conflict messages
+- properly interpolate action in conflict messages
 
-* add resource query to action struct (#178)
+- add resource query to action struct (#178)
 
 ### Improvements:
 
-* add extension installation code
+- add extension installation code
 
-* add igniter-backed installer
+- add igniter-backed installer
 
-* add `nullable_fields?` for easily marking fields as nullable
+- add `nullable_fields?` for easily marking fields as nullable
 
-* only define `managed_relationship` mutations when necessary
+- only define `managed_relationship` mutations when necessary
 
 ## [v1.2.0](https://github.com/ash-project/ash_graphql/compare/v1.1.1...v1.2.0) (2024-06-17)
 
-
-
-
 ### Features:
 
-* argument_input_types (#176)
+- argument_input_types (#176)
 
-* argument_input_types
+- argument_input_types
 
 ### Bug Fixes:
 
-* better type handling around empty types
+- better type handling around empty types
 
-* don't generate empty input objects for embeds
+- don't generate empty input objects for embeds
 
 ## [v1.1.1](https://github.com/ash-project/ash_graphql/compare/v1.1.0...v1.1.1) (2024-06-02)
 
-
-
-
 ### Features:
 
-* relationship pagination (#166)
+- relationship pagination (#166)
 
 ### Bug Fixes:
 
-* honor read_action for update/destroy mutations
+- honor read_action for update/destroy mutations
 
 ## [v1.1.0](https://github.com/ash-project/ash_graphql/compare/v1.0.1...v1.1.0) (2024-05-24)
 
