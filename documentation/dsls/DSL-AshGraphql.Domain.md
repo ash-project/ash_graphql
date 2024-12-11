@@ -246,6 +246,7 @@ action :check_status, :check_status
 |------|------|---------|------|
 | [`description`](#graphql-queries-action-description){: #graphql-queries-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`hide_inputs`](#graphql-queries-action-hide_inputs){: #graphql-queries-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
+| [`error_location`](#graphql-queries-action-error_location){: #graphql-queries-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`relay_id_translations`](#graphql-queries-action-relay_id_translations){: #graphql-queries-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
@@ -352,6 +353,7 @@ update :update_post, :update
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
+| [`description`](#graphql-mutations-update-description){: #graphql-mutations-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`identity`](#graphql-mutations-update-identity){: #graphql-mutations-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-update-read_action){: #graphql-mutations-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
 | [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -393,6 +395,7 @@ destroy :destroy_post, :destroy
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
+| [`description`](#graphql-mutations-destroy-description){: #graphql-mutations-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
 | [`identity`](#graphql-mutations-destroy-identity){: #graphql-mutations-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
 | [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -436,6 +439,7 @@ action :check_status, :check_status
 |------|------|---------|------|
 | [`description`](#graphql-mutations-action-description){: #graphql-mutations-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`hide_inputs`](#graphql-mutations-action-hide_inputs){: #graphql-mutations-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
+| [`error_location`](#graphql-mutations-action-error_location){: #graphql-mutations-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 

@@ -1073,7 +1073,7 @@ defmodule AshGraphql.Resource do
               module: schema,
               name: "result",
               type:
-                generic_action_type(mutation.action, resource, domain, %{
+                generic_action_type(%{mutation.action | allow_nil?: true}, resource, domain, %{
                   mutation
                   | error_location: :top_level
                 }),
@@ -1186,7 +1186,7 @@ defmodule AshGraphql.Resource do
             module: schema,
             name: "result",
             type:
-              generic_action_type(mutation.action, resource, domain, %{
+              generic_action_type(%{mutation.action | allow_nil?: true}, resource, domain, %{
                 mutation
                 | error_location: :top_level
               }),
@@ -1733,6 +1733,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp generic_action_type(_action, _resource, domain, %{name: name, error_location: :in_result}) do
     type = String.to_atom("#{name}_result")
     root_level_errors? = AshGraphql.Domain.Info.root_level_errors?(domain)
