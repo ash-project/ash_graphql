@@ -152,55 +152,57 @@ defmodule AshGraphql.Domain do
       AshGraphql.Domain.Transformers.ValidateCompatibleNames
     ]
 
-  def install(igniter, module, Ash.Domain, _path, _argv) do
-    igniter
-    |> Spark.Igniter.add_extension(
-      module,
-      Ash.Domain,
-      :extensions,
-      AshGraphql.Domain
-    )
-    |> add_to_graphql_schema(module)
-  end
+  if Code.ensure_loaded?(Igniter) do
+    def install(igniter, module, Ash.Domain, _path, _argv) do
+      igniter
+      |> Spark.Igniter.add_extension(
+        module,
+        Ash.Domain,
+        :extensions,
+        AshGraphql.Domain
+      )
+      |> add_to_graphql_schema(module)
+    end
 
-  defp add_to_graphql_schema(igniter, domain) do
-    case AshGraphql.Igniter.find_schema(igniter, domain) do
-      {:ok, igniter, _} ->
-        igniter
+    defp add_to_graphql_schema(igniter, domain) do
+      case AshGraphql.Igniter.find_schema(igniter, domain) do
+        {:ok, igniter, _} ->
+          igniter
 
-      {:error, igniter, []} ->
-        AshGraphql.Igniter.setup_absinthe_schema(igniter)
+        {:error, igniter, []} ->
+          AshGraphql.Igniter.setup_absinthe_schema(igniter)
 
-      {:error, igniter, all_schemas} ->
-        schema =
-          case all_schemas do
-            [schema] ->
-              schema
+        {:error, igniter, all_schemas} ->
+          schema =
+            case all_schemas do
+              [schema] ->
+                schema
 
-            schemas ->
-              Owl.IO.select(
-                schemas,
-                label: "Multiple Ash.Graphql modules found. Please select one to use:",
-                render_as: &inspect/1
-              )
-          end
+              schemas ->
+                Owl.IO.select(
+                  schemas,
+                  label: "Multiple Ash.Graphql modules found. Please select one to use:",
+                  render_as: &inspect/1
+                )
+            end
 
-        Igniter.Project.Module.find_and_update_module!(igniter, schema, fn zipper ->
-          with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, AshGraphql),
-               {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
-               {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :domains),
-               {:ok, zipper} <- Igniter.Code.List.append_new_to_list(zipper, domain) do
-            {:ok, zipper}
-          else
-            _ ->
-              {:warning,
-               """
-               Could not add #{inspect(domain)} to the list of domains in #{inspect(schema)}.
+          Igniter.Project.Module.find_and_update_module!(igniter, schema, fn zipper ->
+            with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, AshGraphql),
+                 {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+                 {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :domains),
+                 {:ok, zipper} <- Igniter.Code.List.append_new_to_list(zipper, domain) do
+              {:ok, zipper}
+            else
+              _ ->
+                {:warning,
+                 """
+                 Could not add #{inspect(domain)} to the list of domains in #{inspect(schema)}.
 
-               Please make that change manually.
-               """}
-          end
-        end)
+                 Please make that change manually.
+                 """}
+            end
+          end)
+      end
     end
   end
 
@@ -217,7 +219,14 @@ defmodule AshGraphql.Domain do
   def queries(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
     Enum.flat_map(
       resources,
-      &AshGraphql.Resource.queries(domain, all_domains, &1, action_middleware, schema, relay_ids?)
+      &AshGraphql.Resource.queries(
+        domain,
+        all_domains,
+        &1,
+        action_middleware,
+        schema,
+        relay_ids?
+      )
     )
   end
 
@@ -271,7 +280,13 @@ defmodule AshGraphql.Domain do
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
       |> Enum.flat_map(fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
-          AshGraphql.Resource.type_definitions(resource, domain, all_domains, schema, relay_ids?) ++
+          AshGraphql.Resource.type_definitions(
+            resource,
+            domain,
+            all_domains,
+            schema,
+            relay_ids?
+          ) ++
             AshGraphql.Resource.mutation_types(resource, domain, all_domains, schema) ++
             AshGraphql.Resource.query_types(resource, domain, all_domains, schema) ++
             AshGraphql.Resource.subscription_types(resource, all_domains, schema)
