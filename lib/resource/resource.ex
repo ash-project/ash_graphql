@@ -519,32 +519,34 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  # sobelow_skip ["DOS.StringToAtom"]
-  def install(igniter, module, Ash.Resource, _path, _argv) do
-    type =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Macro.underscore()
-      |> String.to_atom()
+  if Code.ensure_loaded?(Igniter) do
+    # sobelow_skip ["DOS.StringToAtom"]
+    def install(igniter, module, Ash.Resource, _path, _argv) do
+      type =
+        module
+        |> Module.split()
+        |> List.last()
+        |> Macro.underscore()
+        |> String.to_atom()
 
-    igniter =
-      case Ash.Resource.Igniter.domain(igniter, module) do
-        {:ok, igniter, domain} ->
-          AshGraphql.Domain.install(igniter, domain, Ash.Domain, nil, nil)
+      igniter =
+        case Ash.Resource.Igniter.domain(igniter, module) do
+          {:ok, igniter, domain} ->
+            AshGraphql.Domain.install(igniter, domain, Ash.Domain, nil, nil)
 
-        {:error, igniter} ->
-          igniter
-      end
+          {:error, igniter} ->
+            igniter
+        end
 
-    igniter
-    |> Spark.Igniter.add_extension(
-      module,
-      Ash.Resource,
-      :extensions,
-      AshGraphql.Resource
-    )
-    |> Spark.Igniter.set_option(module, [:graphql, :type], type)
+      igniter
+      |> Spark.Igniter.add_extension(
+        module,
+        Ash.Resource,
+        :extensions,
+        AshGraphql.Resource
+      )
+      |> Spark.Igniter.set_option(module, [:graphql, :type], type)
+    end
   end
 
   def encode_id(record, relay_ids?) do
