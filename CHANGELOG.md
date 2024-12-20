@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.4.7](https://github.com/ash-project/ash_graphql/compare/v1.4.6...v1.4.7) (2024-12-20)
+
+
+
+
+### Improvements:
+
+* add `modify_resolution` for generic actions
+
+* make igniter optional
+
 ## [v1.4.6](https://github.com/ash-project/ash_graphql/compare/v1.4.5...v1.4.6) (2024-12-11)
 
 
