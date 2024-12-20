@@ -74,6 +74,12 @@ defmodule AshGraphql.Resource do
         "If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key",
       default: :top_level
     ],
+    modify_resolution: [
+      type: :mfa,
+      doc: """
+      An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
+      """
+    ],
     relay_id_translations: [
       type: :keyword_list,
       doc: """
@@ -93,6 +99,7 @@ defmodule AshGraphql.Resource do
       :description,
       :relay_id_translations,
       :error_location,
+      :modify_resolution,
       hide_inputs: []
     ]
   end

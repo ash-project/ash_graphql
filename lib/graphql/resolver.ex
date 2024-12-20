@@ -16,6 +16,7 @@ defmodule AshGraphql.Graphql.Resolver do
          %AshGraphql.Resource.Action{
            name: query_name,
            action: action,
+           modify_resolution: modify,
            error_location: error_location
          }, input?}
       ) do
@@ -54,10 +55,13 @@ defmodule AshGraphql.Graphql.Resolver do
             tenant: Map.get(context, :tenant)
           ]
 
-          result =
+          input =
             %Ash.ActionInput{domain: domain, resource: resource}
             |> Ash.ActionInput.set_context(get_context(context))
             |> Ash.ActionInput.for_action(action.name, arguments)
+
+          result =
+            input
             |> Ash.run_action(opts)
             |> case do
               :ok ->
@@ -112,6 +116,8 @@ defmodule AshGraphql.Graphql.Resolver do
                 {:error, error}
             end
 
+          modify_args = [input, result]
+
           result =
             if error_location == :in_result do
               case result do
@@ -134,6 +140,7 @@ defmodule AshGraphql.Graphql.Resolver do
             )
           )
           |> add_root_errors(domain, result)
+          |> modify_resolution(modify, modify_args)
         end
 
       {:error, error} ->
