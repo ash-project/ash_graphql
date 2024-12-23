@@ -216,4 +216,17 @@ defmodule AshGraphql.Resource.Info do
 
     is_nil(filterable_fields) or field_name in filterable_fields
   end
+
+  @doc "An error handler for errors produced by the resource"
+  def error_handler(resource) do
+    if resource,
+      do:
+        Extension.get_opt(
+          resource,
+          [:graphql],
+          :error_handler,
+          nil,
+          true
+        )
+  end
 end

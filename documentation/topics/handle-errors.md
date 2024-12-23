@@ -81,6 +81,31 @@ defmodule AshGraphql.DefaultErrorHandler do
 end
 ```
 
+### Error handler in resources
+Error handlers can also be specified in a resource. For examples:
+
+```elixir
+defmodule MyApp.Resource do
+  use Ash.Resource,
+    domain: [MyApp.Domain],
+    extensions: [AshGraphql]
+    
+  graphql do
+    type :ticket
+    error_handler {MyApp.Resource.GraphqlErrorHandler, :handle_error, []}
+  end
+  
+  # ...
+end
+```
+
+If both an error handler for the resource and one for the domain are defined,
+they both take action: first the resource handler and then the domain handler.
+
+If an action on a resource calls other actions (e.g. with a
+`manage_relationships`) the errors are handled by the primary resource that
+called the action.
+
 ## Custom Errors
 
 If you created your own Errors as described in the [Ash Docs](https://hexdocs.pm/ash/error-handling.html#using-a-custom-exception) you also need to implement

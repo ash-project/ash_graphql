@@ -53,5 +53,6 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.TextMessage)
     resource(AshGraphql.Test.ImageMessage)
     resource(AshGraphql.Test.Subscribable)
+    resource(AshGraphql.Test.ErrorHandling)
   end
 end

@@ -72,6 +72,7 @@ end
 | [`generate_object?`](#graphql-generate_object?){: #graphql-generate_object? } | `boolean` | `true` | Whether or not to create the GraphQL object, this allows you to manually create the GraphQL object. |
 | [`filterable_fields`](#graphql-filterable_fields){: #graphql-filterable_fields } | `list(atom)` |  | A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created. |
 | [`nullable_fields`](#graphql-nullable_fields){: #graphql-nullable_fields } | `atom \| list(atom)` |  | Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more. |
+| [`error_handler`](#graphql-error_handler){: #graphql-error_handler } | `mfa` | `{AshGraphql.DefaultErrorHandler, :handle_error, []}` | Set an MFA to intercept/handle any errors that are generated. |
 
 
 ## graphql.queries
@@ -270,6 +271,7 @@ action :check_status, :check_status
 | [`description`](#graphql-queries-action-description){: #graphql-queries-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`hide_inputs`](#graphql-queries-action-hide_inputs){: #graphql-queries-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`error_location`](#graphql-queries-action-error_location){: #graphql-queries-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
+| [`modify_resolution`](#graphql-queries-action-modify_resolution){: #graphql-queries-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-queries-action-relay_id_translations){: #graphql-queries-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
@@ -459,6 +461,7 @@ action :check_status, :check_status
 | [`description`](#graphql-mutations-action-description){: #graphql-mutations-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`hide_inputs`](#graphql-mutations-action-hide_inputs){: #graphql-mutations-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`error_location`](#graphql-mutations-action-error_location){: #graphql-mutations-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
+| [`modify_resolution`](#graphql-mutations-action-modify_resolution){: #graphql-mutations-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 
 
