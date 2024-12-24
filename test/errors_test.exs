@@ -522,4 +522,33 @@ defmodule AshGraphql.ErrorsTest do
 
     assert create_post_mutation["type"]["name"] == "CreatePostResult"
   end
+
+  test "errors can be intercepted at resource level" do
+    variables = %{
+      "input" => %{
+        "name" => "name"
+      }
+    }
+
+    document =
+      """
+      mutation CreateErrorHandling($input: CreateErrorHandlingInput!) {
+        createErrorHandling(input: $input) {
+          result {
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+
+    Absinthe.run(document, AshGraphql.Test.Schema, variables: variables)
+
+    %{data: %{"createErrorHandling" => %{"errors" => [error]}}} =
+      Absinthe.run!(document, AshGraphql.Test.Schema, variables: variables)
+
+    assert error["message"] =~ "replaced!"
+  end
 end

@@ -125,7 +125,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   {:ok, %{result: result, errors: []}}
 
                 {:error, errors} ->
-                  {:ok, %{result: nil, errors: to_errors(errors, context, domain)}}
+                  {:ok, %{result: nil, errors: to_errors(errors, context, domain, resource)}}
               end
             else
               result
@@ -139,7 +139,7 @@ defmodule AshGraphql.Graphql.Resolver do
               domain
             )
           )
-          |> add_root_errors(domain, result)
+          |> add_root_errors(domain, resource, result)
           |> modify_resolution(modify, modify_args)
         end
 
@@ -276,8 +276,10 @@ defmodule AshGraphql.Graphql.Resolver do
                 )
 
               resolution
-              |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
-              |> add_root_errors(domain, result)
+              |> Absinthe.Resolution.put_result(
+                {:error, to_errors([error], context, domain, resource)}
+              )
+              |> add_root_errors(domain, resource, result)
 
             {result, _} ->
               resolution
@@ -292,7 +294,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   domain
                 )
               )
-              |> add_root_errors(domain, result)
+              |> add_root_errors(domain, resource, result)
               |> modify_resolution(modify, modify_args)
           end
         end
@@ -390,7 +392,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
         resolution
         |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-        |> add_root_errors(domain, result)
+        |> add_root_errors(domain, resource, result)
         |> modify_resolution(modify, [query, args])
       end
     else
@@ -516,7 +518,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
           resolution
           |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-          |> add_root_errors(domain, modify_args)
+          |> add_root_errors(domain, resource, modify_args)
           |> modify_resolution(modify, modify_args)
         end
 
@@ -679,7 +681,8 @@ defmodule AshGraphql.Graphql.Resolver do
             [] ->
               Absinthe.Resolution.put_result(
                 resolution,
-                {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+                {:error,
+                 to_errors([Ash.Error.Query.NotFound.exception()], context, domain, resource)}
               )
 
             [first | rest] ->
@@ -785,7 +788,8 @@ defmodule AshGraphql.Graphql.Resolver do
                 {:ok, nil} ->
                   resolution
                   |> Absinthe.Resolution.put_result(
-                    {:error, to_errors([Ash.Error.Query.NotFound.exception()], context, domain)}
+                    {:error,
+                     to_errors([Ash.Error.Query.NotFound.exception()], context, domain, resource)}
                   )
 
                 {:ok, result} ->
@@ -801,7 +805,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
                 {:error, error} ->
                   resolution
-                  |> Absinthe.Resolution.put_result({:error, to_errors([error], context, domain)})
+                  |> Absinthe.Resolution.put_result(
+                    {:error, to_errors([error], context, domain, resource)}
+                  )
               end
 
             notification.action_type in [:destroy] ->
@@ -1470,13 +1476,14 @@ defmodule AshGraphql.Graphql.Resolver do
                  [changeset, {:ok, value}]}
 
               {:error, %{changeset: changeset} = error} ->
-                {{:ok, %{result: nil, errors: to_errors(changeset.errors, context, domain)}},
+                {{:ok,
+                  %{result: nil, errors: to_errors(changeset.errors, context, domain, resource)}},
                  [changeset, {:error, error}]}
             end
 
           resolution
           |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-          |> add_root_errors(domain, modify_args)
+          |> add_root_errors(domain, resource, modify_args)
           |> modify_resolution(modify, modify_args)
         end
 
@@ -1497,7 +1504,7 @@ defmodule AshGraphql.Graphql.Resolver do
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, domain)}},
+              {:ok, %{result: nil, errors: to_errors(error, context, domain, resource)}},
               context,
               domain
             )
@@ -1616,7 +1623,8 @@ defmodule AshGraphql.Graphql.Resolver do
                               )
                             ],
                             context,
-                            domain
+                            domain,
+                            resource
                           )
                       }},
                      [
@@ -1629,13 +1637,13 @@ defmodule AshGraphql.Graphql.Resolver do
                      ]}
 
                   %Ash.BulkResult{status: :error, errors: errors} ->
-                    {{:ok, %{result: nil, errors: to_errors(errors, context, domain)}},
+                    {{:ok, %{result: nil, errors: to_errors(errors, context, domain, resource)}},
                      [query, {:error, errors}]}
                 end
 
               resolution
               |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-              |> add_root_errors(domain, modify_args)
+              |> add_root_errors(domain, resource, modify_args)
               |> modify_resolution(modify, modify_args)
 
             {:error, error} ->
@@ -1663,7 +1671,7 @@ defmodule AshGraphql.Graphql.Resolver do
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, domain)}},
+              {:ok, %{result: nil, errors: to_errors(error, context, domain, resource)}},
               context,
               domain
             )
@@ -1782,7 +1790,8 @@ defmodule AshGraphql.Graphql.Resolver do
                               )
                             ],
                             context,
-                            domain
+                            domain,
+                            resource
                           )
                       }},
                      [
@@ -1795,13 +1804,13 @@ defmodule AshGraphql.Graphql.Resolver do
                      ]}
 
                   %Ash.BulkResult{status: :error, errors: errors} ->
-                    {{:ok, %{result: nil, errors: to_errors(errors, context, domain)}},
+                    {{:ok, %{result: nil, errors: to_errors(errors, context, domain, resource)}},
                      [query, {:error, errors}]}
                 end
 
               resolution
               |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
-              |> add_root_errors(domain, modify_args)
+              |> add_root_errors(domain, resource, modify_args)
               |> modify_resolution(modify, modify_args)
 
             {:error, error} ->
@@ -1829,7 +1838,7 @@ defmodule AshGraphql.Graphql.Resolver do
           Absinthe.Resolution.put_result(
             resolution,
             to_resolution(
-              {:ok, %{result: nil, errors: to_errors(error, context, domain)}},
+              {:ok, %{result: nil, errors: to_errors(error, context, domain, resource)}},
               context,
               domain
             )
@@ -2685,35 +2694,35 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp add_root_errors(resolution, domain, {:error, error_or_errors}) do
-    do_root_errors(domain, resolution, error_or_errors)
+  defp add_root_errors(resolution, domain, resource, {:error, error_or_errors}) do
+    do_root_errors(domain, resource, resolution, error_or_errors)
   end
 
-  defp add_root_errors(resolution, domain, [_, {:error, error_or_errors}]) do
-    do_root_errors(domain, resolution, error_or_errors)
+  defp add_root_errors(resolution, domain, resource, [_, {:error, error_or_errors}]) do
+    do_root_errors(domain, resource, resolution, error_or_errors)
   end
 
-  defp add_root_errors(resolution, domain, [_, {:ok, %{errors: errors}}])
+  defp add_root_errors(resolution, domain, resource, [_, {:ok, %{errors: errors}}])
        when errors not in [nil, []] do
-    do_root_errors(domain, resolution, errors, false)
+    do_root_errors(domain, resource, resolution, errors, false)
   end
 
-  defp add_root_errors(resolution, domain, {:ok, %{errors: errors}})
+  defp add_root_errors(resolution, domain, resource, {:ok, %{errors: errors}})
        when errors not in [nil, []] do
-    do_root_errors(domain, resolution, errors, false)
+    do_root_errors(domain, resource, resolution, errors, false)
   end
 
-  defp add_root_errors(resolution, _domain, _other_thing) do
+  defp add_root_errors(resolution, _domain, _resource, _other_thing) do
     resolution
   end
 
-  defp do_root_errors(domain, resolution, error_or_errors, to_errors? \\ true) do
+  defp do_root_errors(domain, resource, resolution, error_or_errors, to_errors? \\ true) do
     if AshGraphql.Domain.Info.root_level_errors?(domain) do
       Map.update!(resolution, :errors, fn current_errors ->
         if to_errors? do
           Enum.concat(
             current_errors || [],
-            List.wrap(to_errors(error_or_errors, resolution.context, domain))
+            List.wrap(to_errors(error_or_errors, resolution.context, domain, resource))
           )
         else
           Enum.concat(current_errors || [], List.wrap(error_or_errors))
@@ -2784,8 +2793,8 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp to_errors(errors, context, domain) do
-    AshGraphql.Errors.to_errors(errors, context, domain)
+  defp to_errors(errors, context, domain, resource) do
+    AshGraphql.Errors.to_errors(errors, context, domain, resource)
   end
 
   def resolve_calculation(%Absinthe.Resolution{state: :resolved} = resolution, _),
