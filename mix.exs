@@ -123,10 +123,15 @@ defmodule AshGraphql.MixProject do
     [
       name: :ash_graphql,
       licenses: ["MIT"],
+      maintainers: "Zach Daniel",
       files: ~w(lib .formatter.exs mix.exs README* LICENSE*
       CHANGELOG* documentation),
       links: %{
-        GitHub: "https://github.com/ash-project/ash_graphql"
+        "GitHub" => @source_url,
+        "Discord" => "https://discord.gg/HTHRaaVPUc",
+        "Website" => "https://ash-hq.org",
+        "Forum" => "https://elixirforum.com/c/ash-framework-forum/",
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"
       }
     ]
   end
