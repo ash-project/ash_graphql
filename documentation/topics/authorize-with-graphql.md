@@ -16,6 +16,28 @@ end
 
 If you are doing authorization, you'll need to provide an `actor`.
 
+### Using AshAuthentication
+
+If you have not yet installed AshAuthentication, you can install it with igniter:
+
+```bash
+# installs ash_authentication & ash_authentication_phoenix
+mix igniter.install ash_authentication_phoenix 
+```
+
+If you've already set up `AshGraphql` before adding `AshAuthentication`, you will 
+just need to make sure that your `:graphql` scope in your router looks like this:
+
+```elixir
+pipeline :graphql do
+  plug :load_from_bearer
+  plug :set_actor, :user
+  plug AshGraphql.Plug
+end
+```
+
+### Using Something Else
+
 To set the `actor` for authorization, you'll need to add an `actor` key to the
 absinthe context. Typically, you would have a plug that fetches the current user and uses `Ash.PlugHelpers.set_actor/2` to set the actor in the `conn` (likewise with `Ash.PlugHelpers.set_tenant/2`).
 
