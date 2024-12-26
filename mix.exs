@@ -7,6 +7,8 @@ defmodule AshGraphql.MixProject do
 
   @version "1.4.7"
 
+  @source_url "https://github.com/ash-project/ash_graphql"
+
   def project do
     [
       app: :ash_graphql,
@@ -20,7 +22,7 @@ defmodule AshGraphql.MixProject do
       dialyzer: [plt_add_apps: [:ash]],
       docs: docs(),
       description: @description,
-      source_url: "https://github.com/ash-project/ash_graphql",
+      source_url: @source_url,
       homepage_url: "https://github.com/ash-project/ash_graphql"
     ]
   end
@@ -155,7 +157,7 @@ defmodule AshGraphql.MixProject do
       {:spark, "~> 2.2 and >= 2.2.10"},
       {:owl, "~> 0.11"},
       # dev/test dependencies
-      {:ex_doc, github: "elixir-lang/ex_doc", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.36", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.12", only: [:dev, :test]},
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
