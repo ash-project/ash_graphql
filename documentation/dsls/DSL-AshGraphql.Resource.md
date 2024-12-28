@@ -72,6 +72,7 @@ end
 | [`generate_object?`](#graphql-generate_object?){: #graphql-generate_object? } | `boolean` | `true` | Whether or not to create the GraphQL object, this allows you to manually create the GraphQL object. |
 | [`filterable_fields`](#graphql-filterable_fields){: #graphql-filterable_fields } | `list(atom)` |  | A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created. |
 | [`nullable_fields`](#graphql-nullable_fields){: #graphql-nullable_fields } | `atom \| list(atom)` |  | Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more. |
+| [`error_handler`](#graphql-error_handler){: #graphql-error_handler } | `mfa` | `{AshGraphql.DefaultErrorHandler, :handle_error, []}` | Set an MFA to intercept/handle any errors that are generated. |
 
 
 ## graphql.queries

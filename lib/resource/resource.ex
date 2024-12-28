@@ -459,6 +459,13 @@ defmodule AshGraphql.Resource do
         type: {:wrap_list, :atom},
         doc:
           "Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more."
+      ],
+      error_handler: [
+        type: :mfa,
+        default: {AshGraphql.DefaultErrorHandler, :handle_error, []},
+        doc: """
+        Set an MFA to intercept/handle any errors that are generated.
+        """
       ]
     ],
     sections: [
