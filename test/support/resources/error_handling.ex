@@ -11,6 +11,7 @@ defmodule AshGraphql.Test.ErrorHandling do
 
     mutations do
       create :create_error_handling, :create
+      update :update_error_handling, :update
     end
 
     error_handler {ErrorHandler, :handle_error, []}
@@ -18,7 +19,17 @@ defmodule AshGraphql.Test.ErrorHandling do
 
   actions do
     default_accept(:*)
-    defaults([:read, :update, :destroy, :create])
+    defaults([:read, :destroy, :create])
+
+    update :update do
+      accept([:name])
+
+      validate(fn _changeset, _context ->
+        {:error, "error no matter what"}
+      end)
+
+      require_atomic?(false)
+    end
   end
 
   attributes do
@@ -37,7 +48,12 @@ end
 
 defmodule ErrorHandler do
   @moduledoc false
-  def handle_error(error, _context) do
-    %{error | message: "replaced!"}
+  def handle_error(error, context) do
+    %{action: action} = context
+
+    case action do
+      :update -> %{error | message: "replaced! update"}
+      _ -> %{error | message: "replaced!"}
+    end
   end
 end

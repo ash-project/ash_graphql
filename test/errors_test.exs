@@ -551,4 +551,56 @@ defmodule AshGraphql.ErrorsTest do
 
     assert error["message"] =~ "replaced!"
   end
+
+  test "errors carry action in context" do
+    create_variables = %{
+      "input" => %{
+        "name" => "name"
+      }
+    }
+
+    create_document =
+      """
+      mutation CreateErrorHandling($input: CreateErrorHandlingInput!) {
+        createErrorHandling(input: $input) {
+          result {
+            id
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+
+    %{data: %{"createErrorHandling" => %{"result" => %{"id" => id}}}} =
+      Absinthe.run!(create_document, AshGraphql.Test.Schema, variables: create_variables)
+
+    update_variables = %{
+      "id" => id,
+      "input" => %{
+        "name" => "new_name"
+      }
+    }
+
+    update_document =
+      """
+      mutation UpdateErrorHandling($id: ID!, $input: UpdateErrorHandlingInput!) {
+        updateErrorHandling(id: $id, input: $input) {
+          result {
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+
+    %{data: %{"updateErrorHandling" => %{"errors" => [error]}}} =
+      Absinthe.run!(update_document, AshGraphql.Test.Schema, variables: update_variables)
+
+    assert error["message"] == "replaced! update"
+  end
 end
