@@ -106,6 +106,57 @@ If an action on a resource calls other actions (e.g. with a
 `manage_relationships`) the errors are handled by the primary resource that
 called the action.
 
+### Filtering by action
+
+The error handler carries in the context the name of the primary action that
+returned the error down the line. With that one can set different behaviors
+depending on the specific action that triggered the error. For example consider
+the following resource with `:create`, `:custom_create` and `:update` actions:
+
+```elixir
+defmodule MyApp.Resource do
+  use Ash.Resource,
+    domain: [MyApp.Domain],
+    extensions: [AshGraphql]
+    
+  graphql do
+    type :ticket
+    error_handler {MyApp.Resource.GraphqlErrorHandler, :handle_error, []}
+  end
+  
+  actions do
+    deafults [:read, :destroy, :create]
+    create :custom_create do
+      # ...
+      change manage_relationships # ...
+    end
+    
+    update :update do
+      # ...
+    end
+  end
+end
+```
+
+The error handler `MyApp.Resource.GraphqlErrorHandler` can in this case set
+different behaviors depending on the specific action that caused the error:
+
+```elixir
+defmodule MyApp.Resource.GraphqlErrorHandler do
+
+  def handle_error(error, context) do
+    %{action: action} = context
+
+    case action do
+      :custom_create -> custom_create_behavior(error)
+      :update -> update_behavior(error)
+      
+      _ -> deafult_behvaior(error)
+    end
+  end
+end
+```
+
 ## Custom Errors
 
 If you created your own Errors as described in the [Ash Docs](https://hexdocs.pm/ash/error-handling.html#using-a-custom-exception) you also need to implement

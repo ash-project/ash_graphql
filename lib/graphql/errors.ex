@@ -7,12 +7,13 @@ defmodule AshGraphql.Errors do
   @doc """
   Transform an error or list of errors into the response for graphql.
   """
-  def to_errors(errors, context, domain, resource) do
+  def to_errors(errors, context, domain, resource, action) do
     errors
     |> AshGraphql.Graphql.Resolver.unwrap_errors()
     |> Enum.map(fn error ->
       if AshGraphql.Error.impl_for(error) do
         error = AshGraphql.Error.to_error(error)
+        context = Map.put(context, :action, action)
 
         resource_handled_error =
           case AshGraphql.Resource.Info.error_handler(resource) do
