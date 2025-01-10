@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.5.0](https://github.com/ash-project/ash_graphql/compare/v1.4.7...v1.5.0) (2025-01-10)
+
+
+
+
+### Features:
+
+* errors: carry action name in context (#257)
+
+### Improvements:
+
+* error handling in resources (#253)
+
 ## [v1.4.7](https://github.com/ash-project/ash_graphql/compare/v1.4.6...v1.4.7) (2024-12-20)
 
 
