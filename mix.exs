@@ -19,7 +19,7 @@ defmodule AshGraphql.MixProject do
       aliases: aliases(),
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
-      dialyzer: [plt_add_apps: [:ash]],
+      dialyzer: [plt_add_apps: [:ash, :mix]],
       docs: docs(),
       description: @description,
       source_url: @source_url,
