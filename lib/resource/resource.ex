@@ -462,7 +462,6 @@ defmodule AshGraphql.Resource do
       ],
       error_handler: [
         type: :mfa,
-        default: {AshGraphql.DefaultErrorHandler, :handle_error, []},
         doc: """
         Set an MFA to intercept/handle any errors that are generated.
         """
