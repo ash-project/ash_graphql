@@ -228,6 +228,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_error, :create_with_error
       create :create_post_with_required_error, :create_with_required_error
       create :create_post, :create_confirm
+      create :create_post_with_length_constraint, :create_with_length_constraint
       create :upsert_post, :upsert, upsert?: true
 
       create :create_post_with_common_map, :create_with_common_map
@@ -297,6 +298,10 @@ defmodule AshGraphql.Test.Post do
 
     create :create_with_error do
       change(RaiseResourceError)
+    end
+
+    create :create_with_length_constraint do
+      validate(string_length(:text, max: 2))
     end
 
     create :create_with_required_error do

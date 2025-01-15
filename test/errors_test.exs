@@ -523,6 +523,44 @@ defmodule AshGraphql.ErrorsTest do
     assert create_post_mutation["type"]["name"] == "CreatePostResult"
   end
 
+  defmodule DomainLevelErrorHandler do
+    # Allow error messages to remain un-interpolated (the opposite of the default error handler)
+    def handle_error(error, _context) do
+      error
+    end
+  end
+
+  test "default error handler is not also applied when an error handler is defined on domain" do
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
+      graphql: [error_handler: {DomainLevelErrorHandler, :handle_error, []}]
+    )
+
+    resp =
+      """
+      mutation CreatePostWithLengthConstraint($input: CreatePostWithLengthConstraintInput) {
+        createPostWithLengthConstraint(input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "too long"
+          }
+        }
+      )
+
+    assert {:ok, %{data: %{"createPostWithLengthConstraint" => %{"errors" => [errors]}}}} = resp
+    assert %{"message" => message} = errors
+    assert message == "must have length of no more than %{max}"
+  end
+
   test "errors can be intercepted at resource level" do
     variables = %{
       "input" => %{
