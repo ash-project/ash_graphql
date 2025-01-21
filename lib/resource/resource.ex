@@ -216,12 +216,12 @@ defmodule AshGraphql.Resource do
   @managed_relationships %Spark.Dsl.Section{
     name: :managed_relationships,
     describe: """
-    Generates input objects for `manage_relationship` arguments on resource actions.
+    Generates input objects for `managed_relationship` arguments on resource actions.
     """,
     examples: [
       """
       managed_relationships do
-        manage_relationship :create_post, :comments
+        managed_relationship :create_post, :comments
       end
       """
     ],
@@ -229,7 +229,7 @@ defmodule AshGraphql.Resource do
       auto?: [
         type: :boolean,
         doc:
-          "Automatically derive types for all arguments that have a `manage_relationship` call change.",
+          "Automatically derive types for all arguments that have a `managed_relationship` call change.",
         default: true
       ]
     ],
