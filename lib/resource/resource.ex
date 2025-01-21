@@ -2185,11 +2185,46 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def manage_fields(manage_opts, managed_relationship, relationship, schema) do
-    on_match_fields(manage_opts, relationship, schema) ++
-      on_no_match_fields(manage_opts, relationship, schema) ++
-      on_lookup_fields(manage_opts, relationship, schema) ++
+    [
+      on_match_fields(manage_opts, relationship, schema),
+      on_no_match_fields(manage_opts, relationship, schema),
+      on_lookup_fields(manage_opts, relationship, schema),
       manage_pkey_fields(manage_opts, managed_relationship, relationship, schema)
+    ]
+    |> Enum.reject(&(&1 == :none))
+    |> case do
+      [] ->
+        []
+
+      [one] ->
+        one
+
+      field_sets ->
+        Enum.reduce(field_sets, [], fn field_set, fields ->
+          new_fields =
+            Enum.reduce(field_set, [], fn {resource, action, field}, fields ->
+              if required?(field) do
+                if Enum.all?(field_sets, fn field_set ->
+                     Enum.all?(field_set, fn {_, _, other_field} ->
+                       other_field.identifier != field.identifier || required?(other_field)
+                     end)
+                   end) do
+                  [{resource, action, field} | fields]
+                else
+                  [{resource, action, %{field | type: field.type.of_type}} | fields]
+                end
+              else
+                [{resource, action, field} | fields]
+              end
+            end)
+
+          fields ++ new_fields
+        end)
+    end
   end
+
+  defp required?(%{type: %Absinthe.Blueprint.TypeReference.NonNull{}}), do: true
+  defp required?(_), do: false
 
   defp check_for_conflicts!(fields, managed_relationship, resource) do
     {ok, errors} =
@@ -2376,7 +2411,7 @@ defmodule AshGraphql.Resource do
   defp on_lookup_fields(opts, relationship, schema) do
     case ManagedRelationshipHelpers.on_lookup_update_action(opts, relationship) do
       {:destination, nil} ->
-        []
+        :none
 
       {:destination, action} ->
         action = Ash.Resource.Info.action(relationship.destination, action)
@@ -2391,7 +2426,7 @@ defmodule AshGraphql.Resource do
         end)
 
       {:join, nil, _} ->
-        []
+        :none
 
       {:join, action, fields} ->
         action = Ash.Resource.Info.action(relationship.through, action)
@@ -2414,7 +2449,7 @@ defmodule AshGraphql.Resource do
         end)
 
       nil ->
-        []
+        :none
     end
   end
 
@@ -2424,7 +2459,7 @@ defmodule AshGraphql.Resource do
     |> List.wrap()
     |> Enum.flat_map(fn
       {:destination, nil} ->
-        []
+        :none
 
       {:destination, action_name} ->
         action = Ash.Resource.Info.action(relationship.destination, action_name)
@@ -2439,7 +2474,7 @@ defmodule AshGraphql.Resource do
         end)
 
       {:join, nil, _} ->
-        []
+        :none
 
       {:join, action_name, fields} ->
         action = Ash.Resource.Info.action(relationship.through, action_name)
@@ -2469,7 +2504,7 @@ defmodule AshGraphql.Resource do
     |> List.wrap()
     |> Enum.flat_map(fn
       {:destination, nil} ->
-        []
+        :none
 
       {:destination, action_name} ->
         action = Ash.Resource.Info.action(relationship.destination, action_name)
@@ -2484,7 +2519,7 @@ defmodule AshGraphql.Resource do
         end)
 
       {:join, nil, _} ->
-        []
+        :none
 
       {:join, action_name, fields} ->
         action = Ash.Resource.Info.action(relationship.through, action_name)
@@ -2564,7 +2599,7 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.concat(pkey_fields)
     else
-      []
+      :none
     end
   end
 
