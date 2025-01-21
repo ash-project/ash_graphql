@@ -961,8 +961,9 @@ defmodule AshGraphql.Graphql.Resolver do
         manage_opts = Spark.Options.validate!(opts[:opts], manage_opts_schema)
 
         fields =
-          manage_opts
+          resource
           |> AshGraphql.Resource.manage_fields(
+            manage_opts,
             managed_relationship,
             relationship,
             __MODULE__

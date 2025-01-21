@@ -237,6 +237,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_bar_with_baz, :create_bar_with_baz
 
       create :create_post_with_comments, :with_comments
+      create :create_post_with_comments_lookup, :with_comments_lookup
       create :create_post_with_comments_and_tags, :with_comments_and_tags
 
       create :create_post_with_custom_description, :create,
@@ -356,6 +357,14 @@ defmodule AshGraphql.Test.Post do
     create :create_confirm do
       argument(:confirmation, :string)
       validate(confirm(:text, :confirmation))
+    end
+
+    create :with_comments_lookup do
+      argument(:comments, {:array, :map})
+
+      change(
+        manage_relationship(:comments, on_lookup: :relate, on_no_match: {:create, :with_required})
+      )
     end
 
     create :with_comments do

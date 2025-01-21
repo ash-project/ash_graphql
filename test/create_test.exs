@@ -96,6 +96,54 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "a create with a managed relationship that does a lookup works" do
+    comment1 = Ash.Seed.seed!(%AshGraphql.Test.Comment{text: "a"})
+
+    resp =
+      """
+      mutation CreatePostWithCommentsLookup($input: CreatePostWithCommentsLookupInput) {
+        createPostWithCommentsLookup(input: $input) {
+          result{
+            text
+            comments(sort:{field:TEXT}){
+              text
+            }
+          }
+          errors{
+            message
+            fields
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "comments" => [
+              %{"id" => comment1.id},
+              %{"text" => "b", "required" => "foo"}
+            ]
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithCommentsLookup" => %{
+                 "result" => %{
+                   "text" => "foobar",
+                   "comments" => [%{"text" => "a"}, %{"text" => "b"}]
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a union type can be written to" do
     resp =
       """

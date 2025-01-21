@@ -30,6 +30,17 @@ input CreateUserInput {
   name: String
 }
 
+input UserFilterNameTwice {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
 input UserFilterName {
   isNil: Boolean
   eq: String
@@ -59,6 +70,7 @@ input UserFilterInput {
   id: UserFilterId
   name: UserFilterName
   posts: PostFilterInput
+  nameTwice: UserFilterNameTwice
 }
 
 type User implements Node {
@@ -77,6 +89,7 @@ type User implements Node {
     "The number of records to skip."
     offset: Int
   ): [Post!]!
+  nameTwice: String
 }
 
 "The result of the :create_resource mutation"
@@ -223,6 +236,7 @@ input PostFilterInput {
   text: PostFilterText
   authorId: PostFilterAuthorId
   author: UserFilterInput
+  comments: CommentFilterInput
 }
 
 input PostSortInput {
@@ -235,6 +249,139 @@ type Post implements Node {
   text: String
   authorId: ID
   author: User
+  comments(
+    "How to sort the records in the response"
+    sort: [CommentSortInput]
+
+    "A filter to limit the results"
+    filter: CommentFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Comment!]!
+}
+
+"The result of the :create_comment mutation"
+type CreateCommentResult {
+  "The successful result of the mutation"
+  result: Comment
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateCommentInput {
+  text: String
+  postId: ID
+  authorId: ID
+}
+
+enum CommentSortField {
+  ID
+  TEXT
+  TYPE
+  POST_ID
+  AUTHOR_ID
+  TIMESTAMP
+}
+
+input CommentFilterTimestamp {
+  isNil: Boolean
+  eq: DateTime
+  notEq: DateTime
+  in: [DateTime!]
+  lessThan: DateTime
+  greaterThan: DateTime
+  lessThanOrEqual: DateTime
+  greaterThanOrEqual: DateTime
+}
+
+input CommentFilterAuthorId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input CommentFilterPostId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input CommentFilterType {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input CommentFilterText {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input CommentFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input CommentFilterInput {
+  and: [CommentFilterInput!]
+  or: [CommentFilterInput!]
+  not: [CommentFilterInput!]
+  id: CommentFilterId
+  text: CommentFilterText
+  type: CommentFilterType
+  postId: CommentFilterPostId
+  authorId: CommentFilterAuthorId
+  post: PostFilterInput
+  author: UserFilterInput
+  timestamp: CommentFilterTimestamp
+}
+
+input CommentSortInput {
+  order: SortOrder
+  field: CommentSortField!
+}
+
+type Comment {
+  id: ID!
+  text: String
+  type: String
+  postId: ID
+  authorId: ID
+  post: Post
+  author: User
+  timestamp: DateTime
 }
 
 "A relay node"
@@ -277,6 +424,14 @@ type RootQueryType {
     id: ID!
   ): Node!
 
+  listComments(
+    "How to sort the records in the response"
+    sort: [CommentSortInput]
+
+    "A filter to limit the results"
+    filter: CommentFilterInput
+  ): [Comment!]!
+
   getPost(
     "The id of the record"
     id: ID!
@@ -316,6 +471,7 @@ type RootQueryType {
 }
 
 type RootMutationType {
+  createComment(input: CreateCommentInput): CreateCommentResult!
   simpleCreatePost(input: SimpleCreatePostInput): SimpleCreatePostResult!
   updatePost(id: ID!, input: UpdatePostInput): UpdatePostResult!
   assignAuthor(id: ID!, input: AssignAuthorInput): AssignAuthorResult!
@@ -331,3 +487,11 @@ character sequences. The Json type is most often used to represent a free-form
 human-readable json string.
 """
 scalar Json
+
+"""
+The `DateTime` scalar type represents a date and time in the UTC
+timezone. The DateTime appears in a JSON response as an ISO8601 formatted
+string, including UTC timezone ("Z"). The parsed date and time string will
+be converted to UTC if there is an offset.
+"""
+scalar DateTime

@@ -14,6 +14,13 @@ input PostWithCommentsSponsoredCommentsInput {
   text: String
 }
 
+input PostWithCommentsLookupCommentsInput {
+  id: ID
+  text: String
+  required: String!
+  authorId: ID
+}
+
 input CreatePostCommentWithTag {
   id: ID
   text: String
@@ -162,6 +169,12 @@ type IndirectChannelMessages {
   count: Int!
 }
 
+type FilterByActorChannelMessages {
+  results: [Message]!
+  hasNextPage: Boolean!
+  count: Int!
+}
+
 input CommonMapStructInput {
   stuff: String!
   some: String!
@@ -231,8 +244,10 @@ type Channel {
   name: String!
   createdAt: DateTime!
   channelMessageCount: Int!
+  filterByUserChannelMessageCount: Int!
   directChannelMessages: [Message!]
   indirectChannelMessages(offset: Int, limit: Int): IndirectChannelMessages
+  filterByActorChannelMessages(offset: Int, limit: Int): FilterByActorChannelMessages
 }
 
 "The result of the :delete_current_user mutation"
@@ -622,8 +637,31 @@ type RelayTag implements Node {
   name: String
 }
 
+"The result of the :post_count_with_errors query"
+type PostCountWithErrorsResult {
+  "The successful result of the query"
+  result: Int
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
 input RandomPostInput {
   published: Boolean
+}
+
+"The result of the :delete_post_with_invalid_arguments_names mutation"
+type DeletePostWithInvalidArgumentsNamesResult {
+  "The record that was successfully deleted"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input DeletePostWithInvalidArgumentsNamesInput {
+  invalid1: String
+  removeInvalid: Boolean
 }
 
 "The result of the :delete_post_with_error mutation"
@@ -688,6 +726,45 @@ input ArchivePostInput {
   commonMapAttribute: CommonMapInput
   commonMapStructAttribute: CommonMapStructInput
   authorId: ID
+}
+
+"The result of the :update_post_with_invalid_arguments_names mutation"
+type UpdatePostWithInvalidArgumentsNamesResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdatePostWithInvalidArgumentsNamesInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  invalid1: String
+  removeInvalid: Boolean
 }
 
 "The result of the :update_post_with_hidden_input mutation"
@@ -914,6 +991,45 @@ input UpdatePostInput {
   authorId: ID
 }
 
+"The result of the :create_post_with_invalid_arguments_names mutation"
+type CreatePostWithInvalidArgumentsNamesResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithInvalidArgumentsNamesInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  invalid1: String
+  removeInvalid: Boolean
+}
+
 type CreatePostWithCustomDescriptionMetadata {
   foo: String
 }
@@ -995,6 +1111,44 @@ input CreatePostWithCommentsAndTagsInput {
   authorId: ID
   comments: [CreatePostCommentWithTag!]
   tags: [PostWithCommentsAndTagsTagsInput!]!
+}
+
+"The result of the :create_post_with_comments_lookup mutation"
+type CreatePostWithCommentsLookupResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithCommentsLookupInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  comments: [PostWithCommentsLookupCommentsInput!]
 }
 
 "The result of the :create_post_with_comments mutation"
@@ -1224,6 +1378,43 @@ input UpsertPostInput {
   commonMapStructAttribute: CommonMapStructInput
   authorId: ID
   id: ID
+}
+
+"The result of the :create_post_with_length_constraint mutation"
+type CreatePostWithLengthConstraintResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithLengthConstraintInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
 }
 
 "The result of the :create_post mutation"
@@ -1743,6 +1934,7 @@ input PostFilterInput {
   createdAt: PostFilterCreatedAt
   authorId: PostFilterAuthorId
   author: UserFilterInput
+  authorThatIsActor: UserFilterInput
   comments: CommentFilterInput
   sponsoredComments: SponsoredCommentFilterInput
   paginatedComments: CommentFilterInput
@@ -1819,6 +2011,8 @@ type Post {
 
   author: User
 
+  authorThatIsActor: User
+
   comments(
     "How to sort the records in the response"
     sort: [CommentSortInput]
@@ -1854,12 +2048,12 @@ type Post {
     "A filter to limit the results"
     filter: CommentFilterInput
 
-    "The number of records to return. Maximum 250"
-    limit: Int!
+    "The number of records to return."
+    limit: Int
 
     "The number of records to skip."
     offset: Int
-  ): PageOfComment!
+  ): [Comment!]!
 
   tags(
     "How to sort the records in the response"
@@ -2165,18 +2359,6 @@ enum CommentSortField {
   POST_ID
   AUTHOR_ID
   TIMESTAMP
-}
-
-"A page of :comment"
-type PageOfComment {
-  "Total count on all pages"
-  count: Int
-
-  "The records contained in the page"
-  results: [Comment!]
-
-  "Whether or not there is a next page"
-  hasNextPage: Boolean!
 }
 
 input CommentFilterTimestamp {
@@ -2498,7 +2680,23 @@ type RootQueryType {
     offset: Int
   ): PageOfPost
 
+  readPostWithInvalidArgumentsNames(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    invalid1: String
+
+    removeInvalid: Boolean
+  ): [Post!]!
+
   postCount(published: Boolean): Int!
+
+  postCountWithErrors(published: Boolean): PostCountWithErrorsResult
+
+  postCustomActionWithInvalidArgumentsNames(invalid1: String, removeInvalid: Boolean): String!
 
   getRelayTag(
     "The id of the record"
@@ -2606,6 +2804,8 @@ type RootMutationType {
 
   createPost(input: CreatePostInput): CreatePostResult
 
+  createPostWithLengthConstraint(input: CreatePostWithLengthConstraintInput): CreatePostWithLengthConstraintResult
+
   upsertPost(input: UpsertPostInput): UpsertPostResult
 
   createPostWithCommonMap(input: CreatePostWithCommonMapInput): CreatePostWithCommonMapResult
@@ -2618,10 +2818,14 @@ type RootMutationType {
 
   createPostWithComments(input: CreatePostWithCommentsInput): CreatePostWithCommentsResult
 
+  createPostWithCommentsLookup(input: CreatePostWithCommentsLookupInput): CreatePostWithCommentsLookupResult
+
   createPostWithCommentsAndTags(input: CreatePostWithCommentsAndTagsInput!): CreatePostWithCommentsAndTagsResult
 
   "Another custom description"
   createPostWithCustomDescription(input: CreatePostWithCustomDescriptionInput): CreatePostWithCustomDescriptionResult
+
+  createPostWithInvalidArgumentsNames(input: CreatePostWithInvalidArgumentsNamesInput): CreatePostWithInvalidArgumentsNamesResult
 
   updatePost(id: ID!, input: UpdatePostInput): UpdatePostResult
 
@@ -2635,6 +2839,8 @@ type RootMutationType {
 
   updatePostWithHiddenInput(id: ID!, input: UpdatePostWithHiddenInputInput): UpdatePostWithHiddenInputResult
 
+  updatePostWithInvalidArgumentsNames(id: ID!, input: UpdatePostWithInvalidArgumentsNamesInput): UpdatePostWithInvalidArgumentsNamesResult
+
   archivePost(id: ID!, input: ArchivePostInput): ArchivePostResult
 
   deletePost(id: ID!): DeletePostResult
@@ -2642,6 +2848,8 @@ type RootMutationType {
   deleteBestPost: DeleteBestPostResult
 
   deletePostWithError(id: ID!): DeletePostWithErrorResult
+
+  deletePostWithInvalidArgumentsNames(id: ID!, input: DeletePostWithInvalidArgumentsNamesInput): DeletePostWithInvalidArgumentsNamesResult
 
   randomPost(input: RandomPostInput): Post
 

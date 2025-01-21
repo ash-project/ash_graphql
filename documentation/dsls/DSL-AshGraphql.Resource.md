@@ -558,7 +558,7 @@ Generates input objects for `manage_relationship` arguments on resource actions.
 ### Examples
 ```
 managed_relationships do
-  manage_relationship :create_post, :comments
+  managed_relationship :create_post, :comments
 end
 
 ```
@@ -580,36 +580,10 @@ managed_relationship action, argument
 ```
 
 
-Instructs ash_graphql that a given argument with a `manage_relationship` change should have its input objects derived automatically from the potential actions to be called.
+Configures the behavior of a given managed_relationship for a given action.
 
-For example, given an action like:
-
-```elixir
-actions do
-create :create do
-argument :comments, {:array, :map}
-
-change manage_relationship(:comments, type: :direct_control) # <- we look for this change with a matching argument name
-end
-end
-```
-
-You could add the following managed_relationship
-
-```elixir
-graphql do
-...
-
-managed_relationships do
-managed_relationship :create, :comments
-end
-end
-```
-
-By default, the `{:array, :map}` would simply be a `json[]` type. If the argument name
-is placed in this list, all of the potential actions that could be called will be combined
-into a single input object. If there are type conflicts (for example, if the input could create
-or update a record, and the create and update actions have an argument of the same name but with a different type),
+If there are type conflicts (for example, if the input could create or update a record, and the 
+create and update actions have an argument of the same name but with a different type),
 a warning is emitted at compile time and the first one is used. If that is insufficient, you will need to do one of the following:
 
 1.) provide the `:types` option to the `managed_relationship` constructor (see that option for more)
@@ -624,6 +598,8 @@ For `non_null` use `{:non_null, type}`, and for a list, use `{:array, type}`, fo
 `{:non_null, {:array, {:non_null, :string}}}` for a non null list of non null strings.
 
 To *remove* a key from the input object, simply pass `nil` as the type.
+
+Use `ignore?: true` to skip this type generation.
 
 
 

@@ -2157,7 +2157,8 @@ defmodule AshGraphql.Resource do
 
     manage_opts = Spark.Options.validate!(opts[:opts], manage_opts_schema)
 
-    fields = manage_fields(manage_opts, managed_relationship, relationship, schema)
+    fields =
+      manage_fields(resource, manage_opts, managed_relationship, relationship, schema)
 
     type = managed_relationship.type_name || default_managed_type_name(resource, action, argument)
 
@@ -2184,7 +2185,7 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def manage_fields(manage_opts, managed_relationship, relationship, schema) do
+  def manage_fields(_resource, manage_opts, managed_relationship, relationship, schema) do
     [
       on_match_fields(manage_opts, relationship, schema),
       on_no_match_fields(manage_opts, relationship, schema),
@@ -2204,15 +2205,7 @@ defmodule AshGraphql.Resource do
           new_fields =
             Enum.reduce(field_set, [], fn {resource, action, field}, fields ->
               if required?(field) do
-                if Enum.all?(field_sets, fn field_set ->
-                     Enum.all?(field_set, fn {_, _, other_field} ->
-                       other_field.identifier != field.identifier || required?(other_field)
-                     end)
-                   end) do
-                  [{resource, action, field} | fields]
-                else
-                  [{resource, action, %{field | type: field.type.of_type}} | fields]
-                end
+                maybe_unrequire(field_sets, resource, action, field, fields)
               else
                 [{resource, action, field} | fields]
               end
@@ -2220,6 +2213,18 @@ defmodule AshGraphql.Resource do
 
           fields ++ new_fields
         end)
+    end
+  end
+
+  defp maybe_unrequire(field_sets, resource, action, field, fields) do
+    if Enum.all?(field_sets, fn field_set ->
+         Enum.any?(field_set, fn {_, _, other_field} ->
+           other_field.identifier == field.identifier && required?(other_field)
+         end)
+       end) do
+      [{resource, action, field} | fields]
+    else
+      [{resource, action, %{field | type: field.type.of_type}} | fields]
     end
   end
 
@@ -2457,90 +2462,110 @@ defmodule AshGraphql.Resource do
     opts
     |> ManagedRelationshipHelpers.on_match_destination_actions(relationship)
     |> List.wrap()
-    |> Enum.flat_map(fn
-      {:destination, nil} ->
-        :none
-
-      {:destination, action_name} ->
-        action = Ash.Resource.Info.action(relationship.destination, action_name)
-
-        relationship.destination
-        |> mutation_fields(schema, action, action.type)
-        |> Enum.map(fn field ->
-          {relationship.destination, action.name, field}
-        end)
-        |> Enum.reject(fn {_, _, field} ->
-          field.identifier == relationship.destination_attribute
-        end)
-
+    |> Enum.reject(fn
       {:join, nil, _} ->
+        true
+
+      {:destination, nil} ->
+        true
+
+      _ ->
+        false
+    end)
+    |> case do
+      [] ->
         :none
 
-      {:join, action_name, fields} ->
-        action = Ash.Resource.Info.action(relationship.through, action_name)
+      actions ->
+        Enum.flat_map(actions, fn
+          {:destination, action_name} ->
+            action = Ash.Resource.Info.action(relationship.destination, action_name)
 
-        if fields == :all do
-          mutation_fields(relationship.through, schema, action, action.type)
-        else
-          relationship.through
-          |> mutation_fields(schema, action, action.type)
-          |> Enum.filter(&(&1.identifier in fields))
-        end
-        |> Enum.map(fn field ->
-          {relationship.through, action.name, field}
+            relationship.destination
+            |> mutation_fields(schema, action, action.type)
+            |> Enum.map(fn field ->
+              {relationship.destination, action.name, field}
+            end)
+            |> Enum.reject(fn {_, _, field} ->
+              field.identifier == relationship.destination_attribute
+            end)
+
+          {:join, action_name, fields} ->
+            action = Ash.Resource.Info.action(relationship.through, action_name)
+
+            if fields == :all do
+              mutation_fields(relationship.through, schema, action, action.type)
+            else
+              relationship.through
+              |> mutation_fields(schema, action, action.type)
+              |> Enum.filter(&(&1.identifier in fields))
+            end
+            |> Enum.map(fn field ->
+              {relationship.through, action.name, field}
+            end)
+            |> Enum.reject(fn {_, _, field} ->
+              field.identifier in [
+                relationship.destination_attribute_on_join_resource,
+                relationship.source_attribute_on_join_resource
+              ]
+            end)
         end)
-        |> Enum.reject(fn {_, _, field} ->
-          field.identifier in [
-            relationship.destination_attribute_on_join_resource,
-            relationship.source_attribute_on_join_resource
-          ]
-        end)
-    end)
+    end
   end
 
   defp on_no_match_fields(opts, relationship, schema) do
     opts
     |> ManagedRelationshipHelpers.on_no_match_destination_actions(relationship)
     |> List.wrap()
-    |> Enum.flat_map(fn
-      {:destination, nil} ->
-        :none
-
-      {:destination, action_name} ->
-        action = Ash.Resource.Info.action(relationship.destination, action_name)
-
-        relationship.destination
-        |> mutation_fields(schema, action, action.type)
-        |> Enum.map(fn field ->
-          {relationship.destination, action.name, field}
-        end)
-        |> Enum.reject(fn {_, _, field} ->
-          field.identifier == relationship.destination_attribute
-        end)
-
+    |> Enum.reject(fn
       {:join, nil, _} ->
+        true
+
+      {:destination, nil} ->
+        true
+
+      _ ->
+        false
+    end)
+    |> case do
+      [] ->
         :none
 
-      {:join, action_name, fields} ->
-        action = Ash.Resource.Info.action(relationship.through, action_name)
+      actions ->
+        Enum.flat_map(actions, fn
+          {:destination, action_name} ->
+            action = Ash.Resource.Info.action(relationship.destination, action_name)
 
-        if fields == :all do
-          mutation_fields(relationship.through, schema, action, action.type)
-        else
-          relationship.through
-          |> mutation_fields(schema, action, action.type)
-          |> Enum.filter(&(&1.identifier in fields))
-        end
-        |> Enum.map(fn field ->
-          {relationship.through, action.name, field}
+            relationship.destination
+            |> mutation_fields(schema, action, action.type)
+            |> Enum.map(fn field ->
+              {relationship.destination, action.name, field}
+            end)
+            |> Enum.reject(fn {_, _, field} ->
+              field.identifier == relationship.destination_attribute
+            end)
+
+          {:join, action_name, fields} ->
+            action = Ash.Resource.Info.action(relationship.through, action_name)
+
+            if fields == :all do
+              mutation_fields(relationship.through, schema, action, action.type)
+            else
+              relationship.through
+              |> mutation_fields(schema, action, action.type)
+              |> Enum.filter(&(&1.identifier in fields))
+            end
+            |> Enum.map(fn field ->
+              {relationship.through, action.name, field}
+            end)
+            |> Enum.reject(fn {_, _, field} ->
+              field.identifier in [
+                relationship.destination_attribute_on_join_resource,
+                relationship.source_attribute_on_join_resource
+              ]
+            end)
         end)
-        |> Enum.reject(fn {_, _, field} ->
-          field.identifier in [
-            relationship.destination_attribute_on_join_resource,
-            relationship.source_attribute_on_join_resource
-          ]
-        end)
-    end)
+    end
   end
 
   defp manage_pkey_fields(opts, managed_relationship, relationship, schema) do

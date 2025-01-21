@@ -26,6 +26,12 @@ defmodule AshGraphql.Test.Comment do
       primary?(true)
     end
 
+    create :with_required do
+      argument(:text, :string, allow_nil?: false)
+      argument(:required, :string, allow_nil?: false)
+      change(set_attribute(:text, arg(:text)))
+    end
+
     read :paginated do
       pagination(required?: true, offset?: true, countable: true)
     end
