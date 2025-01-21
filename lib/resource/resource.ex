@@ -221,7 +221,7 @@ defmodule AshGraphql.Resource do
     examples: [
       """
       managed_relationships do
-        manage_relationship :create_post, :comments
+        managed_relationship :create_post, :comments
       end
       """
     ],
