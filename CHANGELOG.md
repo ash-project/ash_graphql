@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.5.1](https://github.com/ash-project/ash_graphql/compare/v1.5.0...v1.5.1) (2025-01-27)
+
+
+
+
+### Bug Fixes:
+
+* make manage relationship fields nullable when not always required
+
+* default error handling (#261)
+
 ## [v1.5.0](https://github.com/ash-project/ash_graphql/compare/v1.4.7...v1.5.0) (2025-01-10)
 
 
