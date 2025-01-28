@@ -1222,7 +1222,7 @@ defmodule AshGraphql.Resource do
       action_types =
         Ash.Resource.Info.actions(resource)
         |> Stream.filter(&(&1.name in List.wrap(actions)))
-        |> Stream.map(& &1.name)
+        |> Stream.map(& &1.type)
         |> Stream.concat(List.wrap(action_types))
         |> Enum.uniq()
 
