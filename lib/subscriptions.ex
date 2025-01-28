@@ -15,6 +15,7 @@ defmodule AshGraphql.Subscription do
         type_override \\ nil,
         nested \\ []
       ) do
+
     query
     |> Ash.Query.new()
     |> Ash.Query.set_tenant(Map.get(context, :tenant))
@@ -36,7 +37,8 @@ defmodule AshGraphql.Subscription do
       resolution,
       resolution.path,
       context,
-      type_override
+      type_override,
+      nested
     )
   end
 end
