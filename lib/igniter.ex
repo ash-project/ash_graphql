@@ -189,7 +189,7 @@ if Code.ensure_loaded?(Igniter) do
         {igniter, nil} ->
           igniter
           |> Igniter.add_warning("""
-          Unable to configure Absinthe.Subscription beacuse we don't now the right endpoint
+          Unable to configure Absinthe.Subscription beacuse we don't know the right endpoint
           """)
 
         {igniter, router} ->
