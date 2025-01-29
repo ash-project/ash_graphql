@@ -147,8 +147,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc "Sets up the phoenix module for AshGraphql"
-    def setup_phoenix(igniter, schema_name \\ nil) do
+    def setup_phoenix(igniter, schema_name \\ nil, socket_name \\ nil) do
       schema_name = schema_name || Igniter.Project.Module.module_name(igniter, "GraphqlSchema")
+      socket_name = socket_name || Igniter.Project.Module.module_name(igniter, "GraphqlSocket")
 
       case Igniter.Libs.Phoenix.select_router(igniter) do
         {igniter, nil} ->
@@ -162,7 +163,7 @@ if Code.ensure_loaded?(Igniter) do
 
         {igniter, router} ->
           igniter
-          |> update_endpoints(router)
+          |> update_endpoints(router, socket_name)
           |> Igniter.Libs.Phoenix.add_pipeline(:graphql, "plug AshGraphql.Plug", router: router)
           |> Igniter.Libs.Phoenix.add_scope(
             "/gql",
@@ -183,6 +184,66 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    def setup_application(igniter) do
+      dbg("setup application")
+
+      case Igniter.Libs.Phoenix.select_router(igniter) do
+        {igniter, nil} ->
+          igniter
+          |> Igniter.add_warning("""
+          Unable to configure Absinthe.Subscription beacuse we don't now the right endpoint
+          """)
+
+        {igniter, router} ->
+          {igniter, endpoints} =
+            Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
+
+          igniter =
+            Enum.reduce(endpoints, {nil, igniter}, fn endpoint, {last_child, igniter} ->
+              igniter
+              |> Igniter.Project.Application.add_new_child({Absinthe.Subscription, endpoint},
+                after: endpoint
+              )
+            end)
+
+          igniter
+          |> Igniter.Project.Application.add_new_child(AshGraphql.Subscription.Batcher,
+            after: Absinthe.Subscription
+          )
+      end
+    end
+
+    def setup_socket(igniter, schema_name \\ nil, socket_name \\ nil) do
+      schema_name = schema_name || Igniter.Project.Module.module_name(igniter, "GraphqlSchema")
+      socket_name = socket_name || Igniter.Project.Module.module_name(igniter, "GraphqlSocket")
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      igniter
+      |> Igniter.Project.Module.find_and_update_or_create_module(
+        socket_name,
+        """
+        use Phoenix.Socket
+
+        use Absinthe.Phoenix.Socket,
+          schema: #{inspect(schema_name)}
+
+        @otp_app #{inspect(otp_app)}
+
+        @impl true
+        def connect(_params, socket, _connect_info) do
+          {:ok, socket}
+        end
+
+        @impl true
+        def id(_socket), do: nil
+        """,
+        fn zipper ->
+          # Should never get here
+          {:ok, zipper}
+        end
+      )
+    end
+
     @doc "Returns all modules that `use AshGraphql`"
     def ash_graphql_schemas(igniter) do
       Igniter.Project.Module.find_all_matching_modules(igniter, fn _name, zipper ->
@@ -190,48 +251,91 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp update_endpoints(igniter, router) do
+    defp update_endpoints(igniter, router, socket_name) do
       {igniter, endpoints_that_need_parser} =
         Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
+
+      igniter =
+        Enum.reduce(endpoints_that_need_parser, igniter, fn endpoint, igniter ->
+          Igniter.Project.Module.find_and_update_module!(igniter, endpoint, fn zipper ->
+            case Igniter.Code.Function.move_to_function_call_in_current_scope(
+                   zipper,
+                   :plug,
+                   2,
+                   &Igniter.Code.Function.argument_equals?(&1, 0, Plug.Parsers)
+                 ) do
+              {:ok, zipper} ->
+                with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+                     {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :parsers),
+                     {:ok, zipper} <-
+                       Igniter.Code.List.append_new_to_list(zipper, Absinthe.Plug.Parser) do
+                  {:ok, zipper}
+                else
+                  _ ->
+                    {:warning,
+                     "Could not add `Absinthe.Plug.Parser` to parsers in endpoint #{endpoint}. Please make this change manually."}
+                end
+
+              :error ->
+                case parser_location(zipper) do
+                  {:ok, zipper} ->
+                    {:ok,
+                     Igniter.Code.Common.add_code(zipper, """
+                     plug Plug.Parsers,
+                       parsers: [:urlencoded, :multipart, :json, Absinthe.Plug.Parser],
+                       pass: ["*/*"],
+                       json_decoder: Jason
+                     """)}
+
+                  _ ->
+                    {:warning,
+                     "Could not add `Absinthe.Plug.Parser` to parsers in endpoint #{endpoint}. Please make this change manually."}
+                end
+            end
+          end)
+        end)
 
       Enum.reduce(endpoints_that_need_parser, igniter, fn endpoint, igniter ->
         Igniter.Project.Module.find_and_update_module!(igniter, endpoint, fn zipper ->
           case Igniter.Code.Function.move_to_function_call_in_current_scope(
                  zipper,
-                 :plug,
-                 2,
-                 &Igniter.Code.Function.argument_equals?(&1, 0, Plug.Parsers)
+                 :socket,
+                 3,
+                 &Igniter.Code.Function.argument_equals?(&1, 1, socket_name)
                ) do
             {:ok, zipper} ->
-              with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
-                   {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :parsers),
-                   {:ok, zipper} <-
-                     Igniter.Code.List.append_new_to_list(zipper, Absinthe.Plug.Parser) do
-                {:ok, zipper}
-              else
-                _ ->
-                  {:warning,
-                   "Could not add `Absinthe.Plug.Parser` to parsers in endpoint #{endpoint}. Please make this change manually."}
-              end
+              # Already installed
+              {:ok, zipper}
 
             :error ->
-              case parser_location(zipper) do
+              case socket_location(zipper) do
                 {:ok, zipper} ->
                   {:ok,
                    Igniter.Code.Common.add_code(zipper, """
-                   plug Plug.Parsers,
-                     parsers: [:urlencoded, :multipart, :json, Absinthe.Plug.Parser],
-                     pass: ["*/*"],
-                     json_decoder: Jason
+                     socket "/ws/gql", #{inspect(socket_name)},
+                       websocket: true,
+                       longpoll: true
                    """)}
 
                 _ ->
                   {:warning,
-                   "Could not add `Absinthe.Plug.Parser` to parsers in endpoint #{endpoint}. Please make this change manually."}
+                   "Could not add #{socket_name} in endpoint #{endpoint}. Please make this change manually."}
               end
           end
         end)
       end)
+    end
+
+    defp socket_location(zipper) do
+      with :error <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :socket,
+               3,
+               &Igniter.Code.Function.argument_equals?(&1, 1, Phoenix.LiveView.Socket)
+             ) do
+        Igniter.Code.Module.move_to_use(zipper, Phoenix.Endpoint)
+      end
     end
 
     defp parser_location(zipper) do
