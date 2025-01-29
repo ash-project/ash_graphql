@@ -185,8 +185,6 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     def setup_application(igniter) do
-      dbg("setup application")
-
       case Igniter.Libs.Phoenix.select_router(igniter) do
         {igniter, nil} ->
           igniter
