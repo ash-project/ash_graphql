@@ -155,7 +155,7 @@ defmodule AshGraphql.MixProject do
       {:absinthe, "~> 1.7"},
       {:absinthe_phoenix, "~> 2.0.0", optional: true},
       {:jason, "~> 1.2"},
-      {:igniter, "~> 0.3 and >= 0.3.34", optional: true},
+      {:igniter, path: "../igniter", optional: true, override: true},
       {:spark, "~> 2.2 and >= 2.2.10"},
       {:owl, "~> 0.11"},
       # dev/test dependencies
@@ -168,7 +168,8 @@ defmodule AshGraphql.MixProject do
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:simple_sat, ">= 0.0.0", only: :test},
       {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:benchee, "~> 1.1", only: [:dev, :test]}
+      {:benchee, "~> 1.1", only: [:dev, :test]},
+      {:phx_new, "~> 1.5", only: [:test]}
     ]
   end
 
