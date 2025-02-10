@@ -10,6 +10,7 @@ defmodule AshGraphql.Resource.Query do
     :modify_resolution,
     :relay_id_translations,
     :description,
+    :complexity,
     as_mutation?: false,
     hide_inputs: [],
     metadata_names: [],
@@ -74,6 +75,13 @@ defmodule AshGraphql.Resource.Query do
       type: {:list, :atom},
       doc: "A list of inputs to hide from the mutation.",
       default: []
+    ],
+    complexity: [
+      type: :mod_arg,
+      doc: """
+      An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query.
+      """,
+      default: {AshGraphql.Graphql.Resolver, :query_complexity}
     ]
   ]
 

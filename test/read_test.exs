@@ -421,6 +421,37 @@ defmodule AshGraphql.ReadTest do
            ]
   end
 
+  test "custom complexity calculation" do
+    query = """
+    query PostLibrary {
+      paginatedPosts(limit: 2) {
+        results{
+          text
+          sponsoredComments(limit: 5) {
+            text
+          }
+        }
+      }
+    }
+    """
+
+    resp =
+      query
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        analyze_complexity: true,
+        max_complexity: 300
+      )
+
+    assert {:ok, %{errors: errors}} = resp
+
+    assert errors |> Enum.map(& &1.message) |> Enum.sort() == [
+             "Field paginatedPosts is too complex: complexity is 1014 and maximum is 300",
+             "Field results is too complex: complexity is 507 and maximum is 300",
+             "Field sponsoredComments is too complex: complexity is 505 and maximum is 300",
+             "Operation PostLibrary is too complex: complexity is 1014 and maximum is 300"
+           ]
+  end
+
   test "a read with a loaded field works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true)

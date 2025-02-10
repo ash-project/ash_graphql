@@ -16,6 +16,7 @@ spark_locals_without_parens = [
   create: 2,
   create: 3,
   create: 4,
+  complexity: 1,
   depth_limit: 1,
   derive_filter?: 1,
   derive_sort?: 1,
