@@ -77,7 +77,7 @@ defmodule AshGraphql.Graphql.Resolver do
                     tenant: Map.get(context, :tenant)
                   ]
 
-                if Ash.Type.can_load?(action.returns, action.constraints) do
+                if action.returns && Ash.Type.can_load?(action.returns, action.constraints) do
                   {fields, path} = nested_fields_and_path(resolution, [], [])
 
                   loads =
