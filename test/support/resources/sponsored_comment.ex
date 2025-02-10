@@ -8,9 +8,10 @@ defmodule AshGraphql.Test.SponsoredComment do
 
   graphql do
     type :sponsored_comment
+    complexity {__MODULE__, :query_complexity}
 
     queries do
-      get :get_sponsored_comment, :read
+      get :get_sponsored_comment, :read, complexity: {__MODULE__, :query_complexity}
     end
 
     mutations do
@@ -44,5 +45,14 @@ defmodule AshGraphql.Test.SponsoredComment do
 
   relationships do
     belongs_to(:post, AshGraphql.Test.Post, public?: true)
+  end
+
+  @doc "Sponsored comments are complex to serve, add 100 to the cost per comment"
+  def query_complexity(%{limit: n}, child_complexity, _resolution) do
+    n * (child_complexity + 100)
+  end
+
+  def query_complexity(_args, child_complexity, _resolution) do
+    child_complexity + 100
   end
 end

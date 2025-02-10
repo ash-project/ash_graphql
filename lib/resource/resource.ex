@@ -192,7 +192,7 @@ defmodule AshGraphql.Resource do
     describe: """
     Configures the behavior of a given managed_relationship for a given action.
 
-    If there are type conflicts (for example, if the input could create or update a record, and the 
+    If there are type conflicts (for example, if the input could create or update a record, and the
     create and update actions have an argument of the same name but with a different type),
     a warning is emitted at compile time and the first one is used. If that is insufficient, you will need to do one of the following:
 
@@ -417,6 +417,12 @@ defmodule AshGraphql.Resource do
         type: :integer,
         doc: """
         A simple way to prevent massive queries.
+        """
+      ],
+      complexity: [
+        type: :mod_arg,
+        doc: """
+        An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query.
         """
       ],
       generate_object?: [
@@ -688,7 +694,7 @@ defmodule AshGraphql.Resource do
               [
                 {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, relay_ids?}}
               ],
-          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+          complexity: query.complexity || {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(query.name),
           description: query.description || query_action.description,
@@ -4303,6 +4309,7 @@ defmodule AshGraphql.Resource do
           end
 
         type = AshGraphql.Resource.Info.type(relationship.destination)
+        type_complexity = AshGraphql.Resource.Info.complexity(relationship.destination)
 
         pagination_strategy =
           relationship_pagination_strategy(resource, relationship.name, read_action)
@@ -4314,7 +4321,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(name),
           description: relationship.description,
-          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+          complexity: type_complexity || {AshGraphql.Graphql.Resolver, :query_complexity},
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc_many},
              {domain, relationship, pagination_strategy}}
