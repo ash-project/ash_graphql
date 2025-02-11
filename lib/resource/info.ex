@@ -229,4 +229,9 @@ defmodule AshGraphql.Resource.Info do
           true
         )
   end
+
+  @doc "The complexity callback `{mod, fun}` for this type"
+  def complexity(resource) do
+    Extension.get_opt(resource, [:graphql], :complexity, nil)
+  end
 end
