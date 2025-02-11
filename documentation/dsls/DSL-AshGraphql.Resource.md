@@ -69,6 +69,7 @@ end
 | [`argument_input_types`](#graphql-argument_input_types){: #graphql-argument_input_types } | `keyword` |  | A keyword list of actions and their input type overrides for arguments. The type overrides should refer to types available in the graphql (absinthe) schema. `list_of/1` and `non_null/1` helpers can be used. |
 | [`primary_key_delimiter`](#graphql-primary_key_delimiter){: #graphql-primary_key_delimiter } | `String.t` | `"~"` | If a composite primary key exists, this can be set to determine delimiter used in the `id` field value. |
 | [`depth_limit`](#graphql-depth_limit){: #graphql-depth_limit } | `integer` |  | A simple way to prevent massive queries. |
+| [`complexity`](#graphql-complexity){: #graphql-complexity } | `{module, list(any)}` |  | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`generate_object?`](#graphql-generate_object?){: #graphql-generate_object? } | `boolean` | `true` | Whether or not to create the GraphQL object, this allows you to manually create the GraphQL object. |
 | [`filterable_fields`](#graphql-filterable_fields){: #graphql-filterable_fields } | `list(atom)` |  | A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created. |
 | [`nullable_fields`](#graphql-nullable_fields){: #graphql-nullable_fields } | `atom \| list(atom)` |  | Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more. |
@@ -137,6 +138,7 @@ get :get_post, :read
 | [`as_mutation?`](#graphql-queries-get-as_mutation?){: #graphql-queries-get-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-queries-get-relay_id_translations){: #graphql-queries-get-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`hide_inputs`](#graphql-queries-get-hide_inputs){: #graphql-queries-get-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`complexity`](#graphql-queries-get-complexity){: #graphql-queries-get-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 
 
 
@@ -182,6 +184,7 @@ read_one :current_user, :current_user
 | [`as_mutation?`](#graphql-queries-read_one-as_mutation?){: #graphql-queries-read_one-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-queries-read_one-relay_id_translations){: #graphql-queries-read_one-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`hide_inputs`](#graphql-queries-read_one-hide_inputs){: #graphql-queries-read_one-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`complexity`](#graphql-queries-read_one-complexity){: #graphql-queries-read_one-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 
 
 
@@ -232,6 +235,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`as_mutation?`](#graphql-queries-list-as_mutation?){: #graphql-queries-list-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-queries-list-relay_id_translations){: #graphql-queries-list-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`hide_inputs`](#graphql-queries-list-hide_inputs){: #graphql-queries-list-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`complexity`](#graphql-queries-list-complexity){: #graphql-queries-list-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 
 
 
@@ -582,7 +586,7 @@ managed_relationship action, argument
 
 Configures the behavior of a given managed_relationship for a given action.
 
-If there are type conflicts (for example, if the input could create or update a record, and the 
+If there are type conflicts (for example, if the input could create or update a record, and the
 create and update actions have an argument of the same name but with a different type),
 a warning is emitted at compile time and the first one is used. If that is insufficient, you will need to do one of the following:
 
