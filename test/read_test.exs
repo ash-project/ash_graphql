@@ -452,6 +452,38 @@ defmodule AshGraphql.ReadTest do
            ]
   end
 
+  test "complexity calculation for aliased top-level queries" do
+    query = """
+    query SponsoredComments {
+      c1: getSponsoredComment(id: "abc-123") {
+        text
+      }
+      c2: getSponsoredComment(id: "def-456") {
+        text
+      }
+      c3: getSponsoredComment(id: "fed-789") {
+        text
+      }
+      c4: getSponsoredComment(id: "cba-012") {
+        text
+      }
+    }
+    """
+
+    resp =
+      query
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        analyze_complexity: true,
+        max_complexity: 300
+      )
+
+    assert {:ok, %{errors: errors}} = resp
+
+    assert errors |> Enum.map(& &1.message) |> Enum.sort() == [
+             "Operation SponsoredComments is too complex: complexity is 404 and maximum is 300"
+           ]
+  end
+
   test "a read with a loaded field works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true)
