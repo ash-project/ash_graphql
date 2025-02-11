@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.6.0](https://github.com/ash-project/ash_graphql/compare/v1.5.1...v1.6.0) (2025-02-11)
+
+
+
+
+### Features:
+
+* Type and Query complexity callbacks (#273)
+
+* Type and Query complexity callbacks
+
+### Bug Fixes:
+
+* handle actions with no return
+
 ## [v1.5.1](https://github.com/ash-project/ash_graphql/compare/v1.5.0...v1.5.1) (2025-01-27)
 
 
