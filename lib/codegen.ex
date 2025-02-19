@@ -19,6 +19,23 @@ defmodule AshGraphql.Codegen do
         else
           File.write!(target, contents)
         end
+
+      error ->
+        raise """
+        Failed to generate absinthe schema for: #{inspect(schema)}
+
+        Error:
+
+        #{inspect(error)}
+        """
+    end
+  end
+
+  def __after_compile__(env, _bytecode) do
+    file = env.module.generate_sdl_file()
+
+    if file && env.module.auto_generate_sdl_file?() do
+      generate_sdl_file(env.module, [])
     end
   end
 

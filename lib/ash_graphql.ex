@@ -72,6 +72,7 @@ defmodule AshGraphql do
             domains: opts[:domains],
             domain: opts[:domain],
             generate_sdl_file: opts[:generate_sdl_file],
+            auto_generate_sdl_file?: opts[:auto_generate_sdl_file?],
             action_middleware: opts[:action_middleware] || [],
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
             relay_ids?: Keyword.get(opts, :relay_ids?, false),
@@ -92,6 +93,8 @@ defmodule AshGraphql do
           mutation: 1,
           subscription: 1
         ]
+
+      @after_compile AshGraphql.Codegen
 
       domains =
         domain
@@ -129,10 +132,16 @@ defmodule AshGraphql do
         |> List.update_at(0, fn {domain, resources, _} -> {domain, resources, true} end)
 
       @generate_sdl_file generate_sdl_file
+      @auto_generate_sdl_file? auto_generate_sdl_file?
 
       @doc false
       def generate_sdl_file do
         @generate_sdl_file
+      end
+
+      @doc false
+      def auto_generate_sdl_file? do
+        @auto_generate_sdl_file?
       end
 
       @doc false
