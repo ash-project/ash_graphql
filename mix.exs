@@ -155,11 +155,7 @@ defmodule AshGraphql.MixProject do
       {:absinthe, "~> 1.7"},
       {:absinthe_phoenix, "~> 2.0.0", optional: true},
       {:jason, "~> 1.2"},
-      {:igniter,
-       github: "ash-project/igniter",
-       branch: "feat/phx-test-project",
-       optional: true,
-       override: true},
+      {:igniter, "~> 0.5 and >= 0.5.28", optional: true},
       {:spark, "~> 2.2 and >= 2.2.10"},
       {:owl, "~> 0.11"},
       # dev/test dependencies
