@@ -169,7 +169,7 @@ defmodule AshGraphql.MixProject do
       {:simple_sat, ">= 0.0.0", only: :test},
       {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.1", only: [:dev, :test]},
-      {:phx_new, "~> 1.5", only: [:test]}
+      {:phx_new, "~> 1.7", only: [:test]}
     ]
   end
 

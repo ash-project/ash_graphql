@@ -197,7 +197,7 @@ if Code.ensure_loaded?(Igniter) do
             Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
 
           igniter =
-            Enum.reduce(endpoints, {nil, igniter}, fn endpoint, {last_child, igniter} ->
+            Enum.reduce(endpoints, igniter, fn endpoint, igniter ->
               igniter
               |> Igniter.Project.Application.add_new_child({Absinthe.Subscription, endpoint},
                 after: endpoint
