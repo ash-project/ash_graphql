@@ -7,8 +7,6 @@ config :ash, :validate_domain_config_inclusion?, false
 config :ash, :pub_sub, debug?: true
 config :logger, level: :info
 
-config :ash_graphql, :subscriptions, true
-
 if Mix.env() == :test do
   config :ash_graphql, :simulate_subscription_slowness?, true
 end
