@@ -151,18 +151,19 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
         25 + |      "/playground",
         26 + |      Absinthe.Plug.GraphiQL,
         27 + |      schema: Module.concat(["TestWeb.GraphqlSchema"]),
-        28 + |      interface: :playground
-        29 + |    )
-        30 + |
-        31 + |    forward(
-        32 + |      "/",
-        33 + |      Absinthe.Plug,
-        34 + |      schema: Module.concat(["TestWeb.GraphqlSchema"])
-        35 + |    )
-        36 + |  end
-        37 + |
-     17 38   |  scope "/", TestWeb do
-     18 39   |    pipe_through(:browser)
+        28 + |      socket: Module.concat(["TestWeb.GraphqlSocket"]),
+        29 + |      interface: :playground
+        30 + |    )
+        31 + |
+        32 + |    forward(
+        33 + |      "/",
+        34 + |      Absinthe.Plug,
+        35 + |      schema: Module.concat(["TestWeb.GraphqlSchema"])
+        36 + |    )
+        37 + |  end
+        38 + |
+     17 39   |  scope "/", TestWeb do
+     18 40   |    pipe_through(:browser)
           ...|
     ''')
   end

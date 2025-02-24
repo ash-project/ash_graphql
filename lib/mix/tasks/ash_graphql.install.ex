@@ -23,9 +23,7 @@ if Code.ensure_loaded?(Igniter) do
       if Enum.empty?(candidate_ash_graphql_schemas) do
         igniter
         |> AshGraphql.Igniter.setup_absinthe_schema(schema_name)
-        |> AshGraphql.Igniter.setup_socket(schema_name, socket_name)
         |> AshGraphql.Igniter.setup_phoenix(schema_name, socket_name)
-        |> AshGraphql.Igniter.setup_application()
       else
         igniter
         |> Igniter.add_warning("AshGraphql schema already exists, skipping installation.")

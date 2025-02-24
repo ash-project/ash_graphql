@@ -163,57 +163,54 @@ if Code.ensure_loaded?(Igniter) do
 
         {igniter, router} ->
           igniter
-          |> update_endpoints(router, socket_name)
-          |> Igniter.Libs.Phoenix.add_pipeline(:graphql, "plug AshGraphql.Plug", router: router)
-          |> Igniter.Libs.Phoenix.add_scope(
-            "/gql",
-            """
-              pipe_through [:graphql]
-
-              forward "/playground",
-                      Absinthe.Plug.GraphiQL,
-                      schema: Module.concat(["#{inspect(schema_name)}"]),
-                      interface: :playground
-
-              forward "/",
-                Absinthe.Plug,
-                schema: Module.concat(["#{inspect(schema_name)}"])
-            """,
-            router: router
-          )
+          |> create_socket(schema_name, socket_name)
+          |> update_router(router, socket_name, schema_name)
+          |> update_application(router)
       end
     end
 
-    def setup_application(igniter) do
-      case Igniter.Libs.Phoenix.select_router(igniter) do
-        {igniter, nil} ->
-          igniter
-          |> Igniter.add_warning("""
-          Unable to configure Absinthe.Subscription beacuse we don't know the right endpoint
-          """)
+    defp update_router(igniter, router, socket_name, schema_name) do
+      igniter
+      |> update_endpoints(router, socket_name)
+      |> Igniter.Libs.Phoenix.add_pipeline(:graphql, "plug AshGraphql.Plug", router: router)
+      |> Igniter.Libs.Phoenix.add_scope(
+        "/gql",
+        """
+          pipe_through [:graphql]
 
-        {igniter, router} ->
-          {igniter, endpoints} =
-            Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
+          forward "/playground",
+                  Absinthe.Plug.GraphiQL,
+                  schema: Module.concat(["#{inspect(schema_name)}"]),
+                  socket: Module.concat(["#{inspect(socket_name)}"]),
+                  interface: :playground
 
-          igniter =
-            Enum.reduce(endpoints, igniter, fn endpoint, igniter ->
-              igniter
-              |> Igniter.Project.Application.add_new_child({Absinthe.Subscription, endpoint},
-                after: endpoint
-              )
-            end)
-
-          igniter
-          |> Igniter.Project.Application.add_new_child(AshGraphql.Subscription.Batcher,
-            after: Absinthe.Subscription
-          )
-      end
+          forward "/",
+            Absinthe.Plug,
+            schema: Module.concat(["#{inspect(schema_name)}"])
+        """,
+        router: router
+      )
     end
 
-    def setup_socket(igniter, schema_name \\ nil, socket_name \\ nil) do
-      schema_name = schema_name || Igniter.Project.Module.module_name(igniter, "GraphqlSchema")
-      socket_name = socket_name || Igniter.Project.Module.module_name(igniter, "GraphqlSocket")
+    defp update_application(igniter, router) do
+      {igniter, endpoints} =
+        Igniter.Libs.Phoenix.endpoints_for_router(igniter, router)
+
+      igniter =
+        Enum.reduce(endpoints, igniter, fn endpoint, igniter ->
+          igniter
+          |> Igniter.Project.Application.add_new_child({Absinthe.Subscription, endpoint},
+            after: endpoint
+          )
+        end)
+
+      igniter
+      |> Igniter.Project.Application.add_new_child(AshGraphql.Subscription.Batcher,
+        after: Absinthe.Subscription
+      )
+    end
+
+    defp create_socket(igniter, schema_name, socket_name) do
       otp_app = Igniter.Project.Application.app_name(igniter)
 
       igniter
