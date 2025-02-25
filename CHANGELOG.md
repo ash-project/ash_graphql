@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.0](https://github.com/ash-project/ash_graphql/compare/v1.6.0...v1.7.0) (2025-02-25)
+
+
+
+
+### Features:
+
+* subscription installer (#266)
+
+### Improvements:
+
+* don't require object unless there is a reason
+
+* add `auto_generate_sdl_file?` option to graphql schema
+
 ## [v1.6.0](https://github.com/ash-project/ash_graphql/compare/v1.5.1...v1.6.0) (2025-02-11)
 
 
