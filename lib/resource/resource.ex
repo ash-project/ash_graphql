@@ -3732,11 +3732,12 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp unnest(%{type: {:array, type}, constraints: constraints} = attribute) do
+  @doc false
+  def unnest(%{type: {:array, type}, constraints: constraints} = attribute) do
     unnest(%{attribute | type: type, constraints: constraints[:items] || []})
   end
 
-  defp unnest(other), do: other
+  def unnest(other), do: other
 
   @doc false
   def global_unions(resource, all_domains) do
@@ -3991,7 +3992,7 @@ defmodule AshGraphql.Resource do
   def type_definition(resource, domain, all_domains, schema, relay_ids?) do
     actual_resource = Ash.Type.NewType.subtype_of(resource)
 
-    if generate_object?(resource) do
+    if generate_object?(resource, all_domains) do
       type =
         AshGraphql.Resource.Info.type(resource) ||
           raise """
@@ -4046,6 +4047,52 @@ defmodule AshGraphql.Resource do
           }
       end
     end
+  end
+
+  defp generate_object?(resource, all_domains) do
+    cond do
+      AshGraphql.Resource.Info.type(resource) ->
+        generate_object?(resource)
+
+      !generate_object?(resource) ->
+        false
+
+      referenced_by_action(resource) ->
+        generate_object?(resource)
+
+      referenced_by_type?(resource, all_domains) ->
+        true
+
+      referenced_by_relationship?(resource, all_domains) ->
+        true
+
+      true ->
+        false
+    end
+  end
+
+  defp referenced_by_action(resource) do
+    Enum.any?(
+      AshGraphql.Resource.Info.queries(resource) ++ AshGraphql.Resource.Info.mutations(resource),
+      &(&1.type != :action)
+    )
+  end
+
+  defp referenced_by_relationship?(resource, all_domains) do
+    all_domains
+    |> Enum.flat_map(&Ash.Domain.Info.resources/1)
+    |> Enum.filter(&AshGraphql.Resource.Info.type(&1))
+    |> Enum.flat_map(&Ash.Resource.Info.public_relationships/1)
+    |> Enum.any?(&(&1.destination == resource))
+  end
+
+  defp referenced_by_type?(resource, all_domains) do
+    resource
+    |> AshGraphql.all_attributes_and_arguments(all_domains)
+    |> Enum.map(&AshGraphql.Resource.unnest/1)
+    |> Enum.any?(fn %{type: type, constraints: constraints} ->
+      type == :struct and constraints[:instance_of] == resource
+    end)
   end
 
   defp fields(resource, domain, schema, relay_ids?, query \\ nil) do
