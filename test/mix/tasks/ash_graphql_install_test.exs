@@ -94,8 +94,6 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
       use Absinthe.Phoenix.Socket,
         schema: TestWeb.GraphqlSchema
 
-      @otp_app :test
-
       @impl true
       def connect(_params, socket, _connect_info) do
         {:ok, socket}

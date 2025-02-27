@@ -147,7 +147,7 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc "Sets up the phoenix module for AshGraphql"
-    def setup_phoenix(igniter, schema_name \\ nil, socket_name \\ nil) do
+    def setup_phoenix(igniter, schema_name \\ nil, socket_name \\ nil, opts \\ []) do
       schema_name = schema_name || Igniter.Project.Module.module_name(igniter, "GraphqlSchema")
       socket_name = socket_name || Igniter.Project.Module.module_name(igniter, "GraphqlSocket")
 
@@ -163,6 +163,18 @@ if Code.ensure_loaded?(Igniter) do
 
         {igniter, router} ->
           igniter
+          |> Igniter.Project.Deps.add_dep({:absinthe_phoenix, "~> 2.0"})
+          |> then(fn igniter ->
+            if igniter.assigns[:test_mode?] do
+              igniter
+            else
+              Igniter.apply_and_fetch_dependencies(igniter,
+                error_on_abort?: true,
+                yes: opts[:yes],
+                yes_to_deps: true
+              )
+            end
+          end)
           |> create_socket(schema_name, socket_name)
           |> update_router(router, socket_name, schema_name)
           |> update_application(router)
@@ -211,8 +223,6 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp create_socket(igniter, schema_name, socket_name) do
-      otp_app = Igniter.Project.Application.app_name(igniter)
-
       igniter
       |> Igniter.Project.Module.find_and_update_or_create_module(
         socket_name,
@@ -221,8 +231,6 @@ if Code.ensure_loaded?(Igniter) do
 
         use Absinthe.Phoenix.Socket,
           schema: #{inspect(schema_name)}
-
-        @otp_app #{inspect(otp_app)}
 
         @impl true
         def connect(_params, socket, _connect_info) do
