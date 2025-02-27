@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.1](https://github.com/ash-project/ash_graphql/compare/v1.7.0...v1.7.1) (2025-02-27)
+
+
+
+
+### Bug Fixes:
+
+* properly add absinthe_phoenix dependency in installer
+
 ## [v1.7.0](https://github.com/ash-project/ash_graphql/compare/v1.6.0...v1.7.0) (2025-02-25)
 
 
