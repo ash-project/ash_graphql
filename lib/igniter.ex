@@ -260,7 +260,13 @@ if Code.ensure_loaded?(Igniter) do
 
       igniter =
         Enum.reduce(endpoints_that_need_parser, igniter, fn endpoint, igniter ->
-          Igniter.Project.Module.find_and_update_module!(igniter, endpoint, fn zipper ->
+          igniter
+          |> Igniter.Project.Module.find_and_update_module!(endpoint, fn zipper ->
+            with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Phoenix.Endpoint) do
+              {:ok, Igniter.Code.Common.add_code(zipper, "use Absinthe.Phoenix.Endpoint")}
+            end
+          end)
+          |> Igniter.Project.Module.find_and_update_module!(endpoint, fn zipper ->
             case Igniter.Code.Function.move_to_function_call_in_current_scope(
                    zipper,
                    :plug,

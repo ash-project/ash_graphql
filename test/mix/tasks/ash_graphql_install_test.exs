@@ -106,25 +106,16 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
   end
 
   test "adds the socket and parser to the endpoint", %{igniter: igniter} do
-    assert_has_patch(igniter, "lib/test_web/endpoint.ex", ~S'''
-          ...|
-     17 17   |  )
-     18 18   |
-        19 + |  socket("/ws/gql", TestWeb.GraphqlSocket,
-        20 + |    websocket: true,
-        21 + |    longpoll: true
-        22 + |  )
-        23 + |
-     19 24   |  # Serve at "/" the static files from "priv/static" directory.
-     20 25   |  #
-          ...|
-     46 51   |
-     47 52   |  plug(Plug.Parsers,
-     48    - |    parsers: [:urlencoded, :multipart, :json],
-        53 + |    parsers: [:urlencoded, :multipart, :json, Absinthe.Plug.Parser],
-     49 54   |    pass: ["*/*"],
-     50 55   |    json_decoder: Phoenix.json_library()
-
+    igniter
+    |> assert_has_patch("lib/test_web/endpoint.ex", ~S'''
+    + |  socket("/ws/gql", TestWeb.GraphqlSocket,
+    + |    websocket: true,
+    + |    longpoll: true
+    + |  )
+    + |
+    ''')
+    |> assert_has_patch("lib/test_web/endpoint.ex", ~S'''
+    + |  use Absinthe.Phoenix.Endpoint
     ''')
   end
 
