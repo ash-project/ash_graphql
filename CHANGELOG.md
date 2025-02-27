@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.2](https://github.com/ash-project/ash_graphql/compare/v1.7.1...v1.7.2) (2025-02-27)
+
+
+
+
+### Bug Fixes:
+
+* add `use Absinthe.Phoenix.Socket` in endpoints in installer
+
 ## [v1.7.1](https://github.com/ash-project/ash_graphql/compare/v1.7.0...v1.7.1) (2025-02-27)
 
 
