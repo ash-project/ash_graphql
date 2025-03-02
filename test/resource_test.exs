@@ -143,4 +143,23 @@ defmodule AshGraphql.ResourceTest do
 
     assert bar_with_foo["type"] == %{"name" => "BarWithFoo", "kind" => "INPUT_OBJECT"}
   end
+
+  test "can create resource with type inside type" do
+    {:ok, %{data: %{"createTypeInsideType" => true}}} =
+      """
+      mutation {
+        unreferencedTypeInsideTypeWorks(input:{
+          typeWithType: {
+            inner_type: {
+              some: "foo",
+              stuff: "bar"
+            },
+            another_field: "baz"
+          }
+        })
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    end
 end

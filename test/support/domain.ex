@@ -54,5 +54,6 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.ImageMessage)
     resource(AshGraphql.Test.Subscribable)
     resource(AshGraphql.Test.ErrorHandling)
+    resource(AshGraphql.Test.ResourceWithTypeInsideType)
   end
 end
