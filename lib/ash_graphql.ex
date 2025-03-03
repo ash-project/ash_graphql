@@ -467,7 +467,6 @@ defmodule AshGraphql do
         resource,
         all_domains,
         already_checked \\ [],
-        nested? \\ true,
         return_new_checked? \\ false
       ) do
     if resource in already_checked do
@@ -479,51 +478,186 @@ defmodule AshGraphql do
     else
       already_checked = [resource | already_checked]
 
-      resource
-      |> Ash.Resource.Info.public_attributes()
-      |> Enum.concat(all_arguments(resource, all_domains))
-      |> Enum.concat(Ash.Resource.Info.calculations(resource))
-      |> Enum.concat(
+      attrs =
         resource
-        |> Ash.Resource.Info.actions()
-        |> Enum.filter(&(&1.type == :action && &1.returns))
-        |> Enum.map(fn action ->
-          %{
-            type: action.returns,
-            constraints: action.constraints,
-            name: action.name,
-            from_generic_action?: true
-          }
-        end)
-      )
-      |> Enum.reduce({[], already_checked}, fn %{type: type} = attr, {acc, already_checked} ->
-        if nested? do
-          constraints = Map.get(attr, :constraints, [])
-
-          {nested, already_checked} =
-            nested_attrs(type, all_domains, constraints, already_checked)
-
-          {[attr | nested] ++ acc, already_checked}
-        else
-          {[attr | acc], already_checked}
-        end
-      end)
-      |> then(fn {attrs, checked} ->
-        attrs =
-          Enum.filter(attrs, fn attr ->
-            if Map.get(attr, :from_generic_action?) do
-              true
-            else
-              AshGraphql.Resource.Info.show_field?(resource, attr.name)
-            end
+        |> Ash.Resource.Info.public_attributes()
+        |> Enum.concat(all_arguments(resource, all_domains))
+        |> Enum.concat(Ash.Resource.Info.calculations(resource))
+        |> Enum.concat(
+          resource
+          |> Ash.Resource.Info.actions()
+          |> Enum.filter(&(&1.type == :action && &1.returns))
+          |> Enum.map(fn action ->
+            %{
+              type: action.returns,
+              constraints: action.constraints,
+              name: action.name,
+              from_generic_action?: true
+            }
           end)
+        )
 
-        if return_new_checked? do
-          {attrs, checked}
-        else
-          attrs
+      {attrs, already_checked} =
+        Enum.reduce(attrs, {[], already_checked}, fn
+          %{type: type} = attr, {attrs, already_checked} ->
+            constraints = Map.get(attr, :constraints, [])
+
+            {nested, already_checked} =
+              nested_attrs(type, all_domains, constraints, already_checked)
+
+            nested =
+              Enum.map(nested, &Map.put(&1, :original_name, attr.name))
+
+            {[attr | nested] ++ attrs, already_checked}
+        end)
+
+      {attrs, already_checked} =
+        Enum.reduce(attrs, {[], already_checked}, fn attr, {attrs, already_checked} ->
+          if attr.type in already_checked do
+            {[attr | attrs], already_checked}
+          else
+            {new_attrs, already_checked} =
+              expand_named_nested_attrs(
+                Map.put(attr, :original_name, attr.name),
+                already_checked
+              )
+
+            {[attr | new_attrs ++ attrs], already_checked}
+          end
+        end)
+
+      attrs =
+        Enum.filter(attrs, fn attr ->
+          if Map.get(attr, :from_generic_action?) do
+            true
+          else
+            AshGraphql.Resource.Info.show_field?(
+              resource,
+              Map.get(attr, :original_name, attr.name)
+            )
+          end
+        end)
+
+      if return_new_checked? do
+        {attrs, already_checked}
+      else
+        attrs
+      end
+    end
+  end
+
+  defp expand_named_nested_attrs(%{type: {:array, type}} = attr, already_checked) do
+    expand_named_nested_attrs(
+      %{attr | type: type, constraints: attr.constraints[:items] || []},
+      already_checked
+    )
+  end
+
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp expand_named_nested_attrs(%{type: type} = attr, already_checked)
+       when type in [Ash.Type.Map, Ash.Type.Struct, Ash.Type.Keyset] do
+    Enum.reduce(
+      attr.constraints[:fields] || [],
+      {[], already_checked},
+      fn {key, config}, {attrs, already_checked} ->
+        case config[:type] do
+          {:array, type} ->
+            fake_attr = %{
+              attr
+              | name: :"#{attr.name}_#{key}",
+                type: type,
+                constraints: config[:constraints][:items] || []
+            }
+
+            {new, already_checked} =
+              expand_named_nested_attrs(
+                fake_attr,
+                already_checked
+              )
+
+            {[fake_attr | attrs] ++ new, already_checked}
+
+          type ->
+            fake_attr = %{
+              attr
+              | name: :"#{attr.name}_#{key}",
+                type: type,
+                constraints: config[:constraints] || []
+            }
+
+            {new, already_checked} =
+              expand_named_nested_attrs(
+                fake_attr,
+                already_checked
+              )
+
+            {[fake_attr | attrs] ++ new, already_checked}
         end
-      end)
+      end
+    )
+    |> then(fn {attrs, already_checked} ->
+      {[attr | attrs], already_checked}
+    end)
+  end
+
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp expand_named_nested_attrs(%{type: Ash.Type.Union} = attr, already_checked) do
+    Enum.reduce(
+      attr.constraints[:types] || [],
+      {[], already_checked},
+      fn {key, config}, {attrs, already_checked} ->
+        case config[:type] do
+          {:array, type} ->
+            fake_attr = %{
+              attr
+              | name: :"#{attr.name}_#{key}",
+                type: type,
+                constraints: config[:constraints][:items] || []
+            }
+
+            {new, already_checked} =
+              expand_named_nested_attrs(
+                fake_attr,
+                already_checked
+              )
+
+            {[fake_attr | attrs] ++ new, already_checked}
+
+          type ->
+            fake_attr = %{
+              attr
+              | name: :"#{attr.name}_#{key}",
+                type: type,
+                constraints: config[:constraints] || []
+            }
+
+            {new, already_checked} =
+              expand_named_nested_attrs(
+                fake_attr,
+                already_checked
+              )
+
+            {[fake_attr | attrs] ++ new, already_checked}
+        end
+      end
+    )
+    |> then(fn {attrs, already_checked} ->
+      {[attr | attrs], already_checked}
+    end)
+  end
+
+  defp expand_named_nested_attrs(attr, already_checked) do
+    if Ash.Type.NewType.new_type?(attr.type) and attr.type not in already_checked do
+      constraints = Ash.Type.NewType.constraints(attr.type, attr.constraints)
+
+      already_checked = [attr.type | already_checked]
+
+      expand_named_nested_attrs(
+        %{attr | type: Ash.Type.NewType.subtype_of(attr.type), constraints: constraints},
+        already_checked
+      )
+    else
+      {[], already_checked}
     end
   end
 
@@ -604,7 +738,7 @@ defmodule AshGraphql do
       AshGraphql.Resource.embedded?(type) ->
         type
         |> unwrap_type()
-        |> all_attributes_and_arguments(all_domains, already_checked, true, true)
+        |> all_attributes_and_arguments(all_domains, already_checked, true)
 
       Ash.Type.NewType.new_type?(type) ->
         constraints = Ash.Type.NewType.constraints(type, constraints)

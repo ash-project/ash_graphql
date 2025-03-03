@@ -145,21 +145,20 @@ defmodule AshGraphql.ResourceTest do
   end
 
   test "can create resource with type inside type" do
-    {:ok, %{data: %{"createTypeInsideType" => true}}} =
-      """
-      mutation {
-        unreferencedTypeInsideTypeWorks(input:{
-          typeWithType: {
-            inner_type: {
-              some: "foo",
-              stuff: "bar"
-            },
-            another_field: "baz"
-          }
-        })
-      }
-      """
-      |> Absinthe.run(AshGraphql.Test.Schema)
-
-    end
+    assert {:ok, %{data: %{"createTypeInsideType" => true}}} =
+             """
+             mutation {
+               createTypeInsideType(input:{
+                 typeWithType: {
+                   inner_type: {
+                     some: "foo",
+                     stuff: "bar"
+                   },
+                   another_field: "baz"
+                 }
+               })
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+  end
 end

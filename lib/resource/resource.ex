@@ -3710,7 +3710,7 @@ defmodule AshGraphql.Resource do
   @doc false
   def global_maps(resource, all_domains) do
     resource
-    |> AshGraphql.all_attributes_and_arguments(all_domains, [], false)
+    |> AshGraphql.all_attributes_and_arguments(all_domains)
     |> Enum.map(&unnest/1)
     |> Enum.filter(
       &(Ash.Type.NewType.subtype_of(&1.type) in [Ash.Type.Map, Ash.Type.Struct] &&
