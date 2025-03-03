@@ -9,7 +9,6 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
   graphql do
     type(:resource_with_type_inside)
 
-
     queries do
     end
 
@@ -22,10 +21,11 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
     default_accept(:*)
 
     action :custom_action, :boolean do
-      argument :type_with_type, AshGraphql.Test.TypeWithTypeInside, allow_nil?: false
-      run fn _inputs, _ctx ->
+      argument(:type_with_type, AshGraphql.Test.TypeWithTypeInside, allow_nil?: false)
+
+      run(fn _inputs, _ctx ->
         {:ok, true}
-      end
+      end)
     end
   end
 
@@ -34,5 +34,4 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
 
     attribute(:foo, :string, public?: true)
   end
-
 end
