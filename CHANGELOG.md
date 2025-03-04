@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.3](https://github.com/ash-project/ash_graphql/compare/v1.7.2...v1.7.3) (2025-03-04)
+
+
+
+
+### Bug Fixes:
+
+* fully traverse nested map & union types
+
 ## [v1.7.2](https://github.com/ash-project/ash_graphql/compare/v1.7.1...v1.7.2) (2025-02-27)
 
 
