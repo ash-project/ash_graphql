@@ -3421,7 +3421,7 @@ defmodule AshGraphql.Resource do
                        nil,
                        nil,
                        false,
-                       Keyword.get(constraints, :constraints) || []
+                       Keyword.get(attribute, :constraints) || []
                      )
                    else
                      %Absinthe.Blueprint.TypeReference.NonNull{
@@ -3431,7 +3431,7 @@ defmodule AshGraphql.Resource do
                            nil,
                            nil,
                            false,
-                           Keyword.get(constraints, :constraints) || []
+                           Keyword.get(attribute, :constraints) || []
                          )
                      }
                    end
