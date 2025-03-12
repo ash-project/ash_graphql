@@ -3421,7 +3421,7 @@ defmodule AshGraphql.Resource do
                        nil,
                        nil,
                        false,
-                       Keyword.get(constraints, :constraints) || []
+                       Keyword.get(attribute, :constraints) || []
                      )
                    else
                      %Absinthe.Blueprint.TypeReference.NonNull{
@@ -3431,7 +3431,7 @@ defmodule AshGraphql.Resource do
                            nil,
                            nil,
                            false,
-                           Keyword.get(constraints, :constraints) || []
+                           Keyword.get(attribute, :constraints) || []
                          )
                      }
                    end
@@ -4639,7 +4639,14 @@ defmodule AshGraphql.Resource do
   end
 
   defp do_field_type({:array, type}, nil, resource, input?, constraints) do
-    field_type = do_field_type(type, nil, resource, input?, constraints[:items] || [])
+    # Due to ash not automatically adding the default array constraints to
+    # types defined outside of an `attribute` we need to default to true here
+    # and not to false.
+    nil_items? = Keyword.get(constraints, :nil_items?, true)
+
+    field_type =
+      do_field_type(type, nil, resource, input?, constraints[:items] || [])
+      |> maybe_wrap_non_null(!nil_items?)
 
     %Absinthe.Blueprint.TypeReference.List{
       of_type: field_type
