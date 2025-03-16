@@ -150,6 +150,9 @@ defmodule AshGraphql.Domain do
       AshGraphql.Domain.Transformers.RequireKeysetForRelayQueries,
       AshGraphql.Domain.Transformers.ValidateActions,
       AshGraphql.Domain.Transformers.ValidateCompatibleNames
+    ],
+    verifiers: [
+      AshGraphql.Resource.Verifiers.VerifyDomainQueryMetadata
     ]
 
   if Code.ensure_loaded?(Igniter) do
