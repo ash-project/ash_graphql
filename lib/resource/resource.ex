@@ -3317,7 +3317,7 @@ defmodule AshGraphql.Resource do
           [
             input_type_name
           ]
-          |> define_input_map_types(constraints, schema, env)
+          |> define_input_map_types(constraints, schema, resource, env)
         )
       end)
     else
@@ -3342,7 +3342,7 @@ defmodule AshGraphql.Resource do
                    Ash.Type.Struct
                  ])
 
-          if map_type? && attribute[:constraints] not in [nil, []] do
+          if map_type? && attribute[:constraints][:fields] do
             nested_type_name =
               String.to_atom("#{Atom.to_string(type_name)}_#{Atom.to_string(name)}")
 
@@ -3418,20 +3418,26 @@ defmodule AshGraphql.Resource do
                       ) do
                      do_field_type(
                        attribute[:type],
-                       nil,
-                       nil,
-                       false,
-                       Keyword.get(attribute, :constraints) || []
+                       %{
+                         name: name,
+                         type: attribute[:type],
+                         constraints: Keyword.get(attribute, :constraints) || []
+                       },
+                       resource,
+                       false
                      )
                    else
                      %Absinthe.Blueprint.TypeReference.NonNull{
                        of_type:
                          do_field_type(
                            attribute[:type],
-                           nil,
-                           nil,
-                           false,
-                           Keyword.get(attribute, :constraints) || []
+                           %{
+                             name: name,
+                             type: attribute[:type],
+                             constraints: Keyword.get(attribute, :constraints) || []
+                           },
+                           resource,
+                           false
                          )
                      }
                    end
@@ -3455,7 +3461,7 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp define_input_map_types(input_type_names, constraints, schema, env) do
+  defp define_input_map_types(input_type_names, constraints, schema, resource, env) do
     input_type_names
     |> Enum.filter(& &1)
     |> Enum.flat_map(fn type_name ->
@@ -3471,7 +3477,7 @@ defmodule AshGraphql.Resource do
                    Ash.Type.Struct
                  ])
 
-          if map_type? && attribute[:constraints] not in [nil, []] do
+          if map_type? && attribute[:constraints][:fields] do
             nested_type_name =
               String.to_atom(
                 "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"
@@ -3482,6 +3488,7 @@ defmodule AshGraphql.Resource do
                 [nested_type_name],
                 attribute[:constraints] || [],
                 schema,
+                resource,
                 env
               ) ++ types,
               [
@@ -3514,20 +3521,26 @@ defmodule AshGraphql.Resource do
                    if Keyword.get(attribute, :allow_nil?, true) do
                      do_field_type(
                        attribute[:type],
-                       nil,
-                       nil,
-                       true,
-                       attribute[:constraints] || []
+                       %{
+                         name: name,
+                         type: attribute[:type],
+                         constraints: Keyword.get(attribute, :constraints) || []
+                       },
+                       resource,
+                       true
                      )
                    else
                      %Absinthe.Blueprint.TypeReference.NonNull{
                        of_type:
                          do_field_type(
                            attribute[:type],
-                           nil,
-                           nil,
-                           true,
-                           attribute[:constraints] || []
+                           %{
+                             name: name,
+                             type: attribute[:type],
+                             constraints: Keyword.get(attribute, :constraints) || []
+                           },
+                           resource,
+                           true
                          )
                      }
                    end
@@ -4642,7 +4655,7 @@ defmodule AshGraphql.Resource do
     # Due to ash not automatically adding the default array constraints to
     # types defined outside of an `attribute` we need to default to true here
     # and not to false.
-    nil_items? = Keyword.get(constraints, :nil_items?, true)
+    nil_items? = Keyword.get(constraints || [], :nil_items?, true)
 
     field_type =
       do_field_type(type, nil, resource, input?, constraints[:items] || [])
