@@ -11,6 +11,7 @@ defmodule AshGraphql.Test.Comment do
 
     queries do
       list :list_comments, :read
+      action :list_ranked_comments, :ranked_comments
     end
 
     mutations do
@@ -34,6 +35,22 @@ defmodule AshGraphql.Test.Comment do
 
     read :paginated do
       pagination(required?: true, offset?: true, countable: true)
+    end
+
+    action :ranked_comments, {:array, RankedComment} do
+      run(fn _input, _ctx ->
+        res =
+          Ash.read!(__MODULE__)
+          |> Enum.with_index()
+          |> Enum.map(fn {c, i} ->
+            %{
+              rank: i,
+              comment: c
+            }
+          end)
+
+        {:ok, res}
+      end)
     end
   end
 

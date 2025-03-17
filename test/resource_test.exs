@@ -161,4 +161,30 @@ defmodule AshGraphql.ResourceTest do
              """
              |> Absinthe.run(AshGraphql.Test.Schema)
   end
+
+  test "can list ranked comments, testing newType of map with Resource inside" do
+    [
+      "a",
+      "b",
+      "c"
+    ]
+    |> Enum.each(fn text ->
+      Ash.Seed.seed!(%AshGraphql.Test.Comment{text: text})
+    end)
+
+    assert {:ok, %{data: %{"listRankedComments" => data}}} =
+             """
+             query {
+               listRankedComments {
+                 rank
+                 comment {
+                   text
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert List.first(data)["rank"] < List.last(data)["rank"]
+  end
 end
