@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.4](https://github.com/ash-project/ash_graphql/compare/v1.7.3...v1.7.4) (2025-03-18)
+
+
+
+
+### Bug Fixes:
+
+* properly construct nested type maps
+
+* apply action verifier to domains as well as resources
+
+* Properly non_null() inner items in list when constraint is supplied for arrays in NewType of :map (#286)
+
 ## [v1.7.3](https://github.com/ash-project/ash_graphql/compare/v1.7.2...v1.7.3) (2025-03-04)
 
 

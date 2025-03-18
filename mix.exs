@@ -5,7 +5,7 @@ defmodule AshGraphql.MixProject do
   The extension for building GraphQL APIs with Ash
   """
 
-  @version "1.7.3"
+  @version "1.7.4"
 
   @source_url "https://github.com/ash-project/ash_graphql"
 
@@ -150,7 +150,7 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 3.0 and >= 3.2.3")},
+      {:ash, ash_version("~> 3.0 and >= 3.4.69")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:absinthe_phoenix, "~> 2.0", optional: true},
