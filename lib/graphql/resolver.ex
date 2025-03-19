@@ -3029,8 +3029,19 @@ defmodule AshGraphql.Graphql.Resolver do
     raise "unknown source #{inspect(source)}"
   end
 
-  defp resolve_union_result(value, data) when is_list(value) do
-    Enum.map(value, &resolve_union_result(&1, data))
+  defp resolve_union_result(
+         value,
+         {name, {:array, field_type}, field, resource, unnested_types, domain}
+       )
+       when is_list(value) do
+    Enum.map(
+      value,
+      &resolve_union_result(
+        &1,
+        {name, field_type, %{field | constraints: field.constraints[:items]}, resource,
+         unnested_types, domain}
+      )
+    )
   end
 
   defp resolve_union_result(
@@ -3041,17 +3052,15 @@ defmodule AshGraphql.Graphql.Resolver do
       %Ash.Union{type: type, value: value} = union ->
         constraints = Ash.Type.NewType.constraints(field_type, field.constraints)
 
-        if type in unnested_types do
-          if not is_nil(value) do
-            type =
-              AshGraphql.Resource.field_type(
-                constraints[:types][type][:type],
-                %{field | constraints: constraints[:types][type][:constraints]},
-                resource
-              )
+        if type in unnested_types and not is_nil(value) do
+          type =
+            AshGraphql.Resource.field_type(
+              constraints[:types][type][:type],
+              %{field | constraints: constraints[:types][type][:constraints]},
+              resource
+            )
 
-            Map.put(value, :__union_type__, type)
-          end
+          Map.put(value, :__union_type__, type)
         else
           union
         end
