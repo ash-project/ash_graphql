@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.5](https://github.com/ash-project/ash_graphql/compare/v1.7.4...v1.7.5) (2025-03-20)
+
+
+
+
+### Bug Fixes:
+
+* logic error in union type resolution
+
+* resolve arrays of unions and unions of arrays properly
+
+* properly extract item constraints when resolving union results
+
 ## [v1.7.4](https://github.com/ash-project/ash_graphql/compare/v1.7.3...v1.7.4) (2025-03-18)
 
 
