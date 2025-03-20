@@ -3046,6 +3046,21 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp resolve_union_result(
          value,
+         {name, field_type, field, resource, unnested_types, domain}
+       )
+       when is_list(value) do
+    Enum.map(
+      value,
+      &resolve_union_result(
+        &1,
+        {name, field_type, %{field | constraints: field.constraints}, resource, unnested_types,
+         domain}
+      )
+    )
+  end
+
+  defp resolve_union_result(
+         value,
          {_name, field_type, field, resource, unnested_types, _domain}
        ) do
     case value do
