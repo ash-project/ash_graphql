@@ -2852,16 +2852,14 @@ defmodule AshGraphql.Graphql.Resolver do
         )
 
       result ->
-        {type, constraints} =
-          unwrap_type_and_constraints(calculation.type, calculation.constraints)
+        unwrapped_type =
+          unwrap_type(calculation.type)
 
         result =
-          if Ash.Type.NewType.new_type?(type) &&
-               Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
-               function_exported?(type, :graphql_unnested_unions, 1) do
-            unnested_types = type.graphql_unnested_unions(calculation.constraints)
-
-            calculation = %{calculation | type: type, constraints: constraints}
+          if Ash.Type.NewType.new_type?(unwrapped_type) &&
+               Ash.Type.NewType.subtype_of(unwrapped_type) == Ash.Type.Union &&
+               function_exported?(unwrapped_type, :graphql_unnested_unions, 1) do
+            unnested_types = unwrapped_type.graphql_unnested_unions(calculation.constraints)
 
             resolve_union_result(
               result,
@@ -2875,10 +2873,10 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp unwrap_type_and_constraints({:array, type}, constraints),
-    do: unwrap_type_and_constraints(type, constraints[:items] || [])
+  defp unwrap_type({:array, type}),
+    do: unwrap_type(type)
 
-  defp unwrap_type_and_constraints(other, constraints), do: {other, constraints}
+  defp unwrap_type(other), do: other
 
   def resolve_assoc_one(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
@@ -3032,31 +3030,17 @@ defmodule AshGraphql.Graphql.Resolver do
   defp resolve_union_result(
          value,
          {name, {:array, field_type}, field, resource, unnested_types, domain}
-       )
-       when is_list(value) do
-    Enum.map(
-      value,
-      &resolve_union_result(
-        &1,
-        {name, field_type, %{field | constraints: field.constraints[:items]}, resource,
-         unnested_types, domain}
+       ) do
+    if value do
+      Enum.map(
+        value,
+        &resolve_union_result(
+          &1,
+          {name, field_type, %{field | type: field_type, constraints: field.constraints[:items]},
+           resource, unnested_types, domain}
+        )
       )
-    )
-  end
-
-  defp resolve_union_result(
-         value,
-         {name, field_type, field, resource, unnested_types, domain}
-       )
-       when is_list(value) do
-    Enum.map(
-      value,
-      &resolve_union_result(
-        &1,
-        {name, field_type, %{field | constraints: field.constraints}, resource, unnested_types,
-         domain}
-      )
-    )
+    end
   end
 
   defp resolve_union_result(
