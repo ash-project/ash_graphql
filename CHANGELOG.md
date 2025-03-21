@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.6](https://github.com/ash-project/ash_graphql/compare/v1.7.5...v1.7.6) (2025-03-21)
+
+
+
+
+### Bug Fixes:
+
+* allow for calculations & args in filter and use filter/sort_input
+
 ## [v1.7.5](https://github.com/ash-project/ash_graphql/compare/v1.7.4...v1.7.5) (2025-03-20)
 
 
