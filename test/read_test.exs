@@ -128,6 +128,30 @@ defmodule AshGraphql.ReadTest do
            } = result
   end
 
+  test "forbidden fields are not exposed in filters" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name",
+        secret: "a secret"
+      )
+      |> Ash.create!()
+
+    resp =
+      """
+      query CurrentUserWithMetadata {
+        currentUserWithMetadata(filter: {secret: {eq: "a secret"}}) {
+          bar
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema, context: %{actor: user})
+
+    assert {:ok, result} = resp
+
+    assert %{data: %{"currentUserWithMetadata" => nil}} = result
+  end
+
   test "loading relationships with fragment works" do
     user =
       AshGraphql.Test.User
