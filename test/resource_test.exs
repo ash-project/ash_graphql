@@ -187,4 +187,38 @@ defmodule AshGraphql.ResourceTest do
 
     assert List.first(data)["rank"] < List.last(data)["rank"]
   end
+
+  test "can use argument in filter and sort on calculated field" do
+    [
+      "a",
+      "b",
+      "c"
+    ]
+    |> Enum.each(fn text ->
+      Ash.Seed.seed!(%AshGraphql.Test.Comment{text: text})
+    end)
+
+    Ash.read!(AshGraphql.Test.Comment, load: [:timestamp, arg_returned: [seconds: 10]])
+    |> Enum.each(fn %{arg_returned: arg_returned} ->
+      assert 10 = arg_returned
+    end)
+
+    assert {:ok, %{data: %{"listComments" => comments}}} =
+             """
+             query {
+               listComments(
+               filter: {argReturned: {input: {seconds: 10}}}
+               sort: {argReturnedInput: {seconds: 10}, field: ARG_RETURNED, order: ASC_NULLS_LAST}
+               ) {
+                 text
+                 argReturned(seconds: 10)
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    Enum.each(comments, fn %{"arg_returned" => arg_returned} ->
+      assert 10 = arg_returned
+    end)
+  end
 end

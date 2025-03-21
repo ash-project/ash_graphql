@@ -75,6 +75,13 @@ defmodule AshGraphql.Test.Comment do
       expr(created_at),
       public?: true
     )
+
+    calculate :arg_returned,
+              :integer,
+              expr(^arg(:seconds)) do
+      argument(:seconds, :integer, allow_nil?: false)
+      public?(true)
+    end
   end
 
   relationships do
