@@ -1961,7 +1961,7 @@ defmodule AshGraphql.Graphql.Resolver do
   def massage_filter(_resource, nil), do: nil
 
   def massage_filter(resource, filter) when is_map(filter) do
-    Map.new(filter, fn {key, value} ->
+    Enum.map(filter, fn {key, value} ->
       cond do
         rel = Ash.Resource.Info.relationship(resource, key) ->
           {key, massage_filter(rel.destination, value)}
@@ -3144,7 +3144,7 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Query.offset(query, offset)
 
       {:filter, value}, query ->
-        Ash.Query.do_filter(query, massage_filter(query.resource, value))
+        Ash.Query.filter_input(query, massage_filter(query.resource, value))
 
       {:sort, value}, query ->
         keyword_sort =
@@ -3160,7 +3160,7 @@ defmodule AshGraphql.Graphql.Resolver do
             end
           end)
 
-        Ash.Query.sort(query, keyword_sort)
+        Ash.Query.sort_input(query, keyword_sort)
 
       _, query ->
         query
