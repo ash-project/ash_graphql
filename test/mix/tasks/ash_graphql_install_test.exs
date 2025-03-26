@@ -108,11 +108,7 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
   test "adds the socket and parser to the endpoint", %{igniter: igniter} do
     igniter
     |> assert_has_patch("lib/test_web/endpoint.ex", ~S'''
-    + |  socket("/ws/gql", TestWeb.GraphqlSocket,
-    + |    websocket: true,
-    + |    longpoll: true
-    + |  )
-    + |
+    + |  socket("/ws/gql", TestWeb.GraphqlSocket, websocket: true, longpoll: true)
     ''')
     |> assert_has_patch("lib/test_web/endpoint.ex", ~S'''
     + |  use Absinthe.Phoenix.Endpoint
@@ -121,39 +117,32 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
 
   test "adds the gql routes in the router", %{igniter: igniter} do
     assert_has_patch(igniter, "lib/test_web/router.ex", ~S'''
-          ...|
-      2  2   |  use TestWeb, :router
-      3  3   |
-         4 + |  pipeline :graphql do
-         5 + |    plug(AshGraphql.Plug)
-         6 + |  end
-         7 + |
-      4  8   |  pipeline :browser do
-      5  9   |    plug(:accepts, ["html"])
-          ...|
-     15 19   |  end
-     16 20   |
-        21 + |  scope "/gql" do
-        22 + |    pipe_through([:graphql])
-        23 + |
-        24 + |    forward(
-        25 + |      "/playground",
-        26 + |      Absinthe.Plug.GraphiQL,
-        27 + |      schema: Module.concat(["TestWeb.GraphqlSchema"]),
-        28 + |      socket: Module.concat(["TestWeb.GraphqlSocket"]),
-        29 + |      interface: :playground
-        30 + |    )
-        31 + |
-        32 + |    forward(
-        33 + |      "/",
-        34 + |      Absinthe.Plug,
-        35 + |      schema: Module.concat(["TestWeb.GraphqlSchema"])
-        36 + |    )
-        37 + |  end
-        38 + |
-     17 39   |  scope "/", TestWeb do
-     18 40   |    pipe_through(:browser)
-          ...|
+     ...|
+        |  use TestWeb, :router
+        |
+      + |  pipeline :graphql do
+      + |    plug(AshGraphql.Plug)
+      + |  end
+      + |
+        |  pipeline :browser do
+        |    plug(:accepts, ["html"])
+     ...|
+        |  end
+        |
+      + |  scope "/gql" do
+      + |    pipe_through([:graphql])
+      + |
+      + |    forward("/playground", Absinthe.Plug.GraphiQL,
+      + |      schema: Module.concat(["TestWeb.GraphqlSchema"]),
+      + |      socket: Module.concat(["TestWeb.GraphqlSocket"]),
+      + |      interface: :playground
+      + |    )
+      + |
+      + |    forward("/", Absinthe.Plug, schema: Module.concat(["TestWeb.GraphqlSchema"]))
+      + |  end
+      + |
+        |  scope "/", TestWeb do
+        |    pipe_through(:browser)
     ''')
   end
 end
