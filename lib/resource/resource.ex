@@ -132,6 +132,20 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  @validate %Spark.Dsl.Entity{
+    name: :validate,
+    schema: Mutation.validate_schema(),
+    args: [:name, :action],
+    describe: "A query to validate the update or creation of a record",
+    examples: [
+      "validate :validate_create_post, :create"
+    ],
+    target: Mutation,
+    auto_set_fields: [
+      type: :validate
+    ]
+  }
+
   @update %Spark.Dsl.Entity{
     name: :update,
     schema: Mutation.update_schema(),
@@ -249,6 +263,7 @@ defmodule AshGraphql.Resource do
         create :create_post, :create
         update :update_post, :update
         destroy :destroy_post, :destroy
+        validate :validate_create_post, :create
       end
       """
     ],
@@ -256,11 +271,12 @@ defmodule AshGraphql.Resource do
       @create,
       @update,
       @destroy,
-      @action
+      @action,
+      @validate
     ]
   }
 
-  def mutations, do: [@create, @update, @destroy, @action]
+  def mutations, do: [@create, @update, @destroy, @action, @validate]
 
   @subscribe %Spark.Dsl.Entity{
     name: :subscribe,
@@ -812,6 +828,33 @@ defmodule AshGraphql.Resource do
         end
 
       %{type: :create} = mutation ->
+        create_mutation(resource, schema, mutation, action_middleware, domain, relay_ids?)
+
+      %{type: :validate} = mutation ->
+        validate_mutation(resource, schema, mutation, action_middleware, domain, relay_ids?)
+
+      mutation ->
+        update_mutation(resource, schema, mutation, schema, action_middleware, domain, relay_ids?)
+    end)
+    |> Enum.concat(
+      queries(domain, all_domains, resource, action_middleware, schema, relay_ids?, true)
+    )
+  end
+
+  defp validate_mutation(resource, schema, mutation, action_middleware, domain, relay_ids?) do
+    action =
+      Ash.Resource.Info.action(resource, mutation.action) ||
+      raise "No such action #{mutation.action} for #{inspect(resource)}"
+
+    case action do
+      %Ash.Resource.Actions.Create{} ->
+        create_mutation(resource, schema, mutation, action_middleware, domain, relay_ids?)
+      %Ash.Resource.Actions.Update{} ->
+        update_mutation(resource, schema, mutation, schema, action_middleware, domain, relay_ids?)
+    end
+  end
+
+  defp create_mutation(resource, schema, mutation, action_middleware, domain, relay_ids?) do
         action =
           Ash.Resource.Info.action(resource, mutation.action) ||
             raise "No such action #{mutation.action} for #{inspect(resource)}"
@@ -857,13 +900,6 @@ defmodule AshGraphql.Resource do
           type: mutation_result_type(mutation.name, domain),
           __reference__: ref(__ENV__)
         }
-
-      mutation ->
-        update_mutation(resource, schema, mutation, schema, action_middleware, domain, relay_ids?)
-    end)
-    |> Enum.concat(
-      queries(domain, all_domains, resource, action_middleware, schema, relay_ids?, true)
-    )
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -1460,7 +1496,7 @@ defmodule AshGraphql.Resource do
             field_type =
               attribute.type
               |> field_type(attribute, resource, true)
-              |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
+              |> maybe_wrap_non_null(explicitly_required || not allow_nil?, type)
 
             name = field_names[attribute.name] || attribute.name
 
@@ -1483,12 +1519,12 @@ defmodule AshGraphql.Resource do
 
         case find_manage_change(argument, action, resource) do
           nil ->
-            type =
+            field_type =
               case AshGraphql.Resource.Info.argument_input_types(resource)[action.name][name] do
                 nil ->
                   argument.type
                   |> field_type(argument, resource, true)
-                  |> maybe_wrap_non_null(argument_required?(argument))
+                  |> maybe_wrap_non_null(argument_required?(argument), type)
 
                 override ->
                   unwrap_literal_type(override)
@@ -1499,7 +1535,7 @@ defmodule AshGraphql.Resource do
               module: schema,
               name: to_string(name),
               description: argument.description,
-              type: type,
+              type: field_type,
               __reference__: ref(__ENV__)
             }
 
@@ -1516,35 +1552,35 @@ defmodule AshGraphql.Resource do
                 ]
               )
 
-              type =
+              field_type =
                 if managed.type_name do
                   managed.type_name
                 else
                   default_managed_type_name(resource, action, argument)
                 end
 
-              type = wrap_arrays(argument.type, type, argument.constraints)
+              field_type = wrap_arrays(argument.type, field_type, argument.constraints)
 
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 identifier: argument.name,
                 module: schema,
                 name: to_string(name),
                 description: argument.description,
-                type: maybe_wrap_non_null(type, argument_required?(argument)),
+                type: maybe_wrap_non_null(field_type, argument_required?(argument), type),
                 __reference__: ref(__ENV__)
               }
             else
-              type =
+              field_type =
                 argument.type
                 |> field_type(argument, resource, true)
-                |> maybe_wrap_non_null(argument_required?(argument))
+                |> maybe_wrap_non_null(argument_required?(argument), type)
 
               %Absinthe.Blueprint.Schema.FieldDefinition{
                 identifier: name,
                 module: schema,
                 name: to_string(name),
                 description: Map.get(argument, :description, ""),
-                type: type,
+                type: field_type,
                 __reference__: ref(__ENV__)
               }
             end
@@ -1685,19 +1721,23 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp maybe_wrap_non_null({:non_null, type}, true) do
+  defp maybe_wrap_non_null(type, non_null?, action_type \\ nil)
+
+  defp maybe_wrap_non_null(type, _, :validate), do: type
+
+  defp maybe_wrap_non_null({:non_null, type}, true, _) do
     %Absinthe.Blueprint.TypeReference.NonNull{
       of_type: type
     }
   end
 
-  defp maybe_wrap_non_null(type, true) do
+  defp maybe_wrap_non_null(type, true, _) do
     %Absinthe.Blueprint.TypeReference.NonNull{
       of_type: type
     }
   end
 
-  defp maybe_wrap_non_null(type, _), do: type
+  defp maybe_wrap_non_null(type, _, _), do: type
 
   defp get_fields(resource) do
     if AshGraphql.Resource.Info.encode_primary_key?(resource) do
