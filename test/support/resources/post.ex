@@ -201,6 +201,7 @@ defmodule AshGraphql.Test.Post do
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
       list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
+      list :lazyinit_search, :search
       action(:post_count, :count)
       action(:post_count_with_errors, :count, error_location: :in_result)
 
@@ -451,6 +452,10 @@ defmodule AshGraphql.Test.Post do
     read :read_with_invalid_arguments_names do
       argument(:invalid_1, :string)
       argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
+    read :search do
+      argument(:predicate, Type.LazyInitTest.Example)
     end
 
     update :update, primary?: true
