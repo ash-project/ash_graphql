@@ -10,6 +10,6 @@ defmodule AshGraphql.Test.Embed do
   end
 
   attributes do
-    attribute(:nested_embed, AshGraphql.Test.NestedEmbed)
+    attribute(:nested_embed, AshGraphql.Test.NestedEmbed, public?: true)
   end
 end

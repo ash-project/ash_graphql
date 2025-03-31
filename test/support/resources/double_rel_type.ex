@@ -6,5 +6,5 @@ defmodule AshGraphql.Test.DoubleRelType do
       :second
     ]
 
-  def graphql_type, do: :double_rel_type
+  def graphql_type(_), do: :double_rel_type
 end

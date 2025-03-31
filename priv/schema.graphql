@@ -1,0 +1,3714 @@
+schema {
+  subscription: RootSubscriptionType
+  mutation: RootMutationType
+  query: RootQueryType
+}
+
+input PostEmbedInput {
+  nestedEmbed: EmbedNestedEmbedInput
+}
+
+input PostEmbedFooInput {
+  foo: String
+}
+
+input PostEmbedUnionNewTypeBarInput {
+  bar: String
+}
+
+input PostEmbedUnionNewTypeFooInput {
+  foo: String
+}
+
+input PostEmbedUnionUnnestedBarInput {
+  bar: String
+}
+
+type BarEmbed {
+  type: String
+  bar: String!
+  alwaysTrue: Boolean
+  alwaysFalse: Boolean
+}
+
+input PostEmbedUnionUnnestedFooInput {
+  foo: String
+}
+
+type FooEmbed {
+  type: String
+  foo: String!
+  alwaysTrue: Boolean
+  alwaysNil: Boolean
+}
+
+input EmbedNestedEmbedInput {
+  name: String
+  enum: NestedEnum
+}
+
+type NestedEmbed {
+  name: String
+  enum: NestedEnum
+}
+
+type Embed {
+  nestedEmbed: NestedEmbed
+}
+
+union Message = TextMessage | ImageMessage
+
+type SimpleUnionString {
+  value: String!
+}
+
+type SimpleUnionInt {
+  value: Int!
+}
+
+input SimpleUnionInput {
+  int: Int
+  string: String
+}
+
+union SimpleUnion = SimpleUnionInt | SimpleUnionString
+
+type EmbedUnionNewTypeBar {
+  value: BarEmbed!
+}
+
+type EmbedUnionNewTypeFoo {
+  value: FooEmbed!
+}
+
+input EmbedUnionNewTypeInput {
+  foo: PostEmbedUnionNewTypeFooInput
+  bar: PostEmbedUnionNewTypeBarInput
+}
+
+union EmbedUnionNewType = EmbedUnionNewTypeFoo | EmbedUnionNewTypeBar
+
+input FooBarUnnestedInput {
+  foo: PostEmbedUnionUnnestedFooInput
+  bar: PostEmbedUnionUnnestedBarInput
+}
+
+union FooBarUnnested = FooEmbed | BarEmbed
+
+union PostComments = Comment | SponsoredComment
+
+enum StatusEnum {
+  OPEN
+  CLOSED
+}
+
+enum EnumWithAshGraphqlDescription {
+  "A foo"
+  FOO
+
+  "A bar"
+  BAR
+
+  NO_DESCRIPTION
+}
+
+enum EnumWithAshDescription {
+  "A fizz"
+  FIZZ
+
+  "A buzz"
+  BUZZ
+}
+
+enum NestedEnum {
+  FOO
+  BAR
+}
+
+type IndirectChannelMessages {
+  results: [Message]!
+  hasNextPage: Boolean!
+  count: Int!
+}
+
+type FilterByActorChannelMessages {
+  results: [Message]!
+  hasNextPage: Boolean!
+  count: Int!
+}
+
+input CommonMapStructInput {
+  stuff: String!
+  some: String!
+}
+
+type CommonMapStruct {
+  stuff: String!
+  some: String!
+}
+
+input BarWithFoo {
+  foo: String!
+}
+
+input BarWithBaz {
+  baz: Int!
+}
+
+input CommonMapInput {
+  stuff: String!
+  some: String!
+}
+
+type CommonMap {
+  stuff: String!
+  some: String!
+}
+
+input ConstrainedMapBamInput {
+  qux: String
+}
+
+input ConstrainedMapInput {
+  bam: ConstrainedMapBamInput
+  baz: Int
+  fooBar: String!
+}
+
+type ConstrainedMapBam {
+  qux: String
+}
+
+type ConstrainedMap {
+  bam: ConstrainedMapBam
+  baz: Int
+  fooBar: String!
+}
+
+"The result of the :update_error_handling mutation"
+type UpdateErrorHandlingResult {
+  "The successful result of the mutation"
+  result: ErrorHandling
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateErrorHandlingInput {
+  name: String
+}
+
+"The result of the :create_error_handling mutation"
+type CreateErrorHandlingResult {
+  "The successful result of the mutation"
+  result: ErrorHandling
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateErrorHandlingInput {
+  name: String!
+}
+
+type ErrorHandling {
+  id: ID!
+  name: String!
+}
+
+type subscribable_events_with_arguments_result {
+  created: Subscribable
+}
+
+type deduped_subscribable_events_result {
+  created: Subscribable
+  updated: Subscribable
+  destroyed: ID
+}
+
+type subscribable_events_result {
+  created: Subscribable
+  updated: Subscribable
+  destroyed: ID
+}
+
+type subscribed_on_domain_result {
+  created: Subscribable
+}
+
+"The result of the :destroy_subscribable mutation"
+type DestroySubscribableResult {
+  "The record that was successfully deleted"
+  result: Subscribable
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :update_subscribable mutation"
+type UpdateSubscribableResult {
+  "The successful result of the mutation"
+  result: Subscribable
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateSubscribableInput {
+  hiddenField: String
+  text: String
+  topic: String
+  actorId: Int
+}
+
+"The result of the :create_subscribable mutation"
+type CreateSubscribableResult {
+  "The successful result of the mutation"
+  result: Subscribable
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateSubscribableInput {
+  hiddenField: String
+  text: String
+  topic: String
+  actorId: Int
+}
+
+input SubscribableFilterActorId {
+  isNil: Boolean
+  eq: Int
+  notEq: Int
+  in: [Int]
+  lessThan: Int
+  greaterThan: Int
+  lessThanOrEqual: Int
+  greaterThanOrEqual: Int
+}
+
+input SubscribableFilterTopic {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input SubscribableFilterText {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input SubscribableFilterHiddenField {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input SubscribableFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input SubscribableFilterInput {
+  and: [SubscribableFilterInput!]
+  or: [SubscribableFilterInput!]
+  not: [SubscribableFilterInput!]
+  id: SubscribableFilterId
+  hiddenField: SubscribableFilterHiddenField
+  text: SubscribableFilterText
+  topic: SubscribableFilterTopic
+  actorId: SubscribableFilterActorId
+}
+
+type Subscribable {
+  id: ID!
+  hiddenField: String!
+  text: String
+  topic: String
+  actorId: Int
+}
+
+type ImageMessage {
+  id: ID!
+  text: String
+  type: String
+  channelId: ID
+  channel: Channel
+}
+
+type TextMessage {
+  id: ID!
+  text: String
+  type: String
+  channelId: ID
+  channel: Channel
+}
+
+"The result of the :update_channel mutation"
+type UpdateChannelResult {
+  "The successful result of the mutation"
+  result: ChannelSimple
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateChannelInput {
+  channel: JsonString
+  name: String!
+}
+
+type ChannelSimple {
+  id: ID!
+  channel: Channel!
+  createdAt: DateTime!
+}
+
+type Channel {
+  id: ID!
+  name: String!
+  createdAt: DateTime!
+  channelMessageCount: Int!
+  filterByUserChannelMessageCount: Int!
+  directChannelMessages: [Message!]
+  indirectChannelMessages(offset: Int, limit: Int): IndirectChannelMessages
+  filterByActorChannelMessages(offset: Int, limit: Int): FilterByActorChannelMessages
+}
+
+"The result of the :delete_current_user mutation"
+type DeleteCurrentUserResult {
+  "The record that was successfully deleted"
+  result: User
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+type AuthenticateWithTokenMetadata {
+  jwt: String!
+}
+
+"The result of the :authenticate_with_token mutation"
+type AuthenticateWithTokenResult {
+  "The successful result of the mutation"
+  result: User
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+
+  "Metadata produced by the mutation"
+  metadata: AuthenticateWithTokenMetadata
+}
+
+input AuthenticateWithTokenInput {
+  name: String
+  secret: String
+}
+
+"The result of the :create_user mutation"
+type CreateUserResult {
+  "The successful result of the mutation"
+  result: User
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateUserInput {
+  name: String
+  secret: String
+}
+
+input UserFilterNameTwice {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input UserFilterSecret {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input UserFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input UserFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input UserFilterInput {
+  and: [UserFilterInput!]
+  or: [UserFilterInput!]
+  not: [UserFilterInput!]
+  id: UserFilterId
+  name: UserFilterName
+  secret: UserFilterSecret
+  posts: PostFilterInput
+  nameTwice: UserFilterNameTwice
+}
+
+type UserWithBar {
+  id: ID!
+  name: String
+  secret: String
+  bar: String
+  posts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Post!]!
+  nameTwice: String
+}
+
+type User {
+  id: ID!
+  name: String
+  secret: String
+  posts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Post!]!
+  nameTwice: String
+}
+
+"The result of the :destroy_tag mutation"
+type DestroyTagResult {
+  "The record that was successfully deleted"
+  result: Tag
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :create_tag mutation"
+type CreateTagResult {
+  "The successful result of the mutation"
+  result: Tag
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateTagInput {
+  name: String
+}
+
+enum TagSortField {
+  ID
+  NAME
+}
+
+"A keyset page of :tag"
+type KeysetPageOfTag {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Tag!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input TagFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input TagFilterInput {
+  and: [TagFilterInput!]
+  or: [TagFilterInput!]
+  not: [TagFilterInput!]
+  name: TagFilterName
+}
+
+input TagSortInput {
+  order: SortOrder
+  field: TagSortField!
+}
+
+type Tag {
+  id: ID!
+  name: String
+}
+
+"The result of the :create_sponsored_comment mutation"
+type CreateSponsoredCommentResult {
+  "The successful result of the mutation"
+  result: SponsoredComment
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateSponsoredCommentInput {
+  text: String
+  postId: ID
+}
+
+enum SponsoredCommentSortField {
+  ID
+  TEXT
+  TYPE
+  POST_ID
+}
+
+input SponsoredCommentFilterPostId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input SponsoredCommentFilterType {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input SponsoredCommentFilterText {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input SponsoredCommentFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input SponsoredCommentFilterInput {
+  and: [SponsoredCommentFilterInput!]
+  or: [SponsoredCommentFilterInput!]
+  not: [SponsoredCommentFilterInput!]
+  id: SponsoredCommentFilterId
+  text: SponsoredCommentFilterText
+  type: SponsoredCommentFilterType
+  postId: SponsoredCommentFilterPostId
+  post: PostFilterInput
+}
+
+input SponsoredCommentSortInput {
+  order: SortOrder
+  field: SponsoredCommentSortField!
+}
+
+type SponsoredComment {
+  id: ID!
+  text: String
+  type: String
+  postId: ID
+  post: Post
+}
+
+enum ReviewSortField {
+  ID
+  TEXT
+  MOVIE_ID
+}
+
+"A page of :review"
+type PageOfReview {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Review!]
+
+  "Whether or not there is a next page"
+  hasNextPage: Boolean!
+}
+
+input ReviewFilterMovieId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input ReviewFilterText {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input ReviewFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input ReviewFilterInput {
+  and: [ReviewFilterInput!]
+  or: [ReviewFilterInput!]
+  not: [ReviewFilterInput!]
+  id: ReviewFilterId
+  text: ReviewFilterText
+  movieId: ReviewFilterMovieId
+  movie: MovieFilterInput
+}
+
+input ReviewSortInput {
+  order: SortOrder
+  field: ReviewSortField!
+}
+
+type Review {
+  id: ID!
+  text: String
+  movieId: ID
+  movie: Movie
+}
+
+"The result of the :destroy_relay_tag mutation"
+type DestroyRelayTagResult {
+  "The record that was successfully deleted"
+  result: RelayTag
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :create_relay_tag mutation"
+type CreateRelayTagResult {
+  "The successful result of the mutation"
+  result: RelayTag
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateRelayTagInput {
+  name: String
+}
+
+enum RelayTagSortField {
+  ID
+  NAME
+}
+
+":relay_tag connection"
+type RelayTagConnection {
+  "Total count on all pages"
+  count: Int
+
+  "Page information"
+  pageInfo: PageInfo!
+
+  ":relay_tag edges"
+  edges: [RelayTagEdge!]
+}
+
+":relay_tag edge"
+type RelayTagEdge {
+  "Cursor"
+  cursor: String!
+
+  ":relay_tag node"
+  node: RelayTag!
+}
+
+input RelayTagFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input RelayTagFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input RelayTagFilterInput {
+  and: [RelayTagFilterInput!]
+  or: [RelayTagFilterInput!]
+  not: [RelayTagFilterInput!]
+  id: RelayTagFilterId
+  name: RelayTagFilterName
+}
+
+input RelayTagSortInput {
+  order: SortOrder
+  field: RelayTagSortField!
+}
+
+type RelayTag implements Node {
+  id: ID!
+  name: String
+}
+
+"The result of the :post_count_with_errors query"
+type PostCountWithErrorsResult {
+  "The successful result of the query"
+  result: Int
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input RandomPostInput {
+  published: Boolean
+}
+
+"The result of the :delete_post_with_invalid_arguments_names mutation"
+type DeletePostWithInvalidArgumentsNamesResult {
+  "The record that was successfully deleted"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input DeletePostWithInvalidArgumentsNamesInput {
+  invalid1: String
+  removeInvalid: Boolean
+}
+
+"The result of the :delete_post_with_error mutation"
+type DeletePostWithErrorResult {
+  "The record that was successfully deleted"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :delete_best_post mutation"
+type DeleteBestPostResult {
+  "The record that was successfully deleted"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :delete_post mutation"
+type DeletePostResult {
+  "The record that was successfully deleted"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :archive_post mutation"
+type ArchivePostResult {
+  "The record that was successfully deleted"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input ArchivePostInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :update_post_with_invalid_arguments_names mutation"
+type UpdatePostWithInvalidArgumentsNamesResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdatePostWithInvalidArgumentsNamesInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  invalid1: String
+  removeInvalid: Boolean
+}
+
+"The result of the :update_post_with_hidden_input mutation"
+type UpdatePostWithHiddenInputResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdatePostWithHiddenInputInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :update_best_post_arg mutation"
+type UpdateBestPostArgResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateBestPostArgInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :update_best_post mutation"
+type UpdateBestPostResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateBestPostInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :update_post_confirm mutation"
+type UpdatePostConfirmResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdatePostConfirmInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  confirmation: String
+}
+
+"The result of the :update_post_with_comments mutation"
+type UpdatePostWithCommentsResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdatePostWithCommentsInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  comments: [PostUpdateWithCommentsCommentsInput!]
+  sponsoredComments: [PostUpdateWithCommentsSponsoredCommentsInput!]
+}
+
+"The result of the :update_post mutation"
+type UpdatePostResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdatePostInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :create_post_with_invalid_arguments_names mutation"
+type CreatePostWithInvalidArgumentsNamesResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithInvalidArgumentsNamesInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  invalid1: String
+  removeInvalid: Boolean
+}
+
+type CreatePostWithCustomDescriptionMetadata {
+  foo: String
+}
+
+"The result of the :create_post_with_custom_description mutation"
+type CreatePostWithCustomDescriptionResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+
+  "Metadata produced by the mutation"
+  metadata: CreatePostWithCustomDescriptionMetadata
+}
+
+input CreatePostWithCustomDescriptionInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :create_post_with_comments_and_tags mutation"
+type CreatePostWithCommentsAndTagsResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithCommentsAndTagsInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  comments: [CreatePostCommentWithTag!]
+  tags: [PostWithCommentsAndTagsTagsInput!]!
+}
+
+"The result of the :create_post_with_comments_lookup mutation"
+type CreatePostWithCommentsLookupResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithCommentsLookupInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  comments: [PostWithCommentsLookupCommentsInput!]
+}
+
+"The result of the :create_post_with_comments mutation"
+type CreatePostWithCommentsResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithCommentsInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  comments: [PostWithCommentsCommentsInput!]
+  sponsoredComments: [PostWithCommentsSponsoredCommentsInput!]
+}
+
+"The result of the :create_post_bar_with_baz mutation"
+type CreatePostBarWithBazResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostBarWithBazInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  bar: BarWithBaz
+}
+
+"The result of the :create_post_bar_with_foo_with_map mutation"
+type CreatePostBarWithFooWithMapResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostBarWithFooWithMapInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  bar: BarWithFoo
+}
+
+"The result of the :create_post_bar_with_foo mutation"
+type CreatePostBarWithFooResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostBarWithFooInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  bar: BarWithFoo
+}
+
+"The result of the :create_post_with_common_map mutation"
+type CreatePostWithCommonMapResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithCommonMapInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  commonMapArg: [CommonMapInput!]
+}
+
+"The result of the :upsert_post mutation"
+type UpsertPostResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpsertPostInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  id: ID
+}
+
+"The result of the :create_post_with_length_constraint mutation"
+type CreatePostWithLengthConstraintResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithLengthConstraintInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :create_post mutation"
+type CreatePostResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+  confirmation: String
+}
+
+"The result of the :create_post_with_required_error mutation"
+type CreatePostWithRequiredErrorResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithRequiredErrorInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+"The result of the :create_post_with_error mutation"
+type CreatePostWithErrorResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreatePostWithErrorInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+type SimpleCreatePostMetadata {
+  foo: String
+}
+
+"The result of the :simple_create_post mutation"
+type SimpleCreatePostResult {
+  "The successful result of the mutation"
+  result: Post
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+
+  "Metadata produced by the mutation"
+  metadata: SimpleCreatePostMetadata
+}
+
+input SimpleCreatePostInput {
+  text: String
+  published: Boolean
+  foo: FooInput
+  status: Status
+  statusEnum: StatusEnum
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+  enumWithAshDescription: EnumWithAshDescription
+  best: Boolean
+  score: Float
+  integerAsStringInDomain: String
+  embed: PostEmbedInput
+  text1: String
+  text2: String
+  visibility: String
+  simpleUnion: SimpleUnionInput
+  embedFoo: PostEmbedFooInput
+  embedUnionNewTypeList: [FooBarUnnestedInput!]
+  embedUnionNewType: EmbedUnionNewTypeInput
+  embedUnionUnnested: FooBarUnnestedInput
+  stringNewType: String
+  privateAttribute: Boolean
+  requiredString: String
+  commonMapAttribute: CommonMapInput
+  commonMapStructAttribute: CommonMapStructInput
+  authorId: ID
+}
+
+enum PostSortField {
+  ID
+  TEXT
+  PUBLISHED
+  FOO
+  STATUS
+  STATUS_ENUM
+  ENUM_WITH_ASH_GRAPHQL_DESCRIPTION
+  ENUM_WITH_ASH_DESCRIPTION
+  BEST
+  SCORE
+  INTEGER_AS_STRING_IN_DOMAIN
+  TEXT1
+  TEXT2
+  VISIBILITY
+  STRING_NEW_TYPE
+  PRIVATE_ATTRIBUTE
+  REQUIRED_STRING
+  COMMON_MAP_ATTRIBUTE
+  COMMON_MAP_STRUCT_ATTRIBUTE
+  CREATED_AT
+  AUTHOR_ID
+  TEXT1_AND2
+  COMMENT_COUNT
+  LATEST_COMMENT_AT
+  LATEST_COMMENT_TYPE
+}
+
+"A keyset page of :post"
+type KeysetPageOfPost {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Post!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+"A page of :post"
+type PageOfPost {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Post!]
+
+  "Whether or not there is a next page"
+  hasNextPage: Boolean!
+}
+
+input PostText1And2FieldInput {
+  separator: String
+}
+
+input PostFilterText1And2 {
+  input: PostText1And2FieldInput
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterLatestCommentType {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterLatestCommentAt {
+  isNil: Boolean
+  eq: DateTime
+  notEq: DateTime
+  in: [DateTime]
+  lessThan: DateTime
+  greaterThan: DateTime
+  lessThanOrEqual: DateTime
+  greaterThanOrEqual: DateTime
+}
+
+input PostFilterCommentCount {
+  isNil: Boolean
+  eq: Int
+  notEq: Int
+  in: [Int]
+  lessThan: Int
+  greaterThan: Int
+  lessThanOrEqual: Int
+  greaterThanOrEqual: Int
+}
+
+input PostFilterAuthorId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input PostFilterCreatedAt {
+  isNil: Boolean
+  eq: DateTime
+  notEq: DateTime
+  in: [DateTime!]
+  lessThan: DateTime
+  greaterThan: DateTime
+  lessThanOrEqual: DateTime
+  greaterThanOrEqual: DateTime
+}
+
+input PostFilterCommonMapStructAttribute {
+  isNil: Boolean
+  eq: CommonMapStructInput
+  notEq: CommonMapStructInput
+  in: [CommonMapStructInput]
+  lessThan: CommonMapStructInput
+  greaterThan: CommonMapStructInput
+  lessThanOrEqual: CommonMapStructInput
+  greaterThanOrEqual: CommonMapStructInput
+}
+
+input PostFilterCommonMapAttribute {
+  isNil: Boolean
+  eq: CommonMapInput
+  notEq: CommonMapInput
+  in: [CommonMapInput]
+  lessThan: CommonMapInput
+  greaterThan: CommonMapInput
+  lessThanOrEqual: CommonMapInput
+  greaterThanOrEqual: CommonMapInput
+}
+
+input PostFilterRequiredString {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterPrivateAttribute {
+  isNil: Boolean
+  eq: Boolean
+  notEq: Boolean
+  in: [Boolean]
+  lessThan: Boolean
+  greaterThan: Boolean
+  lessThanOrEqual: Boolean
+  greaterThanOrEqual: Boolean
+}
+
+input PostFilterStringNewType {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterVisibility {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterText2 {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterText1 {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterIntegerAsStringInDomain {
+  isNil: String
+  eq: String
+  notEq: String
+  in: String
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterScore {
+  isNil: Boolean
+  eq: Float
+  notEq: Float
+  in: [Float]
+  lessThan: Float
+  greaterThan: Float
+  lessThanOrEqual: Float
+  greaterThanOrEqual: Float
+}
+
+input PostFilterBest {
+  isNil: Boolean
+  eq: Boolean
+  notEq: Boolean
+  in: [Boolean]
+  lessThan: Boolean
+  greaterThan: Boolean
+  lessThanOrEqual: Boolean
+  greaterThanOrEqual: Boolean
+}
+
+input PostFilterEnumWithAshDescription {
+  isNil: Boolean
+  eq: EnumWithAshDescription
+  notEq: EnumWithAshDescription
+  in: [EnumWithAshDescription]
+  lessThan: EnumWithAshDescription
+  greaterThan: EnumWithAshDescription
+  lessThanOrEqual: EnumWithAshDescription
+  greaterThanOrEqual: EnumWithAshDescription
+}
+
+input PostFilterEnumWithAshGraphqlDescription {
+  isNil: Boolean
+  eq: EnumWithAshGraphqlDescription
+  notEq: EnumWithAshGraphqlDescription
+  in: [EnumWithAshGraphqlDescription]
+  lessThan: EnumWithAshGraphqlDescription
+  greaterThan: EnumWithAshGraphqlDescription
+  lessThanOrEqual: EnumWithAshGraphqlDescription
+  greaterThanOrEqual: EnumWithAshGraphqlDescription
+}
+
+input PostFilterStatusEnum {
+  isNil: Boolean
+  eq: StatusEnum
+  notEq: StatusEnum
+  in: [StatusEnum]
+  lessThan: StatusEnum
+  greaterThan: StatusEnum
+  lessThanOrEqual: StatusEnum
+  greaterThanOrEqual: StatusEnum
+}
+
+input PostFilterStatus {
+  isNil: Boolean
+  eq: Status
+  notEq: Status
+  in: [Status]
+  lessThan: Status
+  greaterThan: Status
+  lessThanOrEqual: Status
+  greaterThanOrEqual: Status
+}
+
+input PostFilterFoo {
+  isNil: Boolean
+  eq: FooInput
+  notEq: FooInput
+  in: [FooInput]
+  lessThan: FooInput
+  greaterThan: FooInput
+  lessThanOrEqual: FooInput
+  greaterThanOrEqual: FooInput
+}
+
+input PostFilterPublished {
+  isNil: Boolean
+  eq: Boolean
+  notEq: Boolean
+  in: [Boolean]
+  lessThan: Boolean
+  greaterThan: Boolean
+  lessThanOrEqual: Boolean
+  greaterThanOrEqual: Boolean
+}
+
+input PostFilterText {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input PostFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input PostFilterInput {
+  and: [PostFilterInput!]
+  or: [PostFilterInput!]
+  not: [PostFilterInput!]
+  id: PostFilterId
+  text: PostFilterText
+  published: PostFilterPublished
+  foo: PostFilterFoo
+  status: PostFilterStatus
+  statusEnum: PostFilterStatusEnum
+  enumWithAshGraphqlDescription: PostFilterEnumWithAshGraphqlDescription
+  enumWithAshDescription: PostFilterEnumWithAshDescription
+  best: PostFilterBest
+  score: PostFilterScore
+  integerAsStringInDomain: PostFilterIntegerAsStringInDomain
+  text1: PostFilterText1
+  text2: PostFilterText2
+  visibility: PostFilterVisibility
+  stringNewType: PostFilterStringNewType
+  privateAttribute: PostFilterPrivateAttribute
+  requiredString: PostFilterRequiredString
+  commonMapAttribute: PostFilterCommonMapAttribute
+  commonMapStructAttribute: PostFilterCommonMapStructAttribute
+  createdAt: PostFilterCreatedAt
+  authorId: PostFilterAuthorId
+  author: UserFilterInput
+  authorThatIsActor: UserFilterInput
+  comments: CommentFilterInput
+  sponsoredComments: SponsoredCommentFilterInput
+  paginatedComments: CommentFilterInput
+  tags: TagFilterInput
+  multitenantTags: MultitenantTagFilterInput
+  relayTags: RelayTagFilterInput
+  relatedPosts: PostFilterInput
+  commentCount: PostFilterCommentCount
+  latestCommentAt: PostFilterLatestCommentAt
+  latestCommentType: PostFilterLatestCommentType
+  text1And2: PostFilterText1And2
+}
+
+input PostSortInput {
+  order: SortOrder
+  field: PostSortField!
+  text1And2Input: PostText1And2FieldInput
+}
+
+type Post {
+  id: ID!
+
+  text: String
+
+  published: Boolean
+
+  foo: Foo
+
+  status: Status
+
+  statusEnum: StatusEnum
+
+  enumWithAshGraphqlDescription: EnumWithAshGraphqlDescription
+
+  enumWithAshDescription: EnumWithAshDescription
+
+  best: Boolean
+
+  score: Float
+
+  integerAsStringInDomain: String
+
+  embed: Embed
+
+  text1: String
+
+  text2: String
+
+  visibility: String
+
+  simpleUnion: SimpleUnion
+
+  embedFoo: FooEmbed
+
+  embedUnionNewTypeList: [FooBarUnnested!]
+
+  embedUnionNewType: EmbedUnionNewType
+
+  embedUnionUnnested: FooBarUnnested
+
+  stringNewType: String
+
+  privateAttribute: Boolean
+
+  requiredString: String!
+
+  commonMapAttribute: CommonMap
+
+  commonMapStructAttribute: CommonMapStruct
+
+  createdAt: DateTime!
+
+  authorId: ID
+
+  author: User
+
+  authorThatIsActor: User
+
+  comments(
+    "How to sort the records in the response"
+    sort: [CommentSortInput]
+
+    "A filter to limit the results"
+    filter: CommentFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Comment!]!
+
+  sponsoredComments(
+    "How to sort the records in the response"
+    sort: [SponsoredCommentSortInput]
+
+    "A filter to limit the results"
+    filter: SponsoredCommentFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [SponsoredComment!]!
+
+  paginatedComments(
+    "How to sort the records in the response"
+    sort: [CommentSortInput]
+
+    "A filter to limit the results"
+    filter: CommentFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Comment!]!
+
+  tags(
+    "How to sort the records in the response"
+    sort: [TagSortInput]
+
+    "A filter to limit the results"
+    filter: TagFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Tag!]!
+
+  multitenantTags(
+    "How to sort the records in the response"
+    sort: [MultitenantTagSortInput]
+
+    "A filter to limit the results"
+    filter: MultitenantTagFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [MultitenantTag!]!
+
+  relayTags(
+    "How to sort the records in the response"
+    sort: [RelayTagSortInput]
+
+    "A filter to limit the results"
+    filter: RelayTagFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [RelayTag!]!
+
+  relatedPosts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Post!]!
+
+  commentCount: Int!
+
+  latestCommentAt: DateTime
+
+  latestCommentType: String
+
+  staticCalculation: String
+
+  commonMapCalculation: CommonMap
+
+  privateCalculation: Embed
+
+  fullText: String
+
+  text1And2(separator: String): String
+
+  postComments: [PostComments!]
+
+  "The pagination keyset."
+  keyset: String
+}
+
+type NonIdPrimaryKey {
+  id: ID!
+  other: ID!
+}
+
+"The result of the :destroy_multitenant_tag mutation"
+type DestroyMultitenantTagResult {
+  "The record that was successfully deleted"
+  result: MultitenantTag
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :create_multitenant_tag mutation"
+type CreateMultitenantTagResult {
+  "The successful result of the mutation"
+  result: MultitenantTag
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateMultitenantTagInput {
+  name: String
+}
+
+enum MultitenantTagSortField {
+  ID
+  NAME
+}
+
+"A keyset page of :multitenant_tag"
+type KeysetPageOfMultitenantTag {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [MultitenantTag!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input MultitenantTagFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input MultitenantTagFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input MultitenantTagFilterInput {
+  and: [MultitenantTagFilterInput!]
+  or: [MultitenantTagFilterInput!]
+  not: [MultitenantTagFilterInput!]
+  id: MultitenantTagFilterId
+  name: MultitenantTagFilterName
+  posts: PostFilterInput
+}
+
+input MultitenantTagSortInput {
+  order: SortOrder
+  field: MultitenantTagSortField!
+}
+
+type MultitenantTag {
+  id: ID!
+  name: String
+  posts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Post!]!
+}
+
+"The result of the :destroy_movie mutation"
+type DestroyMovieResult {
+  "The record that was successfully deleted"
+  result: Movie
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+"The result of the :update_movie mutation"
+type UpdateMovieResult {
+  "The successful result of the mutation"
+  result: Movie
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateMovieInput {
+  title: String
+}
+
+"The result of the :create_movie mutation"
+type CreateMovieResult {
+  "The successful result of the mutation"
+  result: Movie
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateMovieInput {
+  title: String
+  actorIds: [ID!]!
+}
+
+enum MovieSortField {
+  ID
+  TITLE
+}
+
+input MovieFilterTitle {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input MovieFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input MovieFilterInput {
+  and: [MovieFilterInput!]
+  or: [MovieFilterInput!]
+  not: [MovieFilterInput!]
+  id: MovieFilterId
+  title: MovieFilterTitle
+  actors: ActorFilterInput
+  reviews: ReviewFilterInput
+  awards: AwardFilterInput
+}
+
+input MovieSortInput {
+  order: SortOrder
+  field: MovieSortField!
+}
+
+type Movie {
+  id: ID!
+  title: String
+  actors(
+    "How to sort the records in the response"
+    sort: [ActorSortInput]
+
+    "A filter to limit the results"
+    filter: ActorFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): ActorConnection!
+  reviews(
+    "How to sort the records in the response"
+    sort: [ReviewSortInput]
+
+    "A filter to limit the results"
+    filter: ReviewFilterInput
+
+    "The number of records to return. Maximum 250"
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): PageOfReview!
+  awards(
+    "How to sort the records in the response"
+    sort: [AwardSortInput]
+
+    "A filter to limit the results"
+    filter: AwardFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfAward!
+}
+
+"The result of the :module_update_map_types mutation"
+type ModuleUpdateMapTypesResult {
+  "The successful result of the mutation"
+  result: MapTypes
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input ModuleUpdateMapTypesInput {
+  jsonMap: JsonString
+  values: ConstrainedMapInput
+  moduleValues: ConstrainedMapInput
+}
+
+enum MapTypesSortField {
+  ID
+  JSON_MAP
+  VALUES
+}
+
+"A keyset page of :map_types"
+type KeysetPageOfMapTypes {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [MapTypes!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input MapTypesFilterValues {
+  isNil: Boolean
+  eq: ConstrainedMapInput
+  notEq: ConstrainedMapInput
+  in: [ConstrainedMapInput]
+  lessThan: ConstrainedMapInput
+  greaterThan: ConstrainedMapInput
+  lessThanOrEqual: ConstrainedMapInput
+  greaterThanOrEqual: ConstrainedMapInput
+}
+
+input MapTypesFilterJsonMap {
+  isNil: Boolean
+  eq: JsonString
+  notEq: JsonString
+  in: [JsonString]
+  lessThan: JsonString
+  greaterThan: JsonString
+  lessThanOrEqual: JsonString
+  greaterThanOrEqual: JsonString
+}
+
+input MapTypesFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input MapTypesFilterInput {
+  and: [MapTypesFilterInput!]
+  or: [MapTypesFilterInput!]
+  not: [MapTypesFilterInput!]
+  id: MapTypesFilterId
+  jsonMap: MapTypesFilterJsonMap
+  values: MapTypesFilterValues
+}
+
+input MapTypesSortInput {
+  order: SortOrder
+  field: MapTypesSortField!
+}
+
+type MapTypes {
+  id: ID!
+  jsonMap: JsonString
+  values: ConstrainedMap
+}
+
+type CompositePrimaryKeyNotEncoded {
+  first: ID!
+  second: ID!
+}
+
+type CompositePrimaryKey {
+  "A unique identifier"
+  id: ID!
+
+  first: ID!
+
+  second: ID!
+}
+
+"The result of the :create_comment mutation"
+type CreateCommentResult {
+  "The successful result of the mutation"
+  result: Comment
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateCommentInput {
+  text: String
+  postId: ID
+  authorId: ID
+}
+
+enum CommentSortField {
+  ID
+  TEXT
+  TYPE
+  POST_ID
+  AUTHOR_ID
+  TIMESTAMP
+}
+
+input CommentFilterTimestamp {
+  isNil: Boolean
+  eq: DateTime
+  notEq: DateTime
+  in: [DateTime!]
+  lessThan: DateTime
+  greaterThan: DateTime
+  lessThanOrEqual: DateTime
+  greaterThanOrEqual: DateTime
+}
+
+input CommentFilterAuthorId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input CommentFilterPostId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input CommentFilterType {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input CommentFilterText {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input CommentFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input CommentFilterInput {
+  and: [CommentFilterInput!]
+  or: [CommentFilterInput!]
+  not: [CommentFilterInput!]
+  id: CommentFilterId
+  text: CommentFilterText
+  type: CommentFilterType
+  postId: CommentFilterPostId
+  authorId: CommentFilterAuthorId
+  post: PostFilterInput
+  author: UserFilterInput
+  timestamp: CommentFilterTimestamp
+}
+
+input CommentSortInput {
+  order: SortOrder
+  field: CommentSortField!
+}
+
+type Comment {
+  id: ID!
+  text: String
+  type: String
+  postId: ID
+  authorId: ID
+  post: Post
+  author: User
+  timestamp: DateTime
+}
+
+enum AwardSortField {
+  ID
+  NAME
+  MOVIE_ID
+}
+
+"A keyset page of :award"
+type KeysetPageOfAward {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Award!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input AwardFilterMovieId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input AwardFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input AwardFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input AwardFilterInput {
+  and: [AwardFilterInput!]
+  or: [AwardFilterInput!]
+  not: [AwardFilterInput!]
+  id: AwardFilterId
+  name: AwardFilterName
+  movieId: AwardFilterMovieId
+  movie: MovieFilterInput
+}
+
+input AwardSortInput {
+  order: SortOrder
+  field: AwardSortField!
+}
+
+type Award {
+  id: ID!
+  name: String
+  movieId: ID
+  movie: Movie
+}
+
+enum AgentSortField {
+  ID
+  NAME
+}
+
+":agent connection"
+type AgentConnection {
+  "Total count on all pages"
+  count: Int
+
+  "Page information"
+  pageInfo: PageInfo!
+
+  ":agent edges"
+  edges: [AgentEdge!]
+}
+
+":agent edge"
+type AgentEdge {
+  "Cursor"
+  cursor: String!
+
+  ":agent node"
+  node: Agent!
+}
+
+input AgentFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input AgentFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input AgentFilterInput {
+  and: [AgentFilterInput!]
+  or: [AgentFilterInput!]
+  not: [AgentFilterInput!]
+  id: AgentFilterId
+  name: AgentFilterName
+  actors: ActorFilterInput
+}
+
+input AgentSortInput {
+  order: SortOrder
+  field: AgentSortField!
+}
+
+type Agent {
+  id: ID!
+  name: String
+  actors(
+    "How to sort the records in the response"
+    sort: [ActorSortInput]
+
+    "A filter to limit the results"
+    filter: ActorFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): ActorConnection!
+}
+
+enum ActorSortField {
+  ID
+  NAME
+}
+
+":actor connection"
+type ActorConnection {
+  "Total count on all pages"
+  count: Int
+
+  "Page information"
+  pageInfo: PageInfo!
+
+  ":actor edges"
+  edges: [ActorEdge!]
+}
+
+":actor edge"
+type ActorEdge {
+  "Cursor"
+  cursor: String!
+
+  ":actor node"
+  node: Actor!
+}
+
+input ActorFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+}
+
+input ActorFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input ActorFilterInput {
+  and: [ActorFilterInput!]
+  or: [ActorFilterInput!]
+  not: [ActorFilterInput!]
+  id: ActorFilterId
+  name: ActorFilterName
+  movies: MovieFilterInput
+  agents: AgentFilterInput
+}
+
+input ActorSortInput {
+  order: SortOrder
+  field: ActorSortField!
+}
+
+type Actor {
+  id: ID!
+  name: String
+  movies(
+    "How to sort the records in the response"
+    sort: [MovieSortInput]
+
+    "A filter to limit the results"
+    filter: MovieFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Movie!]!
+  agents(
+    "How to sort the records in the response"
+    sort: [AgentSortInput]
+
+    "A filter to limit the results"
+    filter: AgentFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): AgentConnection!
+}
+
+"A relay page info"
+type PageInfo {
+  "When paginating backwards, are there more items?"
+  hasPreviousPage: Boolean!
+
+  "When paginating forwards, are there more items?"
+  hasNextPage: Boolean!
+
+  "When paginating backwards, the cursor to continue"
+  startCursor: String
+
+  "When paginating forwards, the cursor to continue"
+  endCursor: String
+}
+
+"A relay node"
+interface Node {
+  "A unique identifier"
+  id: ID!
+}
+
+enum SortOrder {
+  DESC
+  DESC_NULLS_FIRST
+  DESC_NULLS_LAST
+  ASC
+  ASC_NULLS_FIRST
+  ASC_NULLS_LAST
+}
+
+"An error generated by a failed mutation"
+type MutationError {
+  "The human readable error message"
+  message: String
+
+  "A shorter error message, with vars not replaced"
+  shortMessage: String
+
+  "Replacements for the short message"
+  vars: Json
+
+  "An error code for the given error"
+  code: String
+
+  "The field or fields that produced the error"
+  fields: [String!]
+}
+
+input PostWithCommentsCommentsInput {
+  id: ID
+  text: String
+  authorId: ID
+}
+
+input PostWithCommentsSponsoredCommentsInput {
+  id: ID
+  text: String
+}
+
+input PostWithCommentsLookupCommentsInput {
+  id: ID
+  text: String
+  required: String!
+  authorId: ID
+}
+
+input CreatePostCommentWithTag {
+  id: ID
+  text: String
+  authorId: ID
+}
+
+input PostWithCommentsAndTagsTagsInput {
+  name: String
+}
+
+input PostUpdateWithCommentsCommentsInput {
+  id: ID
+  text: String
+  authorId: ID
+}
+
+input PostUpdateWithCommentsSponsoredCommentsInput {
+  id: ID
+  text: String
+}
+
+"The result of the :create_other_resource_with_common_map mutation"
+type CreateOtherResourceWithCommonMapResult {
+  "The successful result of the mutation"
+  result: OtherResource
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateOtherResourceWithCommonMapInput {
+  commonMapArg: [CommonMapInput!]
+}
+
+enum OtherResourceSortField {
+  ID
+  COMMON_MAP_ATTRIBUTE
+  COMMON_MAP_STRUCT_ATTRIBUTE
+}
+
+input OtherResourceFilterCommonMapStructAttribute {
+  isNil: Boolean
+  eq: CommonMapStructInput
+  notEq: CommonMapStructInput
+  in: [CommonMapStructInput]
+  lessThan: CommonMapStructInput
+  greaterThan: CommonMapStructInput
+  lessThanOrEqual: CommonMapStructInput
+  greaterThanOrEqual: CommonMapStructInput
+}
+
+input OtherResourceFilterCommonMapAttribute {
+  isNil: Boolean
+  eq: CommonMapInput
+  notEq: CommonMapInput
+  in: [CommonMapInput]
+  lessThan: CommonMapInput
+  greaterThan: CommonMapInput
+  lessThanOrEqual: CommonMapInput
+  greaterThanOrEqual: CommonMapInput
+}
+
+input OtherResourceFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+}
+
+input OtherResourceFilterInput {
+  and: [OtherResourceFilterInput!]
+  or: [OtherResourceFilterInput!]
+  not: [OtherResourceFilterInput!]
+  id: OtherResourceFilterId
+  commonMapAttribute: OtherResourceFilterCommonMapAttribute
+  commonMapStructAttribute: OtherResourceFilterCommonMapStructAttribute
+}
+
+input OtherResourceSortInput {
+  order: SortOrder
+  field: OtherResourceSortField!
+}
+
+type OtherResource {
+  id: ID!
+  commonMapAttribute: CommonMap
+  commonMapStructAttribute: CommonMapStruct
+  commonMapCalculation: CommonMap
+}
+
+type RootQueryType {
+  customGetPost(id: ID!): Post
+
+  customGetPostQuery(id: ID!): Post
+
+  getOtherResource(
+    "The id of the record"
+    id: ID!
+  ): OtherResource
+
+  listOtherResources(
+    "How to sort the records in the response"
+    sort: [OtherResourceSortInput]
+
+    "A filter to limit the results"
+    filter: OtherResourceFilterInput
+  ): [OtherResource!]!
+
+  getComment(
+    "The id of the record"
+    id: ID!
+  ): Comment
+
+  listComments(
+    "How to sort the records in the response"
+    sort: [CommentSortInput]
+
+    "A filter to limit the results"
+    filter: CommentFilterInput
+  ): [Comment!]!
+
+  getCompositePrimaryKey(
+    "The id of the record"
+    id: ID!
+  ): CompositePrimaryKey
+
+  getCompositePrimaryKeyNotEncoded(
+    ""
+    first: ID!, ""
+    second: ID!
+  ): CompositePrimaryKeyNotEncoded
+
+  listMapTypes(
+    "How to sort the records in the response"
+    sort: [MapTypesSortInput]
+
+    "A filter to limit the results"
+    filter: MapTypesFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfMapTypes
+
+  getMovie(
+    "The id of the record"
+    id: ID!
+  ): Movie
+
+  getMovies(
+    "How to sort the records in the response"
+    sort: [MovieSortInput]
+
+    "A filter to limit the results"
+    filter: MovieFilterInput
+  ): [Movie!]!
+
+  getMultitenantTag(
+    "The id of the record"
+    id: ID!
+  ): MultitenantTag
+
+  getMultitenantTags(
+    "How to sort the records in the response"
+    sort: [MultitenantTagSortInput]
+
+    "A filter to limit the results"
+    filter: MultitenantTagFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfMultitenantTag
+
+  noObjectCount: [Int!]!
+
+  getNonIdPrimaryKey(
+    "The id of the record"
+    id: ID!
+  ): NonIdPrimaryKey
+
+  postScore(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    score: Float
+  ): [Post!]!
+
+  getPost(
+    "The id of the record"
+    id: ID!
+  ): Post
+
+  "A custom description"
+  getPostWithCustomDescription(
+    "The id of the record"
+    id: ID!
+  ): Post
+
+  postLibrary(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    published: Boolean
+  ): [Post!]!
+
+  paginatedPosts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return. Maximum 250"
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): PageOfPost
+
+  keysetPaginatedPosts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfPost
+
+  otherKeysetPaginatedPosts(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfPost
+
+  paginatedPostsWithoutLimit(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return. Maximum 250"
+    limit: Int!
+
+    "The number of records to skip."
+    offset: Int
+  ): PageOfPost
+
+  paginatedPostsLimitNotRequired(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    "The number of records to return. Maximum 250"
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): PageOfPost
+
+  readPostWithInvalidArgumentsNames(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    invalid1: String
+
+    removeInvalid: Boolean
+  ): [Post!]!
+
+  postCount(published: Boolean): Int!
+
+  postCountWithErrors(published: Boolean): PostCountWithErrorsResult!
+
+  postCustomActionWithInvalidArgumentsNames(invalid1: String, removeInvalid: Boolean): String!
+
+  getRelayTag(
+    "The id of the record"
+    id: ID!
+  ): RelayTag
+
+  getRelayTags(
+    "How to sort the records in the response"
+    sort: [RelayTagSortInput]
+
+    "A filter to limit the results"
+    filter: RelayTagFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): RelayTagConnection
+
+  getSponsoredComment(
+    "The id of the record"
+    id: ID!
+  ): SponsoredComment
+
+  getTag(
+    "The id of the record"
+    id: ID!
+  ): Tag
+
+  getTags(
+    "How to sort the records in the response"
+    sort: [TagSortInput]
+
+    "A filter to limit the results"
+    filter: TagFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfTag
+
+  currentUser(
+    "A filter to limit the results"
+    filter: UserFilterInput
+  ): User
+
+  currentUserWithMetadata(
+    "A filter to limit the results"
+    filter: UserFilterInput
+  ): UserWithBar
+
+  channel(
+    "The id of the record"
+    id: ID!
+  ): Channel
+
+  getSubscribable(
+    "The id of the record"
+    id: ID!
+  ): Subscribable
+}
+
+type Foo {
+  foo: String
+  bar: String
+}
+
+input FooInput {
+  foo: String!
+  bar: String!
+}
+
+enum Status {
+  "The post is open"
+  OPEN
+
+  "The post is closed"
+  CLOSED
+}
+
+type RootMutationType {
+  createOtherResourceWithCommonMap(input: CreateOtherResourceWithCommonMapInput): CreateOtherResourceWithCommonMapResult!
+
+  createComment(input: CreateCommentInput): CreateCommentResult!
+
+  moduleUpdateMapTypes(id: ID!, input: ModuleUpdateMapTypesInput): ModuleUpdateMapTypesResult!
+
+  createMovie(input: CreateMovieInput!): CreateMovieResult!
+
+  updateMovie(id: ID!, input: UpdateMovieInput): UpdateMovieResult!
+
+  destroyMovie(id: ID!): DestroyMovieResult!
+
+  createMultitenantTag(input: CreateMultitenantTagInput): CreateMultitenantTagResult!
+
+  destroyMultitenantTag(id: ID!): DestroyMultitenantTagResult!
+
+  simpleCreatePost(input: SimpleCreatePostInput): SimpleCreatePostResult!
+
+  createPostWithError(input: CreatePostWithErrorInput): CreatePostWithErrorResult!
+
+  createPostWithRequiredError(input: CreatePostWithRequiredErrorInput): CreatePostWithRequiredErrorResult!
+
+  createPost(input: CreatePostInput): CreatePostResult!
+
+  createPostWithLengthConstraint(input: CreatePostWithLengthConstraintInput): CreatePostWithLengthConstraintResult!
+
+  upsertPost(input: UpsertPostInput): UpsertPostResult!
+
+  createPostWithCommonMap(input: CreatePostWithCommonMapInput): CreatePostWithCommonMapResult!
+
+  createPostBarWithFoo(input: CreatePostBarWithFooInput): CreatePostBarWithFooResult!
+
+  createPostBarWithFooWithMap(input: CreatePostBarWithFooWithMapInput): CreatePostBarWithFooWithMapResult!
+
+  createPostBarWithBaz(input: CreatePostBarWithBazInput): CreatePostBarWithBazResult!
+
+  createPostWithComments(input: CreatePostWithCommentsInput): CreatePostWithCommentsResult!
+
+  createPostWithCommentsLookup(input: CreatePostWithCommentsLookupInput): CreatePostWithCommentsLookupResult!
+
+  createPostWithCommentsAndTags(input: CreatePostWithCommentsAndTagsInput!): CreatePostWithCommentsAndTagsResult!
+
+  "Another custom description"
+  createPostWithCustomDescription(input: CreatePostWithCustomDescriptionInput): CreatePostWithCustomDescriptionResult!
+
+  createPostWithInvalidArgumentsNames(input: CreatePostWithInvalidArgumentsNamesInput): CreatePostWithInvalidArgumentsNamesResult!
+
+  updatePost(id: ID!, input: UpdatePostInput): UpdatePostResult!
+
+  updatePostWithComments(id: ID!, input: UpdatePostWithCommentsInput): UpdatePostWithCommentsResult!
+
+  updatePostConfirm(id: ID!, input: UpdatePostConfirmInput): UpdatePostConfirmResult!
+
+  updateBestPost(input: UpdateBestPostInput): UpdateBestPostResult!
+
+  updateBestPostArg(best: Boolean!, input: UpdateBestPostArgInput): UpdateBestPostArgResult!
+
+  updatePostWithHiddenInput(id: ID!, input: UpdatePostWithHiddenInputInput): UpdatePostWithHiddenInputResult!
+
+  updatePostWithInvalidArgumentsNames(id: ID!, input: UpdatePostWithInvalidArgumentsNamesInput): UpdatePostWithInvalidArgumentsNamesResult!
+
+  archivePost(id: ID!, input: ArchivePostInput): ArchivePostResult!
+
+  deletePost(id: ID!): DeletePostResult!
+
+  deleteBestPost: DeleteBestPostResult!
+
+  deletePostWithError(id: ID!): DeletePostWithErrorResult!
+
+  deletePostWithInvalidArgumentsNames(id: ID!, input: DeletePostWithInvalidArgumentsNamesInput): DeletePostWithInvalidArgumentsNamesResult!
+
+  randomPost(input: RandomPostInput): Post
+
+  createRelayTag(input: CreateRelayTagInput): CreateRelayTagResult!
+
+  destroyRelayTag(id: ID!): DestroyRelayTagResult!
+
+  createSponsoredComment(input: CreateSponsoredCommentInput): CreateSponsoredCommentResult!
+
+  createTag(input: CreateTagInput): CreateTagResult!
+
+  destroyTag(id: ID!): DestroyTagResult!
+
+  createUser(input: CreateUserInput): CreateUserResult!
+
+  authenticateWithToken(token: String!, input: AuthenticateWithTokenInput): AuthenticateWithTokenResult!
+
+  deleteCurrentUser: DeleteCurrentUserResult!
+
+  updateChannel(channelId: ID!, input: UpdateChannelInput!): UpdateChannelResult!
+
+  createSubscribable(input: CreateSubscribableInput): CreateSubscribableResult!
+
+  updateSubscribable(id: ID!, input: UpdateSubscribableInput): UpdateSubscribableResult!
+
+  destroySubscribable(id: ID!): DestroySubscribableResult!
+
+  createErrorHandling(input: CreateErrorHandlingInput!): CreateErrorHandlingResult!
+
+  updateErrorHandling(id: ID!, input: UpdateErrorHandlingInput): UpdateErrorHandlingResult!
+}
+
+type RootSubscriptionType {
+  subscribedOnDomain(
+    "A filter to limit the results"
+    filter: SubscribableFilterInput
+  ): subscribed_on_domain_result
+  subscribableEvents(
+    "A filter to limit the results"
+    filter: SubscribableFilterInput
+  ): subscribable_events_result
+  dedupedSubscribableEvents(
+    "A filter to limit the results"
+    filter: SubscribableFilterInput
+  ): deduped_subscribable_events_result
+  subscribableEventsWithArguments(
+    "A filter to limit the results"
+    filter: SubscribableFilterInput
+
+    topic: String!
+  ): subscribable_events_with_arguments_result
+}
+
+"""
+The `Json` scalar type represents arbitrary json string data, represented as UTF-8
+character sequences. The Json type is most often used to represent a free-form
+human-readable json string.
+"""
+scalar JsonString
+
+"""
+The `Json` scalar type represents arbitrary json string data, represented as UTF-8
+character sequences. The Json type is most often used to represent a free-form
+human-readable json string.
+"""
+scalar Json
+
+"""
+The `DateTime` scalar type represents a date and time in the UTC
+timezone. The DateTime appears in a JSON response as an ISO8601 formatted
+string, including UTC timezone ("Z"). The parsed date and time string will
+be converted to UTC if there is an offset.
+"""
+scalar DateTime

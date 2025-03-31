@@ -12,11 +12,11 @@ defmodule AshGraphql.ReadTest do
   test "float fields works correctly" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true, score: 9.8)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true, score: 9.85)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -41,11 +41,11 @@ defmodule AshGraphql.ReadTest do
   test "union fields works correctly" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true, simple_union: 10)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true, simple_union: "foo")
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -53,10 +53,10 @@ defmodule AshGraphql.ReadTest do
         postLibrary {
           text
           simpleUnion {
-            ... on PostSimpleUnionString {
+            ... on SimpleUnionString {
               value
             }
-            ... on PostSimpleUnionInt {
+            ... on SimpleUnionInt {
               value
             }
           }
@@ -83,7 +83,7 @@ defmodule AshGraphql.ReadTest do
     |> Ash.Changeset.for_create(:create,
       name: "My Name"
     )
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -101,13 +101,13 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"currentUserWithMetadata" => %{"bar" => "bar"}}} = result
   end
 
-  test "forbidden fields show errors" do
+  test "forbidden fields show errors for just the forbidden field" do
     user =
       AshGraphql.Test.User
       |> Ash.Changeset.for_create(:create,
         name: "My Name"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -123,16 +123,40 @@ defmodule AshGraphql.ReadTest do
     assert {:ok, result} = resp
 
     assert %{
-             data: %{"currentUserWithMetadata" => nil},
+             data: %{"currentUserWithMetadata" => %{"bar" => "bar"}},
              errors: [%{code: "forbidden_field"}]
            } = result
+  end
+
+  test "forbidden fields are not exposed in filters" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name",
+        secret: "a secret"
+      )
+      |> Ash.create!()
+
+    resp =
+      """
+      query CurrentUserWithMetadata {
+        currentUserWithMetadata(filter: {secret: {eq: "a secret"}}) {
+          bar
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema, context: %{actor: user})
+
+    assert {:ok, result} = resp
+
+    assert %{data: %{"currentUserWithMetadata" => nil}} = result
   end
 
   test "loading relationships with fragment works" do
     user =
       AshGraphql.Test.User
-      |> Ash.Changeset.for_create(:create, %{name: "fred"})
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create, %{name: "My Name"})
+      |> Ash.create!()
 
     post =
       AshGraphql.Test.Post
@@ -144,7 +168,7 @@ defmodule AshGraphql.ReadTest do
           published: true
         }
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     post
     |> Ash.Changeset.for_update(
@@ -153,7 +177,7 @@ defmodule AshGraphql.ReadTest do
         comments: [%{text: "comment", author_id: user.id}]
       }
     )
-    |> AshGraphql.Test.Api.update!()
+    |> Ash.update!()
 
     resp =
       """
@@ -186,7 +210,7 @@ defmodule AshGraphql.ReadTest do
                  %{
                    "comments" => [
                      %{
-                       "author" => %{"name" => "fred"}
+                       "author" => %{"name" => "My Name"}
                      }
                    ]
                  }
@@ -198,11 +222,11 @@ defmodule AshGraphql.ReadTest do
   test "a read with arguments works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "foo", published: true)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: false)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -228,17 +252,17 @@ defmodule AshGraphql.ReadTest do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create,
       text: "foo",
-      integer_as_string_in_api: 1,
+      integer_as_string_in_domain: 1,
       published: true
     )
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
       query PostLibrary {
         postLibrary {
           text
-          integerAsStringInApi
+          integerAsStringInDomain
         }
       }
       """
@@ -247,19 +271,19 @@ defmodule AshGraphql.ReadTest do
     assert {:ok, result} = resp
 
     refute Map.has_key?(result, :errors)
-    assert %{data: %{"postLibrary" => [%{"integerAsStringInApi" => "1"}]}} = result
+    assert %{data: %{"postLibrary" => [%{"integerAsStringInDomain" => "1"}]}} = result
   end
 
   test "reading relationships works, without selecting the id field" do
     post =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "foo", published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     AshGraphql.Test.Comment
     |> Ash.Changeset.for_create(:create, %{text: "stuff"})
     |> Ash.Changeset.force_change_attribute(:post_id, post.id)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -290,12 +314,12 @@ defmodule AshGraphql.ReadTest do
     post =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "foo", published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     AshGraphql.Test.Comment
     |> Ash.Changeset.for_create(:create, %{text: "stuff"})
     |> Ash.Changeset.force_change_attribute(:post_id, post.id)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -332,13 +356,13 @@ defmodule AshGraphql.ReadTest do
     post =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "foo", published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     for _ <- 0..1 do
       AshGraphql.Test.Comment
       |> Ash.Changeset.for_create(:create, %{text: "stuff"})
       |> Ash.Changeset.force_change_attribute(:post_id, post.id)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
     end
 
     resp =
@@ -421,10 +445,73 @@ defmodule AshGraphql.ReadTest do
            ]
   end
 
+  test "custom complexity calculation" do
+    query = """
+    query PostLibrary {
+      paginatedPosts(limit: 2) {
+        results{
+          text
+          sponsoredComments(limit: 5) {
+            text
+          }
+        }
+      }
+    }
+    """
+
+    resp =
+      query
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        analyze_complexity: true,
+        max_complexity: 300
+      )
+
+    assert {:ok, %{errors: errors}} = resp
+
+    assert errors |> Enum.map(& &1.message) |> Enum.sort() == [
+             "Field paginatedPosts is too complex: complexity is 1014 and maximum is 300",
+             "Field results is too complex: complexity is 507 and maximum is 300",
+             "Field sponsoredComments is too complex: complexity is 505 and maximum is 300",
+             "Operation PostLibrary is too complex: complexity is 1014 and maximum is 300"
+           ]
+  end
+
+  test "complexity calculation for aliased top-level queries" do
+    query = """
+    query SponsoredComments {
+      c1: getSponsoredComment(id: "abc-123") {
+        text
+      }
+      c2: getSponsoredComment(id: "def-456") {
+        text
+      }
+      c3: getSponsoredComment(id: "fed-789") {
+        text
+      }
+      c4: getSponsoredComment(id: "cba-012") {
+        text
+      }
+    }
+    """
+
+    resp =
+      query
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        analyze_complexity: true,
+        max_complexity: 300
+      )
+
+    assert {:ok, %{errors: errors}} = resp
+
+    assert errors |> Enum.map(& &1.message) |> Enum.sort() == [
+             "Operation SponsoredComments is too complex: complexity is 404 and maximum is 300"
+           ]
+  end
+
   test "a read with a loaded field works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -452,7 +539,7 @@ defmodule AshGraphql.ReadTest do
   test "the same calculation can be loaded twice with different arguments via aliases" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -475,11 +562,11 @@ defmodule AshGraphql.ReadTest do
   test "the same calculation can be sorted on twice with different arguments via aliases" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -507,7 +594,7 @@ defmodule AshGraphql.ReadTest do
     record =
       AshGraphql.Test.NonIdPrimaryKey
       |> Ash.Changeset.for_create(:create, %{})
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -535,7 +622,7 @@ defmodule AshGraphql.ReadTest do
     record =
       AshGraphql.Test.CompositePrimaryKeyNotEncoded
       |> Ash.Changeset.for_create(:create, %{})
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -570,7 +657,7 @@ defmodule AshGraphql.ReadTest do
     record =
       AshGraphql.Test.CompositePrimaryKey
       |> Ash.Changeset.for_create(:create, %{})
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -601,17 +688,17 @@ defmodule AshGraphql.ReadTest do
       published: true,
       score: 9.8
     )
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     post =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "foo", published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     AshGraphql.Test.Comment
     |> Ash.Changeset.for_create(:create, %{text: "stuff"})
     |> Ash.Changeset.force_change_attribute(:post_id, post.id)
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -631,6 +718,107 @@ defmodule AshGraphql.ReadTest do
     assert result[:data]["getPost"]["latestCommentAt"]
   end
 
+  test "custom queries can load fields" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "foo",
+      published: true,
+      score: 9.8
+    )
+    |> Ash.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> Ash.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> Ash.create!()
+
+    resp =
+      """
+      query Post($id: ID!) {
+        customGetPost(id: $id) {
+          latestCommentAt
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+    assert result[:data]["customGetPost"]["latestCommentAt"]
+  end
+
+  test "custom queries can load fields with `load_fields_on_query`" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "foo",
+      published: true,
+      score: 9.8
+    )
+    |> Ash.create!()
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foo", published: true)
+      |> Ash.create!()
+
+    AshGraphql.Test.Comment
+    |> Ash.Changeset.for_create(:create, %{text: "stuff"})
+    |> Ash.Changeset.force_change_attribute(:post_id, post.id)
+    |> Ash.create!()
+
+    resp =
+      """
+      query Post($id: ID!) {
+        customGetPostQuery(id: $id) {
+          latestCommentAt
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok, result} = resp
+    assert result[:data]["customGetPostQuery"]["latestCommentAt"]
+  end
+
+  test "custom queries can handle errors" do
+    resp =
+      """
+      query Post($id: ID!) {
+        customGetPost(id: $id) {
+          id
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => Ash.UUID.generate()
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert [
+             %{
+               code: "not_found",
+               message: "could not be found",
+               path: ["customGetPost"],
+               short_message: "could not be found"
+             }
+           ] = result[:errors]
+  end
+
   test "a read with custom types works" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create,
@@ -638,7 +826,7 @@ defmodule AshGraphql.ReadTest do
       published: true,
       foo: %{foo: "foo", bar: "bar"}
     )
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     resp =
       """
@@ -682,7 +870,7 @@ defmodule AshGraphql.ReadTest do
       |> Ash.Changeset.for_create(:create,
         name: "My Name"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     doc = """
     query CurrentUser {
@@ -702,6 +890,66 @@ defmodule AshGraphql.ReadTest do
             }} == Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
   end
 
+  test "a read with a relationship filtered by an actor" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> Ash.create!()
+
+    user2 =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create,
+        name: "My Name"
+      )
+      |> Ash.create!()
+
+    user_id = user.id
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          author_id: user.id,
+          text: "a",
+          published: true
+        }
+      )
+      |> Ash.create!()
+
+    doc = """
+    query {
+      getPost(id: "#{post.id}") {
+        authorThatIsActor{
+          id
+        }
+      }
+    }
+    """
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{
+                  "authorThatIsActor" => %{
+                    "id" => ^user_id
+                  }
+                }
+              }
+            }} = Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user})
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{
+                  "authorThatIsActor" => nil
+                }
+              }
+            }} = Absinthe.run(doc, AshGraphql.Test.Schema, context: %{actor: user2})
+  end
+
   test "a multitenant object can be read if tenant is set" do
     tenant = "Some Tenant"
 
@@ -712,7 +960,7 @@ defmodule AshGraphql.ReadTest do
         [name: "My Tag1"],
         tenant: tenant
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     doc = """
     query MultitenantTag($id: ID!) {
@@ -746,7 +994,7 @@ defmodule AshGraphql.ReadTest do
         [name: "My Tag"],
         tenant: tenant
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     post =
       AshGraphql.Test.Post
@@ -757,7 +1005,7 @@ defmodule AshGraphql.ReadTest do
         on_no_match: {:create, :create_action},
         on_lookup: :relate
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     doc = """
     query MultitenantPostTag($id: ID!) {
@@ -798,7 +1046,7 @@ defmodule AshGraphql.ReadTest do
         :create,
         name: "My Tag"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     post_1 =
       AshGraphql.Test.Post
@@ -809,7 +1057,7 @@ defmodule AshGraphql.ReadTest do
         on_no_match: {:create, :create_action},
         on_lookup: :relate
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", published: true)
@@ -819,7 +1067,7 @@ defmodule AshGraphql.ReadTest do
       on_no_match: {:create, :create_action},
       on_lookup: :relate
     )
-    |> AshGraphql.Test.Api.create!()
+    |> Ash.create!()
 
     doc = """
     query ($id: ID!) {
@@ -847,8 +1095,11 @@ defmodule AshGraphql.ReadTest do
   describe "loading through types" do
     test "loading through an embed works" do
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(embed_foo: %{type: "foo", foo: "fred"}, published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create,
+        embed_foo: %{foo: "fred"},
+        published: true
+      )
+      |> Ash.create!()
 
       resp =
         """
@@ -881,24 +1132,32 @@ defmodule AshGraphql.ReadTest do
 
     test "loading through a union works" do
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(text: "a", embed_union: %{type: :foo, foo: "fred"}, published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create,
+        text: "a",
+        embed_union_new_type: %{type: :foo, foo: "fred"},
+        published: true
+      )
+      |> Ash.create!()
 
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(text: "b", embed_union: %{type: :bar, bar: "george"}, published: true)
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create,
+        text: "b",
+        embed_union_new_type: %{type: :bar, bar: "george"},
+        published: true
+      )
+      |> Ash.create!()
 
       resp =
         """
         query postLibrary {
           postLibrary(sort: {field: TEXT}) {
-            embedUnion{
-              ...on PostEmbedUnionFoo {
+            embedUnionNewType{
+              ...on EmbedUnionNewTypeFoo {
                 value {
                   alwaysNil
                 }
               }
-              ...on PostEmbedUnionBar {
+              ...on EmbedUnionNewTypeBar {
                 value {
                   alwaysFalse
                 }
@@ -917,14 +1176,14 @@ defmodule AshGraphql.ReadTest do
                data: %{
                  "postLibrary" => [
                    %{
-                     "embedUnion" => %{
+                     "embedUnionNewType" => %{
                        "value" => %{
                          "alwaysNil" => nil
                        }
                      }
                    },
                    %{
-                     "embedUnion" => %{
+                     "embedUnionNewType" => %{
                        "value" => %{
                          "alwaysFalse" => false
                        }
@@ -937,20 +1196,20 @@ defmodule AshGraphql.ReadTest do
 
     test "loading through an unnested union works" do
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(
+      |> Ash.Changeset.for_create(:create,
         text: "a",
         embed_union_unnested: %{type: :foo, foo: "fred"},
         published: true
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(
+      |> Ash.Changeset.for_create(:create,
         text: "b",
         embed_union_unnested: %{type: :bar, bar: "george"},
         published: true
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
       resp =
         """
@@ -993,20 +1252,20 @@ defmodule AshGraphql.ReadTest do
 
     test "loading through a list of unnested union with aliases works" do
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(
+      |> Ash.Changeset.for_create(:create,
         text: "a",
         embed_union_new_type_list: [%{type: :foo, foo: "fred"}],
         published: true
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(
+      |> Ash.Changeset.for_create(:create,
         text: "b",
         embed_union_new_type_list: [%{type: :bar, bar: "george"}],
         published: true
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
       resp =
         """
@@ -1055,20 +1314,20 @@ defmodule AshGraphql.ReadTest do
 
     test "loading through an unnested union with aliases works" do
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(
+      |> Ash.Changeset.for_create(:create,
         text: "a",
         embed_union_unnested: %{type: :foo, foo: "fred"},
         published: true
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(
+      |> Ash.Changeset.for_create(:create,
         text: "b",
         embed_union_unnested: %{type: :bar, bar: "george"},
         published: true
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
       resp =
         """
@@ -1115,16 +1374,77 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
 
+    test "loading through an unnested union with aliases works when one is nil" do
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create,
+        text: "a",
+        embed_union_unnested: %{type: :foo, foo: "fred"},
+        published: true
+      )
+      |> Ash.create!()
+
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create,
+        text: "b",
+        published: true
+      )
+      |> Ash.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            foo: embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysNil
+              }
+              ...on BarEmbed {
+                alwaysFalse
+              }
+            }
+            bar: embedUnionUnnested{
+              ...on FooEmbed {
+                alwaysTrue
+              }
+              ...on BarEmbed {
+                alwaysTrue
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "postLibrary" => [
+                   %{
+                     "bar" => %{"alwaysTrue" => true},
+                     "foo" => %{"alwaysNil" => nil}
+                   },
+                   %{
+                     "bar" => nil,
+                     "foo" => nil
+                   }
+                 ]
+               }
+             } = result
+    end
+
     test "loading relationships through a union with fragments works" do
       user1 =
         AshGraphql.Test.User
         |> Ash.Changeset.for_create(:create, %{name: "fred"})
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!(authorize?: false)
 
       user2 =
         AshGraphql.Test.User
         |> Ash.Changeset.for_create(:create, %{name: "barney"})
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!(authorize?: false)
 
       post1 =
         AshGraphql.Test.Post
@@ -1136,7 +1456,7 @@ defmodule AshGraphql.ReadTest do
             published: true
           }
         )
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!()
 
       post1 =
         post1
@@ -1147,7 +1467,7 @@ defmodule AshGraphql.ReadTest do
             sponsored_comments: [%{text: "sponsored"}]
           }
         )
-        |> AshGraphql.Test.Api.update!()
+        |> Ash.update!()
 
       resp =
         """
@@ -1192,8 +1512,8 @@ defmodule AshGraphql.ReadTest do
     test "loading relationships through an unnested union with aliases works" do
       user =
         AshGraphql.Test.User
-        |> Ash.Changeset.for_create(:create, %{name: "fred"})
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.Changeset.for_create(:create, %{name: "My Name"})
+        |> Ash.create!()
 
       post =
         AshGraphql.Test.Post
@@ -1205,7 +1525,7 @@ defmodule AshGraphql.ReadTest do
             published: true
           }
         )
-        |> AshGraphql.Test.Api.create!()
+        |> Ash.create!()
 
       post =
         post
@@ -1216,7 +1536,7 @@ defmodule AshGraphql.ReadTest do
             sponsored_comments: [%{text: "sponsored"}]
           }
         )
-        |> AshGraphql.Test.Api.update!()
+        |> Ash.update!()
 
       resp =
         """
@@ -1279,12 +1599,12 @@ defmodule AshGraphql.ReadTest do
                        %{
                          "__typename" => "SponsoredComment",
                          "text" => "sponsored",
-                         "p" => %{"id" => ^post_id, "user" => %{"name" => "fred"}}
+                         "p" => %{"id" => ^post_id, "user" => %{"name" => "My Name"}}
                        },
                        %{
                          "__typename" => "Comment",
                          "text" => "comment",
-                         "author" => %{"name" => "fred"}
+                         "author" => %{"name" => "My Name"}
                        }
                      ],
                      "bar" => [
@@ -1296,7 +1616,7 @@ defmodule AshGraphql.ReadTest do
                        %{
                          "__typename" => "Comment",
                          "text" => "comment",
-                         "author" => %{"name" => "fred"}
+                         "author" => %{"name" => "My Name"}
                        }
                      ]
                    }

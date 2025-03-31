@@ -4,43 +4,79 @@ defmodule AshGraphql.ErrorsTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
       Application.delete_env(:ash_graphql, :policies)
 
       AshGraphql.TestHelpers.stop_ets()
     end)
   end
 
-  test "errors can be configured to be shown in the root" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api, graphql: [root_level_errors?: true])
-
-    resp =
-      """
-      mutation CreatePost($input: CreatePostInput) {
-        createPost(input: $input) {
-          result{
-            text
-          }
-          errors{
-            message
-          }
-        }
-      }
-      """
-      |> Absinthe.run(AshGraphql.Test.Schema,
-        variables: %{
-          "input" => %{
-            "text" => "foobar",
-            "confirmation" => "foobar2"
+  describe "when root level errors are enabled" do
+    test "errors that occur are shown at the root level" do
+      resp =
+        """
+        mutation CreatePost($input: CreatePostInput) {
+          createPost(input: $input) {
+            result{
+              text
+            }
+            errors{
+              message
+            }
           }
         }
-      )
+        """
+        |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
+          variables: %{
+            "input" => %{
+              "text" => "foobar",
+              "confirmation" => "foobar2"
+            }
+          }
+        )
 
-    assert {:ok, result} = resp
+      assert {:ok, result} = resp
 
-    assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
+      assert %{data: %{"createPost" => nil}, errors: [%{message: message}]} = result
+      assert message =~ "confirmation did not match value"
+    end
 
-    assert message =~ "confirmation did not match value"
+    test "the root level errors field is not present when no errors occur" do
+      resp =
+        """
+        mutation CreatePost($input: CreatePostInput) {
+          createPost(input: $input) {
+            result{
+              text
+            }
+            errors{
+              message
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
+          variables: %{
+            "input" => %{
+              "text" => "foobar",
+              "confirmation" => "foobar"
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      assert %{
+               data: %{
+                 "createPost" => %{
+                   "result" => %{"text" => "foobar"},
+                   "errors" => []
+                 }
+               }
+             } = result
+
+      refute Map.has_key?(result, :errors)
+    end
   end
 
   test "raised errors are by default not shown" do
@@ -68,7 +104,7 @@ defmodule AshGraphql.ErrorsTest do
 
              assert {:ok, result} = resp
 
-             assert %{data: %{"createPostWithError" => nil}, errors: [%{message: message}]} =
+             assert %{data: nil, errors: [%{message: message}]} =
                       result
 
              assert message =~ "Something went wrong."
@@ -76,7 +112,9 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "raised errors can be configured to be shown" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api, graphql: [show_raised_errors?: true])
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
+      graphql: [show_raised_errors?: true]
+    )
 
     resp =
       """
@@ -111,8 +149,8 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "showing raised errors alongside root errors shows raised errors in the root" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
-      graphql: [show_raised_errors?: true, root_level_errors?: true]
+    Application.put_env(:ash_graphql, AshGraphql.Test.RootLevelErrorsDomain,
+      graphql: [show_raised_errors?: true]
     )
 
     resp =
@@ -128,7 +166,7 @@ defmodule AshGraphql.ErrorsTest do
         }
       }
       """
-      |> Absinthe.run(AshGraphql.Test.Schema,
+      |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema,
         variables: %{
           "input" => %{
             "text" => "foobar"
@@ -139,9 +177,7 @@ defmodule AshGraphql.ErrorsTest do
     assert {:ok, result} = resp
 
     assert %{
-             data: %{
-               "createPostWithError" => nil
-             },
+             data: %{"createPostWithError" => nil},
              errors: [
                %{message: message}
              ]
@@ -161,7 +197,7 @@ defmodule AshGraphql.ErrorsTest do
                  [name: "My Tag4"],
                  tenant: tenant
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              resp =
                """
@@ -192,7 +228,7 @@ defmodule AshGraphql.ErrorsTest do
                  [name: "My Tag2"],
                  tenant: tenant
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              resp =
                """
@@ -223,7 +259,7 @@ defmodule AshGraphql.ErrorsTest do
                  [name: "My Tag3"],
                  tenant: tenant
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              post =
                AshGraphql.Test.Post
@@ -234,7 +270,7 @@ defmodule AshGraphql.ErrorsTest do
                  on_no_match: {:create, :create_action},
                  on_lookup: :relate
                )
-               |> AshGraphql.Test.Api.create!()
+               |> Ash.create!()
 
              resp =
                """
@@ -270,7 +306,7 @@ defmodule AshGraphql.ErrorsTest do
       |> Ash.Changeset.for_create(:create,
         name: "My Name"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -319,7 +355,7 @@ defmodule AshGraphql.ErrorsTest do
       |> Ash.Changeset.for_create(:create,
         name: "My Name"
       )
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.create!()
 
     resp =
       """
@@ -354,5 +390,255 @@ defmodule AshGraphql.ErrorsTest do
            } = result
 
     assert message =~ "Breakdown"
+  end
+
+  test "error items are a non-nullable list of non-nullables" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "CreateUserResult") {
+          fields {
+            name
+            type {
+              kind
+              ofType {
+                kind
+                ofType {
+                  kind
+                  ofType {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    errors =
+      data["__type"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "errors" end)
+
+    assert errors == %{
+             "name" => "errors",
+             "type" => %{
+               "kind" => "NON_NULL",
+               "ofType" => %{
+                 "kind" => "LIST",
+                 "ofType" => %{
+                   "kind" => "NON_NULL",
+                   "ofType" => %{"name" => "MutationError"}
+                 }
+               }
+             }
+           }
+  end
+
+  test "MutationError fields items are non-nullable" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "MutationError") {
+          fields {
+            name
+            type {
+              kind
+              ofType {
+                kind
+                ofType {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    fields =
+      data["__type"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "fields" end)
+
+    assert fields["type"]["kind"] == "LIST"
+    assert fields["type"]["ofType"]["kind"] == "NON_NULL"
+    assert fields["type"]["ofType"]["ofType"]["name"] == "String"
+  end
+
+  test "mutation result is non nullable without root level errors" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          mutationType {
+            name
+            fields {
+              name
+              type {
+                kind
+                ofType {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    create_post_mutation =
+      data["__schema"]["mutationType"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "createPost" end)
+
+    assert create_post_mutation["type"]["kind"] == "NON_NULL"
+    assert create_post_mutation["type"]["ofType"]["name"] == "CreatePostResult"
+  end
+
+  test "mutation result is nullable with root level errors" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          mutationType {
+            name
+            fields {
+              name
+              type {
+                name
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.RootLevelErrorsSchema)
+
+    create_post_mutation =
+      data["__schema"]["mutationType"]["fields"]
+      |> Enum.find(fn field -> field["name"] == "createPost" end)
+
+    assert create_post_mutation["type"]["name"] == "CreatePostResult"
+  end
+
+  defmodule DomainLevelErrorHandler do
+    # Allow error messages to remain un-interpolated (the opposite of the default error handler)
+    def handle_error(error, _context) do
+      error
+    end
+  end
+
+  test "default error handler is not also applied when an error handler is defined on domain" do
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
+      graphql: [error_handler: {DomainLevelErrorHandler, :handle_error, []}]
+    )
+
+    resp =
+      """
+      mutation CreatePostWithLengthConstraint($input: CreatePostWithLengthConstraintInput) {
+        createPostWithLengthConstraint(input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "too long"
+          }
+        }
+      )
+
+    assert {:ok, %{data: %{"createPostWithLengthConstraint" => %{"errors" => [errors]}}}} = resp
+    assert %{"message" => message} = errors
+    assert message == "must have length of no more than %{max}"
+  end
+
+  test "errors can be intercepted at resource level" do
+    variables = %{
+      "input" => %{
+        "name" => "name"
+      }
+    }
+
+    document =
+      """
+      mutation CreateErrorHandling($input: CreateErrorHandlingInput!) {
+        createErrorHandling(input: $input) {
+          result {
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+
+    Absinthe.run(document, AshGraphql.Test.Schema, variables: variables)
+
+    %{data: %{"createErrorHandling" => %{"errors" => [error]}}} =
+      Absinthe.run!(document, AshGraphql.Test.Schema, variables: variables)
+
+    assert error["message"] =~ "replaced!"
+  end
+
+  test "errors carry action in context" do
+    create_variables = %{
+      "input" => %{
+        "name" => "name"
+      }
+    }
+
+    create_document =
+      """
+      mutation CreateErrorHandling($input: CreateErrorHandlingInput!) {
+        createErrorHandling(input: $input) {
+          result {
+            id
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+
+    %{data: %{"createErrorHandling" => %{"result" => %{"id" => id}}}} =
+      Absinthe.run!(create_document, AshGraphql.Test.Schema, variables: create_variables)
+
+    update_variables = %{
+      "id" => id,
+      "input" => %{
+        "name" => "new_name"
+      }
+    }
+
+    update_document =
+      """
+      mutation UpdateErrorHandling($id: ID!, $input: UpdateErrorHandlingInput!) {
+        updateErrorHandling(id: $id, input: $input) {
+          result {
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+
+    %{data: %{"updateErrorHandling" => %{"errors" => [error]}}} =
+      Absinthe.run!(update_document, AshGraphql.Test.Schema, variables: update_variables)
+
+    assert error["message"] == "replaced! update"
   end
 end

@@ -2,6 +2,7 @@ defmodule AshGraphql.Test.MultitenantPostTag do
   @moduledoc false
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets
 
   actions do

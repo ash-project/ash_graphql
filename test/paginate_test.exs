@@ -17,13 +17,13 @@ defmodule AshGraphql.PaginateTest do
         post =
           AshGraphql.Test.Post
           |> Ash.Changeset.for_create(:create, text: text, published: true)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
 
         for text <- letters do
           AshGraphql.Test.Comment
           |> Ash.Changeset.for_create(:create, text: text)
           |> Ash.Changeset.manage_relationship(:post, post, type: :append_and_remove)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
         end
       end
 
@@ -67,6 +67,44 @@ defmodule AshGraphql.PaginateTest do
       assert is_binary(start_keyset)
       assert is_binary(end_keyset)
     end
+
+    test "works if action has both offset and keyset pagination" do
+      doc = """
+      query OtherKeysetPaginatedPosts {
+        otherKeysetPaginatedPosts(sort: [{field: TEXT, order: ASC_NULLS_LAST}]) {
+          count
+          startKeyset
+          endKeyset
+          results{
+            text
+            keyset
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "otherKeysetPaginatedPosts" => %{
+                    "startKeyset" => start_keyset,
+                    "endKeyset" => end_keyset,
+                    "count" => 5,
+                    "results" => [
+                      %{"text" => "a", "keyset" => keyset},
+                      %{"text" => "b"},
+                      %{"text" => "c"},
+                      %{"text" => "d"},
+                      %{"text" => "e"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+      assert is_binary(keyset)
+      assert is_binary(start_keyset)
+      assert is_binary(end_keyset)
+    end
   end
 
   describe "offset pagination" do
@@ -77,13 +115,13 @@ defmodule AshGraphql.PaginateTest do
         post =
           AshGraphql.Test.Post
           |> Ash.Changeset.for_create(:create, text: text, published: true)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
 
         for text <- letters do
           AshGraphql.Test.Comment
           |> Ash.Changeset.for_create(:create, text: text)
           |> Ash.Changeset.manage_relationship(:post, post, type: :append_and_remove)
-          |> AshGraphql.Test.Api.create!()
+          |> Ash.create!()
         end
       end
 

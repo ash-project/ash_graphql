@@ -4,13 +4,56 @@ defmodule AshGraphql.Resource.Info do
   alias Spark.Dsl.Extension
 
   @doc "The queries exposed for the resource"
-  def queries(resource) do
-    Extension.get_entities(resource, [:graphql, :queries])
+  def queries(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.queries/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :queries]))
   end
 
   @doc "The mutations exposed for the resource"
-  def mutations(resource) do
-    Extension.get_entities(resource, [:graphql, :mutations]) || []
+  def mutations(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.mutations/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :mutations]) || [])
+  end
+
+  @doc "The subscriptions exposed for the resource"
+  def subscriptions(resource, domain_or_domains \\ []) do
+    module =
+      if is_atom(resource) do
+        resource
+      else
+        Spark.Dsl.Extension.get_persisted(resource, :module)
+      end
+
+    domain_or_domains
+    |> List.wrap()
+    |> Enum.flat_map(&AshGraphql.Domain.Info.subscriptions/1)
+    |> Enum.filter(&(&1.resource == module))
+    |> Enum.concat(Extension.get_entities(resource, [:graphql, :subscriptions]) || [])
+  end
+
+  @doc "The pubsub module used for subscriptions"
+  def subscription_pubsub(resource) do
+    Extension.get_opt(resource, [:graphql, :subscriptions], :pubsub)
   end
 
   @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"
@@ -24,7 +67,7 @@ defmodule AshGraphql.Resource.Info do
   end
 
   def managed_relationships_auto?(resource) do
-    Extension.get_opt(resource, [:graphql, :managed_relationships], :auto?, false)
+    Extension.get_opt(resource, [:graphql, :managed_relationships], :auto?, true)
   end
 
   @doc "The managed_relationshi configuration for a given action/argument"
@@ -37,10 +80,14 @@ defmodule AshGraphql.Resource.Info do
         managed_relationship.action == action.name
     end)
     |> then(fn managed_relationship ->
-      if managed_relationships_auto?(resource) do
-        managed_relationship || default_managed_relationship(action, argument)
+      if managed_relationship && managed_relationship.ignore? do
+        nil
       else
-        managed_relationship
+        if managed_relationships_auto?(resource) do
+          managed_relationship || default_managed_relationship(action, argument)
+        else
+          managed_relationship
+        end
       end
     end)
   end
@@ -52,7 +99,7 @@ defmodule AshGraphql.Resource.Info do
 
          _ ->
            nil
-       end) do
+       end) && map_type?(argument.type) do
       %AshGraphql.Resource.ManagedRelationship{
         argument: argument.name,
         action: action,
@@ -63,6 +110,11 @@ defmodule AshGraphql.Resource.Info do
       }
     end
   end
+
+  defp map_type?({:array, type}), do: map_type?(type)
+  defp map_type?(Ash.Type.Map), do: true
+  defp map_type?(:map), do: true
+  defp map_type?(_), do: false
 
   @doc "The graphql type of the resource"
   def type(resource) do
@@ -84,6 +136,11 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :attribute_types, [])
   end
 
+  @doc "Graphql nullability overrides for the resource"
+  def nullable_fields(resource) do
+    Extension.get_opt(resource, [:graphql], :nullable_fields, [])
+  end
+
   @doc "The field name to place the keyset of a result in"
   def keyset_field(resource) do
     Extension.get_opt(resource, [:graphql], :keyset_field, nil)
@@ -94,14 +151,22 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :field_names, [])
   end
 
-  @doc "Fields to hide from the graphql api"
+  @doc "Fields to hide from the graphql domain"
   def hide_fields(resource) do
     Extension.get_opt(resource, [:graphql], :hide_fields, [])
   end
 
+  @doc "Fields to show in the graphql domain"
+  def show_fields(resource) do
+    Extension.get_opt(resource, [:graphql], :show_fields, nil)
+  end
+
   @doc "Wether or not a given field will be shown"
   def show_field?(resource, field) do
-    field not in hide_fields(resource)
+    hide_fields = hide_fields(resource)
+    show_fields = show_fields(resource) || [field]
+
+    field not in hide_fields and field in show_fields
   end
 
   @doc "Which relationships should be included in the generated type"
@@ -110,14 +175,24 @@ defmodule AshGraphql.Resource.Info do
       resource |> Ash.Resource.Info.public_relationships() |> Enum.map(& &1.name)
   end
 
+  @doc "Pagination configuration for list relationships"
+  def paginate_relationship_with(resource) do
+    Extension.get_opt(resource, [:graphql], :paginate_relationship_with, [])
+  end
+
   @doc "Graphql argument name overrides for the resource"
   def argument_names(resource) do
     Extension.get_opt(resource, [:graphql], :argument_names, [])
   end
 
-  @doc "Graphql type overrides for the resource"
+  @doc "Graphql attribute input type overrides for the resource"
   def attribute_input_types(resource) do
     Extension.get_opt(resource, [:graphql], :attribute_input_types, [])
+  end
+
+  @doc "Graphql argument type overrides for the resource"
+  def argument_input_types(resource) do
+    Extension.get_opt(resource, [:graphql], :argument_input_types, [])
   end
 
   @doc "The delimiter for a resource with a composite primary key"
@@ -127,7 +202,7 @@ defmodule AshGraphql.Resource.Info do
 
   @doc "Wether or not an object should be generated, or if one with the type name for this resource should be used."
   def generate_object?(resource) do
-    Extension.get_opt(resource, [:graphql], :generate_object?, nil)
+    Extension.get_opt(resource, [:graphql], :generate_object?, true)
   end
 
   @doc "Fields that may be filtered on"
@@ -136,9 +211,27 @@ defmodule AshGraphql.Resource.Info do
   end
 
   @doc "May the specified field be filtered on?"
-  def filterable_field?(resource, field) do
+  def filterable_field?(resource, field_name) do
     filterable_fields = AshGraphql.Resource.Info.filterable_fields(resource)
 
-    is_nil(filterable_fields) or field.name in filterable_fields
+    is_nil(filterable_fields) or field_name in filterable_fields
+  end
+
+  @doc "An error handler for errors produced by the resource"
+  def error_handler(resource) do
+    if resource,
+      do:
+        Extension.get_opt(
+          resource,
+          [:graphql],
+          :error_handler,
+          nil,
+          true
+        )
+  end
+
+  @doc "The complexity callback `{mod, fun}` for this type"
+  def complexity(resource) do
+    Extension.get_opt(resource, [:graphql], :complexity, nil)
   end
 end

@@ -3,7 +3,7 @@ defmodule AshGraphql.CreateTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
 
       AshGraphql.TestHelpers.stop_ets()
     end)
@@ -96,6 +96,54 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "a create with a managed relationship that does a lookup works" do
+    comment1 = Ash.Seed.seed!(%AshGraphql.Test.Comment{text: "a"})
+
+    resp =
+      """
+      mutation CreatePostWithCommentsLookup($input: CreatePostWithCommentsLookupInput) {
+        createPostWithCommentsLookup(input: $input) {
+          result{
+            text
+            comments(sort:{field:TEXT}){
+              text
+            }
+          }
+          errors{
+            message
+            fields
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "text" => "foobar",
+            "comments" => [
+              %{"id" => comment1.id},
+              %{"text" => "b", "required" => "foo"}
+            ]
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithCommentsLookup" => %{
+                 "result" => %{
+                   "text" => "foobar",
+                   "comments" => [%{"text" => "a"}, %{"text" => "b"}]
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a union type can be written to" do
     resp =
       """
@@ -104,10 +152,10 @@ defmodule AshGraphql.CreateTest do
           result{
             text1
             simpleUnion {
-              ... on PostSimpleUnionString {
+              ... on SimpleUnionString {
                 value
               }
-              ... on PostSimpleUnionInt {
+              ... on SimpleUnionInt {
                 value
               }
             }
@@ -146,6 +194,54 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "an embedded union type uses the correct types" do
+    assert {:ok, resp} =
+             """
+             mutation SimpleCreatePost($input: SimpleCreatePostInput) {
+               simpleCreatePost(input: $input) {
+                 result{
+                   text1
+                   simpleUnion {
+                     ... on SimpleUnionString {
+                       value
+                     }
+                     ... on SimpleUnionInt {
+                       value
+                     }
+                   }
+                 }
+                 errors{
+                   message
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema,
+               variables: %{
+                 "input" => %{
+                   "text1" => "foo",
+                   "simpleUnion" => %{
+                     "string" => "5"
+                   }
+                 }
+               }
+             )
+
+    refute Map.has_key?(resp, :errors)
+
+    assert %{
+             data: %{
+               "simpleCreatePost" => %{
+                 "result" => %{
+                   "simpleUnion" => %{
+                     "value" => "5"
+                   }
+                 }
+               }
+             }
+           } = resp
+  end
+
   test "an embedded union type can be written to" do
     resp =
       """
@@ -153,13 +249,13 @@ defmodule AshGraphql.CreateTest do
         simpleCreatePost(input: $input) {
           result{
             text1
-            embedUnion {
-              ... on PostEmbedUnionFoo {
+            embedUnionNewType {
+              ... on EmbedUnionNewTypeFoo {
                 value {
                   foo
                 }
               }
-              ... on PostEmbedUnionBar {
+              ... on EmbedUnionNewTypeBar {
                 value {
                   bar
                 }
@@ -176,7 +272,7 @@ defmodule AshGraphql.CreateTest do
         variables: %{
           "input" => %{
             "text1" => "foo",
-            "embedUnion" => %{
+            "embedUnionNewType" => %{
               "foo" => %{
                 "foo" => "10"
               }
@@ -193,7 +289,7 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "simpleCreatePost" => %{
                  "result" => %{
-                   "embedUnion" => %{
+                   "embedUnionNewType" => %{
                      "value" => %{
                        "foo" => "10"
                      }
@@ -212,12 +308,12 @@ defmodule AshGraphql.CreateTest do
           result{
             text1
             embedUnionNewType {
-              ... on FooBarFoo {
+              ... on EmbedUnionNewTypeFoo {
                 value {
                   foo
                 }
               }
-              ... on FooBarBar {
+              ... on EmbedUnionNewTypeBar {
                 value {
                   bar
                 }
@@ -304,7 +400,7 @@ defmodule AshGraphql.CreateTest do
         simpleCreatePost(input: $input) {
           result{
             text1
-            integerAsStringInApi
+            integerAsStringInDomain
           }
           errors{
             message
@@ -313,7 +409,7 @@ defmodule AshGraphql.CreateTest do
       }
       """
       |> Absinthe.run(AshGraphql.Test.Schema,
-        variables: %{"input" => %{"text1" => "foo", "integerAsStringInApi" => "1"}}
+        variables: %{"input" => %{"text1" => "foo", "integerAsStringInDomain" => "1"}}
       )
 
     assert {:ok, result} = resp
@@ -324,7 +420,7 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "simpleCreatePost" => %{
                  "result" => %{
-                   "integerAsStringInApi" => "1"
+                   "integerAsStringInDomain" => "1"
                  }
                }
              }
@@ -332,7 +428,10 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "a create can load a calculation on a related belongs_to record" do
-    author = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.User, name: "bob"))
+    author =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create, name: "My Name")
+      |> Ash.create!()
 
     resp =
       """
@@ -365,7 +464,7 @@ defmodule AshGraphql.CreateTest do
                  "result" => %{
                    "fullText" => "foobar",
                    "author" => %{
-                     "nameTwice" => "bob bob"
+                     "nameTwice" => "My Name My Name"
                    }
                  }
                }
@@ -376,7 +475,7 @@ defmodule AshGraphql.CreateTest do
   test "a create with a managed relationship works with many_to_many and [on_lookup: :relate, on_match: :relate]" do
     resp =
       """
-      mutation CreatePostWithCommentsAndTags($input: CreatePostWithCommentsAndTagsInput) {
+      mutation CreatePostWithCommentsAndTags($input: CreatePostWithCommentsAndTagsInput!) {
         createPostWithCommentsAndTags(input: $input) {
           result{
             text
@@ -487,8 +586,8 @@ defmodule AshGraphql.CreateTest do
   test "an upsert works" do
     post =
       AshGraphql.Test.Post
-      |> Ash.Changeset.new(text: "foobar")
-      |> AshGraphql.Test.Api.create!()
+      |> Ash.Changeset.for_create(:create, text: "foobar")
+      |> Ash.create!()
 
     resp =
       """
@@ -560,7 +659,7 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "errors can be intercepted" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
       graphql: [
         error_handler: {ErrorHandler, :handle_error, []}
       ]
@@ -600,7 +699,7 @@ defmodule AshGraphql.CreateTest do
   end
 
   test "root level error" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 
@@ -710,44 +809,6 @@ defmodule AshGraphql.CreateTest do
              data: %{
                "createPost" => %{
                  "result" => %{"text" => "foobar", "statusEnum" => "OPEN"}
-               }
-             }
-           } = result
-  end
-
-  test "enum newtypes can be written to" do
-    resp =
-      """
-      mutation CreatePost($input: CreatePostInput) {
-        createPost(input: $input) {
-          result{
-            text
-            enumNewType
-          }
-          errors{
-            message
-          }
-        }
-      }
-      """
-      |> Absinthe.run(AshGraphql.Test.Schema,
-        variables: %{
-          "input" => %{
-            "text" => "foobar",
-            "confirmation" => "foobar",
-            "enumNewType" => "BIZ"
-          }
-        }
-      )
-
-    assert {:ok, result} = resp
-
-    refute Map.has_key?(result, :errors)
-
-    assert %{
-             data: %{
-               "createPost" => %{
-                 "result" => %{"text" => "foobar", "enumNewType" => "BIZ"}
                }
              }
            } = result

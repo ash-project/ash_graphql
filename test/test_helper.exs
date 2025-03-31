@@ -1,3 +1,3 @@
 ExUnit.start()
 
-Code.ensure_compiled(AshGraphql.Test.Api)
+Code.ensure_compiled(AshGraphql.Test.Domain)

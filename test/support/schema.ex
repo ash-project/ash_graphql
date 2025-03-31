@@ -3,11 +3,34 @@ defmodule AshGraphql.Test.Schema do
 
   use Absinthe.Schema
 
-  @apis [AshGraphql.Test.Api]
+  @domains [AshGraphql.Test.Domain, AshGraphql.Test.OtherDomain]
 
-  use AshGraphql, apis: @apis
+  use AshGraphql, domains: @domains, generate_sdl_file: "priv/schema.graphql"
 
   query do
+    field :custom_get_post, :post do
+      arg(:id, non_null(:id))
+
+      resolve(fn %{id: post_id}, resolution ->
+        with {:ok, post} when not is_nil(post) <- Ash.get(AshGraphql.Test.Post, post_id) do
+          post
+          |> AshGraphql.load_fields(AshGraphql.Test.Post, resolution)
+        end
+        |> AshGraphql.handle_errors(AshGraphql.Test.Post, resolution)
+      end)
+    end
+
+    field :custom_get_post_query, :post do
+      arg(:id, non_null(:id))
+
+      resolve(fn %{id: post_id}, resolution ->
+        AshGraphql.Test.Post
+        |> Ash.Query.do_filter(id: post_id)
+        |> AshGraphql.load_fields_on_query(resolution)
+        |> Ash.read_one(not_found_error?: true)
+        |> AshGraphql.handle_errors(AshGraphql.Test.Post, resolution)
+      end)
+    end
   end
 
   mutation do
@@ -26,5 +49,8 @@ defmodule AshGraphql.Test.Schema do
   enum :status do
     value(:open, description: "The post is open")
     value(:closed, description: "The post is closed")
+  end
+
+  subscription do
   end
 end

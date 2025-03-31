@@ -8,7 +8,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidChanges do
       message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
+      code: "invalid_changes",
       fields: List.wrap(error.fields)
     }
   end
@@ -20,7 +20,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
       message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
+      code: "invalid_query",
       fields: [error.field]
     }
   end
@@ -31,8 +31,8 @@ defimpl AshGraphql.Error, for: Ash.Error.Page.InvalidKeyset do
     %{
       message: "Invalid value provided as a keyset for %{key}: %{value}",
       short_message: "invalid keyset",
+      code: "invalid_keyset",
       vars: Map.merge(Map.new(error.vars), %{value: inspect(error.value), key: error.key}),
-      code: Ash.ErrorKind.code(error),
       fields: List.wrap(Map.get(error, :key))
     }
   end
@@ -43,8 +43,8 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidAttribute do
     %{
       message: error.message,
       short_message: error.message,
+      code: "invalid_attribute",
       vars: Map.new(error.vars),
-      code: Ash.ErrorKind.code(error),
       fields: [error.field]
     }
   end
@@ -54,8 +54,8 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.InvalidArgument do
   def to_error(error) do
     %{
       message: error.message,
-      code: Ash.ErrorKind.code(error),
       short_message: error.message,
+      code: "invalid_argument",
       vars: Map.new(error.vars),
       fields: [error.field]
     }
@@ -66,8 +66,8 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidArgument do
   def to_error(error) do
     %{
       message: error.message,
-      code: Ash.ErrorKind.code(error),
       short_message: error.message,
+      code: "invalid_argument",
       vars: Map.new(error.vars),
       fields: [error.field]
     }
@@ -79,7 +79,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Changes.Required do
     %{
       message: "is required",
       short_message: "is required",
-      code: Ash.ErrorKind.code(error),
+      code: "required",
       vars: error.vars,
       fields: [error.field]
     }
@@ -91,9 +91,9 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.NotFound do
     %{
       message: "could not be found",
       short_message: "could not be found",
+      code: "not_found",
       fields: Map.keys(error.primary_key || %{}),
-      vars: error.vars,
-      code: Ash.ErrorKind.code(error)
+      vars: error.vars
     }
   end
 end
@@ -103,8 +103,8 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.Required do
     %{
       message: "is required",
       short_message: "is required",
+      code: "required",
       vars: error.vars,
-      code: Ash.ErrorKind.code(error),
       fields: [error.field]
     }
   end
@@ -138,6 +138,54 @@ defimpl AshGraphql.Error, for: Ash.Error.Forbidden.ForbiddenField do
       vars: %{},
       code: "forbidden_field",
       fields: []
+    }
+  end
+end
+
+defimpl AshGraphql.Error, for: Ash.Error.Query.ReadActionRequiresActor do
+  def to_error(_error) do
+    %{
+      message: "forbidden",
+      short_message: "forbidden",
+      vars: %{},
+      code: "forbidden",
+      fields: []
+    }
+  end
+end
+
+defimpl AshGraphql.Error, for: Ash.Error.Invalid.InvalidPrimaryKey do
+  def to_error(error) do
+    %{
+      message: "invalid primary key provided",
+      short_message: "invalid primary key provided",
+      fields: [],
+      code: "invalid_primary_key",
+      vars: Map.new(error.vars)
+    }
+  end
+end
+
+defimpl AshGraphql.Error, for: AshAuthentication.Errors.AuthenticationFailed do
+  def to_error(_error) do
+    %{
+      message: "Authentication failed",
+      short_message: "Authentication failed",
+      fields: [],
+      code: "authentication_failed",
+      vars: %{}
+    }
+  end
+end
+
+defimpl AshGraphql.Error, for: AshAuthentication.Errors.InvalidToken do
+  def to_error(_error) do
+    %{
+      message: "An invalid token was presented",
+      short_message: "Invalid token",
+      fields: [],
+      code: "invalid_token",
+      vars: %{}
     }
   end
 end

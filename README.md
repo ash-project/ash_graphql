@@ -1,9 +1,35 @@
-# AshGraphQL
+![Logo](https://github.com/ash-project/ash/blob/main/logos/cropped-for-header-black-text.png?raw=true#gh-light-mode-only)
+![Logo](https://github.com/ash-project/ash/blob/main/logos/cropped-for-header-white-text.png?raw=true#gh-dark-mode-only)
 
-![Ash CI](https://github.com/ash-project/ash_graphql/workflows/Ash%20CI/badge.svg)
+![Elixir CI](https://github.com/ash-project/ash_graphql/workflows/CI/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hex version badge](https://img.shields.io/hexpm/v/ash_graphql.svg)](https://hex.pm/packages/ash_graphql)
+[![Hexdocs badge](https://img.shields.io/badge/docs-hexdocs-purple)](https://hexdocs.pm/ash_graphql)
 
-AshGraphQL is a [GraphQL](https://graphql.org/) extension for the [Ash framework](https://ash-hq.org/). It gives you an efficient way to expose your application resources over a GraphQL API. You configure what you want to expose and AshGraphQL will generate an [Absinthe](https://github.com/absinthe-graphql/absinthe) schema which will resolve data straight from your Ash resources.
+# AshGraphql
 
-See the [getting started guide](https://ash-hq.org/docs/guides/ash_graphql/latest/tutorials/getting-started-with-graphql.md) for information on setting it up, and see the `AshGraphql.Resource` documentation for docs on its DSL. See the [hexdocs](https://ash-hq.org/docs/dsl/ash_graphql/latest/ashgraphql-resource) for more information.
+Welcome! This is the extension for building GraphQL APIs with [Ash](https://hexdocs.pm/ash). The generated GraphQL APIs are powered by [Absinthe](http://hexdocs.pm/absinthe). Generate a powerful Graphql API in minutes!
+
+## Tutorials
+
+- [Getting Started with GraphQL](documentation/tutorials/getting-started-with-graphql.md)
+
+## Topics
+
+- [Authorize with GraphQL](documentation/topics/authorize-with-graphql.md)
+- [Handle Errors](documentation/topics/handle-errors.md)
+- [Monitoring](documentation/topics/monitoring.md)
+- [Use JSON with GraphQL](documentation/topics/use-json-with-graphql.md)
+- [Use Subscriptions with GraphQL](documentation/topics/use-subscriptions-with-graphql.md)
+- [GraphQL Generation](documentation/topics/graphql-generation.md)
+- [Modifying the Resolution](documentation/topics/modifying-the-resolution.md)
+- [Relay](documentation/topics/relay.md)
+- [Use Enums with GraphQL](documentation/topics/use-enums-with-graphql.md)
+- [Use Maps with GraphQL](documentation/topics/use-maps-with-graphql.md)
+- [Use Unions with GraphQL](documentation/topics/use-unions-with-graphql.md)
+- [Upgrading to 1.0](documentation/topics/upgrade.md)
+
+## Reference
+
+- [AshGraphql.Resource DSL](documentation/dsls/DSL-AshGraphql.Resource.md)
+- [AshGraphql.Domain DSL](documentation/dsls/DSL-AshGraphql.Domain.md)

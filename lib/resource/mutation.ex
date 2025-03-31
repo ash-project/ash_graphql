@@ -6,9 +6,13 @@ defmodule AshGraphql.Resource.Mutation do
     :type,
     :identity,
     :read_action,
+    :resource,
     :upsert?,
     :upsert_identity,
-    :modify_resolution
+    :modify_resolution,
+    :relay_id_translations,
+    :description,
+    hide_inputs: []
   ]
 
   @create_schema [
@@ -22,10 +26,15 @@ defmodule AshGraphql.Resource.Mutation do
       doc: "The action to use for the mutation.",
       required: true
     ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
     upsert?: [
       type: :boolean,
       default: false,
-      doc: "Whether or not to use the `upsert?: true` option when calling `YourApi.create/2`."
+      doc: "Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`."
     ],
     upsert_identity: [
       type: :atom,
@@ -37,6 +46,18 @@ defmodule AshGraphql.Resource.Mutation do
       doc: """
       An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      default: [],
+      doc: "A list of inputs to hide from the mutation."
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 
@@ -51,6 +72,11 @@ defmodule AshGraphql.Resource.Mutation do
       doc: "The action to use for the mutation.",
       required: true
     ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
     identity: [
       type: :atom,
       doc: """
@@ -61,6 +87,17 @@ defmodule AshGraphql.Resource.Mutation do
       type: :atom,
       doc:
         "The read action to use to fetch the record to be updated. Defaults to the primary read action."
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "A list of inputs to hide from the mutation."
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 
@@ -75,6 +112,11 @@ defmodule AshGraphql.Resource.Mutation do
       doc: "The action to use for the mutation.",
       required: true
     ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
     read_action: [
       type: :atom,
       doc:
@@ -85,6 +127,17 @@ defmodule AshGraphql.Resource.Mutation do
       doc: """
       The identity to use to fetch the record to be destroyed. Use `false` if no identity is required.
       """
+    ],
+    hide_inputs: [
+      type: {:list, :atom},
+      doc: "A list of inputs to hide from the mutation."
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
+      default: []
     ]
   ]
 

@@ -17,7 +17,7 @@ defmodule AshGraphql.Types.EmbedUnionNewTypeUnnested do
       ]
     ]
 
-  def graphql_type, do: :foo_bar_unnested
+  def graphql_type(_), do: :foo_bar_unnested
 
   def graphql_unnested_unions(_), do: [:foo, :bar]
 end

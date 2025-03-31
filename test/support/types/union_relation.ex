@@ -4,18 +4,22 @@ defmodule UnionRelation do
 
   @types [
     comment: [
-      type: Comment,
+      type: :struct,
+      constraints: [instance_of: Comment],
       tag: :type,
       tag_value: :comment
     ],
     sponsored_comment: [
-      type: SponsoredComment,
+      type: :struct,
+      constraints: [instance_of: SponsoredComment],
       tag: :type,
       tag_value: :sponsored
     ]
   ]
 
-  @structs_to_names Keyword.new(@types, fn {key, value} -> {value[:type], key} end)
+  @structs_to_names Keyword.new(@types, fn {key, value} ->
+                      {value[:constraints][:instance_of], key}
+                    end)
 
   use Ash.Type.NewType,
     subtype_of: :union,

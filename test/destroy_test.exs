@@ -3,18 +3,21 @@ defmodule AshGraphql.DestroyTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
 
       AshGraphql.TestHelpers.stop_ets()
     end)
   end
 
   test "a destroy works" do
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar")
+      |> Ash.create!()
 
     resp =
       """
-      mutation DeletePost($id: ID) {
+      mutation DeletePost($id: ID!) {
         deletePost(id: $id) {
           result{
             text
@@ -35,14 +38,18 @@ defmodule AshGraphql.DestroyTest do
 
     refute Map.has_key?(result, :errors)
     assert %{data: %{"deletePost" => %{"result" => %{"text" => "foobar"}}}} = result
+    refute Ash.get!(AshGraphql.Test.Post, post.id, error?: false)
   end
 
   test "a soft destroy works" do
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar")
+      |> Ash.create!()
 
     resp =
       """
-      mutation ArchivePost($id: ID) {
+      mutation ArchivePost($id: ID!) {
         deletePost(id: $id) {
           result{
             text
@@ -66,9 +73,9 @@ defmodule AshGraphql.DestroyTest do
   end
 
   test "a destroy with a configured read action and no identity works" do
-    AshGraphql.Test.Api.create!(
-      Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
-    )
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+    |> Ash.create!()
 
     resp =
       """
@@ -92,11 +99,14 @@ defmodule AshGraphql.DestroyTest do
   end
 
   test "a destroy with an error" do
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """
-      mutation DeleteWithError($id: ID) {
+      mutation DeleteWithError($id: ID!) {
         deletePostWithError(id: $id) {
           result{
             text
@@ -128,7 +138,7 @@ defmodule AshGraphql.DestroyTest do
   test "destroying a non-existent record returns a not found error" do
     resp =
       """
-      mutation DeletePost($id: ID) {
+      mutation DeletePost($id: ID!) {
         deletePost(id: $id) {
           result{
             text
@@ -154,15 +164,18 @@ defmodule AshGraphql.DestroyTest do
   end
 
   test "root level error on destroy" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """
-      mutation DeletePost($id: ID) {
+      mutation DeletePost($id: ID!) {
         deletePostWithError(id: $id) {
           result{
             text
@@ -182,5 +195,36 @@ defmodule AshGraphql.DestroyTest do
     assert {:ok, result} = resp
 
     assert %{errors: [%{message: "could not be found"}]} = result
+  end
+
+  test "destroy properly allows policy authorized destroys" do
+    user =
+      AshGraphql.Test.User |> Ash.Changeset.for_create(:create) |> Ash.create!(authorize?: false)
+
+    resp =
+      """
+      mutation DeleteCurrentUser {
+        deleteCurrentUser {
+          result{
+            name
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        context: %{
+          actor: user
+        }
+      )
+
+    assert {:ok,
+            %{
+              data: %{
+                "deleteCurrentUser" => %{"errors" => [], "result" => %{"name" => nil}}
+              }
+            }} = resp
   end
 end

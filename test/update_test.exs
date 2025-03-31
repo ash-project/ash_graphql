@@ -3,7 +3,7 @@ defmodule AshGraphql.UpdateTest do
 
   setup do
     on_exit(fn ->
-      Application.delete_env(:ash_graphql, AshGraphql.Test.Api)
+      Application.delete_env(:ash_graphql, AshGraphql.Test.Domain)
 
       try do
         AshGraphql.TestHelpers.stop_ets()
@@ -15,11 +15,14 @@ defmodule AshGraphql.UpdateTest do
   end
 
   test "an update works" do
-    post = AshGraphql.Test.Api.create!(Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar"))
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar")
+      |> Ash.create!()
 
     resp =
       """
-      mutation UpdatePost($id: ID, $input: UpdatePostInput) {
+      mutation UpdatePost($id: ID!, $input: UpdatePostInput) {
         updatePost(id: $id, input: $input) {
           result{
             text
@@ -137,9 +140,9 @@ defmodule AshGraphql.UpdateTest do
 
   test "an update with a configured read action and no identity works" do
     post =
-      AshGraphql.Test.Api.create!(
-        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
-      )
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """
@@ -169,9 +172,9 @@ defmodule AshGraphql.UpdateTest do
   end
 
   test "an update with a configured read action and no identity works with an argument the same name as an attribute" do
-    AshGraphql.Test.Api.create!(
-      Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
-    )
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+    |> Ash.create!()
 
     resp =
       """
@@ -203,13 +206,13 @@ defmodule AshGraphql.UpdateTest do
 
   test "arguments are threaded properly" do
     post =
-      AshGraphql.Test.Api.create!(
-        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
-      )
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """
-      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID) {
+      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID!) {
         updatePostConfirm(input: $input, id: $id) {
           result{
             text
@@ -242,18 +245,18 @@ defmodule AshGraphql.UpdateTest do
   end
 
   test "root level error" do
-    Application.put_env(:ash_graphql, AshGraphql.Test.Api,
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
       graphql: [show_raised_errors?: true, root_level_errors?: true]
     )
 
     post =
-      AshGraphql.Test.Api.create!(
-        Ash.Changeset.new(AshGraphql.Test.Post, text: "foobar", best: true)
-      )
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+      |> Ash.create!()
 
     resp =
       """
-      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID) {
+      mutation UpdatePostConfirm($input: UpdatePostConfirmInput, $id: ID!) {
         updatePostConfirm(input: $input, id: $id) {
           result{
             text
@@ -279,5 +282,117 @@ defmodule AshGraphql.UpdateTest do
     assert %{errors: [%{message: message}]} = result
 
     assert message =~ "confirmation did not match value"
+  end
+
+  test "referencing a hidden input is not allowed" do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "foobar")
+      |> Ash.create!()
+
+    resp =
+      """
+      mutation UpdatePostWithHiddenInput($id: ID!, $input: UpdatePostWithHiddenInputInput) {
+        updatePostWithHiddenInput(id: $id, input: $input) {
+          result{
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id,
+          "input" => %{
+            "score" => 10
+          }
+        }
+      )
+
+    assert {
+             :ok,
+             %{
+               errors: [
+                 %{
+                   message:
+                     "Argument \"input\" has invalid value $input.\nIn field \"score\": Unknown field."
+                 }
+               ]
+             }
+           } =
+             resp
+  end
+
+  test "an update with a configured read action and no identity works in resource with simple data layer" do
+    channel =
+      AshGraphql.Test.Channel
+      |> Ash.Changeset.for_create(:create, name: "test channel 1")
+      |> Ash.create!()
+
+    resp =
+      """
+      mutation UpdateChannel($channelId: ID!, $input: UpdateChannelInput!) {
+        updateChannel(channelId: $channelId, input: $input) {
+          result{
+            channel {
+              name
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "channelId" => channel.id,
+          "input" => %{"name" => "test channel 2"}
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: %{
+               "updateChannel" => %{"result" => %{"channel" => %{"name" => "test channel 2"}}}
+             }
+           } =
+             result
+  end
+
+  test "authenticateWithToken" do
+    _user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create, %{name: "Name"})
+      |> Ash.create!(authorize?: false)
+
+    resp =
+      """
+      mutation AuthenticateWithToken($token: String!) {
+        authenticateWithToken(token: $token) {
+          result {
+            name
+          }
+          errors {
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema, variables: %{"token" => "invalid-token"})
+
+    assert {:ok,
+            %{
+              data: %{
+                "authenticateWithToken" => %{
+                  "errors" => [%{"message" => "test error"}],
+                  "result" => nil
+                }
+              }
+            }} = resp
   end
 end

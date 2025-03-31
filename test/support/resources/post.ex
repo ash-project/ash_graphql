@@ -36,7 +36,7 @@ end
 
 defmodule FullTextCalculation do
   @moduledoc false
-  use Ash.Calculation
+  use Ash.Resource.Calculation
 
   def calculate(posts, _, _) do
     Enum.map(posts, fn post ->
@@ -44,7 +44,7 @@ defmodule FullTextCalculation do
     end)
   end
 
-  def select(_, _, _), do: [:text1, :text2]
+  def load(_, _, _), do: [:text1, :text2]
 end
 
 defmodule AfterActionRaiseResourceError do
@@ -58,13 +58,51 @@ defmodule AfterActionRaiseResourceError do
   end
 end
 
+defmodule BarWithFoo do
+  @moduledoc false
+  use Ash.Type.NewType,
+    subtype_of: :map,
+    constraints: [
+      fields: [
+        foo: [
+          type: :string,
+          allow_nil?: false
+        ]
+      ]
+    ]
+
+  use AshGraphql.Type
+
+  @impl true
+  def graphql_input_type(_), do: :bar_with_foo
+end
+
+defmodule BarWithBaz do
+  @moduledoc false
+  use Ash.Type.NewType,
+    subtype_of: :map,
+    constraints: [
+      fields: [
+        baz: [
+          type: :integer,
+          allow_nil?: false
+        ]
+      ]
+    ]
+
+  use AshGraphql.Type
+
+  @impl true
+  def graphql_input_type(_), do: :bar_with_baz
+end
+
 defmodule RelatedPosts do
   @moduledoc false
   use Ash.Resource.ManualRelationship
   require Ash.Query
 
-  def load(posts, _opts, %{api: api}) do
-    posts = api.load!(posts, :tags)
+  def load(posts, _opts, _context) do
+    posts = Ash.load!(posts, :tags)
 
     {
       :ok,
@@ -78,7 +116,7 @@ defmodule RelatedPosts do
           AshGraphql.Test.Post
           |> Ash.Query.filter(tags.id in ^tag_ids)
           |> Ash.Query.filter(id != ^post.id)
-          |> api.read!()
+          |> Ash.read!()
 
         {post.id, other_posts}
       end)
@@ -90,31 +128,86 @@ end
 defmodule AshGraphql.Test.Post do
   @moduledoc false
   alias AshGraphql.Test.Comment
+  alias AshGraphql.Test.CommonMap
+  alias AshGraphql.Test.CommonMapStruct
   alias AshGraphql.Test.SponsoredComment
 
   use Ash.Resource,
+    domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshGraphql.Resource]
 
   require Ash.Query
 
+  policies do
+    policy always() do
+      authorize_if(always())
+    end
+
+    policy action(:count) do
+      authorize_if(actor_present())
+    end
+  end
+
+  field_policies do
+    field_policy :* do
+      authorize_if(always())
+    end
+
+    field_policy [:private_calculation, :private_attribute] do
+      forbid_if(always())
+    end
+  end
+
   graphql do
     type :post
 
-    attribute_types integer_as_string_in_api: :string
-    attribute_input_types integer_as_string_in_api: :string
+    attribute_types integer_as_string_in_domain: :string
+    attribute_input_types integer_as_string_in_domain: :string
+    argument_input_types create_bar_with_foo_with_map: [bar: :bar_with_foo]
+
+    argument_names create_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   update_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   destroy_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   read_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ],
+                   custom_action_with_invalid_arguments_names: [
+                     invalid_1: :invalid1,
+                     remove_invalid?: :remove_invalid
+                   ]
+
     field_names text_1_and_2: :text1_and2
     keyset_field :keyset
 
     queries do
       get :get_post, :read
+      get :get_post_with_custom_description, :read, description: "A custom description"
       list :post_library, :library
-      list :post_score, :score
       list :paginated_posts, :paginated
       list :keyset_paginated_posts, :keyset_paginated
+      list :other_keyset_paginated_posts, :keyset_and_offset_paginated, paginate_with: :keyset
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
+      list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
       action(:post_count, :count)
+      action(:post_count_with_errors, :count, error_location: :in_result)
+
+      action(
+        :post_custom_action_with_invalid_arguments_names,
+        :custom_action_with_invalid_arguments_names
+      )
     end
 
     managed_relationships do
@@ -135,10 +228,22 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_error, :create_with_error
       create :create_post_with_required_error, :create_with_required_error
       create :create_post, :create_confirm
+      create :create_post_with_length_constraint, :create_with_length_constraint
       create :upsert_post, :upsert, upsert?: true
 
+      create :create_post_with_common_map, :create_with_common_map
+      create :create_post_bar_with_foo, :create_bar_with_foo
+      create :create_post_bar_with_foo_with_map, :create_bar_with_foo_with_map
+      create :create_post_bar_with_baz, :create_bar_with_baz
+
       create :create_post_with_comments, :with_comments
+      create :create_post_with_comments_lookup, :with_comments_lookup
       create :create_post_with_comments_and_tags, :with_comments_and_tags
+
+      create :create_post_with_custom_description, :create,
+        description: "Another custom description"
+
+      create :create_post_with_invalid_arguments_names, :create_with_invalid_arguments_names
 
       update :update_post, :update
       update :update_post_with_comments, :update_with_comments
@@ -146,10 +251,18 @@ defmodule AshGraphql.Test.Post do
       update :update_best_post, :update, read_action: :best_post, identity: false
       update :update_best_post_arg, :update, read_action: :best_post_arg, identity: false
 
+      update :update_post_with_hidden_input, :update do
+        hide_inputs([:score])
+      end
+
+      update :update_post_with_invalid_arguments_names, :update_with_invalid_arguments_names
+
       destroy :archive_post, :archive
       destroy :delete_post, :destroy
       destroy :delete_best_post, :destroy, read_action: :best_post, identity: false
       destroy :delete_post_with_error, :destroy_with_error
+
+      destroy :delete_post_with_invalid_arguments_names, :destroy_with_invalid_arguments_names
 
       # this is a mutation just for testing
       action(:random_post, :random)
@@ -157,6 +270,8 @@ defmodule AshGraphql.Test.Post do
   end
 
   actions do
+    default_accept(:*)
+
     create :create do
       primary?(true)
       metadata(:foo, :string)
@@ -166,18 +281,50 @@ defmodule AshGraphql.Test.Post do
       change(set_attribute(:author_id, arg(:author_id)))
     end
 
+    create :create_bar_with_foo do
+      argument(:bar, BarWithFoo)
+    end
+
+    create :create_bar_with_foo_with_map do
+      argument(:bar, :map)
+    end
+
+    create :create_bar_with_baz do
+      argument(:bar, BarWithBaz)
+    end
+
+    create :create_with_common_map do
+      argument(:common_map_arg, {:array, CommonMap})
+    end
+
     create :create_with_error do
       change(RaiseResourceError)
+    end
+
+    create :create_with_length_constraint do
+      validate(string_length(:text, max: 2))
     end
 
     create :create_with_required_error do
       change(ReturnResourceError)
     end
 
+    create :create_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
     create :upsert do
       argument(:id, :uuid)
 
       change(AshGraphql.Test.ForceChangeId)
+    end
+
+    action :custom_action_with_invalid_arguments_names, :atom do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+
+      run(fn _input, _ -> :ok end)
     end
 
     action :count, :integer do
@@ -191,7 +338,7 @@ defmodule AshGraphql.Test.Post do
             __MODULE__
           end
 
-        input.api.count(query)
+        Ash.count(query)
       end)
     end
 
@@ -203,13 +350,21 @@ defmodule AshGraphql.Test.Post do
       run(fn input, _ ->
         __MODULE__
         |> Ash.Query.limit(1)
-        |> input.api.read_one()
+        |> Ash.read_one()
       end)
     end
 
     create :create_confirm do
       argument(:confirmation, :string)
       validate(confirm(:text, :confirmation))
+    end
+
+    create :with_comments_lookup do
+      argument(:comments, {:array, :map})
+
+      change(
+        manage_relationship(:comments, on_lookup: :relate, on_no_match: {:create, :with_required})
+      )
     end
 
     create :with_comments do
@@ -236,6 +391,16 @@ defmodule AshGraphql.Test.Post do
       pagination(
         required?: true,
         keyset?: true,
+        countable: true,
+        default_limit: 20
+      )
+    end
+
+    read :keyset_and_offset_paginated do
+      pagination(
+        required?: true,
+        keyset?: true,
+        offset?: true,
         countable: true,
         default_limit: 20
       )
@@ -268,7 +433,11 @@ defmodule AshGraphql.Test.Post do
     end
 
     read :best_post do
-      filter(expr(best == true))
+      manual(fn query, _, _ ->
+        __MODULE__
+        |> Ash.Query.filter(best == true)
+        |> Ash.read()
+      end)
     end
 
     read :best_post_arg do
@@ -279,9 +448,15 @@ defmodule AshGraphql.Test.Post do
       end)
     end
 
+    read :read_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
     update :update, primary?: true
 
     update :update_with_comments do
+      require_atomic?(false)
       argument(:comments, {:array, :map})
       argument(:sponsored_comments, {:array, :map})
 
@@ -294,6 +469,11 @@ defmodule AshGraphql.Test.Post do
       validate(confirm(:text, :confirmation))
     end
 
+    update :update_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
     destroy(:destroy, primary?: true)
 
     destroy :archive do
@@ -302,133 +482,181 @@ defmodule AshGraphql.Test.Post do
     end
 
     destroy :destroy_with_error do
+      require_atomic?(false)
       change(AfterActionRaiseResourceError)
+    end
+
+    destroy :destroy_with_invalid_arguments_names do
+      argument(:invalid_1, :string)
+      argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
     end
   end
 
   attributes do
     uuid_primary_key(:id)
 
-    attribute(:text, :string)
-    attribute(:published, :boolean, default: false)
-    attribute(:foo, AshGraphql.Test.Foo)
-    attribute(:status, AshGraphql.Test.Status)
-    attribute(:status_enum, AshGraphql.Test.StatusEnum)
-    attribute(:best, :boolean)
-    attribute(:score, :float)
-    attribute(:integer_as_string_in_api, :integer)
-    attribute(:embed, AshGraphql.Test.Embed)
-    attribute(:text1, :string)
-    attribute(:text2, :string)
-    attribute(:visibility, :atom, constraints: [one_of: [:public, :private]])
+    attribute(:text, :string, public?: true)
+    attribute(:published, :boolean, default: false, public?: true)
+    attribute(:foo, AshGraphql.Test.Foo, public?: true)
+    attribute(:status, AshGraphql.Test.Status, public?: true)
+    attribute(:status_enum, AshGraphql.Test.StatusEnum, public?: true)
 
-    attribute(:simple_union, :union,
-      constraints: [
-        types: [
-          int: [
-            type: :integer
-          ],
-          string: [
-            type: :string
-          ]
-        ]
-      ]
+    attribute(:enum_with_ash_graphql_description, AshGraphql.Test.EnumWithAshGraphqlDescription,
+      public?: true
     )
 
-    attribute(:embed_foo, Foo)
+    attribute(:enum_with_ash_description, AshGraphql.Test.EnumWithAshDescription, public?: true)
+    attribute(:best, :boolean, public?: true)
+    attribute(:score, :float, public?: true)
+    attribute(:integer_as_string_in_domain, :integer, public?: true)
+    attribute(:embed, AshGraphql.Test.Embed, public?: true)
+    attribute(:text1, :string, public?: true)
+    attribute(:text2, :string, public?: true)
+    attribute(:visibility, :atom, constraints: [one_of: [:public, :private]], public?: true)
 
-    attribute(:embed_union, :union,
-      constraints: [
-        types: [
-          foo: [
-            type: Foo,
-            tag: :type,
-            tag_value: :foo
-          ],
-          bar: [
-            type: Bar,
-            tag: :type,
-            tag_value: :bar
-          ]
-        ]
-      ]
+    attribute(:simple_union, AshGraphql.Test.Types.SimpleUnion, public?: true)
+
+    attribute(:embed_foo, Foo, public?: true)
+
+    attribute(:embed_union_new_type_list, {:array, AshGraphql.Types.EmbedUnionNewTypeUnnested},
+      public?: true
     )
 
-    attribute(:embed_union_new_type_list, {:array, AshGraphql.Types.EmbedUnionNewTypeUnnested})
-    attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType)
-    attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested)
-    attribute(:enum_new_type, AshGraphql.Types.EnumNewType)
-    attribute(:string_new_type, AshGraphql.Types.StringNewType)
+    attribute(:embed_union_new_type, AshGraphql.Types.EmbedUnionNewType, public?: true)
+    attribute(:embed_union_unnested, AshGraphql.Types.EmbedUnionNewTypeUnnested, public?: true)
+    attribute(:string_new_type, AshGraphql.Types.StringNewType, public?: true)
+
+    attribute(:private_attribute, :boolean) do
+      default(true)
+      public?(true)
+    end
 
     attribute :required_string, :string do
       allow_nil? false
       default("test")
+      public?(true)
     end
 
-    create_timestamp(:created_at, private?: false)
+    attribute :common_map_attribute, CommonMap do
+      public?(true)
+    end
+
+    attribute :common_map_struct_attribute, CommonMapStruct do
+      public?(true)
+    end
+
+    create_timestamp(:created_at, public?: true)
   end
 
   calculations do
-    calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation)
-    calculate(:full_text, :string, FullTextCalculation)
+    calculate(:static_calculation, :string, AshGraphql.Test.StaticCalculation, public?: true)
+
+    calculate :common_map_calculation, CommonMap do
+      public?(true)
+      calculation(fn records, _ -> {:ok, []} end)
+    end
+
+    calculate(:private_calculation, AshGraphql.Test.Embed, fn records, _ ->
+      records
+      |> Enum.map(fn
+        %{private_attribute: true} ->
+          %AshGraphql.Test.Embed{}
+
+        %{private_attribute: true} ->
+          nil
+      end)
+    end) do
+      public?(true)
+      load(:private_attribute)
+    end
+
+    calculate(:full_text, :string, FullTextCalculation, public?: true)
 
     calculate(:text_1_and_2, :string, expr(text1 <> ^arg(:separator) <> text2)) do
+      public?(true)
+
       argument :separator, :string do
         allow_nil? false
         default(" ")
       end
     end
 
-    calculate(:post_comments, {:array, UnionRelation}, fn record, _ ->
-      # This is very inefficient, do not copy this pattern into your own app!!!
-      values =
-        [
-          SponsoredComment |> AshGraphql.Test.Api.read!(),
-          Comment |> AshGraphql.Test.Api.read!()
-        ]
-        |> List.flatten()
-        |> Stream.filter(&(&1.post_id == record.id))
-        |> Enum.map(&%Ash.Union{type: UnionRelation.struct_to_name(&1), value: &1})
+    calculate(
+      :post_comments,
+      {:array, UnionRelation},
+      fn records, _ ->
+        # This is very inefficient, do not copy this pattern into your own app!!!
+        values =
+          Enum.map(records, fn record ->
+            [
+              SponsoredComment |> Ash.read!(),
+              Comment |> Ash.read!()
+            ]
+            |> List.flatten()
+            |> Stream.filter(&(&1.post_id == record.id))
+            |> Enum.map(&%Ash.Union{type: UnionRelation.struct_to_name(&1), value: &1})
+          end)
 
-      {:ok, values}
-    end)
+        {:ok, values}
+      end,
+      public?: true
+    )
   end
 
   aggregates do
-    count(:comment_count, :comments)
-    max(:latest_comment_at, [:comments], :timestamp)
+    count(:comment_count, :comments, public?: true)
+    max(:latest_comment_at, [:comments], :timestamp, public?: true)
+
+    first :latest_comment_type, [:comments], :type do
+      public?(true)
+      sort(timestamp: :desc)
+    end
   end
 
   relationships do
     belongs_to(:author, AshGraphql.Test.User) do
+      public?(true)
       attribute_writable?(true)
     end
 
-    has_many(:comments, AshGraphql.Test.Comment)
-    has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment)
-    has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated)
+    belongs_to(:author_that_is_actor, AshGraphql.Test.User) do
+      source_attribute(:author_id)
+      define_attribute?(false)
+      public?(true)
+      filter(expr(id == ^actor(:id)))
+    end
+
+    has_many(:comments, AshGraphql.Test.Comment, public?: true)
+    has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment, public?: true)
+    has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated, public?: true)
 
     many_to_many(:tags, AshGraphql.Test.Tag,
       through: AshGraphql.Test.PostTag,
       source_attribute_on_join_resource: :post_id,
-      destination_attribute_on_join_resource: :tag_id
+      destination_attribute_on_join_resource: :tag_id,
+      public?: true
     )
 
     many_to_many(:multitenant_tags, AshGraphql.Test.MultitenantTag,
       through: AshGraphql.Test.MultitenantPostTag,
       source_attribute_on_join_resource: :post_id,
-      destination_attribute_on_join_resource: :tag_id
+      destination_attribute_on_join_resource: :tag_id,
+      public?: true
     )
 
     many_to_many(:relay_tags, AshGraphql.Test.RelayTag,
       through: AshGraphql.Test.RelayPostTag,
       source_attribute_on_join_resource: :post_id,
-      destination_attribute_on_join_resource: :tag_id
+      destination_attribute_on_join_resource: :tag_id,
+      public?: true
     )
 
     has_many :related_posts, AshGraphql.Test.Post do
+      public?(true)
       manual(RelatedPosts)
       no_attributes?(true)
     end
+
+    has_one(:no_graphql, AshGraphql.Test.NoGraphql, public?: true)
   end
 end

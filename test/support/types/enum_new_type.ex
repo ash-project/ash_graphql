@@ -1,6 +1,6 @@
 defmodule AshGraphql.Types.EnumNewType do
   @moduledoc false
-  use Ash.Type.NewType, subtype_of: :atom, constraints: [one_of: [:biz, :buz]]
+  use Ash.Type.Enum, values: [:biz, :buz]
 
-  def graphql_type, do: :biz_buz
+  def graphql_type(_), do: :biz_buz
 end

@@ -1,11 +1,15 @@
 import Config
 
-config :ash, :utc_datetime_type, :datetime
 config :ash, :disable_async?, true
-config :ash, :validate_api_resource_inclusion?, false
-config :ash, :validate_api_config_inclusion?, false
+config :ash, :validate_domain_resource_inclusion?, false
+config :ash, :validate_domain_config_inclusion?, false
 
-config :ash_graphql, :default_managed_relationship_type_name_template, :action_name
+config :ash, :pub_sub, debug?: true
+config :logger, level: :info
+
+if Mix.env() == :test do
+  config :ash_graphql, :simulate_subscription_slowness?, true
+end
 
 if Mix.env() == :dev do
   config :git_ops,

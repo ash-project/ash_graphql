@@ -3,7 +3,7 @@ defmodule AshGraphql.TestHelpers do
   require Logger
 
   def stop_ets do
-    for resource <- Ash.Registry.Info.entries(AshGraphql.Test.Registry) do
+    for resource <- Ash.Domain.Info.resources(AshGraphql.Test.Domain) do
       try do
         Ash.DataLayer.Ets.stop(resource)
       rescue

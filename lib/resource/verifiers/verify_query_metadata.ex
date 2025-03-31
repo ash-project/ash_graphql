@@ -7,7 +7,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyQueryMetadata do
 
   def verify(dsl) do
     dsl
-    |> AshGraphql.Resource.Info.queries()
+    |> AshGraphql.Resource.Info.queries([])
     |> Enum.reject(&(&1.type == :action))
     |> Enum.each(fn query ->
       action = Ash.Resource.Info.action(dsl, query.action)
