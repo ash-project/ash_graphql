@@ -1405,6 +1405,16 @@ defmodule AshGraphql.Graphql.Resolver do
   def mutate(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
 
+  def mutate(resolution, {domain, resource, %{type: :validate, action: action} = mutation, relay_ids?}) do
+    case Ash.Resource.Info.action(resource, action) do
+      %Ash.Resource.Actions.Create{} ->
+        validate_create(resolution, domain, resource, mutation, relay_ids?)
+
+      %Ash.Resource.Actions.Update{} ->
+        validate_update(resolution, domain, resource, mutation, relay_ids?)
+    end
+  end
+
   def mutate(
         %{arguments: arguments, context: context} = resolution,
         {domain, resource,
@@ -1839,6 +1849,263 @@ defmodule AshGraphql.Graphql.Resolver do
                 to_resolution({:error, error}, context, domain)
               )
           end
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  rescue
+    e ->
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+
+        if AshGraphql.Domain.Info.root_level_errors?(domain) do
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error}, context, domain)
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution(
+              {:ok, %{result: nil, errors: to_errors(error, context, domain, resource, action)}},
+              context,
+              domain
+            )
+          )
+        end
+      else
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
+      end
+  end
+
+  # TODO This duplicates a lot of code from the :create mutate function,
+  # maybe we should extract the common parts and reuse them in both places?
+  # For now I didn't do that because this would probably need to be changed
+  # to be a query instead of a mutation anyway
+  defp validate_update(
+         %{arguments: arguments, context: context} = resolution,
+         domain, resource,
+         %{
+           name: mutation_name,
+           action: action,
+           identity: identity,
+           read_action: read_action,
+           modify_resolution: modify
+         } , relay_ids?
+       ) do
+    read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
+    input = arguments[:input] || %{}
+
+    args_result =
+      with {:ok, input} <- handle_arguments(resource, action, input),
+           {:ok, read_action_input} <-
+             handle_arguments(resource, read_action, Map.delete(arguments, :input)) do
+        {:ok, input, read_action_input}
+      end
+
+    case args_result do
+      {:ok, input, read_action_input} ->
+        metadata = %{
+          domain: domain,
+          resource: resource,
+          resource_short_name: Ash.Resource.Info.short_name(resource),
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant),
+          action: action,
+          mutation: mutation_name,
+          source: :graphql,
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
+        }
+
+        trace domain,
+              resource,
+              :gql_mutation,
+              mutation_name,
+              metadata do
+          filter = identity_filter(identity, resource, arguments, relay_ids?)
+
+          case filter do
+            {:ok, filter} ->
+              resource
+              |> Ash.Query.do_filter(filter)
+              |> Ash.Query.set_tenant(Map.get(context, :tenant))
+              |> Ash.Query.set_context(get_context(context))
+              |> set_query_arguments(read_action, read_action_input)
+              |> Ash.Query.limit(1)
+              |> Ash.read_one()
+              |> case do
+                {:ok, fetched_resource} ->
+                  type_name = mutation_result_type(mutation_name)
+
+                  dbg(fetched_resource)
+
+                  changeset =
+                    fetched_resource
+                    |> Ash.Changeset.new()
+                    |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+                    |> Ash.Changeset.set_context(get_context(context) || %{})
+                    |> Ash.Changeset.for_update(action, input,
+                      actor: Map.get(context, :actor),
+                      authorize?: AshGraphql.Domain.Info.authorize?(domain)
+                    )
+                    |> select_fields(resource, resolution, type_name, ["result"])
+                    |> load_fields(
+                      [
+                        domain: domain,
+                        tenant: Map.get(context, :tenant),
+                        authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                        tracer: AshGraphql.Domain.Info.tracer(domain),
+                        actor: Map.get(context, :actor)
+                      ],
+                      resource,
+                      resolution,
+                      resolution.path,
+                      context,
+                      mutation_result_type(mutation_name),
+                      ["result"]
+                    )
+
+                  {result, modify_args} =
+                    {{:ok,
+                      %{
+                        result: nil,
+                        errors: to_errors(changeset.errors, context, domain, resource, action)
+                      }}, [changeset, {:ok, nil}]}
+
+                  resolution
+                  |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+                  |> add_root_errors(domain, resource, action, modify_args)
+                  |> modify_resolution(modify, modify_args)
+
+                  {:error, error} ->
+                    {:error, error}
+              end
+
+            {:error, error} ->
+              Absinthe.Resolution.put_result(
+                resolution,
+                to_resolution({:error, error}, context, domain)
+              )
+          end
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  rescue
+    e ->
+      if AshGraphql.Domain.Info.show_raised_errors?(domain) do
+        error = Ash.Error.to_ash_error([e], __STACKTRACE__)
+
+        if AshGraphql.Domain.Info.root_level_errors?(domain) do
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution({:error, error}, context, domain)
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution(
+              {:ok, %{result: nil, errors: to_errors(error, context, domain, resource, action)}},
+              context,
+              domain
+            )
+          )
+        end
+      else
+        something_went_wrong(resolution, e, domain, __STACKTRACE__)
+      end
+  end
+
+  defp validate_create(
+        %{arguments: arguments, context: context} = resolution,
+        domain, resource,
+         %{
+           name: mutation_name,
+           action: action,
+           upsert?: upsert?,
+           upsert_identity: upsert_identity,
+           modify_resolution: modify
+         } , _relay_ids?
+      ) do
+    input = arguments[:input] || %{}
+
+    case handle_arguments(resource, action, input) do
+      {:ok, input} ->
+        metadata = %{
+          domain: domain,
+          resource: resource,
+          resource_short_name: Ash.Resource.Info.short_name(resource),
+          actor: Map.get(context, :actor),
+          tenant: Map.get(context, :tenant),
+          action: action,
+          source: :graphql,
+          mutation_name: mutation_name,
+          authorize?: AshGraphql.Domain.Info.authorize?(domain)
+        }
+
+        trace domain,
+              resource,
+              :gql_mutation,
+              mutation_name,
+              metadata do
+          opts = [
+            actor: Map.get(context, :actor),
+            action: action,
+            authorize?: AshGraphql.Domain.Info.authorize?(domain),
+            tenant: Map.get(context, :tenant),
+            upsert?: upsert?
+          ]
+
+          opts =
+            if upsert? && upsert_identity do
+              Keyword.put(opts, :upsert_identity, upsert_identity)
+            else
+              opts
+            end
+
+          type_name = mutation_result_type(mutation_name)
+
+          changeset =
+            resource
+            |> Ash.Changeset.new()
+            |> Ash.Changeset.set_tenant(Map.get(context, :tenant))
+            |> Ash.Changeset.set_context(get_context(context))
+            |> Ash.Changeset.for_create(action, input,
+              actor: Map.get(context, :actor),
+              authorize?: AshGraphql.Domain.Info.authorize?(domain)
+            )
+            |> select_fields(resource, resolution, type_name, ["result"])
+            |> load_fields(
+              [
+                domain: domain,
+                tenant: Map.get(context, :tenant),
+                authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                tracer: AshGraphql.Domain.Info.tracer(domain),
+                actor: Map.get(context, :actor)
+              ],
+              resource,
+              resolution,
+              resolution.path,
+              context,
+              type_name,
+              ["result"]
+            )
+
+          # TODO Remove the result somehow
+
+          {result, modify_args} =
+                {{:ok,
+                  %{
+                    result: nil,
+                    errors: to_errors(changeset.errors, context, domain, resource, action)
+                  }}, [changeset, {:ok, nil}]}
+
+          resolution
+          |> Absinthe.Resolution.put_result(to_resolution(result, context, domain))
+          |> add_root_errors(domain, resource, action, modify_args)
+          |> modify_resolution(modify, modify_args)
         end
 
       {:error, error} ->

@@ -141,7 +141,26 @@ defmodule AshGraphql.Resource.Mutation do
     ]
   ]
 
+  @validate_schema [
+    name: [
+      type: :atom,
+      doc: "The name to use for the mutation.",
+      default: :get
+    ],
+    action: [
+      type: :atom,
+      doc: "The action to use for the mutation.",
+      required: true
+    ],
+    description: [
+      type: :string,
+      doc:
+        "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ]
+   ]
+
   def create_schema, do: @create_schema
   def update_schema, do: @update_schema
   def destroy_schema, do: @destroy_schema
+  def validate_schema, do: @validate_schema
 end
