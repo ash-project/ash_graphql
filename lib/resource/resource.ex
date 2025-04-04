@@ -3414,9 +3414,6 @@ defmodule AshGraphql.Resource do
                 already_checked
               }
             else
-              if Process.get(:foo) do
-                IO.inspect(attribute)
-              end
               {types,
                [
                  %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -4831,16 +4828,15 @@ defmodule AshGraphql.Resource do
 
               true ->
                 if Ash.Type.NewType.new_type?(type) do
+                  subtype_of = Ash.Type.NewType.subtype_of(type)
+
                   do_field_type(
-                    type.subtype_of(),
+                    subtype_of, 
                     %{
                       attribute
-                      | type: type.subtype_of(),
+                      | type: subtype_of,
                         constraints:
-                          type.type_constraints(
-                            constraints,
-                            type.subtype_constraints()
-                          )
+                          Ash.Type.NewType.constraints(type, constraints)
                     },
                     resource,
                     input?
