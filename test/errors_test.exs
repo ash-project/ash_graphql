@@ -80,6 +80,18 @@ defmodule AshGraphql.ErrorsTest do
   end
 
   test "raised errors are by default not shown" do
+    defmodule TestLoggerHandler do
+      def log(log_event, %{config: %{test_pid: test_pid}}) do
+        send(test_pid, {:log_event, log_event})
+      end
+    end
+
+    :logger.add_handler(
+      TestLoggerHandler,
+      TestLoggerHandler,
+      %{level: :error, config: %{test_pid: self()}}
+    )
+
     assert capture_log(fn ->
              resp =
                """
@@ -109,6 +121,20 @@ defmodule AshGraphql.ErrorsTest do
 
              assert message =~ "Something went wrong."
            end) =~ "Exception raised while resolving query"
+
+    assert_receive {
+      :log_event,
+      %{
+        level: :error,
+        msg: _msg,
+        meta: %{
+          crash_reason: {
+            %Ash.Error.Invalid{errors: [%Ash.Error.Changes.Required{}]},
+            [_ | _] = _stacktrace
+          }
+        }
+      }
+    }
   end
 
   test "raised errors can be configured to be shown" do
