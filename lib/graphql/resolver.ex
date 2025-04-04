@@ -1872,13 +1872,16 @@ defmodule AshGraphql.Graphql.Resolver do
   defp log_exception(e, stacktrace) do
     uuid = Ash.UUID.generate()
 
-    Logger.error("""
-    #{uuid}: Exception raised while resolving query.
+    Logger.error(
+      """
+      #{uuid}: Exception raised while resolving query.
 
-    #{String.slice(Exception.format(:error, e), 0, 2000)}
+      #{String.slice(Exception.format(:error, e), 0, 2000)}
 
-    #{Exception.format_stacktrace(stacktrace)}
-    """)
+      #{Exception.format_stacktrace(stacktrace)}
+      """,
+      crash_reason: {e, stacktrace}
+    )
 
     uuid
   end
