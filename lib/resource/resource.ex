@@ -3344,13 +3344,12 @@ defmodule AshGraphql.Resource do
           new_type? = Ash.Type.NewType.new_type?(attribute[:type])
           {map_type?, map_type, map_constraints} = map_type(attribute, new_type?)
 
-           map_constraints = 
+          map_constraints =
             if new_type? do
               Ash.Type.NewType.constraints(map_type, map_constraints)
             else
               map_constraints
             end
-
 
           if new_type? && map_type in already_checked do
             {types, fields, already_checked}
@@ -3534,7 +3533,7 @@ defmodule AshGraphql.Resource do
           new_type? = Ash.Type.NewType.new_type?(attribute[:type])
           {map_type?, map_type, map_constraints} = map_type(attribute, new_type?)
 
-           map_constraints = 
+          map_constraints =
             if new_type? do
               Ash.Type.NewType.constraints(map_type, map_constraints)
             else
@@ -4831,12 +4830,11 @@ defmodule AshGraphql.Resource do
                   subtype_of = Ash.Type.NewType.subtype_of(type)
 
                   do_field_type(
-                    subtype_of, 
+                    subtype_of,
                     %{
                       attribute
                       | type: subtype_of,
-                        constraints:
-                          Ash.Type.NewType.constraints(type, constraints)
+                        constraints: Ash.Type.NewType.constraints(type, constraints)
                     },
                     resource,
                     input?
