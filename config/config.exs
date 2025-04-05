@@ -5,7 +5,7 @@ config :ash, :validate_domain_resource_inclusion?, false
 config :ash, :validate_domain_config_inclusion?, false
 
 config :ash, :pub_sub, debug?: true
-config :logger, level: :info
+config :logger, level: :info, default_formatter: [metadata: [:crash_reason]]
 
 if Mix.env() == :test do
   config :ash_graphql, :simulate_subscription_slowness?, true
