@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.7](https://github.com/ash-project/ash_graphql/compare/v1.7.6...v1.7.7) (2025-04-09)
+
+
+
+
+### Bug Fixes:
+
+* more fixes for compilation loops
+
+### Improvements:
+
+* allows :logger handlers to know the original exception (#297)
+
 ## [v1.7.6](https://github.com/ash-project/ash_graphql/compare/v1.7.5...v1.7.6) (2025-03-21)
 
 
