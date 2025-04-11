@@ -220,7 +220,8 @@ defmodule AshGraphql.Graphql.Resolver do
                     actor: opts[:actor],
                     authorize?: AshGraphql.Domain.Info.authorize?(domain),
                     tenant: Map.get(context, :tenant),
-                    tracer: AshGraphql.Domain.Info.tracer(domain)
+                    tracer: AshGraphql.Domain.Info.tracer(domain),
+                    domain: domain
                   )
                   |> load_fields(
                     [
