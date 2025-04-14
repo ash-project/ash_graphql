@@ -667,4 +667,32 @@ defmodule AshGraphql.ErrorsTest do
 
     assert error["message"] == "replaced! update"
   end
+
+  test "errors are transformed into correct responses" do
+    message = "incorrect email"
+
+    errors =
+      AshGraphql.Errors.to_errors(
+        [
+          Ash.Error.Query.InvalidQuery.exception(
+            field: :email,
+            message: message
+          )
+        ],
+        %{},
+        AshGraphql.Test.Domain,
+        nil,
+        nil
+      )
+
+    assert [
+             %{
+               code: "invalid_query",
+               message: message,
+               fields: [:email],
+               vars: %{},
+               short_message: message
+             }
+           ] == errors
+  end
 end

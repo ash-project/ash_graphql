@@ -16,12 +16,19 @@ end
 
 defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
   def to_error(error) do
+    error_fields =
+      if is_nil(error.field) do
+        Map.get(error, :fields, [])
+      else
+        [error.field]
+      end
+
     %{
       message: error.message,
       short_message: error.message,
       vars: Map.new(error.vars),
       code: "invalid_query",
-      fields: [error.field]
+      fields: error_fields
     }
   end
 end
