@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.8](https://github.com/ash-project/ash_graphql/compare/v1.7.7...v1.7.8) (2025-04-15)
+
+
+
+
+### Bug Fixes:
+
+* Add domain to Ash.for_read, as it might not be set on the resource, but only by set_domain middleware (for `use Ash.Resource domain: nil`). (#300)
+
 ## [v1.7.7](https://github.com/ash-project/ash_graphql/compare/v1.7.6...v1.7.7) (2025-04-09)
 
 
