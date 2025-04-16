@@ -23,7 +23,7 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
       short_message: error.message,
       vars: Map.new(error.vars),
       code: "invalid_query",
-      fields: error_fields
+      fields: fields
     }
   end
 end
