@@ -393,6 +393,7 @@ defmodule AshGraphql do
       %Absinthe.Blueprint.Schema.EnumTypeDefinition{
         module: schema,
         name: name,
+        description: AshGraphql.Type.description(type, []),
         values:
           Enum.map(type.values(), fn value ->
             name =

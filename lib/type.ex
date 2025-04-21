@@ -81,9 +81,33 @@ defmodule AshGraphql.Type do
   """
   @callback graphql_describe_enum_value(atom) :: String.t() | nil
 
+  @doc """
+  Used to add a custom description to GraphQL generated types (for maps, enums and unions that auto-derive).
+
+  ```elixir
+  defmodule MyMap do
+    use Ash.Type.NewType, ...
+
+
+    def graphql_description(_constraints), do: "My special map"
+  end
+  ```
+  """
+  @callback graphql_description(atom) :: String.t() | nil
+
+  @doc false
+  def description(type, constraints) do
+    if function_exported?(type, :graphql_description, 1) do
+      type.graphql_description(constraints)
+    else
+      nil
+    end
+  end
+
   @optional_callbacks graphql_type: 1,
                       graphql_input_type: 1,
                       graphql_rename_value: 1,
+                      graphql_description: 1,
                       graphql_unnested_unions: 1,
                       graphql_describe_enum_value: 1,
                       graphql_define_type?: 1
