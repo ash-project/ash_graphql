@@ -2,6 +2,7 @@ defmodule Type.LazyInitTest.Example do
   @moduledoc false
   use Ash.Type.NewType,
     subtype_of: :map,
+    lazy_init?: true,
     constraints: [
       fields: [
         condition: [
@@ -17,7 +18,7 @@ defmodule Type.LazyInitTest.Example do
           type: :string
         ],
         predicates: [
-          type: {:array, Type.LazyInitTest.ExampleNested}
+          type: {:array, __MODULE__}
         ]
       ]
     ]

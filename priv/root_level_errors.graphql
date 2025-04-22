@@ -17,7 +17,7 @@ input PostWithCommentsSponsoredCommentsInput {
 input PostWithCommentsLookupCommentsInput {
   id: ID
   text: String
-  required: String!
+  required: String
   authorId: ID
 }
 
@@ -42,14 +42,6 @@ input PostUpdateWithCommentsSponsoredCommentsInput {
   text: String
 }
 
-input PostEmbedInput {
-  nestedEmbed: EmbedNestedEmbedInput
-}
-
-input PostEmbedFooInput {
-  foo: String
-}
-
 input PostEmbedUnionNewTypeBarInput {
   bar: String
 }
@@ -58,7 +50,7 @@ input PostEmbedUnionNewTypeFooInput {
   foo: String
 }
 
-input PostEmbedUnionUnnestedBarInput {
+input PostEmbedUnionNewTypeListBarInput {
   bar: String
 }
 
@@ -69,7 +61,11 @@ type BarEmbed {
   alwaysFalse: Boolean
 }
 
-input PostEmbedUnionUnnestedFooInput {
+input PostEmbedUnionNewTypeListFooInput {
+  foo: String
+}
+
+input PostEmbedFooInput {
   foo: String
 }
 
@@ -85,31 +81,22 @@ input EmbedNestedEmbedInput {
   enum: NestedEnum
 }
 
-type NestedEmbed {
-  name: String
-  enum: NestedEnum
+input PostEmbedInput {
+  nestedEmbed: EmbedNestedEmbedInput
 }
 
 type Embed {
   nestedEmbed: NestedEmbed
 }
 
+type NestedEmbed {
+  name: String
+  enum: NestedEnum
+}
+
 union Message = TextMessage | ImageMessage
 
-type SimpleUnionString {
-  value: String!
-}
-
-type SimpleUnionInt {
-  value: Int!
-}
-
-input SimpleUnionInput {
-  int: Int
-  string: String
-}
-
-union SimpleUnion = SimpleUnionInt | SimpleUnionString
+union PostComments = Comment | SponsoredComment
 
 type EmbedUnionNewTypeBar {
   value: BarEmbed!
@@ -127,17 +114,38 @@ input EmbedUnionNewTypeInput {
 union EmbedUnionNewType = EmbedUnionNewTypeFoo | EmbedUnionNewTypeBar
 
 input FooBarUnnestedInput {
-  foo: PostEmbedUnionUnnestedFooInput
-  bar: PostEmbedUnionUnnestedBarInput
+  foo: PostEmbedUnionNewTypeListFooInput
+  bar: PostEmbedUnionNewTypeListBarInput
 }
 
 union FooBarUnnested = FooEmbed | BarEmbed
 
-union PostComments = Comment | SponsoredComment
+type SimpleUnionString {
+  value: String!
+}
 
-enum StatusEnum {
-  OPEN
-  CLOSED
+type SimpleUnionInt {
+  value: Int!
+}
+
+input SimpleUnionInput {
+  int: Int
+  string: String
+}
+
+union SimpleUnion = SimpleUnionInt | SimpleUnionString
+
+enum NestedEnum {
+  FOO
+  BAR
+}
+
+enum EnumWithAshDescription {
+  "A fizz"
+  FIZZ
+
+  "A buzz"
+  BUZZ
 }
 
 enum EnumWithAshGraphqlDescription {
@@ -150,29 +158,36 @@ enum EnumWithAshGraphqlDescription {
   NO_DESCRIPTION
 }
 
-enum EnumWithAshDescription {
-  "A fizz"
-  FIZZ
-
-  "A buzz"
-  BUZZ
-}
-
-enum NestedEnum {
-  FOO
-  BAR
-}
-
-type IndirectChannelMessages {
-  results: [Message]!
-  hasNextPage: Boolean!
-  count: Int!
+enum StatusEnum {
+  OPEN
+  CLOSED
 }
 
 type FilterByActorChannelMessages {
-  results: [Message]!
+  results: [Message!]!
   hasNextPage: Boolean!
   count: Int!
+}
+
+type IndirectChannelMessages {
+  results: [Message!]!
+  hasNextPage: Boolean!
+  count: Int!
+}
+
+input PredicateInput {
+  value: String
+  operator: String
+  field: String
+  condition: String
+}
+
+input BarWithBaz {
+  baz: Int!
+}
+
+input BarWithFoo {
+  foo: String!
 }
 
 input CommonMapStructInput {
@@ -183,14 +198,6 @@ input CommonMapStructInput {
 type CommonMapStruct {
   stuff: String!
   some: String!
-}
-
-input BarWithFoo {
-  foo: String!
-}
-
-input BarWithBaz {
-  baz: Int!
 }
 
 input CommonMapInput {
@@ -221,6 +228,11 @@ type ConstrainedMap {
   bam: ConstrainedMapBam
   baz: Int
   fooBar: String!
+}
+
+type RankedCommentResultItem {
+  comment: Comment!
+  rank: Float!
 }
 
 type ImageMessage {
@@ -2359,6 +2371,23 @@ enum CommentSortField {
   POST_ID
   AUTHOR_ID
   TIMESTAMP
+  ARG_RETURNED
+}
+
+input CommentArgReturnedFieldInput {
+  seconds: Int!
+}
+
+input CommentFilterArgReturned {
+  input: CommentArgReturnedFieldInput
+  isNil: Boolean
+  eq: Int
+  notEq: Int
+  in: [Int!]
+  lessThan: Int
+  greaterThan: Int
+  lessThanOrEqual: Int
+  greaterThanOrEqual: Int
 }
 
 input CommentFilterTimestamp {
@@ -2439,11 +2468,13 @@ input CommentFilterInput {
   post: PostFilterInput
   author: UserFilterInput
   timestamp: CommentFilterTimestamp
+  argReturned: CommentFilterArgReturned
 }
 
 input CommentSortInput {
   order: SortOrder
   field: CommentSortField!
+  argReturnedInput: CommentArgReturnedFieldInput
 }
 
 type Comment {
@@ -2455,6 +2486,7 @@ type Comment {
   post: Post
   author: User
   timestamp: DateTime
+  argReturned(seconds: Int!): Int
 }
 
 "A relay page info"
@@ -2513,6 +2545,8 @@ type RootQueryType {
     "A filter to limit the results"
     filter: CommentFilterInput
   ): [Comment!]!
+
+  listRankedComments: [RankedCommentResultItem!]!
 
   getCompositePrimaryKey(
     "The id of the record"
@@ -2690,6 +2724,16 @@ type RootQueryType {
     invalid1: String
 
     removeInvalid: Boolean
+  ): [Post!]!
+
+  lazyinitSearch(
+    "How to sort the records in the response"
+    sort: [PostSortInput]
+
+    "A filter to limit the results"
+    filter: PostFilterInput
+
+    predicate: PredicateInput
   ): [Post!]!
 
   postCount(published: Boolean): Int!

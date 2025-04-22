@@ -104,6 +104,32 @@ defmodule AshGraphql.Type do
     end
   end
 
+  @doc false
+  def type({:array, type}, constraints) do
+    type(type, constraints)
+  end
+
+  def type(type, constraints) do
+    if function_exported?(type, :graphql_type, 1) do
+      type.graphql_type(constraints)
+    else
+      nil
+    end
+  end
+
+  @doc false
+  def input_type({:array, type}, constraints) do
+    input_type(type, constraints)
+  end
+
+  def input_type(type, constraints) do
+    if function_exported?(type, :graphql_input_type, 1) do
+      type.graphql_input_type(constraints)
+    else
+      nil
+    end
+  end
+
   @optional_callbacks graphql_type: 1,
                       graphql_input_type: 1,
                       graphql_rename_value: 1,
