@@ -12,27 +12,30 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
     |> Transformer.get_entities([:graphql, :queries])
     |> Enum.concat(Transformer.get_entities(dsl, [:graphql, :mutations]))
     |> Enum.each(fn query_or_mutation ->
-      type =
+      types =
         case query_or_mutation do
           %AshGraphql.Resource.Query{} ->
-            :read
+            [:read]
 
           %AshGraphql.Resource.Action{} ->
-            nil
+            []
+
+          %AshGraphql.Resource.Mutation{type: :validate} ->
+            [:create, :update]
 
           %AshGraphql.Resource.Mutation{type: type} ->
-            type
+            [type]
         end
 
       available_actions = Transformer.get_entities(dsl, [:actions]) || []
 
       available_actions =
-        if type do
-          Enum.filter(available_actions, fn action ->
-            action.type == type
-          end)
-        else
+        if Enum.empty?(types) do
           available_actions
+        else
+          Enum.filter(available_actions, fn action ->
+            action.type in types
+          end)
         end
 
       action =
@@ -46,9 +49,9 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
         raise Spark.Error.DslError,
           module: resource,
           message: """
-          No such action #{query_or_mutation.action} of type #{type} on #{inspect(resource)}
+          No such action #{query_or_mutation.action} of types #{inspect(types)} on #{inspect(resource)}
 
-          Available #{type} actions:
+          Available #{inspect(types)} actions:
 
           #{Enum.map_join(available_actions, ", ", & &1.name)}
           """
