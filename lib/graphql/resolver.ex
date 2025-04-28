@@ -1592,6 +1592,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   notify?: true,
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
+                  authorize_changeset_with: authorize_bulk_with(query.resource),
                   return_records?: true,
                   tenant: Map.get(context, :tenant),
                   context: get_context(context) || %{},
@@ -1759,6 +1760,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.bulk_destroy(action, input,
                   return_errors?: true,
                   notify?: true,
+                  authorize_changeset_with: authorize_bulk_with(query.resource),
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
                   return_records?: true,
@@ -1868,6 +1870,20 @@ defmodule AshGraphql.Graphql.Resolver do
       else
         something_went_wrong(resolution, e, domain, __STACKTRACE__)
       end
+  end
+
+  if Application.compile_env(:ash_graphql, :authorize_update_destroy_with_error?) do
+    def authorize_bulk_with(resource) do
+      if Ash.DataLayer.data_layer_can?(resource, :expr_error) do
+        :error
+      else
+        :filter
+      end
+    end
+  else
+    def authorize_bulk_with(_resource) do
+      :filter
+    end
   end
 
   defp log_exception(e, stacktrace) do

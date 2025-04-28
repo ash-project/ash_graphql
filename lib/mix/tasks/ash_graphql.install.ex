@@ -21,6 +21,12 @@ if Code.ensure_loaded?(Igniter) do
         |> Igniter.Project.Formatter.import_dep(:absinthe)
         |> Igniter.Project.Formatter.import_dep(:ash_graphql)
         |> Igniter.Project.Formatter.add_formatter_plugin(Absinthe.Formatter)
+        |> Igniter.Project.Config.configure(
+          "config.exs",
+          :ash_graphql,
+          [:authorize_update_destroy_with_error?],
+          true
+        )
         |> Spark.Igniter.prepend_to_section_order(:"Ash.Resource", [:graphql])
         |> Spark.Igniter.prepend_to_section_order(:"Ash.Domain", [:graphql])
 

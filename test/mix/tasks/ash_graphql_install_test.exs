@@ -60,16 +60,14 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
 
   test "updates config", %{igniter: igniter} do
     assert_has_patch(igniter, "config/config.exs", ~S'''
-      8  8   |import Config
-      9  9   |
-        10 + |config :spark,
-        11 + |  formatter: [
-        12 + |    "Ash.Resource": [section_order: [:graphql]],
-        13 + |    "Ash.Domain": [section_order: [:graphql]]
-        14 + |  ]
-        15 + |
-     10 16   |config :test,
-     11 17   |  ecto_repos: [Test.Repo],
+    + |config :spark,
+    + |  formatter: [
+    + |    "Ash.Resource": [section_order: [:graphql]],
+    + |    "Ash.Domain": [section_order: [:graphql]]
+    + |  ]
+    + |
+    + |config :ash_graphql, authorize_update_destroy_with_error?: true
+    + |
     ''')
   end
 

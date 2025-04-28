@@ -11,6 +11,8 @@ if Mix.env() == :test do
   config :ash_graphql, :simulate_subscription_slowness?, true
 end
 
+config :ash_graphql, :authorize_update_destroy_with_error?, true
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,
