@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.9](https://github.com/ash-project/ash_graphql/compare/v1.7.8...v1.7.9) (2025-04-29)
+
+
+
+
+### Bug Fixes:
+
+* properly expand lazy nested types
+
+* handle invalid query error different formats (#301)
+
+### Improvements:
+
+* add `authorize_update_destroy_with_error?` config
+
+* use more descriptions from resources
+
 ## [v1.7.8](https://github.com/ash-project/ash_graphql/compare/v1.7.7...v1.7.8) (2025-04-15)
 
 
