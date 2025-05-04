@@ -3303,8 +3303,11 @@ defmodule AshGraphql.Graphql.Resolver do
   defp add_notification_fields(loads, resource) do
     notification_fields = get_notification_fields(resource)
     
+    IO.puts("DEBUG: Notification fields for #{inspect(resource)}: #{inspect(notification_fields)}")
+    IO.puts("DEBUG: Current loads: #{inspect(loads)}")
+    
     # Return the original loads if there are no notification fields
-    if Enum.empty?(notification_fields) do
+    result = if Enum.empty?(notification_fields) do
       loads
     else
       # Merge notification fields with existing loads
@@ -3314,5 +3317,8 @@ defmodule AshGraphql.Graphql.Resolver do
         other -> [other | notification_fields]
       end
     end
+    
+    IO.puts("DEBUG: Final loads: #{inspect(result)}")
+    result
   end
 end
