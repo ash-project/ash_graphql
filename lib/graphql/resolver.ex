@@ -1590,6 +1590,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.bulk_update(action, input,
                   return_errors?: true,
                   notify?: true,
+                  notification_fields: get_notification_fields(resource),
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
                   authorize_changeset_with: authorize_bulk_with(query.resource),
@@ -1760,6 +1761,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.bulk_destroy(action, input,
                   return_errors?: true,
                   notify?: true,
+                  notification_fields: get_notification_fields(resource),
                   authorize_changeset_with: authorize_bulk_with(query.resource),
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
@@ -3237,4 +3239,59 @@ defmodule AshGraphql.Graphql.Resolver do
        end
      end)}
   end
+
+  def get_notification_fields(resource) do
+    if function_exported?(resource, :__ash_notifiers__, 0) do
+      try do
+        resource.__ash_notifiers__()
+        |> List.wrap()
+        |> Enum.filter(&pubsub_notifier?/1)
+        |> Enum.flat_map(&publication_fields/1)
+        |> Enum.uniq()
+      rescue
+        _ -> []
+      end
+    else
+      []
+    end
+  end
+
+  defp pubsub_notifier?({Ash.Notifier.PubSub, _}), do: true
+  defp pubsub_notifier?(_), do: false
+
+  defp publication_fields({_, dsl}) do
+    dsl
+    |> Spark.Dsl.Extension.get_entities([:pub_sub])
+    |> Enum.flat_map(&publication_section_fields/1)
+  end
+
+  defp publication_section_fields(pub_section) do
+    pub_section
+    |> Map.get(:publications, [])
+    |> Enum.flat_map(&publication_entry_fields/1)
+  end
+
+  defp publication_entry_fields(publication) do
+    topic_fields =
+      publication
+      |> Map.get(:topic, [])
+      |> extract_field_references()
+
+    filter_fields =
+      case publication[:filter] do
+        fun when is_function(fun, 1) -> []
+        filter -> extract_field_references(filter || [])
+      end
+
+    topic_fields ++ filter_fields
+  end
+
+  defp extract_field_references(topic) when is_list(topic),
+    do: Enum.flat_map(topic, &extract_field_references/1)
+
+  defp extract_field_references(topic) when is_atom(topic) do
+    if topic in [:id, :created, :updated, :destroyed, :event, :record], do: [], else: [topic]
+  end
+
+  defp extract_field_references(_), do: []
 end
