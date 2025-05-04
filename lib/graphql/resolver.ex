@@ -1590,7 +1590,6 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.bulk_update(action, input,
                   return_errors?: true,
                   notify?: true,
-                  notification_fields: get_notification_fields(resource),
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
                   authorize_changeset_with: authorize_bulk_with(query.resource),
@@ -1606,20 +1605,23 @@ defmodule AshGraphql.Graphql.Resolver do
                       "result"
                     ]),
                   load:
-                    get_loads(
-                      [
-                        domain: domain,
-                        tenant: Map.get(context, :tenant),
-                        authorize?: AshGraphql.Domain.Info.authorize?(domain),
-                        tracer: AshGraphql.Domain.Info.tracer(domain),
-                        actor: Map.get(context, :actor)
-                      ],
-                      resource,
-                      resolution,
-                      resolution.path,
-                      context,
-                      mutation_result_type(mutation_name),
-                      ["result"]
+                    add_notification_fields(
+                      get_loads(
+                        [
+                          domain: domain,
+                          tenant: Map.get(context, :tenant),
+                          authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                          tracer: AshGraphql.Domain.Info.tracer(domain),
+                          actor: Map.get(context, :actor)
+                        ],
+                        resource,
+                        resolution,
+                        resolution.path,
+                        context,
+                        mutation_result_type(mutation_name),
+                        ["result"]
+                      ),
+                      resource
                     )
                 )
                 |> case do
@@ -1761,7 +1763,6 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.bulk_destroy(action, input,
                   return_errors?: true,
                   notify?: true,
-                  notification_fields: get_notification_fields(resource),
                   authorize_changeset_with: authorize_bulk_with(query.resource),
                   strategy: [:atomic, :stream, :atomic_batches],
                   allow_stream_with: :full_read,
@@ -1777,20 +1778,23 @@ defmodule AshGraphql.Graphql.Resolver do
                       "result"
                     ]),
                   load:
-                    get_loads(
-                      [
-                        domain: domain,
-                        tenant: Map.get(context, :tenant),
-                        authorize?: AshGraphql.Domain.Info.authorize?(domain),
-                        tracer: AshGraphql.Domain.Info.tracer(domain),
-                        actor: Map.get(context, :actor)
-                      ],
-                      resource,
-                      resolution,
-                      resolution.path,
-                      context,
-                      mutation_result_type(mutation_name),
-                      ["result"]
+                    add_notification_fields(
+                      get_loads(
+                        [
+                          domain: domain,
+                          tenant: Map.get(context, :tenant),
+                          authorize?: AshGraphql.Domain.Info.authorize?(domain),
+                          tracer: AshGraphql.Domain.Info.tracer(domain),
+                          actor: Map.get(context, :actor)
+                        ],
+                        resource,
+                        resolution,
+                        resolution.path,
+                        context,
+                        mutation_result_type(mutation_name),
+                        ["result"]
+                      ),
+                      resource
                     )
                 )
                 |> case do
@@ -3294,4 +3298,21 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp extract_field_references(_), do: []
+  
+  # Helper to add fields needed for notifications to the load option
+  defp add_notification_fields(loads, resource) do
+    notification_fields = get_notification_fields(resource)
+    
+    # Return the original loads if there are no notification fields
+    if Enum.empty?(notification_fields) do
+      loads
+    else
+      # Merge notification fields with existing loads
+      case loads do
+        nil -> notification_fields
+        fields when is_list(fields) -> fields ++ notification_fields
+        other -> [other | notification_fields]
+      end
+    end
+  end
 end
