@@ -251,7 +251,7 @@ defmodule AshGraphql.Domain do
     )
   end
 
-  def subscriptions(domain, all_domains, resources, action_middleware, schema) do
+  def subscriptions(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
     resources
     |> Enum.filter(fn resource ->
       AshGraphql.Resource in Spark.extensions(resource)
@@ -262,7 +262,8 @@ defmodule AshGraphql.Domain do
         all_domains,
         &1,
         action_middleware,
-        schema
+        schema,
+        relay_ids?
       )
     )
   end

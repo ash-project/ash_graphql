@@ -1326,7 +1326,7 @@ defmodule AshGraphql.Resource do
   # sobelow_skip ["DOS.StringToAtom"]
   @doc false
 
-  def subscriptions(domain, all_domains, resource, action_middleware, schema) do
+  def subscriptions(domain, all_domains, resource, action_middleware, schema, relay_ids?) do
     resource
     |> subscriptions(all_domains)
     |> Enum.map(fn %Subscription{name: name, hide_inputs: hide_inputs} = subscription ->
@@ -1351,7 +1351,8 @@ defmodule AshGraphql.Resource do
           action_middleware ++
             domain_middleware(domain) ++
             [
-              {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, subscription, true}}
+              {{AshGraphql.Graphql.Resolver, :resolve},
+               {domain, resource, subscription, relay_ids?}}
             ],
         type: result_type,
         __reference__: ref(__ENV__)

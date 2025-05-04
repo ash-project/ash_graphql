@@ -249,7 +249,8 @@ defmodule AshGraphql do
                 all_domains,
                 unquote(resources),
                 action_middleware,
-                unquote(schema)
+                unquote(schema),
+                unquote(relay_ids?)
               )
               |> Enum.reduce(blueprint_with_mutations, fn subscription, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", subscription)

@@ -554,7 +554,7 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve(
         %{arguments: args, context: context, root_value: notifications} = resolution,
         {domain, resource,
-         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, _input?}
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, relay_ids?}
       )
       when is_list(notifications) do
     case handle_arguments(resource, read_action, args) do
@@ -674,7 +674,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 end
               else
                 Enum.map(notifications, fn notification ->
-                  %{key => AshGraphql.Resource.encode_id(notification.data, false)}
+                  %{key => AshGraphql.Resource.encode_id(notification.data, relay_ids?)}
                 end)
               end
             end)
@@ -711,7 +711,7 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve(
         %{arguments: args, context: context, root_value: notification} = resolution,
         {domain, resource,
-         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, _input?}
+         %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, relay_ids?}
       ) do
     case handle_arguments(resource, read_action, args) do
       {:ok, args} ->
@@ -831,7 +831,7 @@ defmodule AshGraphql.Graphql.Resolver do
                  %{
                    String.to_existing_atom(
                      subcription_field_from_action_type(notification.action_type)
-                   ) => AshGraphql.Resource.encode_id(notification.data, false)
+                   ) => AshGraphql.Resource.encode_id(notification.data, relay_ids?)
                  }}
               )
           end
