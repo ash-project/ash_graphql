@@ -3247,15 +3247,48 @@ defmodule AshGraphql.Graphql.Resolver do
   def get_notification_fields(resource) do
     if function_exported?(resource, :__ash_notifiers__, 0) do
       try do
-        resource.__ash_notifiers__()
-        |> List.wrap()
-        |> Enum.filter(&pubsub_notifier?/1)
-        |> Enum.flat_map(&publication_fields/1)
-        |> Enum.uniq()
+        IO.puts("DEBUG: Finding notification fields for #{inspect(resource)}")
+        
+        notifiers = resource.__ash_notifiers__()
+        IO.puts("DEBUG: Notifiers: #{inspect(notifiers)}")
+        
+        pubsub_notifiers = 
+          notifiers
+          |> List.wrap()
+          |> Enum.filter(&pubsub_notifier?/1)
+          
+        IO.puts("DEBUG: PubSub notifiers: #{inspect(pubsub_notifiers)}")
+        
+        # Look at publications directly using introspection
+        if Code.ensure_loaded?(Ash.Notifier.PubSub.Info) do
+          IO.puts("DEBUG: Using Ash.Notifier.PubSub.Info to get publications")
+          publications = Ash.Notifier.PubSub.Info.publications(resource)
+          IO.puts("DEBUG: Publications from introspection: #{inspect(publications)}")
+        end
+        
+        # Get PubSub section from resource dsl
+        pub_sub_entities = Spark.Dsl.Extension.get_entities(resource, [:pub_sub])
+        IO.puts("DEBUG: PubSub entities from resource: #{inspect(pub_sub_entities)}")
+        
+        if pub_sub_entities != [] do
+          first_entity = List.first(pub_sub_entities)
+          IO.puts("DEBUG: First PubSub entity publications: #{inspect(Map.get(first_entity, :publications, []))}")
+        end
+        
+        fields = 
+          pubsub_notifiers
+          |> Enum.flat_map(&publication_fields/1)
+          |> Enum.uniq()
+          
+        IO.puts("DEBUG: Final notification fields: #{inspect(fields)}")
+        fields
       rescue
-        _ -> []
+        e -> 
+          IO.puts("DEBUG: Error getting notification fields: #{inspect(e)}")
+          []
       end
     else
+      IO.puts("DEBUG: Resource #{inspect(resource)} does not export __ash_notifiers__")
       []
     end
   end
@@ -3276,38 +3309,77 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   defp publication_entry_fields(publication) do
+    # Extract fields from topic definition
     topic_fields =
-      publication
-      |> Map.get(:topic, [])
-      |> extract_field_references()
+      cond do
+        # Standard %Ash.Notifier.PubSub.Publication{} structs
+        is_struct(publication) && Map.has_key?(publication, :topic) ->
+          extract_field_references(publication.topic)
+          
+        # Raw entries from DSL
+        is_map(publication) && Map.has_key?(publication, :topic) ->
+          extract_field_references(publication.topic)
+          
+        # Raw publish/publish_all args format: [action_or_type, topic]
+        is_list(publication) && length(publication) >= 2 ->
+          # Second element is the topic
+          extract_field_references(Enum.at(publication, 1))
+          
+        true ->
+          []
+      end
 
+    # Extract fields from filter if present
     filter_fields =
-      case publication[:filter] do
-        fun when is_function(fun, 1) -> []
-        filter -> extract_field_references(filter || [])
+      if is_map(publication) && Map.has_key?(publication, :filter) do
+        case publication.filter do
+          fun when is_function(fun, 1) -> []
+          filter -> extract_field_references(filter || [])
+        end
+      else
+        []
       end
 
     topic_fields ++ filter_fields
   end
 
-  defp extract_field_references(topic) when is_list(topic),
-    do: Enum.flat_map(topic, &extract_field_references/1)
-
-  defp extract_field_references(topic) when is_atom(topic) do
-    if topic in [:id, :created, :updated, :destroyed, :event, :record], do: [], else: [topic]
+  defp extract_field_references(topic) when is_list(topic) do
+    cond do
+      # Handle special case of field reference with default value: [:field, nil]
+      # This is how optional field parts are specified in Ash.Notifier.PubSub
+      is_list(topic) && length(topic) == 2 && 
+      is_atom(Enum.at(topic, 0)) && Enum.at(topic, 1) == nil ->
+        [Enum.at(topic, 0)]
+        
+      # Handle standard list of topic components
+      true ->
+        Enum.flat_map(topic, &extract_field_references/1)
+    end
   end
 
+  defp extract_field_references(topic) when is_atom(topic) do
+    # Skip common keywords that aren't actual fields
+    reserved_keywords = [:id, :created, :updated, :destroyed, :event, :record, :_pkey, :_tenant, nil]
+    if topic in reserved_keywords, do: [], else: [topic]
+  end
+
+  # When we get tuples like {:depot_id, nil}, extract the field
+  defp extract_field_references({field, _}) when is_atom(field) do
+    [field]
+  end
+
+  # String components in topics aren't field references
+  defp extract_field_references(topic) when is_binary(topic), do: []
+  
+  # Catch all for other types
   defp extract_field_references(_), do: []
   
   # Helper to add fields needed for notifications to the load option
   defp add_notification_fields(loads, resource) do
     notification_fields = get_notification_fields(resource)
     
-    IO.puts("DEBUG: Notification fields for #{inspect(resource)}: #{inspect(notification_fields)}")
-    IO.puts("DEBUG: Current loads: #{inspect(loads)}")
-    
     # Return the original loads if there are no notification fields
-    result = if Enum.empty?(notification_fields) do
+    if Enum.empty?(notification_fields) do
       loads
     else
       # Merge notification fields with existing loads
@@ -3317,8 +3389,5 @@ defmodule AshGraphql.Graphql.Resolver do
         other -> [other | notification_fields]
       end
     end
-    
-    IO.puts("DEBUG: Final loads: #{inspect(result)}")
-    result
   end
 end
