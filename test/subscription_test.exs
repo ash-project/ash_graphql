@@ -2,6 +2,8 @@ defmodule AshGraphql.SubscriptionTest do
   use ExUnit.Case
 
   alias AshGraphql.Test.PubSub
+  alias AshGraphql.Test.RelaySchema
+  alias AshGraphql.Test.RelaySubscribable
   alias AshGraphql.Test.Schema
   alias AshGraphql.Test.Subscribable
 
@@ -135,6 +137,106 @@ defmodule AshGraphql.SubscriptionTest do
     assert_receive({^topic, %{data: subscription_data}})
 
     assert subscription_data["subscribableEvents"]["destroyed"] == subscribable_id
+  end
+
+  test "subscription to relay schema returns relay id on destroy action for multiple notifications" do
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEventsRelay {
+                   created {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               RelaySchema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    subscribable_relay_id =
+      RelaySubscribable
+      |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
+      |> Ash.create!()
+      |> AshGraphql.Resource.encode_relay_id()
+
+    assert_receive({^topic, %{data: subscription_data}})
+
+    assert subscribable_relay_id == subscription_data["subscribableEventsRelay"]["created"]["id"]
+
+    destroy_mutation = """
+    mutation DeleteSubscribable($id: ID!) {
+        destroySubscribableRelay(id: $id) {
+          result{
+            id
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(destroy_mutation, RelaySchema,
+               variables: %{"id" => subscribable_relay_id},
+               context: %{actor: @admin}
+             )
+
+    assert Enum.empty?(mutation_result["destroySubscribableRelay"]["errors"])
+
+    assert_receive({^topic, %{data: subscription_data}})
+
+    assert subscription_data["subscribableEventsRelay"]["destroyed"] == subscribable_relay_id
+  end
+
+  test "subscription to relay schema returns relay id on destroy action for single notification" do
+    subscribable_relay_id =
+      RelaySubscribable
+      |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
+      |> Ash.create!()
+      |> AshGraphql.Resource.encode_relay_id()
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableDeletedRelay {
+                   destroyed
+                 }
+               }
+               """,
+               RelaySchema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    destroy_mutation = """
+    mutation DeleteSubscribable($id: ID!) {
+        destroySubscribableRelay(id: $id) {
+          result {
+            id
+          }
+          errors {
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(destroy_mutation, RelaySchema,
+               variables: %{"id" => subscribable_relay_id},
+               context: %{actor: @admin}
+             )
+
+    assert Enum.empty?(mutation_result["destroySubscribableRelay"]["errors"])
+
+    assert_receive({^topic, %{data: subscription_data}})
+
+    assert subscription_data["subscribableDeletedRelay"]["destroyed"] == subscribable_relay_id
   end
 
   test "policies are applied to subscriptions" do
