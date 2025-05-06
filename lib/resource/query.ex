@@ -82,6 +82,12 @@ defmodule AshGraphql.Resource.Query do
       An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query.
       """,
       default: {AshGraphql.Graphql.Resolver, :query_complexity}
+    ],
+    modify_resolution: [
+      type: :mfa,
+      doc: """
+      An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
+      """
     ]
   ]
 
@@ -96,12 +102,6 @@ defmodule AshGraphql.Resource.Query do
                   type: :boolean,
                   default: true,
                   doc: "Whether or not the action can return nil."
-                ],
-                modify_resolution: [
-                  type: :mfa,
-                  doc: """
-                  An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
-                  """
                 ]
               ]
               |> Spark.Options.merge(@query_schema, "Shared Query Options")

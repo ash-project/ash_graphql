@@ -101,7 +101,6 @@ get :get_post, :read
 |------|------|---------|------|
 | [`identity`](#graphql-queries-get-identity){: #graphql-queries-get-identity } | `atom` |  | The identity to use for looking up the record. Pass `false` to not use an identity. |
 | [`allow_nil?`](#graphql-queries-get-allow_nil?){: #graphql-queries-get-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
-| [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`type_name`](#graphql-queries-get-type_name){: #graphql-queries-get-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-get-description){: #graphql-queries-get-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`metadata_names`](#graphql-queries-get-metadata_names){: #graphql-queries-get-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
@@ -111,6 +110,7 @@ get :get_post, :read
 | [`relay_id_translations`](#graphql-queries-get-relay_id_translations){: #graphql-queries-get-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`hide_inputs`](#graphql-queries-get-hide_inputs){: #graphql-queries-get-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
 | [`complexity`](#graphql-queries-get-complexity){: #graphql-queries-get-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
+| [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
 
 
@@ -158,6 +158,7 @@ read_one :current_user, :current_user
 | [`relay_id_translations`](#graphql-queries-read_one-relay_id_translations){: #graphql-queries-read_one-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`hide_inputs`](#graphql-queries-read_one-hide_inputs){: #graphql-queries-read_one-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
 | [`complexity`](#graphql-queries-read_one-complexity){: #graphql-queries-read_one-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
+| [`modify_resolution`](#graphql-queries-read_one-modify_resolution){: #graphql-queries-read_one-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
 
 
@@ -210,6 +211,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`relay_id_translations`](#graphql-queries-list-relay_id_translations){: #graphql-queries-list-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`hide_inputs`](#graphql-queries-list-hide_inputs){: #graphql-queries-list-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
 | [`complexity`](#graphql-queries-list-complexity){: #graphql-queries-list-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
+| [`modify_resolution`](#graphql-queries-list-modify_resolution){: #graphql-queries-list-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
 
 
@@ -314,12 +316,12 @@ create :create_post, :create
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`description`](#graphql-mutations-create-description){: #graphql-mutations-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
 | [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
-| [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
-| [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`description`](#graphql-mutations-create-description){: #graphql-mutations-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`relay_id_translations`](#graphql-mutations-create-relay_id_translations){: #graphql-mutations-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
 
 
@@ -357,11 +359,12 @@ update :update_post, :update
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`description`](#graphql-mutations-update-description){: #graphql-mutations-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`identity`](#graphql-mutations-update-identity){: #graphql-mutations-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-update-read_action){: #graphql-mutations-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
-| [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`description`](#graphql-mutations-update-description){: #graphql-mutations-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`relay_id_translations`](#graphql-mutations-update-relay_id_translations){: #graphql-mutations-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`modify_resolution`](#graphql-mutations-update-modify_resolution){: #graphql-mutations-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
 
 
@@ -399,11 +402,12 @@ destroy :destroy_post, :destroy
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`description`](#graphql-mutations-destroy-description){: #graphql-mutations-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
-| [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
 | [`identity`](#graphql-mutations-destroy-identity){: #graphql-mutations-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
-| [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
+| [`description`](#graphql-mutations-destroy-description){: #graphql-mutations-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`relay_id_translations`](#graphql-mutations-destroy-relay_id_translations){: #graphql-mutations-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`modify_resolution`](#graphql-mutations-destroy-modify_resolution){: #graphql-mutations-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
 
 
