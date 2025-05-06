@@ -1,4 +1,5 @@
 defmodule GF.ActiveMemberPolicy do
+  @moduledoc false
   use Ash.Policy.SimpleCheck
 
   # This is used when logging a breakdown of how a policy is applied - see Logging below.
@@ -13,12 +14,10 @@ defmodule GF.ActiveMemberPolicy do
         _other -> false
       end
 
-    cond do
-      opts[:role] ->
-        GF.Member.can_take_role_action?(member, opts[:role])
-
-      true ->
-        active?
+    if opts[:role] do
+      GF.Member.can_take_role_action?(member, opts[:role])
+    else
+      active?
     end
   end
 

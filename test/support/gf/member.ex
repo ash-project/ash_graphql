@@ -1,4 +1,5 @@
 defmodule GF.Member do
+  @moduledoc false
   use Ash.Resource,
     domain: GF.Domain,
     data_layer: Ash.DataLayer.Ets,

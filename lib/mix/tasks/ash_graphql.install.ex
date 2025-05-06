@@ -15,7 +15,7 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @impl true
-    def igniter(igniter, _argv) do
+    def igniter(igniter) do
       igniter =
         igniter
         |> Igniter.Project.Formatter.import_dep(:absinthe)
