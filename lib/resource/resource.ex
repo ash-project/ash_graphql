@@ -703,218 +703,51 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  # sobelow_skip ["DOS.StringToAtom"]
   @doc false
   def mutations(domain, all_domains, resource, action_middleware, schema, relay_ids?) do
     resource
     |> mutations(all_domains)
-    |> Enum.map(fn
-      %{type: :action, name: name, action: action} = query ->
-        query_action =
-          Ash.Resource.Info.action(resource, action) ||
-            raise "No such action #{action} on #{resource}"
+    |> Enum.map(fn mutation ->
+      action =
+        Ash.Resource.Info.action(resource, mutation.action) ||
+          raise "No such action #{mutation.action} for #{inspect(resource)}"
 
-        args =
-          case query_action.arguments do
-            [] ->
-              []
-
-            fields ->
-              [
-                %Absinthe.Blueprint.Schema.InputValueDefinition{
-                  identifier: :input,
-                  module: schema,
-                  name: "input",
-                  placement: :argument_definition,
-                  type: mutation_input_type(name, fields)
-                }
-              ]
-          end
-
+      if mutation.type == :action do
         %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: args,
-          identifier: name,
-          middleware:
-            action_middleware ++
-              domain_middleware(domain) ++
-              id_translation_middleware(query.relay_id_translations, relay_ids?) ++
-              [
-                {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, true}}
-              ],
-          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
-          module: schema,
-          name: to_string(name),
-          description: query.description || query_action.description,
-          type: generic_action_type(query_action, resource, domain, query),
-          __reference__: ref(__ENV__)
-        }
-
-      %{type: :destroy} = mutation ->
-        action =
-          Ash.Resource.Info.action(resource, mutation.action) ||
-            raise "No such action #{mutation.action} for #{inspect(resource)}"
-
-        if action.soft? do
-          update_mutation(
-            resource,
-            schema,
-            mutation,
-            schema,
-            action_middleware,
-            domain,
-            relay_ids?
-          )
-        else
-          args =
-            case mutation_fields(
-                   resource,
-                   schema,
-                   action,
-                   mutation.type,
-                   mutation.hide_inputs
-                 ) do
-              [] ->
-                mutation_args(mutation, resource, schema)
-
-              fields ->
-                mutation_args(mutation, resource, schema) ++
-                  [
-                    %Absinthe.Blueprint.Schema.InputValueDefinition{
-                      identifier: :input,
-                      module: schema,
-                      name: "input",
-                      placement: :argument_definition,
-                      type: mutation_input_type(mutation.name, fields),
-                      __reference__: ref(__ENV__)
-                    }
-                  ]
-            end
-
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            arguments: args,
-            identifier: mutation.name,
-            middleware:
-              action_middleware ++
-                domain_middleware(domain) ++
-                id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-                [
-                  {{AshGraphql.Graphql.Resolver, :mutate},
-                   {domain, resource, mutation, relay_ids?}}
-                ],
-            module: schema,
-            name: to_string(mutation.name),
-            description:
-              mutation.description ||
-                Ash.Resource.Info.action(resource, mutation.action).description,
-            type: mutation_result_type(mutation.name, domain),
-            __reference__: ref(__ENV__)
-          }
-        end
-
-      %{type: :create} = mutation ->
-        action =
-          Ash.Resource.Info.action(resource, mutation.action) ||
-            raise "No such action #{mutation.action} for #{inspect(resource)}"
-
-        args =
-          case mutation_fields(
-                 resource,
-                 schema,
-                 action,
-                 mutation.type,
-                 mutation.hide_inputs
-               ) do
-            [] ->
-              []
-
-            fields ->
-              [
-                %Absinthe.Blueprint.Schema.InputValueDefinition{
-                  identifier: :input,
-                  module: schema,
-                  name: "input",
-                  placement: :argument_definition,
-                  type: mutation_input_type(mutation.name, fields)
-                }
-              ]
-          end
-
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: args,
+          arguments: mutation_args(mutation, resource, action, schema),
           identifier: mutation.name,
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-              [
-                {{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}
-              ],
+              [{{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, mutation, true}}],
+          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
           name: to_string(mutation.name),
-          description:
-            mutation.description ||
-              Ash.Resource.Info.action(resource, mutation.action).description,
+          description: mutation.description || action.description,
+          type: generic_action_type(action, resource, domain, mutation),
+          __reference__: ref(__ENV__)
+        }
+      else
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          arguments: mutation_args(mutation, resource, action, schema),
+          identifier: mutation.name,
+          middleware:
+            action_middleware ++
+              domain_middleware(domain) ++
+              id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
+              [{{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}],
+          module: schema,
+          name: to_string(mutation.name),
+          description: mutation.description || action.description,
           type: mutation_result_type(mutation.name, domain),
           __reference__: ref(__ENV__)
         }
-
-      mutation ->
-        update_mutation(resource, schema, mutation, schema, action_middleware, domain, relay_ids?)
+      end
     end)
     |> Enum.concat(
       queries(domain, all_domains, resource, action_middleware, schema, relay_ids?, true)
     )
-  end
-
-  # sobelow_skip ["DOS.StringToAtom"]
-  defp update_mutation(resource, schema, mutation, schema, action_middleware, domain, relay_ids?) do
-    action =
-      Ash.Resource.Info.action(resource, mutation.action) ||
-        raise "No such action #{mutation.action} for #{inspect(resource)}"
-
-    args =
-      case mutation_fields(
-             resource,
-             schema,
-             action,
-             mutation.type,
-             mutation.hide_inputs
-           ) do
-        [] ->
-          mutation_args(mutation, resource, schema)
-
-        fields ->
-          mutation_args(mutation, resource, schema) ++
-            [
-              %Absinthe.Blueprint.Schema.InputValueDefinition{
-                identifier: :input,
-                module: schema,
-                name: "input",
-                placement: :argument_definition,
-                type: mutation_input_type(mutation.name, fields),
-                __reference__: ref(__ENV__)
-              }
-            ]
-      end
-
-    %Absinthe.Blueprint.Schema.FieldDefinition{
-      arguments: args,
-      identifier: mutation.name,
-      middleware:
-        action_middleware ++
-          domain_middleware(domain) ++
-          id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-          [
-            {{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}
-          ],
-      module: schema,
-      name: to_string(mutation.name),
-      description:
-        mutation.description ||
-          Ash.Resource.Info.action(resource, mutation.action).description,
-      type: mutation_result_type(mutation.name, domain),
-      __reference__: ref(__ENV__)
-    }
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -925,12 +758,37 @@ defmodule AshGraphql.Resource do
     maybe_wrap_non_null(type, not root_level_errors?)
   end
 
-  defp mutation_args(%{identity: false} = mutation, resource, schema) do
-    mutation_read_args(mutation, resource, schema)
+  defp mutation_args(mutation, resource, action, schema) do
+    if mutation.type == :action or mutation.type == :create do
+      input_args = mutation_input_args(mutation, resource, action, schema)
+
+      input_args
+    else
+      identity_args = mutation_identity_args(mutation, resource, schema)
+      read_args = mutation_read_args(mutation, resource, schema)
+      input_args = mutation_input_args(mutation, resource, action, schema)
+
+      identity_args ++ read_args ++ input_args
+    end
   end
 
-  defp mutation_args(%{identity: identity} = mutation, resource, schema)
-       when not is_nil(identity) do
+  defp mutation_identity_args(%{identity: false}, _resource, _schema) do
+    []
+  end
+
+  defp mutation_identity_args(%{identity: nil}, _resource, schema) do
+    [
+      %Absinthe.Blueprint.Schema.InputValueDefinition{
+        identifier: :id,
+        module: schema,
+        name: "id",
+        type: maybe_wrap_non_null(:id, true),
+        __reference__: ref(__ENV__)
+      }
+    ]
+  end
+
+  defp mutation_identity_args(%{identity: identity}, resource, schema) do
     resource
     |> Ash.Resource.Info.identities()
     |> Enum.find(&(&1.name == identity))
@@ -939,48 +797,16 @@ defmodule AshGraphql.Resource do
       attribute = Ash.Resource.Info.attribute(resource, key)
 
       %Absinthe.Blueprint.Schema.InputValueDefinition{
-        name: to_string(key),
         identifier: key,
+        module: schema,
+        name: to_string(key),
+        description: attribute.description || "",
         type: %Absinthe.Blueprint.TypeReference.NonNull{
           of_type: field_type(attribute.type, attribute, resource)
         },
-        description: attribute.description || "",
         __reference__: ref(__ENV__)
       }
     end)
-    |> Enum.concat(mutation_read_args(mutation, resource, schema))
-  end
-
-  defp mutation_args(mutation, resource, schema) do
-    [
-      %Absinthe.Blueprint.Schema.InputValueDefinition{
-        identifier: :id,
-        module: schema,
-        name: "id",
-        placement: :argument_definition,
-        type: maybe_wrap_non_null(:id, true),
-        __reference__: ref(__ENV__)
-      }
-      | mutation_read_args(mutation, resource, schema)
-    ]
-  end
-
-  # sobelow_skip ["DOS.StringToAtom"]
-  defp mutation_input_type(mutation_name, mutation_fields) do
-    any_non_null_field? =
-      mutation_fields
-      |> Enum.any?(fn
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          type: %Absinthe.Blueprint.TypeReference.NonNull{}
-        } ->
-          true
-
-        _ ->
-          false
-      end)
-
-    String.to_atom("#{mutation_name}_input")
-    |> maybe_wrap_non_null(any_non_null_field?)
   end
 
   defp mutation_read_args(%{read_action: read_action}, resource, schema) do
@@ -1017,6 +843,45 @@ defmodule AshGraphql.Resource do
         __reference__: ref(__ENV__)
       }
     end)
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp mutation_input_args(mutation, resource, action, schema) do
+    fields =
+      if mutation.type == :action do
+        action.arguments
+      else
+        mutation_fields(resource, schema, action, mutation.type, mutation.hide_inputs)
+      end
+
+    if fields == [] do
+      []
+    else
+      any_non_null_fields? =
+        Enum.any?(fields, fn
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            type: %Absinthe.Blueprint.TypeReference.NonNull{}
+          } ->
+            true
+
+          _ ->
+            false
+        end)
+
+      input_type =
+        String.to_atom("#{mutation.name}_input")
+        |> maybe_wrap_non_null(any_non_null_fields?)
+
+      [
+        %Absinthe.Blueprint.Schema.InputValueDefinition{
+          identifier: :input,
+          module: schema,
+          name: "input",
+          type: input_type,
+          __reference__: ref(__ENV__)
+        }
+      ]
+    end
   end
 
   @doc false
