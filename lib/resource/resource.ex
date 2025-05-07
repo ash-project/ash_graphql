@@ -1432,7 +1432,8 @@ defmodule AshGraphql.Resource do
 
   defp mutation_fields(resource, schema, action, type, hide_inputs \\ []) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
-    argument_names = AshGraphql.Resource.Info.argument_names(resource)
+    argument_names = AshGraphql.Resource.Info.argument_names(resource)[action.name]
+    argument_input_types = AshGraphql.Resource.Info.argument_input_types(resource)[action.name]
 
     attribute_fields =
       cond do
@@ -1466,10 +1467,10 @@ defmodule AshGraphql.Resource do
             name = field_names[attribute.name] || attribute.name
 
             %Absinthe.Blueprint.Schema.FieldDefinition{
-              description: attribute.description,
               identifier: attribute.name,
               module: schema,
               name: to_string(name),
+              description: attribute.description,
               type: field_type,
               __reference__: ref(__ENV__)
             }
@@ -1480,12 +1481,10 @@ defmodule AshGraphql.Resource do
       action.arguments
       |> Enum.filter(& &1.public?)
       |> Enum.map(fn argument ->
-        name = argument_names[action.name][argument.name] || argument.name
-
-        case find_manage_change(argument, action, resource) do
-          nil ->
-            type =
-              case AshGraphql.Resource.Info.argument_input_types(resource)[action.name][name] do
+        argument_type =
+          case find_manage_change(argument, action, resource) do
+            nil ->
+              case argument_input_types[argument.name] do
                 nil ->
                   argument.type
                   |> field_type(argument, resource, true)
@@ -1495,61 +1494,28 @@ defmodule AshGraphql.Resource do
                   unwrap_literal_type(override)
               end
 
-            %Absinthe.Blueprint.Schema.FieldDefinition{
-              identifier: name,
-              module: schema,
-              name: to_string(name),
-              description: argument.description,
-              type: type,
-              __reference__: ref(__ENV__)
-            }
+            _manage_opts ->
+              managed = AshGraphql.Resource.Info.managed_relationship(resource, action, argument)
 
-          _manage_opts ->
-            managed = AshGraphql.Resource.Info.managed_relationship(resource, action, argument)
+              prev_requirements = Process.get(:managed_relationship_requirements, [])
+              next_requirements = [{resource, managed, action, argument} | prev_requirements]
+              Process.put(:managed_relationship_requirements, next_requirements)
 
-            if managed do
-              current = Process.get(:managed_relationship_requirements, [])
+              type = managed.type_name || default_managed_type_name(resource, action, argument)
 
-              Process.put(
-                :managed_relationship_requirements,
-                [
-                  {resource, managed, action, argument} | current
-                ]
-              )
+              wrap_arrays(argument.type, type, argument.constraints)
+          end
 
-              type =
-                if managed.type_name do
-                  managed.type_name
-                else
-                  default_managed_type_name(resource, action, argument)
-                end
+        name = argument_names[argument.name] || argument.name
 
-              type = wrap_arrays(argument.type, type, argument.constraints)
-
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: argument.name,
-                module: schema,
-                name: to_string(name),
-                description: argument.description,
-                type: maybe_wrap_non_null(type, argument_required?(argument)),
-                __reference__: ref(__ENV__)
-              }
-            else
-              type =
-                argument.type
-                |> field_type(argument, resource, true)
-                |> maybe_wrap_non_null(argument_required?(argument))
-
-              %Absinthe.Blueprint.Schema.FieldDefinition{
-                identifier: name,
-                module: schema,
-                name: to_string(name),
-                description: Map.get(argument, :description, ""),
-                type: type,
-                __reference__: ref(__ENV__)
-              }
-            end
-        end
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: argument.name,
+          module: schema,
+          name: to_string(name),
+          description: argument.description,
+          type: argument_type,
+          __reference__: ref(__ENV__)
+        }
       end)
 
     attribute_fields ++ argument_fields
