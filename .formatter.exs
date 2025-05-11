@@ -6,6 +6,7 @@ spark_locals_without_parens = [
   actions: 1,
   actor: 1,
   allow_nil?: 1,
+  args: 1,
   argument_input_types: 1,
   argument_names: 1,
   as_mutation?: 1,

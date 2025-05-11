@@ -112,7 +112,7 @@ defmodule AshGraphql.GenericActionsTest do
     resp =
       """
       mutation {
-        randomPost(input: {published: true}) {
+        randomPost(input: {published: false}) {
           id
           comments{
             id
@@ -128,5 +128,71 @@ defmodule AshGraphql.GenericActionsTest do
     post_id = post.id
 
     assert %{data: %{"randomPost" => %{"id" => ^post_id, "comments" => []}}} = result
+  end
+
+  describe "generic action with args" do
+    setup do
+      post =
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(:create, text: "foobar", best: true)
+        |> Ash.create!()
+
+      run = fn args ->
+        """
+        mutation {
+          randomPostWithArg#{args} {
+            id
+            comments{
+              id
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+      end
+
+      expect_post = fn args ->
+        post_id = post.id
+
+        assert {:ok, result} = run.(args)
+        assert %{data: %{"randomPostWithArg" => %{"id" => ^post_id, "comments" => []}}} = result
+      end
+
+      expect_nil = fn args ->
+        assert {:ok, result} = run.(args)
+        assert %{data: %{"randomPostWithArg" => nil}} = result
+      end
+
+      expect_error = fn args, message ->
+        assert {:ok, result} = run.(args)
+        assert %{errors: [%{message: ^message}]} = result
+      end
+
+      [
+        expect_post: expect_post,
+        expect_nil: expect_nil,
+        expect_error: expect_error
+      ]
+    end
+
+    test "defines and uses an argument", %{expect_post: expect_post, expect_nil: expect_nil} do
+      expect_post.("(published: false)")
+      expect_nil.("(published: true)")
+    end
+
+    test "does not require optional arguments", %{expect_post: expect_post} do
+      expect_post.("")
+    end
+
+    test "works together with input object", %{expect_post: expect_post} do
+      expect_post.("(published: false, input: {best: true})")
+    end
+
+    test "does not define input field for an argument", %{expect_error: expect_error} do
+      expect_error.(
+        "(input: {published: false})",
+        "Argument \"input\" has invalid value {published: false}.\nIn field \"published\": Unknown field."
+      )
+    end
   end
 end

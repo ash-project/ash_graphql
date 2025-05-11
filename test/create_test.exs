@@ -922,4 +922,55 @@ defmodule AshGraphql.CreateTest do
              }
            } = result
   end
+
+  describe "create action with args" do
+    setup do
+      run = fn args ->
+        """
+        mutation {
+          createPostWithArg#{args} {
+            result {
+              text
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+      end
+
+      expect_post = fn args, text ->
+        assert {:ok, result} = run.(args)
+        assert %{data: %{"createPostWithArg" => %{"result" => %{"text" => ^text}}}} = result
+      end
+
+      expect_error = fn args, message ->
+        assert {:ok, result} = run.(args)
+        assert %{errors: [%{message: ^message}]} = result
+      end
+
+      [
+        expect_post: expect_post,
+        expect_error: expect_error
+      ]
+    end
+
+    test "defines and uses an argument", %{expect_post: expect_post} do
+      expect_post.("(text: \"nice\")", "nice")
+    end
+
+    test "does not require optional arguments", %{expect_post: expect_post} do
+      expect_post.("", nil)
+    end
+
+    test "works together with input object", %{expect_post: expect_post} do
+      expect_post.("(text: \"nice\", input: {best: true})", "nice")
+    end
+
+    test "does not define input field for an argument", %{expect_error: expect_error} do
+      expect_error.(
+        "(input: {text: \"nice\"})",
+        "Argument \"input\" has invalid value {text: \"nice\"}.\nIn field \"text\": Unknown field. Did you mean \"text1\" or \"text2\"?"
+      )
+    end
+  end
 end

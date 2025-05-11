@@ -12,6 +12,7 @@ defmodule AshGraphql.Resource.Mutation do
     :modify_resolution,
     :relay_id_translations,
     :description,
+    args: [],
     hide_inputs: []
   ]
 
@@ -37,6 +38,12 @@ defmodule AshGraphql.Resource.Mutation do
       A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
       """,
       default: []
+    ],
+    args: [
+      type: {:list, :atom},
+      doc: """
+      A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object.
+      """
     ],
     hide_inputs: [
       type: {:list, :atom},
