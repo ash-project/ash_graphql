@@ -18,18 +18,18 @@ defmodule AshGraphql.Graphql.Resolver do
            action: action,
            modify_resolution: modify,
            error_location: error_location
-         }, input?}
+         }, mutation_args}
       ) do
-    arguments =
-      if input? do
-        arguments[:input] || %{}
-      else
-        arguments
-      end
-
     action = Ash.Resource.Info.action(resource, action)
 
-    case handle_arguments(resource, action, arguments) do
+    arguments_result =
+      if mutation_args do
+        handle_mutation_arguments(resource, action, nil, arguments, mutation_args)
+      else
+        handle_arguments(resource, action, arguments)
+      end
+
+    case arguments_result do
       {:ok, arguments} ->
         metadata = %{
           domain: domain,
@@ -870,6 +870,30 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  defp handle_mutation_arguments(resource, action, read_action, arguments, mutation_args) do
+    {input_argument, arguments} = Map.pop(arguments, :input, %{})
+    {mutation_inputs, read_inputs} = Map.split(arguments, mutation_args)
+    mutation_inputs = Map.merge(mutation_inputs, input_argument)
+
+    case handle_arguments(resource, action, mutation_inputs) do
+      {:ok, mutation_inputs} ->
+        if read_action do
+          case handle_arguments(resource, read_action, read_inputs) do
+            {:ok, read_inputs} ->
+              {:ok, mutation_inputs, read_inputs}
+
+            error ->
+              error
+          end
+        else
+          {:ok, mutation_inputs}
+        end
+
+      error ->
+        error
+    end
+  end
+
   defp handle_arguments(_resource, nil, argument_values) do
     {:ok, argument_values}
   end
@@ -1415,12 +1439,11 @@ defmodule AshGraphql.Graphql.Resolver do
            action: action,
            upsert?: upsert?,
            upsert_identity: upsert_identity,
+           args: args,
            modify_resolution: modify
          }, _relay_ids?}
       ) do
-    input = arguments[:input] || %{}
-
-    case handle_arguments(resource, action, input) do
+    case handle_mutation_arguments(resource, action, nil, arguments, args) do
       {:ok, input} ->
         metadata = %{
           domain: domain,
@@ -1541,20 +1564,13 @@ defmodule AshGraphql.Graphql.Resolver do
            action: action,
            identity: identity,
            read_action: read_action,
+           args: args,
            modify_resolution: modify
          }, relay_ids?}
       ) do
     read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
-    input = arguments[:input] || %{}
 
-    args_result =
-      with {:ok, input} <- handle_arguments(resource, action, input),
-           {:ok, read_action_input} <-
-             handle_arguments(resource, read_action, Map.delete(arguments, :input)) do
-        {:ok, input, read_action_input}
-      end
-
-    case args_result do
+    case handle_mutation_arguments(resource, action, read_action, arguments, args) do
       {:ok, input, read_action_input} ->
         metadata = %{
           domain: domain,
@@ -1711,20 +1727,13 @@ defmodule AshGraphql.Graphql.Resolver do
            action: action,
            identity: identity,
            read_action: read_action,
+           args: args,
            modify_resolution: modify
          }, relay_ids?}
       ) do
     read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
-    input = arguments[:input] || %{}
 
-    args_result =
-      with {:ok, input} <- handle_arguments(resource, action, input),
-           {:ok, read_action_input} <-
-             handle_arguments(resource, read_action, Map.delete(arguments, :input)) do
-        {:ok, input, read_action_input}
-      end
-
-    case args_result do
+    case handle_mutation_arguments(resource, action, read_action, arguments, args) do
       {:ok, input, read_action_input} ->
         metadata = %{
           domain: domain,

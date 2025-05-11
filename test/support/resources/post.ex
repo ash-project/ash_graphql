@@ -226,6 +226,7 @@ defmodule AshGraphql.Test.Post do
 
     mutations do
       create :simple_create_post, :create
+      create :create_post_with_arg, :create, args: [:text]
       create :create_post_with_error, :create_with_error
       create :create_post_with_required_error, :create_with_required_error
       create :create_post, :create_confirm
@@ -247,6 +248,7 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_invalid_arguments_names, :create_with_invalid_arguments_names
 
       update :update_post, :update
+      update :update_post_with_arg, :update, args: [:text]
       update :update_post_with_comments, :update_with_comments
       update :update_post_confirm, :update_confirm
       update :update_best_post, :update, read_action: :best_post, identity: false
@@ -267,6 +269,7 @@ defmodule AshGraphql.Test.Post do
 
       # this is a mutation just for testing
       action(:random_post, :random)
+      action(:random_post_with_arg, :random, args: [:published])
     end
   end
 
@@ -332,24 +335,31 @@ defmodule AshGraphql.Test.Post do
       argument(:published, :boolean)
 
       run(fn input, _ ->
-        query =
-          if input.arguments[:published] do
-            Ash.Query.filter(__MODULE__, published == true)
-          else
-            __MODULE__
-          end
+        published = input.arguments[:published]
+        published_filter = if published == nil, do: [], else: [published: published]
 
-        Ash.count(query)
+        __MODULE__
+        |> Ash.Query.build(filter: published_filter)
+        |> Ash.count()
       end)
     end
 
     action :random, :struct do
       constraints(instance_of: __MODULE__)
       argument(:published, :boolean)
+      argument(:best, :boolean)
       allow_nil? true
 
       run(fn input, _ ->
+        published = input.arguments[:published]
+        published_filter = if published == nil, do: [], else: [published: published]
+
+        best = input.arguments[:best]
+        best_filter = if best == nil, do: [], else: [best: best]
+
         __MODULE__
+        |> Ash.Query.build(filter: published_filter)
+        |> Ash.Query.build(filter: best_filter)
         |> Ash.Query.limit(1)
         |> Ash.read_one()
       end)

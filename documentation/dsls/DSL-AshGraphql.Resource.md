@@ -344,6 +344,7 @@ create :create_post, :create
 | [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
 | [`description`](#graphql-mutations-create-description){: #graphql-mutations-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`relay_id_translations`](#graphql-mutations-create-relay_id_translations){: #graphql-mutations-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-create-args){: #graphql-mutations-create-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
@@ -386,6 +387,7 @@ update :update_post, :update
 | [`read_action`](#graphql-mutations-update-read_action){: #graphql-mutations-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
 | [`description`](#graphql-mutations-update-description){: #graphql-mutations-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`relay_id_translations`](#graphql-mutations-update-relay_id_translations){: #graphql-mutations-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-update-args){: #graphql-mutations-update-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-update-modify_resolution){: #graphql-mutations-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
@@ -428,6 +430,7 @@ destroy :destroy_post, :destroy
 | [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
 | [`description`](#graphql-mutations-destroy-description){: #graphql-mutations-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
 | [`relay_id_translations`](#graphql-mutations-destroy-relay_id_translations){: #graphql-mutations-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-destroy-args){: #graphql-mutations-destroy-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-destroy-modify_resolution){: #graphql-mutations-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 
@@ -471,6 +474,7 @@ action :check_status, :check_status
 | [`error_location`](#graphql-mutations-action-error_location){: #graphql-mutations-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-mutations-action-modify_resolution){: #graphql-mutations-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-action-args){: #graphql-mutations-action-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 
 
 

@@ -395,4 +395,61 @@ defmodule AshGraphql.UpdateTest do
               }
             }} = resp
   end
+
+  describe "update action with args" do
+    setup do
+      post =
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(:create, text: "initial")
+        |> Ash.create!()
+
+      run = fn args ->
+        """
+        mutation {
+          updatePostWithArg#{args} {
+            result {
+              text
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+      end
+
+      expect_post = fn args, text ->
+        assert {:ok, result} = run.(args)
+        assert %{data: %{"updatePostWithArg" => %{"result" => %{"text" => ^text}}}} = result
+      end
+
+      expect_error = fn args, message ->
+        assert {:ok, result} = run.(args)
+        assert %{errors: [%{message: ^message}]} = result
+      end
+
+      [
+        id: post.id,
+        expect_post: expect_post,
+        expect_error: expect_error
+      ]
+    end
+
+    test "defines and uses an argument", %{id: id, expect_post: expect_post} do
+      expect_post.(~s'(id: "#{id}", text: "nice")', "nice")
+    end
+
+    test "does not require optional arguments", %{id: id, expect_post: expect_post} do
+      expect_post.(~s'(id: "#{id}")', "initial")
+    end
+
+    test "works together with input object", %{id: id, expect_post: expect_post} do
+      expect_post.(~s'(id: "#{id}", text: "nice", input: {best: true})', "nice")
+    end
+
+    test "does not define input field for an argument", %{id: id, expect_error: expect_error} do
+      expect_error.(
+        ~s'(id: "#{id}", input: {text: "nice"})',
+        ~s'Argument "input" has invalid value {text: "nice"}.\nIn field "text": Unknown field. Did you mean "text1" or "text2"?'
+      )
+    end
+  end
 end
