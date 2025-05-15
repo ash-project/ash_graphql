@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.10](https://github.com/ash-project/ash_graphql/compare/v1.7.9...v1.7.10) (2025-05-15)
+
+
+
+
+### Bug Fixes:
+
+* refactor internal `AshGraphql.Resource.mutation/6` (#312)
+
+* refactor internal `AshGraphql.Resource.mutation_fields/5` (#311)
+
+* define shared mutations options (#310)
+
+* Support for returning relay encoded id when subscribing to destroy events (#307)
+
+### Improvements:
+
+* add `args` option to mutations (#314)
+
 ## [v1.7.9](https://github.com/ash-project/ash_graphql/compare/v1.7.8...v1.7.9) (2025-04-29)
 
 
