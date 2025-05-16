@@ -19,7 +19,7 @@ defmodule AshGraphql.Resource.Query do
     show_metadata: nil,
     type_name: nil,
     relay?: false,
-    extend_context: %{}
+    meta: []
   ]
 
   @query_schema [
@@ -90,10 +90,10 @@ defmodule AshGraphql.Resource.Query do
       An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
     ],
-    extend_context: [
-      type: :map,
-      doc: "A map of values to add to the context of the action.",
-      default: %{}
+    meta: [
+      type: :keyword_list,
+      doc: "A keyword list of metadata for the query.",
+      default: []
     ]
   ]
 
