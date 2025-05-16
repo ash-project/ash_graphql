@@ -668,10 +668,10 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              extend_context_middleware(query.extend_context) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
-                {{AshGraphql.Graphql.ContextMiddleware, :extend_context}, query.extend_context},
-                  {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, nil}}
+                {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, nil}}
               ],
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
           module: schema,
@@ -710,6 +710,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              extend_context_middleware(query.extend_context) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, relay_ids?}}
@@ -740,9 +741,9 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              extend_context_middleware(mutation.extend_context) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
               [
-                {{AshGraphql.Graphql.ContextMiddleware, :extend_context}, mutation.extend_context},
                 {{AshGraphql.Graphql.Resolver, :resolve},
                  {domain, resource, mutation, mutation.args}}
               ],
@@ -760,8 +761,8 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              extend_context_middleware(mutation.extend_context) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-              [{{AshGraphql.Graphql.ContextMiddleware, :extend_context}, mutation.extend_context}] ++
               [{{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}],
           module: schema,
           name: to_string(mutation.name),
@@ -1195,6 +1196,10 @@ defmodule AshGraphql.Resource do
 
   defp domain_middleware(domain) do
     [{{AshGraphql.Graphql.DomainMiddleware, :set_domain}, domain}]
+  end
+
+  defp extend_context_middleware(extend_context) do
+    [{{AshGraphql.Graphql.ExtendContextMiddleware, :extend_context}, extend_context}]
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
