@@ -18,7 +18,8 @@ defmodule AshGraphql.Resource.Query do
     paginate_with: :keyset,
     show_metadata: nil,
     type_name: nil,
-    relay?: false
+    relay?: false,
+    extend_context: %{}
   ]
 
   @query_schema [
@@ -88,6 +89,10 @@ defmodule AshGraphql.Resource.Query do
       doc: """
       An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more.
       """
+    ],
+    extend_context: [
+      type: :map,
+      doc: "A map of values to add to the context of the action."
     ]
   ]
 
