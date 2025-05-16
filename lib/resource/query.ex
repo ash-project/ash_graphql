@@ -92,7 +92,8 @@ defmodule AshGraphql.Resource.Query do
     ],
     extend_context: [
       type: :map,
-      doc: "A map of values to add to the context of the action."
+      doc: "A map of values to add to the context of the action.",
+      default: %{}
     ]
   ]
 

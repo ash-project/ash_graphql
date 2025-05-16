@@ -670,7 +670,7 @@ defmodule AshGraphql.Resource do
               domain_middleware(domain) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
-                {{AshGraphql.Graphql.ContextMiddleware, :extend_context}, query.extend_context} ++
+                {{AshGraphql.Graphql.ContextMiddleware, :extend_context}, query.extend_context},
                   {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, nil}}
               ],
           complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
@@ -741,8 +741,8 @@ defmodule AshGraphql.Resource do
             action_middleware ++
               domain_middleware(domain) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-              [{{AshGraphql.Graphql.ContextMiddleware, :extend_context}, mutation.extend_context}] ++
               [
+                {{AshGraphql.Graphql.ContextMiddleware, :extend_context}, mutation.extend_context},
                 {{AshGraphql.Graphql.Resolver, :resolve},
                  {domain, resource, mutation, mutation.args}}
               ],
