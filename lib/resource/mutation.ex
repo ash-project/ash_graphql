@@ -14,7 +14,7 @@ defmodule AshGraphql.Resource.Mutation do
     :description,
     args: [],
     hide_inputs: [],
-    meta: %{}
+    meta: []
   ]
 
   @mutation_schema [
