@@ -46,6 +46,7 @@ spark_locals_without_parens = [
   lookup_with_primary_key?: 1,
   managed_relationship: 2,
   managed_relationship: 3,
+  meta: 1,
   metadata_names: 1,
   metadata_types: 1,
   modify_resolution: 1,
