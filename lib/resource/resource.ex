@@ -86,6 +86,11 @@ defmodule AshGraphql.Resource do
       A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
       """,
       default: []
+    ],
+    meta: [
+      type: :keyword_list,
+      doc: "A keyword list of metadata for the action.",
+      default: []
     ]
   ]
 
@@ -1264,6 +1269,7 @@ defmodule AshGraphql.Resource do
         middleware:
           action_middleware ++
             domain_middleware(domain) ++
+            metadata_middleware(subscription.meta) ++
             [
               {{AshGraphql.Graphql.Resolver, :resolve},
                {domain, resource, subscription, relay_ids?}}

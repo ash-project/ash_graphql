@@ -12,13 +12,20 @@ defmodule AshGraphql.Test.Movie do
     paginate_relationship_with(actors: :relay, reviews: :offset, awards: :keyset)
 
     queries do
-      get :get_movie, :read
+      get :get_movie, :read do
+        meta meta_string: "bar", meta_integer: 1
+      end
+
       list :get_movies, :read, paginate_with: nil
     end
 
     mutations do
       create :create_movie, :create_with_actors
-      update :update_movie, :update
+
+      update :update_movie, :update do
+        meta meta_string: "bar", meta_integer: 1
+      end
+
       destroy :destroy_movie, :destroy
     end
   end

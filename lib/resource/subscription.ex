@@ -7,7 +7,8 @@ defmodule AshGraphql.Resource.Subscription do
     :action_types,
     :read_action,
     :actor,
-    :hide_inputs
+    :hide_inputs,
+    :meta
   ]
 
   @subscription_schema [
@@ -38,6 +39,10 @@ defmodule AshGraphql.Resource.Subscription do
       doc:
         "A list of inputs to hide from the subscription, usable if the read action has arguments.",
       default: []
+    ],
+    meta: [
+      type: :keyword_list,
+      doc: "A keyword list of metadata to include in the subscription."
     ]
   ]
 

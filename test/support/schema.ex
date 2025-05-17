@@ -7,6 +7,15 @@ defmodule AshGraphql.Test.Schema do
 
   use AshGraphql, domains: @domains, generate_sdl_file: "priv/schema.graphql"
 
+  def middleware(middleware, _field, %Absinthe.Type.Object{identifier: identifier})
+      when identifier in [:query, :mutation, :subscription] do
+    middleware ++ [AshGraphql.MetaMiddleware]
+  end
+
+  def middleware(middleware, _field, _object) do
+    middleware
+  end
+
   query do
     field :custom_get_post, :post do
       arg(:id, non_null(:id))
