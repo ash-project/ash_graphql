@@ -111,6 +111,7 @@ get :get_post, :read
 | [`hide_inputs`](#graphql-queries-get-hide_inputs){: #graphql-queries-get-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
 | [`complexity`](#graphql-queries-get-complexity){: #graphql-queries-get-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-queries-get-meta){: #graphql-queries-get-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
 
 
 
@@ -159,6 +160,7 @@ read_one :current_user, :current_user
 | [`hide_inputs`](#graphql-queries-read_one-hide_inputs){: #graphql-queries-read_one-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
 | [`complexity`](#graphql-queries-read_one-complexity){: #graphql-queries-read_one-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-read_one-modify_resolution){: #graphql-queries-read_one-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-queries-read_one-meta){: #graphql-queries-read_one-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
 
 
 
@@ -212,6 +214,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`hide_inputs`](#graphql-queries-list-hide_inputs){: #graphql-queries-list-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
 | [`complexity`](#graphql-queries-list-complexity){: #graphql-queries-list-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-list-modify_resolution){: #graphql-queries-list-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-queries-list-meta){: #graphql-queries-list-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
 
 
 
@@ -254,6 +257,7 @@ action :check_status, :check_status
 | [`error_location`](#graphql-queries-action-error_location){: #graphql-queries-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-queries-action-modify_resolution){: #graphql-queries-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-queries-action-relay_id_translations){: #graphql-queries-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`meta`](#graphql-queries-action-meta){: #graphql-queries-action-meta } | `keyword` | `[]` | A keyword list of metadata for the action. |
 
 
 
@@ -323,6 +327,7 @@ create :create_post, :create
 | [`args`](#graphql-mutations-create-args){: #graphql-mutations-create-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-mutations-create-meta){: #graphql-mutations-create-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 
 
 
@@ -367,6 +372,7 @@ update :update_post, :update
 | [`args`](#graphql-mutations-update-args){: #graphql-mutations-update-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-update-modify_resolution){: #graphql-mutations-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-mutations-update-meta){: #graphql-mutations-update-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 
 
 
@@ -411,6 +417,7 @@ destroy :destroy_post, :destroy
 | [`args`](#graphql-mutations-destroy-args){: #graphql-mutations-destroy-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-destroy-modify_resolution){: #graphql-mutations-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-mutations-destroy-meta){: #graphql-mutations-destroy-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 
 
 
@@ -453,6 +460,7 @@ action :check_status, :check_status
 | [`error_location`](#graphql-mutations-action-error_location){: #graphql-mutations-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-mutations-action-modify_resolution){: #graphql-mutations-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`relay_id_translations`](#graphql-mutations-action-relay_id_translations){: #graphql-mutations-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`meta`](#graphql-mutations-action-meta){: #graphql-mutations-action-meta } | `keyword` | `[]` | A keyword list of metadata for the action. |
 | [`args`](#graphql-mutations-action-args){: #graphql-mutations-action-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 
 
@@ -520,6 +528,7 @@ end
 | [`action_types`](#graphql-subscriptions-subscribe-action_types){: #graphql-subscriptions-subscribe-action_types } | `list(atom) \| atom` |  | The type of actions the subsciption should listen to. |
 | [`read_action`](#graphql-subscriptions-subscribe-read_action){: #graphql-subscriptions-subscribe-read_action } | `atom` |  | The read action to use for reading data |
 | [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the subscription, usable if the read action has arguments. |
+| [`meta`](#graphql-subscriptions-subscribe-meta){: #graphql-subscriptions-subscribe-meta } | `keyword` |  | A keyword list of metadata to include in the subscription. |
 
 
 
