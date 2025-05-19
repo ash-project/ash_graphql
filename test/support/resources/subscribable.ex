@@ -16,7 +16,10 @@ defmodule AshGraphql.Test.Subscribable do
     end
 
     mutations do
-      create :create_subscribable, :create
+      create :create_subscribable, :create do
+        meta meta_string: "bar", meta_integer: 1
+      end
+
       update :update_subscribable, :update
       destroy :destroy_subscribable, :destroy
     end

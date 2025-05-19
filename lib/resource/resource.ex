@@ -86,6 +86,11 @@ defmodule AshGraphql.Resource do
       A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
       """,
       default: []
+    ],
+    meta: [
+      type: :keyword_list,
+      doc: "A keyword list of metadata for the action.",
+      default: []
     ]
   ]
 
@@ -101,7 +106,8 @@ defmodule AshGraphql.Resource do
       :error_location,
       :modify_resolution,
       args: [],
-      hide_inputs: []
+      hide_inputs: [],
+      meta: []
     ]
   end
 
@@ -668,6 +674,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              metadata_middleware(query.meta) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, nil}}
@@ -709,6 +716,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              metadata_middleware(query.meta) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :resolve}, {domain, resource, query, relay_ids?}}
@@ -739,6 +747,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              metadata_middleware(mutation.meta) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
               [
                 {{AshGraphql.Graphql.Resolver, :resolve},
@@ -758,6 +767,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              metadata_middleware(mutation.meta) ++
               id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
               [{{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}],
           module: schema,
@@ -1194,6 +1204,10 @@ defmodule AshGraphql.Resource do
     [{{AshGraphql.Graphql.DomainMiddleware, :set_domain}, domain}]
   end
 
+  defp metadata_middleware(metadata) do
+    [{{AshGraphql.Graphql.MetadataMiddleware, :set_metadata}, metadata}]
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
 
   defp metadata_field(resource, mutation, schema) do
@@ -1255,6 +1269,7 @@ defmodule AshGraphql.Resource do
         middleware:
           action_middleware ++
             domain_middleware(domain) ++
+            metadata_middleware(subscription.meta) ++
             [
               {{AshGraphql.Graphql.Resolver, :resolve},
                {domain, resource, subscription, relay_ids?}}
