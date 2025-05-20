@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.11](https://github.com/ash-project/ash_graphql/compare/v1.7.10...v1.7.11) (2025-05-20)
+
+
+
+
+### Improvements:
+
+* Add meta option for adding custom resolution context (#317)
+
 ## [v1.7.10](https://github.com/ash-project/ash_graphql/compare/v1.7.9...v1.7.10) (2025-05-15)
 
 
