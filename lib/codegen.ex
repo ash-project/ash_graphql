@@ -14,7 +14,7 @@ defmodule AshGraphql.Codegen do
           target_contents = File.read!(target)
 
           if String.trim(target_contents) != String.trim(contents) do
-            raise "Generated SDL file for #{} does not match existing file. Please run `mix ash.codegen` to  generate the new  file."
+            raise "Generated SDL file for #{inspect(schema)} does not match existing file. Please run `mix ash.codegen` to  generate the new  file."
           end
         else
           File.write!(target, contents)
