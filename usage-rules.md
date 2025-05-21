@@ -136,21 +136,3 @@ defmodule MyApp.CustomType do
   def graphql_input_type(_), do: :string
 end
 ```
-
-## Relay Support
-
-AshGraphql has built-in support for the Relay GraphQL client specification:
-
-```elixir
-use AshGraphql,
-  domains: @domains,
-  relay_ids?: true  # Enable Relay Node IDs
-
-# In your resource:
-graphql do
-  queries do
-    # Use relay pagination
-    list :posts, :read, relay?: true
-  end
-end
-```
