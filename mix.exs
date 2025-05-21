@@ -156,8 +156,7 @@ defmodule AshGraphql.MixProject do
       {:absinthe_phoenix, "~> 2.0", optional: true},
       {:jason, "~> 1.2"},
       {:igniter, "~> 0.5 and >= 0.5.28", optional: true},
-      # {:spark, "~> 2.2 and >= 2.2.10"},
-      {:spark, path: "../../ash/spark", override: true},
+      {:spark, "~> 2.2 and >= 2.2.10"},
       {:owl, "~> 0.11"},
       # dev/test dependencies
       {:ex_doc, "~> 0.37-rc", only: [:dev, :test], runtime: false},
