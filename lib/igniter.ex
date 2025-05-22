@@ -194,7 +194,7 @@ if Code.ensure_loaded?(Igniter) do
                   Absinthe.Plug.GraphiQL,
                   schema: Module.concat(["#{inspect(schema_name)}"]),
                   socket: Module.concat(["#{inspect(socket_name)}"]),
-                  interface: :playground
+                  interface: :simple
 
           forward "/",
             Absinthe.Plug,

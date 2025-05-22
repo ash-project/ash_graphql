@@ -133,7 +133,7 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
       + |    forward("/playground", Absinthe.Plug.GraphiQL,
       + |      schema: Module.concat(["TestWeb.GraphqlSchema"]),
       + |      socket: Module.concat(["TestWeb.GraphqlSocket"]),
-      + |      interface: :playground
+      + |      interface: :simple
       + |    )
       + |
       + |    forward("/", Absinthe.Plug, schema: Module.concat(["TestWeb.GraphqlSchema"]))
