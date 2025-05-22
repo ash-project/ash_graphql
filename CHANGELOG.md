@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.12](https://github.com/ash-project/ash_graphql/compare/v1.7.11...v1.7.12) (2025-05-22)
+
+
+
+
+### Bug Fixes:
+
+* change default playground interface (#319)
+
 ## [v1.7.11](https://github.com/ash-project/ash_graphql/compare/v1.7.10...v1.7.11) (2025-05-20)
 
 
