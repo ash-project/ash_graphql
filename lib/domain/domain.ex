@@ -182,7 +182,7 @@ defmodule AshGraphql.Domain do
                 schema
 
               schemas ->
-                Igniter.Util.UI.select(
+                Igniter.Util.IO.select(
                   "Multiple Ash.Graphql modules found. Please select one to use:",
                   schemas,
                   display: &inspect/1
