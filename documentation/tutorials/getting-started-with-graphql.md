@@ -132,47 +132,9 @@ use AshGraphql, domains: [Your.Domain1, Your.Domain2]
 
 Some example queries/mutations are shown below. If no queries/mutations are added, nothing will show up in the GraphQL API, so be sure to set one up if you want to try it out.
 
-### Queries & Mutations on the Resource
-
-Here we show queries and mutations being added to the resource, but you can also define them on the _domain_. See below for an equivalent definition
-
-```elixir
-defmodule Helpdesk.Support.Ticket do
-  use Ash.Resource,
-    ...,
-    extensions: [
-      AshGraphql.Resource
-    ]
-
-  graphql do
-    type :ticket
-
-    queries do
-      # Examples
-
-      # create a field called `get_ticket` that uses the `read` read action to fetch a single ticke
-      get :get_ticket, :read
-      # create a field called `most_important_ticket` that uses the `most_important` read action to fetch a single record
-      read_one :most_important_ticket, :most_important
-
-      # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
-      list :list_tickets, :read
-    end
-
-    mutations do
-      # Examples
-
-      create :create_ticket, :create
-      update :update_ticket, :update
-      destroy :destroy_ticket, :destroy
-    end
-  end
-
-  ...
-end
-```
-
 ### Queries & Mutations on the Domain
+
+Here we show queries and mutations being added to the domain, but you can also define them on the resource. See below for an equivalent definition. Prefer to add to the domain so your interface is defined in one place.
 
 ```elixir
 defmodule Helpdesk.Support.Ticket do
@@ -213,6 +175,44 @@ defmodule Helpdesk.Support do
       update Helpdesk.Support.Ticket, :update_ticket, :update
       destroy Helpdesk.Support.Ticket, :destroy_ticket, :destroy
     end
+end
+```
+
+### Queries & Mutations on the Resource
+
+```elixir
+defmodule Helpdesk.Support.Ticket do
+  use Ash.Resource,
+    ...,
+    extensions: [
+      AshGraphql.Resource
+    ]
+
+  graphql do
+    type :ticket
+
+    queries do
+      # Examples
+
+      # create a field called `get_ticket` that uses the `read` read action to fetch a single ticke
+      get :get_ticket, :read
+      # create a field called `most_important_ticket` that uses the `most_important` read action to fetch a single record
+      read_one :most_important_ticket, :most_important
+
+      # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
+      list :list_tickets, :read
+    end
+
+    mutations do
+      # Examples
+
+      create :create_ticket, :create
+      update :update_ticket, :update
+      destroy :destroy_ticket, :destroy
+    end
+  end
+
+  ...
 end
 ```
 
