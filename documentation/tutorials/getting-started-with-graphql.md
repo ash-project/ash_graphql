@@ -161,12 +161,14 @@ defmodule Helpdesk.Support do
 
   ...
   graphql do
-    # equivalent queries and mutations, but the first argument
-    # is the resource because the domain can define queries for
-    # any of its resources
     queries do
+      # create a field called `get_ticket` that uses the `read` read action to fetch a single ticke
       get Helpdesk.Support.Ticket, :get_ticket, :read
+
+      # create a field called `most_important_ticket` that uses the `most_important` read action to fetch a single record
       read_one Helpdesk.Support.Ticket, :most_important_ticket, :most_important
+
+      # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
       list Helpdesk.Support.Ticket, :list_tickets, :read
     end
 
@@ -192,20 +194,12 @@ defmodule Helpdesk.Support.Ticket do
     type :ticket
 
     queries do
-      # Examples
-
-      # create a field called `get_ticket` that uses the `read` read action to fetch a single ticke
       get :get_ticket, :read
-      # create a field called `most_important_ticket` that uses the `most_important` read action to fetch a single record
       read_one :most_important_ticket, :most_important
-
-      # create a field called `list_tickets` that uses the `read` read action to fetch a list of tickets
       list :list_tickets, :read
     end
 
     mutations do
-      # Examples
-
       create :create_ticket, :create
       update :update_ticket, :update
       destroy :destroy_ticket, :destroy
