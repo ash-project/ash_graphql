@@ -1328,9 +1328,37 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp paginate_with_offset(%Ash.Page.Offset{results: results, count: count, more?: more?}) do
-    {:ok, %{results: results, count: count, more?: more?}}
+  defp paginate_with_offset(%Ash.Page.Offset{
+         results: results,
+         count: count,
+         more?: more?,
+         offset: offset,
+         limit: limit
+       }) do
+    total_pages = get_total_pages(count, limit)
+    has_next_page = more?
+    has_previous_page = offset > 0
+    page_number = get_current_page(%Ash.Page.Offset{limit: limit, offset: offset}, total_pages)
+    last_page = total_pages
+
+    {:ok,
+     %{
+       results: results,
+       count: count,
+       more?: more?,
+       has_next_page: has_next_page,
+       has_previous_page: has_previous_page,
+       page_number: page_number,
+       last_page: last_page
+     }}
   end
+
+  defp get_total_pages(count, _) when count in [0, nil], do: 1
+  defp get_total_pages(_, nil), do: 1
+  defp get_total_pages(total_count, limit), do: ceil(total_count / limit)
+
+  defp get_current_page(%Ash.Page.Offset{limit: limit, offset: offset}, total),
+    do: min(ceil(offset / limit) + 1, total)
 
   defp paginate(_resource, _gql_query, _action, %Ash.Page.Keyset{} = keyset, relay?) do
     paginate_with_keyset(keyset, relay?)
