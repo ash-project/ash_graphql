@@ -3847,6 +3847,46 @@ defmodule AshGraphql.Resource do
     ]
   end
 
+  defp add_pagination_metadata(fields, schema, true) do
+    [
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "Whether or not there is a next page",
+        identifier: :has_next_page,
+        module: schema,
+        name: "has_next_page",
+        __reference__: ref(__ENV__),
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :boolean}
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "Whether or not there is a previous page",
+        identifier: :has_previous_page,
+        module: schema,
+        name: "has_previous_page",
+        __reference__: ref(__ENV__),
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :boolean}
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "The number of the current page",
+        identifier: :page_number,
+        module: schema,
+        name: "page_number",
+        __reference__: ref(__ENV__),
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :integer}
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "The number of the last page",
+        identifier: :last_page,
+        module: schema,
+        name: "last_page",
+        __reference__: ref(__ENV__),
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :integer}
+      }
+      | fields
+    ]
+  end
+
+  defp add_pagination_metadata(fields, _, _), do: fields
+
   defp add_count_to_page(fields, schema, true) do
     [
       %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -3880,19 +3920,10 @@ defmodule AshGraphql.Resource do
                 of_type: type
               }
             }
-          },
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            description: "Whether or not there is a next page",
-            identifier: :more?,
-            module: schema,
-            name: "has_next_page",
-            __reference__: ref(__ENV__),
-            type: %Absinthe.Blueprint.TypeReference.NonNull{
-              of_type: :boolean
-            }
           }
         ]
-        |> add_count_to_page(schema, countable?),
+        |> add_count_to_page(schema, countable?)
+        |> add_pagination_metadata(schema, countable?),
       identifier: String.to_atom("page_of_#{type}"),
       module: schema,
       name: Macro.camelize("page_of_#{type}"),

@@ -128,6 +128,142 @@ defmodule AshGraphql.PaginateTest do
       :ok
     end
 
+    test "retruns pagination metadata" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 1, sort: [{field: TEXT}]) {
+          count
+          hasNextPage
+          hasPreviousPage
+          pageNumber
+          lastPage
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "hasNextPage" => true,
+                    "hasPreviousPage" => false,
+                    "pageNumber" => 1,
+                    "lastPage" => 5,
+                    "results" => [
+                      %{"text" => "a"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
+    test "pagination metadata is correct when offset is 2" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 1, offset: 2, sort: [{field: TEXT}]) {
+          count
+          hasNextPage
+          hasPreviousPage
+          pageNumber
+          lastPage
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "hasNextPage" => true,
+                    "hasPreviousPage" => true,
+                    "pageNumber" => 3,
+                    "lastPage" => 5,
+                    "results" => [
+                      %{"text" => "c"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
+    test "pagination metadata is correct when offset is 4" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(limit: 1, offset: 4, sort: [{field: TEXT}]) {
+          count
+          hasNextPage
+          hasPreviousPage
+          pageNumber
+          lastPage
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "hasNextPage" => false,
+                    "hasPreviousPage" => true,
+                    "pageNumber" => 5,
+                    "lastPage" => 5,
+                    "results" => [
+                      %{"text" => "e"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
+    test "pagination metadata is correct when the is no limit" do
+      doc = """
+      query PaginatedPosts {
+        paginatedPosts(sort: [{field: TEXT}]) {
+          count
+          hasNextPage
+          hasPreviousPage
+          pageNumber
+          lastPage
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "hasNextPage" => false,
+                    "hasPreviousPage" => false,
+                    "pageNumber" => 1,
+                    "lastPage" => 1,
+                    "results" => [
+                      %{"text" => "a"},
+                      %{"text" => "b"},
+                      %{"text" => "c"},
+                      %{"text" => "d"},
+                      %{"text" => "e"}
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+    end
+
     test "default_limit records are fetched" do
       doc = """
       query PaginatedPosts {
