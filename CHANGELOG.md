@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.13](https://github.com/ash-project/ash_graphql/compare/v1.7.12...v1.7.13) (2025-05-30)
+
+
+
+
+### Bug Fixes:
+
+* properly unwrap constraints & type for list newtypes
+
+### Improvements:
+
+* add limit to pagination metadata (#323)
+
+* support new codegen patterns
+
+* make pagination metadata more robust for offeset pagination (#320)
+
 ## [v1.7.12](https://github.com/ash-project/ash_graphql/compare/v1.7.11...v1.7.12) (2025-05-22)
 
 
