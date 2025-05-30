@@ -3908,6 +3908,14 @@ defmodule AshGraphql.Resource do
         name: "last_page",
         __reference__: ref(__ENV__),
         type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :integer}
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "The number of records per page",
+        identifier: :limit,
+        module: schema,
+        name: "limit",
+        __reference__: ref(__ENV__),
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :integer}
       }
       | fields
     ]
