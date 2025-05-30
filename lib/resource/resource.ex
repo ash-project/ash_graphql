@@ -529,6 +529,7 @@ defmodule AshGraphql.Resource do
     %{module: __MODULE__, location: %{file: env.file, line: env.line}}
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
   def codegen(argv) do
     AshGraphql.Codegen.schemas()
     |> Enum.filter(& &1.generate_sdl_file())
