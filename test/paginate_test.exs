@@ -137,6 +137,7 @@ defmodule AshGraphql.PaginateTest do
           hasPreviousPage
           pageNumber
           lastPage
+          limit
           results{
             text
           }
@@ -153,6 +154,7 @@ defmodule AshGraphql.PaginateTest do
                     "hasPreviousPage" => false,
                     "pageNumber" => 1,
                     "lastPage" => 5,
+                    "limit" => 1,
                     "results" => [
                       %{"text" => "a"}
                     ]

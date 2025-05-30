@@ -1346,6 +1346,7 @@ defmodule AshGraphql.Graphql.Resolver do
        results: results,
        count: count,
        more?: more?,
+       limit: limit,
        has_next_page: has_next_page,
        has_previous_page: has_previous_page,
        page_number: page_number,
