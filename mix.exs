@@ -150,7 +150,7 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 3.0 and >= 3.4.69")},
+      {:ash, ash_version("~> 3.5 and >= 3.5.13")},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:absinthe_phoenix, "~> 2.0", optional: true},
