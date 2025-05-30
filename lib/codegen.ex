@@ -2,7 +2,7 @@ defmodule AshGraphql.Codegen do
   @moduledoc false
 
   # sobelow_skip ["Traversal.FileModule"]
-  def generate_sdl_file(schema, opts) do
+  def generate_sdl_file(schema) do
     target = schema.generate_sdl_file()
 
     case Mix.Tasks.Absinthe.Schema.Sdl.generate_schema(%Mix.Tasks.Absinthe.Schema.Sdl.Options{
@@ -10,15 +10,7 @@ defmodule AshGraphql.Codegen do
            filename: target
          }) do
       {:ok, contents} ->
-        if opts[:check?] do
-          target_contents = File.read!(target)
-
-          if String.trim(target_contents) != String.trim(contents) do
-            raise "Generated SDL file for #{inspect(schema)} does not match existing file. Please run `mix ash.codegen` to  generate the new  file."
-          end
-        else
-          File.write!(target, contents)
-        end
+        {target, contents}
 
       error ->
         raise """
@@ -35,7 +27,8 @@ defmodule AshGraphql.Codegen do
     file = env.module.generate_sdl_file()
 
     if file && env.module.auto_generate_sdl_file?() do
-      generate_sdl_file(env.module, [])
+      {target, contents} = generate_sdl_file(env.module)
+      File.write!(target, contents)
     end
   end
 

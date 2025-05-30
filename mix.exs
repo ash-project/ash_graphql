@@ -150,7 +150,8 @@ defmodule AshGraphql.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 3.0 and >= 3.4.69")},
+      # {:ash, ash_version("~> 3.0 and >= 3.4.69")},
+      {:ash, github: "ash-project/ash", override: true},
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:absinthe_phoenix, "~> 2.0", optional: true},
@@ -172,14 +173,14 @@ defmodule AshGraphql.MixProject do
     ]
   end
 
-  defp ash_version(default_version) do
-    case System.get_env("ASH_VERSION") do
-      nil -> default_version
-      "local" -> [path: "../ash"]
-      "main" -> [git: "https://github.com/ash-project/ash.git"]
-      version -> "~> #{version}"
-    end
-  end
+  # defp ash_version(default_version) do
+  #   case System.get_env("ASH_VERSION") do
+  #     nil -> default_version
+  #     "local" -> [path: "../ash"]
+  #     "main" -> [git: "https://github.com/ash-project/ash.git"]
+  #     version -> "~> #{version}"
+  #   end
+  # end
 
   defp aliases do
     [

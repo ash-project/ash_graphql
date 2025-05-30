@@ -530,12 +530,40 @@ defmodule AshGraphql.Resource do
   end
 
   def codegen(argv) do
-    schemas = AshGraphql.Codegen.schemas()
+    AshGraphql.Codegen.schemas()
+    |> Enum.filter(& &1.generate_sdl_file())
+    |> Enum.map(fn schema ->
+      AshGraphql.Codegen.generate_sdl_file(schema)
+    end)
+    |> Enum.filter(fn {target, contents} ->
+      target_contents =
+        if File.exists?(target) do
+          File.read!(target)
+        else
+          ""
+        end
 
-    check? = "--check" in argv
+      String.trim(target_contents) != String.trim(contents)
+    end)
+    |> case do
+      [] ->
+        :ok
 
-    for schema <- schemas, schema.generate_sdl_file() do
-      AshGraphql.Codegen.generate_sdl_file(schema, check?: check?)
+      files ->
+        cond do
+          "--check" in argv ->
+            raise Ash.Error.Framework.PendingCodegen, diff: files
+
+          "--dry-run" in argv ->
+            Enum.each(files, fn {target, contents} ->
+              IO.puts("#{target}\n\n#{contents}")
+            end)
+
+          true ->
+            Enum.each(files, fn {target, contents} ->
+              File.write!(target, contents)
+            end)
+        end
     end
   end
 
