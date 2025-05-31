@@ -177,6 +177,7 @@ defmodule Helpdesk.Support do
       update Helpdesk.Support.Ticket, :update_ticket, :update
       destroy Helpdesk.Support.Ticket, :destroy_ticket, :destroy
     end
+  end
 end
 ```
 
