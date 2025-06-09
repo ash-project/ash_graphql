@@ -3087,23 +3087,6 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp resolve_union_result(
          value,
-         {name, _field_type, %{type: {:array, field_type}} = field, resource, unnested_types,
-          domain}
-       ) do
-    if value do
-      Enum.map(
-        value,
-        &resolve_union_result(
-          &1,
-          {name, field_type, %{field | type: field_type, constraints: field.constraints[:items]},
-           resource, unnested_types, domain}
-        )
-      )
-    end
-  end
-
-  defp resolve_union_result(
-         value,
          {name, {:array, field_type}, field, resource, unnested_types, domain}
        ) do
     if value do
