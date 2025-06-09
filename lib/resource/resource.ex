@@ -4590,7 +4590,13 @@ defmodule AshGraphql.Resource do
   end
 
   defp middleware_for_field(resource, field, name, {:array, type}, constraints, domain) do
-    middleware_for_field(resource, field, name, type, constraints, domain)
+    case middleware_for_field(resource, field, name, type, constraints, domain) do
+      [{middleware, {name, type, field, resource, unnested_types, domain}}] ->
+        [{middleware, {name, {:array, type}, field, resource, unnested_types, domain}}]
+
+      middleware ->
+        middleware
+    end
   end
 
   defp middleware_for_field(resource, field, name, type, constraints, domain) do
