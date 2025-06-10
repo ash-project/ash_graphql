@@ -16,6 +16,7 @@ config :ash_graphql, :authorize_update_destroy_with_error?, true
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshGraphql.MixProject,
+    github_handle_lookup?: true,
     changelog_file: "CHANGELOG.md",
     repository_url: "https://github.com/ash-project/ash_graphql",
     # Instructs the tool to manage your mix version in your `mix.exs` file
