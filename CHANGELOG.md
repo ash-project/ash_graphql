@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.14](https://github.com/ash-project/ash_graphql/compare/v1.7.13...v1.7.14) (2025-06-10)
+
+
+
+
+### Bug Fixes:
+
+* handling of attribute with array type in middleware for field function (#327) by [@jichon](https://github.com/jichon)
+
 ## [v1.7.13](https://github.com/ash-project/ash_graphql/compare/v1.7.12...v1.7.13) (2025-05-30)
 
 
