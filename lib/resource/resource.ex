@@ -3291,7 +3291,8 @@ defmodule AshGraphql.Resource do
               String.to_atom("#{Atom.to_string(type_name)}_#{Atom.to_string(name)}")
             end
 
-          nested_type = array_to_list_of(attribute[:type], nested_type_name)
+          nested_type =
+            array_to_list_of(attribute[:type], nested_type_name, attribute[:constraints])
 
           nested_field =
             %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -3448,13 +3449,24 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp array_to_list_of({:array, type}, nested_type_name) do
+  defp array_to_list_of({:array, type}, nested_type_name, constraints) do
+    nil_items? = Keyword.get(constraints || [], :nil_items?, true)
+
+    inner_type = array_to_list_of(type, nested_type_name, constraints[:items] || [])
+
     %Absinthe.Blueprint.TypeReference.List{
-      of_type: array_to_list_of(type, nested_type_name)
+      of_type:
+        if nil_items? do
+          inner_type
+        else
+          %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: inner_type
+          }
+        end
     }
   end
 
-  defp array_to_list_of(_type, nested_type_name) do
+  defp array_to_list_of(_type, nested_type_name, _constraints) do
     nested_type_name
   end
 
@@ -3493,7 +3505,8 @@ defmodule AshGraphql.Resource do
                 )
               end
 
-            nested_type = array_to_list_of(attribute[:type], nested_type_name)
+            nested_type =
+              array_to_list_of(attribute[:type], nested_type_name, attribute[:constraints])
 
             nested_field =
               %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -4747,7 +4760,7 @@ defmodule AshGraphql.Resource do
 
     field_type =
       type
-      |> do_field_type(new_attribute, resource, input?)
+      |> do_field_type(new_attribute, resource, input?, new_constraints)
       |> maybe_wrap_non_null(!attribute.constraints[:nil_items?] || embedded?(attribute.type))
 
     %Absinthe.Blueprint.TypeReference.List{

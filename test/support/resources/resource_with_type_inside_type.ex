@@ -14,6 +14,7 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
 
     mutations do
       action :create_type_inside_type, :custom_action
+      action :retrieve_type_inside_type, :custom_action_two
     end
   end
 
@@ -25,6 +26,12 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
 
       run(fn _inputs, _ctx ->
         {:ok, true}
+      end)
+    end
+
+    action :custom_action_two, AshGraphql.Test.CategoryHierarchy do
+      run(fn _inputs, _ctx ->
+        {:ok, %{categories: [%{name: "bananas"}]}}
       end)
     end
   end
