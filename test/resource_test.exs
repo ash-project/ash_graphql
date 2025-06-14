@@ -263,13 +263,13 @@ defmodule AshGraphql.ResourceTest do
     # Verify the type structure: [Category!]!
     # Outer type is NON_NULL
     assert categories_field["type"]["kind"] == "NON_NULL"
-    
+
     # Next level is LIST
     assert categories_field["type"]["ofType"]["kind"] == "LIST"
-    
+
     # List items are NON_NULL
     assert categories_field["type"]["ofType"]["ofType"]["kind"] == "NON_NULL"
-    
+
     # Inner type is Category (an OBJECT type)
     assert categories_field["type"]["ofType"]["ofType"]["ofType"]["name"] == "Category"
     assert categories_field["type"]["ofType"]["ofType"]["ofType"]["kind"] == "OBJECT"
@@ -303,7 +303,7 @@ defmodule AshGraphql.ResourceTest do
 
     name_field = Enum.find(category_type["fields"], &(&1["name"] == "name"))
     assert name_field != nil
-    
+
     # The name field should be non-null String
     assert name_field["type"]["kind"] == "NON_NULL"
     assert name_field["type"]["ofType"]["name"] == "String"

@@ -30,7 +30,6 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
     end
 
     action :custom_action_two, AshGraphql.Test.CategoryHierarchy do
-
       run(fn _inputs, _ctx ->
         {:ok, %{categories: [%{name: "bananas"}]}}
       end)
