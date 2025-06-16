@@ -66,6 +66,7 @@ spark_locals_without_parens = [
   show_fields: 1,
   show_metadata: 1,
   show_raised_errors?: 1,
+  sortable_fields: 1,
   subscribe: 1,
   subscribe: 2,
   subscribe: 3,

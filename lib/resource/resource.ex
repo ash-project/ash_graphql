@@ -463,6 +463,12 @@ defmodule AshGraphql.Resource do
         doc:
           "A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created."
       ],
+      sortable_fields: [
+        type: {:list, :atom},
+        required: false,
+        doc:
+          "A list of fields that are allowed to be sorted on. Defaults to all sortable fields for which a GraphQL type can be created."
+      ],
       nullable_fields: [
         type: {:wrap_list, :atom},
         doc:
@@ -3813,7 +3819,9 @@ defmodule AshGraphql.Resource do
     |> Enum.concat(Ash.Resource.Info.public_calculations(resource))
     |> Enum.concat(Ash.Resource.Info.public_aggregates(resource))
     |> Enum.filter(
-      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && sortable?(&1, resource))
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
+          AshGraphql.Resource.Info.sortable_field?(resource, &1.name) &&
+          sortable?(&1, resource))
     )
     |> Enum.map(& &1.name)
     |> Enum.uniq()

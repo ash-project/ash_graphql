@@ -217,6 +217,18 @@ defmodule AshGraphql.Resource.Info do
     is_nil(filterable_fields) or field_name in filterable_fields
   end
 
+  @doc "Fields that may be sorted on"
+  def sortable_fields(resource) do
+    Extension.get_opt(resource, [:graphql], :sortable_fields, nil)
+  end
+
+  @doc "May the specified field be sorted on?"
+  def sortable_field?(resource, field_name) do
+    sortable_fields = AshGraphql.Resource.Info.sortable_fields(resource)
+
+    is_nil(sortable_fields) or field_name in sortable_fields
+  end
+
   @doc "An error handler for errors produced by the resource"
   def error_handler(resource) do
     if resource,
