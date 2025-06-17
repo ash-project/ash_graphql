@@ -551,6 +551,39 @@ defmodule AshGraphql.CreateTest do
     assert %{data: %{"createPost" => %{"result" => %{"text" => "foobar"}}}} = result
   end
 
+  test "a create with argument_input_type works" do
+    resp =
+      """
+      mutation CreatePostWithArgumentTypes($input: CreatePostWithArgumentTypesInput!) {
+        createPostWithArgumentTypes(input: $input) {
+          result {
+            text
+          }
+          errors {
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "input" => %{
+            "integerArgumentAsString" => "1"
+          }
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithArgumentTypes" => %{"result" => %{}}
+             }
+           } = result
+  end
+
   test "a create with a fragment works" do
     resp =
       """

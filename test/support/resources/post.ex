@@ -165,7 +165,9 @@ defmodule AshGraphql.Test.Post do
 
     attribute_types integer_as_string_in_domain: :string
     attribute_input_types integer_as_string_in_domain: :string
-    argument_input_types create_bar_with_foo_with_map: [bar: :bar_with_foo]
+
+    argument_input_types create_bar_with_foo_with_map: [bar: :bar_with_foo],
+                         integer_argument_as_string: :string
 
     argument_names create_with_invalid_arguments_names: [
                      invalid_1: :invalid1,
@@ -227,6 +229,7 @@ defmodule AshGraphql.Test.Post do
     mutations do
       create :simple_create_post, :create
       create :create_post_with_arg, :create, args: [:text]
+      create :create_post_with_argument_types, :create_with_argument_types
       create :create_post_with_error, :create_with_error
       create :create_post_with_required_error, :create_with_required_error
       create :create_post, :create_confirm
@@ -316,6 +319,10 @@ defmodule AshGraphql.Test.Post do
     create :create_with_invalid_arguments_names do
       argument(:invalid_1, :string)
       argument(:remove_invalid?, :boolean, allow_nil?: false, default: true)
+    end
+
+    create :create_with_argument_types do
+      argument(:integer_argument_as_string, :integer)
     end
 
     create :upsert do
