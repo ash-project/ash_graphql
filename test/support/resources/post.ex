@@ -167,7 +167,7 @@ defmodule AshGraphql.Test.Post do
     attribute_input_types integer_as_string_in_domain: :string
 
     argument_input_types create_bar_with_foo_with_map: [bar: :bar_with_foo],
-                         integer_argument_as_string: :string
+                         create_with_argument_types: [integer_argument_as_string: :string]
 
     argument_names create_with_invalid_arguments_names: [
                      invalid_1: :invalid1,
