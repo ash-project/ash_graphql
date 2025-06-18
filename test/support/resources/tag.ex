@@ -10,6 +10,7 @@ defmodule AshGraphql.Test.Tag do
     type(:tag)
 
     filterable_fields [:name]
+    sortable_fields [:popularity]
 
     queries do
       get :get_tag, :read
@@ -35,6 +36,7 @@ defmodule AshGraphql.Test.Tag do
     uuid_primary_key(:id)
 
     attribute(:name, :string, public?: true)
+    attribute(:popularity, :integer, public?: true)
   end
 
   identities do

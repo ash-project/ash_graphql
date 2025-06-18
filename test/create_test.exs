@@ -482,8 +482,9 @@ defmodule AshGraphql.CreateTest do
             comments(sort:{field:TEXT}){
               text
             }
-            tags(sort:{field:NAME}){
+            tags(sort:{field:POPULARITY}){
               name
+              popularity
             }
           }
           errors{
@@ -500,7 +501,10 @@ defmodule AshGraphql.CreateTest do
               %{"text" => "foobar"},
               %{"text" => "barfoo"}
             ],
-            "tags" => [%{"name" => "test"}, %{"name" => "tag"}]
+            "tags" => [
+              %{"name" => "test", "popularity" => 2},
+              %{"name" => "tag", "popularity" => 1}
+            ]
           }
         }
       )
@@ -515,7 +519,10 @@ defmodule AshGraphql.CreateTest do
                  "result" => %{
                    "text" => "foobar",
                    "comments" => [%{"text" => "barfoo"}, %{"text" => "foobar"}],
-                   "tags" => [%{"name" => "tag"}, %{"name" => "test"}]
+                   "tags" => [
+                     %{"name" => "tag", "popularity" => 1},
+                     %{"name" => "test", "popularity" => 2}
+                   ]
                  }
                }
              }
