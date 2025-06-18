@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.15](https://github.com/ash-project/ash_graphql/compare/v1.7.14...v1.7.15) (2025-06-18)
+
+
+
+
+### Bug Fixes:
+
+* Fix nil constraint to non_null mapping for complex subtypes used in :array definitions (#329) by olivermt
+
+### Improvements:
+
+* Add sortable_fields option (#331) by [@jechol](https://github.com/jechol)
+
+* add a verifier for argument types option by [@zachdaniel](https://github.com/zachdaniel)
+
 ## [v1.7.14](https://github.com/ash-project/ash_graphql/compare/v1.7.13...v1.7.14) (2025-06-10)
 
 
