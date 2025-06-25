@@ -2090,7 +2090,8 @@ defmodule AshGraphql.Resource do
 
     type = managed_relationship.type_name || default_managed_type_name(resource, action, argument)
 
-    fields = check_for_conflicts!(fields, managed_relationship, resource)
+    fields =
+      check_for_conflicts!(fields, managed_relationship, resource)
 
     if Enum.empty?(fields) do
       raise """
@@ -2138,6 +2139,7 @@ defmodule AshGraphql.Resource do
                 [{resource, action, field} | fields]
               end
             end)
+            |> Enum.sort_by(fn {_resource, _action, field} -> field.name end)
 
           fields ++ new_fields
         end)
