@@ -8,6 +8,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith do
 
   @valid_strategies [
     nil,
+    :none,
     :keyset,
     :offset,
     :relay

@@ -195,6 +195,11 @@ defmodule AshGraphql.Test.Post do
 
     queries do
       get :get_post, :read
+
+      get :get_post_with_no_comment_pagination, :read do
+        paginate_relationship_with(comments: :none)
+      end
+
       get :get_post_with_custom_description, :read, description: "A custom description"
       list :post_library, :library
       list :paginated_posts, :paginated
