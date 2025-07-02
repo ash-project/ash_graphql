@@ -1563,6 +1563,10 @@ defmodule AshGraphql.Resource do
 
   defp pagination_strategy(strategy, action, allow_relay? \\ false)
 
+  defp pagination_strategy(:none, _action, _allow_relay?) do
+    :none
+  end
+
   defp pagination_strategy(_strategy, %{pagination: pagination}, _allow_relay?)
        when pagination in [nil, false] do
     nil
@@ -4495,7 +4499,8 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp related_list_type(nil, type, resource, relationship) do
+  defp related_list_type(value, type, resource, relationship)
+       when is_nil(value) or value == :none do
     inner_type = %Absinthe.Blueprint.TypeReference.List{
       of_type: %Absinthe.Blueprint.TypeReference.NonNull{
         of_type: type

@@ -193,13 +193,10 @@ defmodule AshGraphql.Test.Post do
     field_names text_1_and_2: :text1_and2
     keyset_field :keyset
 
+    paginate_relationship_with unpaginated_comments: :none
+
     queries do
       get :get_post, :read
-
-      get :get_post_with_no_comment_pagination, :read do
-        paginate_relationship_with(comments: :none)
-      end
-
       get :get_post_with_custom_description, :read, description: "A custom description"
       list :post_library, :library
       list :paginated_posts, :paginated
@@ -656,6 +653,11 @@ defmodule AshGraphql.Test.Post do
     has_many(:comments, AshGraphql.Test.Comment, public?: true)
     has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment, public?: true)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated, public?: true)
+
+    has_many(:unpaginated_comments, AshGraphql.Test.Comment,
+      public?: true,
+      destination_attribute: :post_id
+    )
 
     many_to_many(:tags, AshGraphql.Test.Tag,
       through: AshGraphql.Test.PostTag,

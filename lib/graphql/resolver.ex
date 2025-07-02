@@ -2287,7 +2287,7 @@ defmodule AshGraphql.Graphql.Resolver do
           nested = Enum.map(Enum.reverse([selection | path]), & &1.name)
 
           related_query =
-            if pagination_strategy do
+            if pagination_strategy && pagination_strategy != :none do
               case page_opts(
                      resolution,
                      relationship.destination,
