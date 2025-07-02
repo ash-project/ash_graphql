@@ -223,7 +223,7 @@ defmodule AshGraphql.RelationshipPaginationTest do
     assert [%{"name" => "Award 2"} | _] = results
   end
 
-  test "works with :none strategy (smoke test)" do
+  test "works with :none strategy" do
     %{id: post_id} =
       AshGraphql.Test.Post
       |> Ash.Changeset.for_create(:create, text: "Post", published: true, score: 9.8)
