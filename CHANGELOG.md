@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.16](https://github.com/ash-project/ash_graphql/compare/v1.7.15...v1.7.16) (2025-07-02)
+
+
+
+
+### Bug Fixes:
+
+* Add sorting of managed inputs to output stable graphql schema (#334) by olivermt
+
 ## [v1.7.15](https://github.com/ash-project/ash_graphql/compare/v1.7.14...v1.7.15) (2025-06-18)
 
 
