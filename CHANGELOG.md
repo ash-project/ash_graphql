@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.7.17](https://github.com/ash-project/ash_graphql/compare/v1.7.16...v1.7.17) (2025-07-02)
+
+
+
+
+### Bug Fixes:
+
+* fix :none relationship pagination strategy, and improve tests for it (#337) by Jesse Williams
+
 ## [v1.7.16](https://github.com/ash-project/ash_graphql/compare/v1.7.15...v1.7.16) (2025-07-02)
 
 
