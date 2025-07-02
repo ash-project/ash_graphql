@@ -223,34 +223,69 @@ defmodule AshGraphql.RelationshipPaginationTest do
     assert [%{"name" => "Award 2"} | _] = results
   end
 
-  test "works with :none strategy" do
-    %{id: post_id} =
-      AshGraphql.Test.Post
-      |> Ash.Changeset.for_create(:create, text: "Post", published: true, score: 9.8)
-      |> Ash.create!()
+  describe ":none strategy" do
+    setup do
+      %{id: post_id} =
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(:create, text: "Post", published: true, score: 9.8)
+        |> Ash.create!()
 
-    document =
-      """
-      query GetPost($id: ID!) {
-        getPostWithNoCommentPagination(id: $id) {
-          id
-          comments {
+      [post_id: post_id]
+    end
+
+    test "works with :none strategy", %{post_id: post_id} do
+      document =
+        """
+        query GetPost($id: ID!) {
+          getPost(id: $id) {
             id
+            unpaginatedComments {
+              id
+            }
           }
         }
-      }
-      """
+        """
 
-    assert {:ok,
-            %{
-              data: %{
-                "getPostWithNoCommentPagination" => %{
-                  "comments" => [],
-                  "id" => ^post_id
+      assert {:ok,
+              %{
+                data: %{
+                  "getPost" => %{
+                    "unpaginatedComments" => [],
+                    "id" => ^post_id
+                  }
                 }
-              }
-            }} =
-             Absinthe.run(document, AshGraphql.Test.Schema, variables: %{"id" => post_id})
+              }} =
+               Absinthe.run(document, AshGraphql.Test.Schema, variables: %{"id" => post_id})
+    end
+
+    test "can't supply limit/offset with :none strategy", %{post_id: post_id} do
+      document =
+        """
+        query GetPost($id: ID!) {
+          getPost(id: $id) {
+            id
+            unpaginatedComments(limit: 1, offset: 0) {
+              id
+            }
+          }
+        }
+        """
+
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    message:
+                      "Unknown argument \"limit\" on field \"unpaginatedComments\" of type \"Post\"."
+                  },
+                  %{
+                    message:
+                      "Unknown argument \"offset\" on field \"unpaginatedComments\" of type \"Post\"."
+                  }
+                ]
+              }} =
+               Absinthe.run(document, AshGraphql.Test.Schema, variables: %{"id" => post_id})
+    end
   end
 
   describe "works when nested" do
