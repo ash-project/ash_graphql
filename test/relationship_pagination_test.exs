@@ -223,6 +223,36 @@ defmodule AshGraphql.RelationshipPaginationTest do
     assert [%{"name" => "Award 2"} | _] = results
   end
 
+  test "works with :none strategy" do
+    %{id: post_id} =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "Post", published: true, score: 9.8)
+      |> Ash.create!()
+
+    document =
+      """
+      query GetPost($id: ID!) {
+        getPostWithNoCommentPagination(id: $id) {
+          id
+          comments {
+            id
+          }
+        }
+      }
+      """
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPostWithNoCommentPagination" => %{
+                  "comments" => [],
+                  "id" => ^post_id
+                }
+              }
+            }} =
+             Absinthe.run(document, AshGraphql.Test.Schema, variables: %{"id" => post_id})
+  end
+
   describe "works when nested" do
     test "on return values for queries" do
       movie =

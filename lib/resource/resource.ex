@@ -392,7 +392,7 @@ defmodule AshGraphql.Resource do
         type: :keyword_list,
         default: [],
         doc:
-          "A keyword list indicating which kind of pagination should be used for each `has_many` and `many_to_many` relationships, e.g. `related_things: :keyset, other_related_things: :offset`. Valid pagination values are `nil`, `:offset`, `:keyset` and `:relay`."
+          "A keyword list indicating which kind of pagination should be used for each `has_many` and `many_to_many` relationships, e.g. `related_things: :keyset, other_related_things: :offset`. Valid pagination values are `nil`, `:none`, `:offset`, `:keyset` and `:relay`."
       ],
       field_names: [
         type: :keyword_list,
@@ -1873,6 +1873,9 @@ defmodule AshGraphql.Resource do
     case relationship_pagination_strategy(resource, relationship_name, action) do
       nil ->
         default_relationship_pagination_args()
+
+      :none ->
+        []
 
       :keyset ->
         keyset_pagination_args(action)
