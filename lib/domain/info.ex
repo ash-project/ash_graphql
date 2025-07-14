@@ -46,6 +46,11 @@ defmodule AshGraphql.Domain.Info do
     Extension.get_entities(resource, [:graphql, :subscriptions]) || []
   end
 
+  @doc "The pubsub module configured for subscriptions in this domain"
+  def subscription_pubsub(domain) do
+    Extension.get_opt(domain, [:graphql, :subscriptions], :pubsub)
+  end
+
   @doc "Whether or not to render raised errors in the GraphQL response"
   def show_raised_errors?(domain) do
     Extension.get_opt(domain, [:graphql], :show_raised_errors?, false, true)

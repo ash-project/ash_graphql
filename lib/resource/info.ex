@@ -52,8 +52,16 @@ defmodule AshGraphql.Resource.Info do
   end
 
   @doc "The pubsub module used for subscriptions"
-  def subscription_pubsub(resource) do
-    Extension.get_opt(resource, [:graphql, :subscriptions], :pubsub)
+  def subscription_pubsub(resource, domain_or_domains \\ []) do
+    case Extension.get_opt(resource, [:graphql, :subscriptions], :pubsub) do
+      nil ->
+        domain_or_domains
+        |> List.wrap()
+        |> Enum.find_value(&AshGraphql.Domain.Info.subscription_pubsub/1)
+
+      pubsub_module ->
+        pubsub_module
+    end
   end
 
   @doc "Wether or not to encode the primary key as a single `id` field when reading and getting"

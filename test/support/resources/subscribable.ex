@@ -25,7 +25,7 @@ defmodule AshGraphql.Test.Subscribable do
     end
 
     subscriptions do
-      pubsub(AshGraphql.Test.PubSub)
+      pubsub AshGraphql.Test.PubSub
 
       subscribe(:subscribable_events) do
         action_types([:create, :update, :destroy])

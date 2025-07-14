@@ -606,4 +606,116 @@ defmodule AshGraphql.SubscriptionTest do
     assert subscribable_id ==
              subscription_data["subscribableEvents"]["created"]["id"]
   end
+
+  test "can subscribe to resource with domain-level pubsub" do
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 domainLevelPubsubEvents {
+                   created {
+                     id
+                     text
+                   }
+                   updated {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateDomainLevelPubsubResource($input: CreateDomainLevelPubsubResourceInput) {
+        createDomainLevelPubsubResource(input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "domain pubsub test"}},
+               context: %{actor: @admin}
+             )
+
+    assert Enum.empty?(mutation_result["createDomainLevelPubsubResource"]["errors"])
+
+    resource_id = mutation_result["createDomainLevelPubsubResource"]["result"]["id"]
+    refute is_nil(resource_id)
+
+    assert_receive({^topic, %{data: subscription_data}})
+
+    assert resource_id ==
+             subscription_data["domainLevelPubsubEvents"]["created"]["id"]
+
+    assert "domain pubsub test" ==
+             subscription_data["domainLevelPubsubEvents"]["created"]["text"]
+  end
+
+  test "can subscribe to resource with resource-level pubsub" do
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 resourceLevelPubsubEvents {
+                   created {
+                     id
+                     text
+                   }
+                   updated {
+                     id
+                     text
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateResourceLevelPubsubResource($input: CreateResourceLevelPubsubResourceInput) {
+        createResourceLevelPubsubResource(input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: mutation_result}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "resource pubsub test"}},
+               context: %{actor: @admin}
+             )
+
+    assert Enum.empty?(mutation_result["createResourceLevelPubsubResource"]["errors"])
+
+    resource_id = mutation_result["createResourceLevelPubsubResource"]["result"]["id"]
+    refute is_nil(resource_id)
+
+    assert_receive({^topic, %{data: subscription_data}})
+
+    assert resource_id ==
+             subscription_data["resourceLevelPubsubEvents"]["created"]["id"]
+
+    assert "resource pubsub test" ==
+             subscription_data["resourceLevelPubsubEvents"]["created"]["text"]
+  end
 end

@@ -483,6 +483,8 @@ Subscriptions to expose for the resource.
 ### Examples
 ```
 subscription do
+  pubsub MyApp.PubSub
+
   subscribe Post, :post_created do
     action_types(:create)
   end
@@ -490,6 +492,14 @@ end
 
 ```
 
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`pubsub`](#graphql-subscriptions-pubsub){: #graphql-subscriptions-pubsub } | `module` |  | The pubsub module to use for subscriptions in this domain. Resources can override this by specifying their own pubsub. |
 
 
 

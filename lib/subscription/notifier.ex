@@ -9,7 +9,7 @@ defmodule AshGraphql.Subscription.Notifier do
 
   @impl Ash.Notifier
   def notify(%Ash.Notifier.Notification{} = notification) do
-    pub_sub = Info.subscription_pubsub(notification.resource)
+    pub_sub = Info.subscription_pubsub(notification.resource, notification.domain)
 
     for subscription <-
           AshGraphql.Resource.Info.subscriptions(notification.resource, notification.domain) do
