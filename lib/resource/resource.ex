@@ -308,8 +308,8 @@ defmodule AshGraphql.Resource do
     schema: [
       pubsub: [
         type: :module,
-        required: true,
-        doc: "The pubsub module to use for the subscription"
+        doc:
+          "The pubsub module to use for the subscription. If not specified, will use the domain's pubsub configuration."
       ]
     ],
     describe: """

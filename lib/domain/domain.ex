@@ -65,11 +65,20 @@ defmodule AshGraphql.Domain do
     examples: [
       """
       subscription do
+        pubsub MyApp.PubSub
+
         subscribe Post, :post_created do
           action_types(:create)
         end
       end
       """
+    ],
+    schema: [
+      pubsub: [
+        type: :module,
+        doc:
+          "The pubsub module to use for subscriptions in this domain. Resources can override this by specifying their own pubsub."
+      ]
     ],
     entities:
       Enum.map(

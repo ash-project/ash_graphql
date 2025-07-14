@@ -14,8 +14,14 @@ defmodule AshGraphql.Test.Domain do
     end
 
     subscriptions do
+      pubsub AshGraphql.Test.PubSub
+
       subscribe AshGraphql.Test.Subscribable, :subscribed_on_domain do
         action_types(:create)
+      end
+
+      subscribe AshGraphql.Test.DomainLevelPubsubResource, :domain_pubsub_subscription do
+        action_types([:create, :update, :destroy])
       end
     end
   end
@@ -53,6 +59,8 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.TextMessage)
     resource(AshGraphql.Test.ImageMessage)
     resource(AshGraphql.Test.Subscribable)
+    resource(AshGraphql.Test.DomainLevelPubsubResource)
+    resource(AshGraphql.Test.ResourceLevelPubsubResource)
     resource(AshGraphql.Test.ErrorHandling)
     resource(AshGraphql.Test.ResourceWithTypeInsideType)
   end
