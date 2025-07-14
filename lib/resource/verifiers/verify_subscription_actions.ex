@@ -7,13 +7,8 @@ defmodule AshGraphql.Resource.Verifiers.VerifySubscriptionActions do
   alias Spark.Dsl.Transformer
 
   def verify(dsl) do
-    subscriptions = AshGraphql.Resource.Info.subscriptions(dsl, Ash.Resource.Info.domain(dsl))
-
-    if subscriptions != [] do
-      verify_pubsub(dsl, subscriptions)
-    end
-
-    subscriptions
+    dsl
+    |> AshGraphql.Resource.Info.subscriptions(Ash.Resource.Info.domain(dsl))
     |> Enum.each(&verify_actions(dsl, &1))
 
     :ok
@@ -56,28 +51,6 @@ defmodule AshGraphql.Resource.Verifiers.VerifySubscriptionActions do
         module: Transformer.get_persisted(dsl, :module),
         message: "The read action #{subscription.read_action} does not exist on the resource.",
         path: [:graphql, :subscriptions, subscription.name, :read_action]
-    end
-  end
-
-  defp verify_pubsub(dsl, _subscriptions) do
-    resource_pubsub = AshGraphql.Resource.Info.subscription_pubsub(dsl)
-
-    domain_pubsub =
-      case Ash.Resource.Info.domain(dsl) do
-        nil ->
-          nil
-
-        domain ->
-          Code.ensure_loaded!(domain)
-          AshGraphql.Domain.Info.subscription_pubsub(domain)
-      end
-
-    unless resource_pubsub || domain_pubsub do
-      raise Spark.Error.DslError,
-        module: Transformer.get_persisted(dsl, :module),
-        message:
-          "A pubsub module must be specified either at the resource level (in the subscriptions section) or at the domain level (in the domain's graphql subscriptions section).",
-        path: [:graphql, :subscriptions, :pubsub]
     end
   end
 end

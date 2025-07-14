@@ -161,7 +161,8 @@ defmodule AshGraphql.Domain do
       AshGraphql.Domain.Transformers.ValidateCompatibleNames
     ],
     verifiers: [
-      AshGraphql.Resource.Verifiers.VerifyDomainQueryMetadata
+      AshGraphql.Resource.Verifiers.VerifyDomainQueryMetadata,
+      AshGraphql.Domain.Verifiers.VerifySubscriptionPubsub
     ]
 
   if Code.ensure_loaded?(Igniter) do
