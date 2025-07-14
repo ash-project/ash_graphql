@@ -520,7 +520,7 @@ end
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`pubsub`](#graphql-subscriptions-pubsub){: #graphql-subscriptions-pubsub .spark-required} | `module` |  | The pubsub module to use for the subscription |
+| [`pubsub`](#graphql-subscriptions-pubsub){: #graphql-subscriptions-pubsub } | `module` |  | The pubsub module to use for the subscription. If not specified, will use the domain's pubsub configuration. |
 
 
 
