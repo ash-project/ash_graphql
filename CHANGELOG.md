@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.8.0](https://github.com/ash-project/ash_graphql/compare/v1.7.17...v1.8.0) (2025-07-17)
+
+
+
+
+### Features:
+
+* add domain-level pubsub configuration for subscriptions (#341) by [@barnabasJ](https://github.com/barnabasJ)
+
 ## [v1.7.17](https://github.com/ash-project/ash_graphql/compare/v1.7.16...v1.7.17) (2025-07-02)
 
 
