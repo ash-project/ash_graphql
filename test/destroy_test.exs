@@ -9,6 +9,24 @@ defmodule AshGraphql.DestroyTest do
     end)
   end
 
+  defp create_post_with_comments(comment_count) do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "test post")
+      |> Ash.create!()
+
+    if comment_count > 0 do
+      for i <- 1..comment_count do
+        AshGraphql.Test.Comment
+        |> Ash.Changeset.for_create(:create, text: "comment #{i}", post_id: post.id)
+        |> Ash.create!()
+      end
+    end
+
+    AshGraphql.Test.Post
+    |> Ash.get!(post.id)
+  end
+
   test "a destroy works" do
     post =
       AshGraphql.Test.Post
@@ -224,6 +242,80 @@ defmodule AshGraphql.DestroyTest do
             %{
               data: %{
                 "deleteCurrentUser" => %{"errors" => [], "result" => %{"name" => nil}}
+              }
+            }} = resp
+  end
+
+  test "destroy mutation returns aggregates" do
+    post = create_post_with_comments(2)
+
+    resp =
+      """
+      mutation DeletePost($id: ID!) {
+        deletePost(id: $id) {
+          result {
+            text
+            commentCount
+          }
+          errors {
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok,
+            %{
+              data: %{
+                "deletePost" => %{
+                  "result" => %{
+                    "text" => "test post",
+                    "commentCount" => 2
+                  },
+                  "errors" => []
+                }
+              }
+            }} = resp
+  end
+
+  test "destroy mutation returns zero aggregates" do
+    post = create_post_with_comments(0)
+
+    resp =
+      """
+      mutation DeletePost($id: ID!) {
+        deletePost(id: $id) {
+          result {
+            text
+            commentCount
+          }
+          errors {
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+
+    assert {:ok,
+            %{
+              data: %{
+                "deletePost" => %{
+                  "result" => %{
+                    "text" => "test post",
+                    "commentCount" => 0
+                  },
+                  "errors" => []
+                }
               }
             }} = resp
   end

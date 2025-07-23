@@ -1792,6 +1792,7 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.Query.set_context(get_context(context))
                 |> set_query_arguments(read_action, read_action_input)
                 |> Ash.Query.limit(1)
+                |> pre_load_for_mutation(domain, resource, resolution, context, mutation_name)
 
               {result, modify_args} =
                 query
@@ -1811,23 +1812,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   select:
                     get_select(resource, resolution, mutation_result_type(mutation_name), [
                       "result"
-                    ]),
-                  load:
-                    get_loads(
-                      [
-                        domain: domain,
-                        tenant: Map.get(context, :tenant),
-                        authorize?: AshGraphql.Domain.Info.authorize?(domain),
-                        tracer: AshGraphql.Domain.Info.tracer(domain),
-                        actor: Map.get(context, :actor)
-                      ],
-                      resource,
-                      resolution,
-                      resolution.path,
-                      context,
-                      mutation_result_type(mutation_name),
-                      ["result"]
-                    )
+                    ])
                 )
                 |> case do
                   %Ash.BulkResult{status: :success, records: [value]} ->
@@ -2066,6 +2051,29 @@ defmodule AshGraphql.Graphql.Resolver do
       %Ash.Changeset{} = changeset ->
         Ash.Changeset.load(changeset, load)
     end
+  end
+
+  # Pre-load aggregates and calculations on the query before destruction
+  # to ensure they are available in the returned record for GraphQL serialization
+  defp pre_load_for_mutation(query, domain, resource, resolution, context, mutation_name) do
+    load_opts = [
+      domain: domain,
+      tenant: Map.get(context, :tenant),
+      authorize?: AshGraphql.Domain.Info.authorize?(domain),
+      tracer: AshGraphql.Domain.Info.tracer(domain),
+      actor: Map.get(context, :actor)
+    ]
+
+    load_fields(
+      query,
+      load_opts,
+      resource,
+      resolution,
+      resolution.path,
+      context,
+      mutation_result_type(mutation_name),
+      ["result"]
+    )
   end
 
   @doc false
