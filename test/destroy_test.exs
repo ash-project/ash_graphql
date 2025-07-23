@@ -9,6 +9,25 @@ defmodule AshGraphql.DestroyTest do
     end)
   end
 
+  # Helper function to create a post with comments for aggregate testing
+  defp create_post_with_comments(comment_count) do
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "test post")
+      |> Ash.create!()
+
+    # Create the specified number of comments
+    for i <- 1..comment_count do
+      AshGraphql.Test.Comment
+      |> Ash.Changeset.for_create(:create, text: "comment #{i}", post_id: post.id)
+      |> Ash.create!()
+    end
+
+    # Reload post to ensure relationships are properly loaded
+    AshGraphql.Test.Post
+    |> Ash.get!(post.id)
+  end
+
   test "a destroy works" do
     post =
       AshGraphql.Test.Post
@@ -226,5 +245,63 @@ defmodule AshGraphql.DestroyTest do
                 "deleteCurrentUser" => %{"errors" => [], "result" => %{"name" => nil}}
               }
             }} = resp
+  end
+
+  test "destroy mutation with aggregate reproduces NotLoaded serialization error" do
+    # Create a post with comments to make the aggregate meaningful
+    post = create_post_with_comments(3)
+
+    # This test demonstrates the bug: attempting to serialize the result will fail
+    # because commentCount returns %Ash.NotLoaded{} instead of the actual count
+    # Expected behavior would be to return the comment count (3) before deletion
+    # or handle the aggregate gracefully
+
+    assert_raise Absinthe.SerializationError, ~r/Could not serialize term #Ash\.NotLoaded/, fn ->
+      """
+      mutation DeletePost($id: ID!) {
+        deletePost(id: $id) {
+          result {
+            text
+            commentCount
+          }
+          errors {
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+    end
+  end
+
+  test "destroy mutation with aggregate - zero comments case" do
+    # Test the edge case with zero comments
+    post = create_post_with_comments(0)
+
+    # This should also demonstrate the NotLoaded issue even with zero comments
+    assert_raise Absinthe.SerializationError, ~r/Could not serialize term #Ash\.NotLoaded/, fn ->
+      """
+      mutation DeletePost($id: ID!) {
+        deletePost(id: $id) {
+          result {
+            text
+            commentCount
+          }
+          errors {
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "id" => post.id
+        }
+      )
+    end
   end
 end
