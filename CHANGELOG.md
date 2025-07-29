@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.8.1](https://github.com/ash-project/ash_graphql/compare/v1.8.0...v1.8.1) (2025-07-29)
+
+
+
+
+### Bug Fixes:
+
+* apply destroy loads on initial query (#346) by Daniel Gollings
+
 ## [v1.8.0](https://github.com/ash-project/ash_graphql/compare/v1.7.17...v1.8.0) (2025-07-17)
 
 
