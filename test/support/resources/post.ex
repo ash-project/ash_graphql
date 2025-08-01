@@ -625,6 +625,16 @@ defmodule AshGraphql.Test.Post do
       end,
       public?: true
     )
+
+    calculate(
+      :struct_calc,
+      :struct,
+      fn records, _ ->
+        Enum.map(records, fn _ -> %{some: "string"} end)
+      end,
+      public?: true,
+      constraints: [instance_of: AshGraphql.Test.UnreferencedType]
+    )
   end
 
   aggregates do
