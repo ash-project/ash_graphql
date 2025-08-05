@@ -1306,6 +1306,7 @@ defmodule AshGraphql.Resource do
           action_middleware ++
             domain_middleware(domain) ++
             metadata_middleware(subscription.meta) ++
+            id_translation_middleware(subscription.relay_id_translations, relay_ids?) ++
             [
               {{AshGraphql.Graphql.Resolver, :resolve},
                {domain, resource, subscription, relay_ids?}}
