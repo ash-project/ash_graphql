@@ -8,6 +8,7 @@ defmodule AshGraphql.Resource.Subscription do
     :read_action,
     :actor,
     :hide_inputs,
+    :relay_id_translations,
     :meta
   ]
 
@@ -38,6 +39,13 @@ defmodule AshGraphql.Resource.Subscription do
       type: {:list, :atom},
       doc:
         "A list of inputs to hide from the subscription, usable if the read action has arguments.",
+      default: []
+    ],
+    relay_id_translations: [
+      type: :keyword_list,
+      doc: """
+      A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more.
+      """,
       default: []
     ],
     meta: [

@@ -538,6 +538,7 @@ end
 | [`action_types`](#graphql-subscriptions-subscribe-action_types){: #graphql-subscriptions-subscribe-action_types } | `list(atom) \| atom` |  | The type of actions the subsciption should listen to. |
 | [`read_action`](#graphql-subscriptions-subscribe-read_action){: #graphql-subscriptions-subscribe-read_action } | `atom` |  | The read action to use for reading data |
 | [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the subscription, usable if the read action has arguments. |
+| [`relay_id_translations`](#graphql-subscriptions-subscribe-relay_id_translations){: #graphql-subscriptions-subscribe-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`meta`](#graphql-subscriptions-subscribe-meta){: #graphql-subscriptions-subscribe-meta } | `keyword` |  | A keyword list of metadata to include in the subscription. |
 
 

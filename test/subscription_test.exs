@@ -400,6 +400,61 @@ defmodule AshGraphql.SubscriptionTest do
              subscription_data["subscribableEventsWithArguments"]["created"]["id"]
   end
 
+  test "can subscribe to read actions that take arguments with relay style id's" do
+    subscribable =
+      RelaySubscribable
+      |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: 1},
+        actor: @admin
+      )
+      |> Ash.create!()
+
+    relay_id = AshGraphql.Resource.encode_relay_id(subscribable)
+
+    subscription = """
+    subscription WithIdFilter($subscribableId: ID!) {
+      subscribableEventsRelayWithIdFilter(subscribableId: $subscribableId) {
+        updated {
+          id
+          text
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               subscription,
+               RelaySchema,
+               variables: %{"subscribableId" => relay_id},
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    update_mutation = """
+    mutation UpdateSubscribable($id: ID! $input: UpdateRelaySubscribableInput) {
+        updateRelaySubscribable(id: $id, input: $input) {
+          result{
+            id
+            text
+          }
+          errors{
+            message
+          }
+        }
+      }
+    """
+
+    assert {:ok, %{data: _mutation_result}} =
+             Absinthe.run(update_mutation, RelaySchema,
+               variables: %{"id" => relay_id, "input" => %{"text" => "updated"}},
+               context: %{actor: @admin}
+             )
+
+    assert_receive({^topic, %{data: subscription_data}})
+
+    assert relay_id ==
+             subscription_data["subscribableEventsRelayWithIdFilter"]["updated"]["id"]
+  end
+
   test "can subscribe on the domain" do
     actor1 = %{
       id: 1,

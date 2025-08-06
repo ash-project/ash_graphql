@@ -12,6 +12,7 @@ defmodule AshGraphql.Test.RelaySubscribable do
     type :relay_subscribable
 
     mutations do
+      update :update_relay_subscribable, :update
       destroy :destroy_subscribable_relay, :destroy
     end
 
@@ -25,6 +26,17 @@ defmodule AshGraphql.Test.RelaySubscribable do
       subscribe(:subscribable_deleted_relay) do
         action_types(:destroy)
       end
+
+      subscribe(:subscribable_events_relay_with_arguments) do
+        read_action(:read_with_arg)
+        actions([:create])
+      end
+
+      subscribe(:subscribable_events_relay_with_id_filter) do
+        read_action(:read_with_id_arg)
+        action_types([:create, :update, :destroy])
+        relay_id_translations(subscribable_id: :relay_subscribable)
+      end
     end
   end
 
@@ -37,7 +49,7 @@ defmodule AshGraphql.Test.RelaySubscribable do
       authorize_if(expr(actor_id == ^actor(:id)))
     end
 
-    policy action([:open_read, :read_with_arg]) do
+    policy action([:open_read, :read_with_arg, :read_with_id_arg]) do
       authorize_if(always())
     end
   end
@@ -64,6 +76,14 @@ defmodule AshGraphql.Test.RelaySubscribable do
       end
 
       filter(expr(topic == ^arg(:topic)))
+    end
+
+    read :read_with_id_arg do
+      argument(:subscribable_id, :uuid) do
+        allow_nil? false
+      end
+
+      filter(expr(id == ^arg(:subscribable_id)))
     end
   end
 
