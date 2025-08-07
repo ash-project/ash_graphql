@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.8.2](https://github.com/ash-project/ash_graphql/compare/v1.8.1...v1.8.2) (2025-08-07)
+
+
+
+
+### Improvements:
+
+* Add support for relay_id_translation on GraphQL subscriptions (#349) by Mike Wilson
+
 ## [v1.8.1](https://github.com/ash-project/ash_graphql/compare/v1.8.0...v1.8.1) (2025-07-29)
 
 
