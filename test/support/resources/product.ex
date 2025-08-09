@@ -44,8 +44,4 @@ defmodule AshGraphql.Test.Product do
     attribute(:organization_id, :integer, public?: true)
     attribute(:name, :string, public?: true)
   end
-
-  # relationships do
-  #   belongs_to :organization,  AshGraphql.Test.Organization
-  # end
 end
