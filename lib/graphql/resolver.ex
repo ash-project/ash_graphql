@@ -552,6 +552,28 @@ defmodule AshGraphql.Graphql.Resolver do
   end
 
   def resolve(
+        %{
+          context: %{tenant: resolution_tenant} = context,
+          root_value: [%{tenant: notifcation_tenant} | _]
+        } =
+          resolution,
+        {domain, resource, %AshGraphql.Resource.Subscription{read_action: read_action}, _}
+      )
+      when resolution_tenant != notifcation_tenant do
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:error,
+       to_errors(
+         [Ash.Error.Query.NotFound.exception()],
+         context,
+         domain,
+         resource,
+         read_action
+       )}
+    )
+  end
+
+  def resolve(
         %{arguments: args, context: context, root_value: notifications} = resolution,
         {domain, resource,
          %AshGraphql.Resource.Subscription{read_action: read_action, name: name}, relay_ids?}

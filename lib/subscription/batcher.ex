@@ -34,7 +34,7 @@ defmodule AshGraphql.Subscription.Batcher do
   defmodule Notification do
     @moduledoc false
 
-    defstruct [:action_type, :data]
+    defstruct [:action_type, :data, :tenant]
   end
 
   def start_link(opts \\ []) do
