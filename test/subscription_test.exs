@@ -6,6 +6,7 @@ defmodule AshGraphql.SubscriptionTest do
   alias AshGraphql.Test.RelaySubscribable
   alias AshGraphql.Test.Schema
   alias AshGraphql.Test.Subscribable
+  alias AshGraphql.Test.Product
 
   def assert_down(pid) do
     ref = Process.monitor(pid)
@@ -772,5 +773,74 @@ defmodule AshGraphql.SubscriptionTest do
 
     assert "resource pubsub test" ==
              subscription_data["resourceLevelPubsubEvents"]["created"]["text"]
+  end
+
+  test "tenant is applied to subscriptions" do
+    actor1 = %{
+      id: 1,
+      role: :user
+    }
+
+    actor2 = %{
+      id: 2,
+      role: :user
+    }
+
+    assert {:ok, %{"subscribed" => topic1}} =
+             Absinthe.run(
+               """
+               subscription {
+                 productEvents {
+                   created {
+                     id
+                     name
+                   }
+                   updated {
+                     id
+                     name
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: actor1, tenant: 1, pubsub: PubSub}
+             )
+
+    assert {:ok, %{"subscribed" => topic2}} =
+             Absinthe.run(
+               """
+               subscription {
+                 productEvents {
+                   created {
+                     id
+                     name
+                   }
+                   updated {
+                     id
+                     name
+                   }
+                   destroyed
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: actor2, tenant: 2, pubsub: PubSub}
+             )
+
+    assert topic1 != topic2
+
+    product =
+      Product
+      |> Ash.Changeset.for_create(:create, %{name: "foo"}, actor: actor1, tenant: 1)
+      |> Ash.create!()
+
+    # actor1 will get data because it can see the resource
+    assert_receive {^topic1, %{data: subscription_data}}
+    # actor 2 will not get data because it cannot see the resource
+    refute_receive({^topic2, _})
+
+    assert product.id ==
+             subscription_data["productEvents"]["created"]["id"]
   end
 end
