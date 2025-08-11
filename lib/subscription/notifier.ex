@@ -17,7 +17,11 @@ defmodule AshGraphql.Subscription.Notifier do
            notification.action.type in List.wrap(subscription.action_types) do
         Absinthe.Subscription.publish(
           pub_sub,
-          %Notification{action_type: notification.action.type, data: notification.data},
+          %Notification{
+            action_type: notification.action.type,
+            data: notification.data,
+            tenant: notification.changeset.tenant
+          },
           [{subscription.name, "*"}]
         )
       end
