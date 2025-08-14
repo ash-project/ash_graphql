@@ -3503,108 +3503,112 @@ defmodule AshGraphql.Resource do
     |> Enum.filter(& &1)
     |> Enum.flat_map(fn type_name ->
       {types, fields, _} =
-        Enum.reduce((constraints[:fields] |> Enum.sort_by(fn {name, _} -> name end)), {[], [], already_checked}, fn
-          {name, attribute}, {types, fields, already_checked} ->
-            new_type? = Ash.Type.NewType.new_type?(attribute[:type])
-            {map_type?, map_type, map_constraints} = map_type(attribute, new_type?)
+        Enum.reduce(
+          constraints[:fields] |> Enum.sort_by(fn {name, _} -> name end),
+          {[], [], already_checked},
+          fn
+            {name, attribute}, {types, fields, already_checked} ->
+              new_type? = Ash.Type.NewType.new_type?(attribute[:type])
+              {map_type?, map_type, map_constraints} = map_type(attribute, new_type?)
 
-            map_constraints =
-              if new_type? do
-                Ash.Type.NewType.constraints(map_type, map_constraints)
-              else
-                map_constraints
-              end
-
-            nested_type_name =
-              if new_type? do
-                AshGraphql.Type.input_type(attribute[:type], attribute[:constraints] || [])
-              else
-                String.to_atom(
-                  "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"
-                )
-              end
-
-            nested_type =
-              array_to_list_of(attribute[:type], nested_type_name, attribute[:constraints])
-
-            nested_field =
-              %Absinthe.Blueprint.Schema.InputValueDefinition{
-                module: schema,
-                identifier: name,
-                description: attribute[:description],
-                __reference__: AshGraphql.Resource.ref(env),
-                name: to_string(name),
-                type:
-                  if Keyword.get(attribute, :allow_nil?, true) do
-                    nested_type
-                  else
-                    %Absinthe.Blueprint.TypeReference.NonNull{
-                      of_type: nested_type
-                    }
-                  end
-              }
-
-            field_type =
-              do_field_type(
-                attribute[:type],
-                %{
-                  name: name,
-                  type: attribute[:type],
-                  description: attribute[:description],
-                  constraints: Keyword.get(attribute, :constraints) || []
-                },
-                resource,
-                true
-              )
-
-            typed_field =
-              %Absinthe.Blueprint.Schema.InputValueDefinition{
-                module: schema,
-                identifier: name,
-                __reference__: AshGraphql.Resource.ref(env),
-                name: to_string(name),
-                description: attribute[:description],
-                type:
-                  if Keyword.get(attribute, :allow_nil?, true) do
-                    field_type
-                  else
-                    %Absinthe.Blueprint.TypeReference.NonNull{of_type: field_type}
-                  end
-              }
-
-            if new_type? && map_type in already_checked do
-              if map_type? && map_constraints[:fields] do
-                {types, [nested_field | fields], already_checked}
-              else
-                {types, [typed_field | fields], already_checked}
-              end
-            else
-              already_checked =
+              map_constraints =
                 if new_type? do
-                  [map_type | already_checked]
+                  Ash.Type.NewType.constraints(map_type, map_constraints)
                 else
-                  already_checked
+                  map_constraints
                 end
 
-              if map_type? && map_constraints[:fields] do
-                {
-                  define_input_map_types(
-                    [nested_type_name],
-                    AshGraphql.Type.description(map_type, map_constraints),
-                    map_constraints,
-                    schema,
-                    resource,
-                    env,
-                    already_checked
-                  ) ++ types,
-                  [nested_field | fields],
-                  already_checked
+              nested_type_name =
+                if new_type? do
+                  AshGraphql.Type.input_type(attribute[:type], attribute[:constraints] || [])
+                else
+                  String.to_atom(
+                    "#{Atom.to_string(type_name) |> String.replace("_input", "")}_#{Atom.to_string(name)}_input"
+                  )
+                end
+
+              nested_type =
+                array_to_list_of(attribute[:type], nested_type_name, attribute[:constraints])
+
+              nested_field =
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  module: schema,
+                  identifier: name,
+                  description: attribute[:description],
+                  __reference__: AshGraphql.Resource.ref(env),
+                  name: to_string(name),
+                  type:
+                    if Keyword.get(attribute, :allow_nil?, true) do
+                      nested_type
+                    else
+                      %Absinthe.Blueprint.TypeReference.NonNull{
+                        of_type: nested_type
+                      }
+                    end
                 }
+
+              field_type =
+                do_field_type(
+                  attribute[:type],
+                  %{
+                    name: name,
+                    type: attribute[:type],
+                    description: attribute[:description],
+                    constraints: Keyword.get(attribute, :constraints) || []
+                  },
+                  resource,
+                  true
+                )
+
+              typed_field =
+                %Absinthe.Blueprint.Schema.InputValueDefinition{
+                  module: schema,
+                  identifier: name,
+                  __reference__: AshGraphql.Resource.ref(env),
+                  name: to_string(name),
+                  description: attribute[:description],
+                  type:
+                    if Keyword.get(attribute, :allow_nil?, true) do
+                      field_type
+                    else
+                      %Absinthe.Blueprint.TypeReference.NonNull{of_type: field_type}
+                    end
+                }
+
+              if new_type? && map_type in already_checked do
+                if map_type? && map_constraints[:fields] do
+                  {types, [nested_field | fields], already_checked}
+                else
+                  {types, [typed_field | fields], already_checked}
+                end
               else
-                {types, [typed_field | fields], already_checked}
+                already_checked =
+                  if new_type? do
+                    [map_type | already_checked]
+                  else
+                    already_checked
+                  end
+
+                if map_type? && map_constraints[:fields] do
+                  {
+                    define_input_map_types(
+                      [nested_type_name],
+                      AshGraphql.Type.description(map_type, map_constraints),
+                      map_constraints,
+                      schema,
+                      resource,
+                      env,
+                      already_checked
+                    ) ++ types,
+                    [nested_field | fields],
+                    already_checked
+                  }
+                else
+                  {types, [typed_field | fields], already_checked}
+                end
               end
-            end
-        end)
+          end
+        )
 
       [
         %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
@@ -3700,7 +3704,8 @@ defmodule AshGraphql.Resource do
         __reference__: ref(env),
         description: AshGraphql.Type.description(attribute.type, attribute.constraints),
         fields:
-          Enum.map((constraints[:types] |> Enum.sort_by(fn {name, _} -> name end)), fn {name, config} ->
+          Enum.map(constraints[:types] |> Enum.sort_by(fn {name, _} -> name end), fn {name,
+                                                                                      config} ->
             %Absinthe.Blueprint.Schema.InputValueDefinition{
               name: name |> to_string(),
               identifier: name,
@@ -3752,7 +3757,8 @@ defmodule AshGraphql.Resource do
         resolve_type: func,
         description: AshGraphql.Type.description(attribute.type, attribute.constraints),
         types:
-          Enum.map((constraints[:types] |> Enum.sort_by(fn {name, _} -> name end)), fn {name, _config} ->
+          Enum.map(constraints[:types] |> Enum.sort_by(fn {name, _} -> name end), fn {name,
+                                                                                      _config} ->
             if name in grapqhl_unnested_unions do
               %Absinthe.Blueprint.TypeReference.Name{
                 name: to_string(names_to_field_types[name]) |> Macro.camelize()
