@@ -396,7 +396,7 @@ defmodule AshGraphql do
         name: name,
         description: AshGraphql.Type.description(type, []),
         values:
-          Enum.map(type.values(), fn value ->
+          Enum.map(type.values() |> Enum.sort(), fn value ->
             name =
               if function_exported?(type, :graphql_rename_value, 1) do
                 type.graphql_rename_value(value)
