@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.8.3](https://github.com/ash-project/ash_graphql/compare/v1.8.2...v1.8.3) (2025-08-21)
+
+
+
+
+### Bug Fixes:
+
+* Fix generated SDL stability (#355) by [@serpent213](https://github.com/serpent213)
+
+* only resolve notifications for the same tenant (#353) by [@barnabasJ](https://github.com/barnabasJ)
+
+### Improvements:
+
+* Add support for relay_id_translation on GraphQL subscriptions (#349) by Mike Wilson
+
 ## [v1.8.2](https://github.com/ash-project/ash_graphql/compare/v1.8.1...v1.8.2) (2025-08-07)
 
 
