@@ -1,12 +1,12 @@
 defmodule AshGraphql.SubscriptionTest do
   use ExUnit.Case
 
+  alias AshGraphql.Test.Product
   alias AshGraphql.Test.PubSub
   alias AshGraphql.Test.RelaySchema
   alias AshGraphql.Test.RelaySubscribable
   alias AshGraphql.Test.Schema
   alias AshGraphql.Test.Subscribable
-  alias AshGraphql.Test.Product
 
   def assert_down(pid) do
     ref = Process.monitor(pid)
