@@ -47,14 +47,14 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
 
   test "adds ash_graphql to the formatter", %{igniter: igniter} do
     assert_has_patch(igniter, ".formatter.exs", ~S'''
-     1 1   |[
-     2   - |  import_deps: [:ecto, :ecto_sql, :phoenix],
-       2 + |  import_deps: [:ash_graphql, :absinthe, :ecto, :ecto_sql, :phoenix],
-     3 3   |  subdirectories: ["priv/*/migrations"],
-     4   - |  plugins: [Phoenix.LiveView.HTMLFormatter],
-       4 + |  plugins: [Absinthe.Formatter, Phoenix.LiveView.HTMLFormatter],
-     5 5   |  inputs: ["*.{heex,ex,exs}", "{config,lib,test}/**/*.{heex,ex,exs}", "priv/*/seeds.exs"]
-     6 6   |]
+      |[
+    - |  import_deps: [:ecto, :ecto_sql, :phoenix],
+    + |  import_deps: [:ash_graphql, :absinthe, :ecto, :ecto_sql, :phoenix],
+      |  subdirectories: ["priv/*/migrations"],
+    - |  plugins: [Phoenix.LiveView.HTMLFormatter],
+    + |  plugins: [Absinthe.Formatter, Phoenix.LiveView.HTMLFormatter],
+      |  inputs: ["*.{heex,ex,exs}", "{config,lib,test}/**/*.{heex,ex,exs}", "priv/*/seeds.exs"]
+      |]
     ''')
   end
 
@@ -73,14 +73,14 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
 
   test "updates appliaction", %{igniter: igniter} do
     assert_has_patch(igniter, "lib/test/application.ex", ~S'''
-     18 18   |      # {Test.Worker, arg},
-     19 19   |      # Start to serve requests, typically the last entry
-     20    - |      TestWeb.Endpoint
-        20 + |      TestWeb.Endpoint,
-        21 + |      {Absinthe.Subscription, TestWeb.Endpoint},
-        22 + |      AshGraphql.Subscription.Batcher
-     21 23   |    ]
-     22 24   |
+      |      # {Test.Worker, arg},
+      |      # Start to serve requests, typically the last entry
+    - |      TestWeb.Endpoint
+    + |      TestWeb.Endpoint,
+    + |      {Absinthe.Subscription, TestWeb.Endpoint},
+    + |      AshGraphql.Subscription.Batcher
+      |    ]
+      |
     ''')
   end
 
