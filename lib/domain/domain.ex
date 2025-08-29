@@ -405,7 +405,7 @@ defmodule AshGraphql.Domain do
           identifier: :desc_nils_first,
           __reference__: AshGraphql.Resource.ref(env),
           name: "DESC_NULLS_FIRST",
-          value: :des_nils_first
+          value: :desc_nils_first
         },
         %Absinthe.Blueprint.Schema.EnumValueDefinition{
           module: schema,
