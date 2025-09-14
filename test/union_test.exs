@@ -23,8 +23,6 @@ defmodule AshGraphql.UnionTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    dbg(data)
-
     assert [
              %{"name" => "UniontypeMemberArrayBoolean"},
              %{"name" => "UniontypeMemberString"},
