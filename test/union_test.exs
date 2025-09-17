@@ -121,7 +121,7 @@ defmodule AshGraphql.UnionTest do
     assert data["__type"]["kind"] == "OBJECT"
 
     # Should have a value field that references PersonType (wrapped in NonNull)
-    value_field = Enum.find(data["__type"]["fields"], & &1["name"] == "value")
+    value_field = Enum.find(data["__type"]["fields"], &(&1["name"] == "value"))
     assert value_field["type"]["kind"] == "NON_NULL"
     assert value_field["type"]["ofType"]["name"] == "PersonType"
     assert value_field["type"]["ofType"]["kind"] == "OBJECT"
@@ -151,7 +151,7 @@ defmodule AshGraphql.UnionTest do
 
     # Should find the wrapper type for Map
     assert map_data["__type"]["name"] == "UniontypeMemberMap"
-    map_value_field = Enum.find(map_data["__type"]["fields"], & &1["name"] == "value")
+    map_value_field = Enum.find(map_data["__type"]["fields"], &(&1["name"] == "value"))
     assert map_value_field["type"]["kind"] == "NON_NULL"
     assert map_value_field["type"]["ofType"]["name"] == "PersonMapType"
     assert map_value_field["type"]["ofType"]["kind"] == "OBJECT"
@@ -181,7 +181,7 @@ defmodule AshGraphql.UnionTest do
 
     # Should find the wrapper type for regular struct
     assert struct_data["__type"]["name"] == "UniontypeMemberRegularStruct"
-    struct_value_field = Enum.find(struct_data["__type"]["fields"], & &1["name"] == "value")
+    struct_value_field = Enum.find(struct_data["__type"]["fields"], &(&1["name"] == "value"))
     assert struct_value_field["type"]["kind"] == "NON_NULL"
     assert struct_value_field["type"]["ofType"]["name"] == "PersonRegularType"
     assert struct_value_field["type"]["ofType"]["kind"] == "OBJECT"
@@ -256,5 +256,4 @@ defmodule AshGraphql.UnionTest do
       assert input_data["__type"]["kind"] == "INPUT_OBJECT"
     end)
   end
-
 end

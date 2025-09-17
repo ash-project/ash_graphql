@@ -3227,8 +3227,9 @@ defmodule AshGraphql.Resource do
 
   def map_definitions(resource, all_domains, schema, env) do
     if AshGraphql.Resource.Info.type(resource) do
-      resource
-      |> global_maps(all_domains)
+      maps = global_maps(resource, all_domains)
+
+      maps
       |> Enum.flat_map(fn attribute ->
         type_name =
           if function_exported?(attribute.type, :graphql_type, 1) do
@@ -3251,14 +3252,12 @@ defmodule AshGraphql.Resource do
             []
           end
 
-        [
-          type_name
-        ]
-        |> define_map_types(description, constraints, schema, resource, env, already_checked)
-        |> Enum.concat(
-          [
-            input_type_name
-          ]
+        output_types =
+          [type_name]
+          |> define_map_types(description, constraints, schema, resource, env, already_checked)
+
+        input_types =
+          [input_type_name]
           |> define_input_map_types(
             description,
             constraints,
@@ -3267,7 +3266,10 @@ defmodule AshGraphql.Resource do
             env,
             already_checked
           )
-        )
+
+        all_types = output_types ++ input_types
+
+        all_types
       end)
     else
       []
@@ -3791,14 +3793,72 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def global_maps(resource, all_domains) do
-    resource
-    |> AshGraphql.all_attributes_and_arguments(all_domains)
-    |> Enum.map(&unnest/1)
-    |> Enum.filter(
-      &(Ash.Type.NewType.subtype_of(&1.type) in [Ash.Type.Map, Ash.Type.Struct] &&
-          !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []) &&
-          define_type?(&1.type, &1.constraints))
-    )
+    # Scan direct resource attributes
+    direct_types =
+      resource
+      |> AshGraphql.all_attributes_and_arguments(all_domains)
+      |> Enum.map(&unnest/1)
+      |> Enum.filter(
+        &(Ash.Type.NewType.subtype_of(&1.type) in [Ash.Type.Map, Ash.Type.Struct] &&
+            !Enum.empty?(Ash.Type.NewType.constraints(&1.type, &1.constraints)[:fields] || []) &&
+            define_type?(&1.type, &1.constraints))
+      )
+
+    # Scan union member custom types
+    all_attributes = AshGraphql.all_attributes_and_arguments(resource, all_domains)
+    union_member_types = extract_union_member_custom_types(all_attributes)
+
+    # Combine and deduplicate
+    (direct_types ++ union_member_types)
+    |> Enum.uniq_by(&{&1.type, &1.constraints})
+  end
+
+  defp extract_union_member_custom_types(attributes) do
+    attributes
+    |> Enum.filter(&is_union_type?/1)
+    |> Enum.flat_map(&extract_custom_types_from_union/1)
+  end
+
+  defp is_union_type?(attribute) do
+    type = Ash.Type.get_type(attribute.type)
+
+    Ash.Type.NewType.new_type?(type) &&
+      Ash.Type.NewType.subtype_of(type) == Ash.Type.Union
+  end
+
+  defp extract_custom_types_from_union(union_attribute) do
+    constraints = Ash.Type.NewType.constraints(union_attribute.type, union_attribute.constraints)
+
+    constraints[:types]
+    |> Kernel.||([])
+    |> Enum.flat_map(fn {_name, config} ->
+      member_type = config[:type]
+      member_constraints = config[:constraints] || []
+
+      # Create fake attribute for the member type
+      fake_attribute = %{
+        union_attribute
+        | type: member_type,
+          constraints: member_constraints
+      }
+
+      # Check if it's a custom map/struct type that should generate definitions
+      if is_custom_map_or_struct_type?(fake_attribute) do
+        [fake_attribute]
+      else
+        []
+      end
+    end)
+  end
+
+  defp is_custom_map_or_struct_type?(attribute) do
+    type = Ash.Type.get_type(attribute.type)
+
+    # Check if it's a Map/Struct type with fields AND implements AshGraphql.Type
+    Ash.Type.NewType.subtype_of(type) in [Ash.Type.Map, Ash.Type.Struct] &&
+      !Enum.empty?(Ash.Type.NewType.constraints(type, attribute.constraints)[:fields] || []) &&
+      function_exported?(type, :graphql_type, 1) &&
+      define_type?(type, attribute.constraints)
   end
 
   @spec define_type?(Ash.Type.t(), Ash.Type.constraints()) :: boolean()
