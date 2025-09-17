@@ -3815,11 +3815,11 @@ defmodule AshGraphql.Resource do
 
   defp extract_union_member_custom_types(attributes) do
     attributes
-    |> Enum.filter(&is_union_type?/1)
+    |> Enum.filter(&union_type?/1)
     |> Enum.flat_map(&extract_custom_types_from_union/1)
   end
 
-  defp is_union_type?(attribute) do
+  defp union_type?(attribute) do
     type = Ash.Type.get_type(attribute.type)
 
     Ash.Type.NewType.new_type?(type) &&
@@ -3843,7 +3843,7 @@ defmodule AshGraphql.Resource do
       }
 
       # Check if it's a custom map/struct type that should generate definitions
-      if is_custom_map_or_struct_type?(fake_attribute) do
+      if custom_map_or_struct_type?(fake_attribute) do
         [fake_attribute]
       else
         []
@@ -3851,7 +3851,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp is_custom_map_or_struct_type?(attribute) do
+  defp custom_map_or_struct_type?(attribute) do
     type = Ash.Type.get_type(attribute.type)
 
     # Check if it's a Map/Struct type with fields AND implements AshGraphql.Type

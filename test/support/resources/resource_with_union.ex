@@ -2,10 +2,12 @@ defmodule AshGraphql.Test.ResourceWithUnion do
   @moduledoc false
 
   alias AshGraphql.Test.PersonMap
-  alias AshGraphql.Test.PersonTypedStructData
   alias AshGraphql.Test.PersonRegularStruct
+  alias AshGraphql.Test.PersonTypedStructData
 
   defmodule Union do
+    @moduledoc false
+
     use Ash.Type.NewType,
       subtype_of: :union,
       constraints: [
