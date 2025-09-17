@@ -309,4 +309,42 @@ defmodule AshGraphql.ResourceTest do
     assert name_field["type"]["ofType"]["name"] == "String"
     assert name_field["type"]["ofType"]["kind"] == "SCALAR"
   end
+
+  test "can create resource from typed struct and read it back as typed struct" do
+    # First, create a resource using the typed struct as input
+    create_mutation = """
+    mutation {
+      createFromTypedStruct(input:{
+        personData: {
+          name: "John Doe",
+          age: 30,
+          email: "john.doe@example.com"
+        }
+      })
+    }
+    """
+
+    assert {:ok, %{data: %{"createFromTypedStruct" => resource_id}}} =
+             Absinthe.run(create_mutation, AshGraphql.Test.Schema)
+
+    # Then, read it back using the typed struct action
+    get_mutation = """
+    mutation {
+      getAsTypedStruct(input:{
+        id: "#{resource_id}"
+      }) {
+        name
+        age
+        email
+      }
+    }
+    """
+
+    assert {:ok, %{data: %{"getAsTypedStruct" => typed_struct_result}}} =
+             Absinthe.run(get_mutation, AshGraphql.Test.Schema)
+
+    assert typed_struct_result["name"] == "John Doe"
+    assert typed_struct_result["age"] == 30
+    assert typed_struct_result["email"] == "john.doe@example.com"
+  end
 end

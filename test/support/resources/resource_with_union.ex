@@ -1,23 +1,13 @@
 defmodule AshGraphql.Test.ResourceWithUnion do
   @moduledoc false
 
-  defmodule TypedStruct do
-    use Ash.TypedStruct
-
-    typed_struct do
-      field(:foo, :string, allow_nil?: false)
-    end
-
-    use AshGraphql.Type
-
-    @impl true
-    def graphql_type(_), do: :typedtype
-
-    @impl true
-    def graphql_input_type(_), do: :typedtype_input
-  end
+  alias AshGraphql.Test.PersonMap
+  alias AshGraphql.Test.PersonRegularStruct
+  alias AshGraphql.Test.PersonTypedStructData
 
   defmodule Union do
+    @moduledoc false
+
     use Ash.Type.NewType,
       subtype_of: :union,
       constraints: [
@@ -32,10 +22,20 @@ defmodule AshGraphql.Test.ResourceWithUnion do
             tag: :type,
             tag_value: "member_string"
           ],
+          member_map: [
+            type: PersonMap,
+            tag: :type,
+            tag_value: "member_map"
+          ],
           member_typed_struct: [
-            type: TypedStruct,
+            type: PersonTypedStructData,
             tag: :type,
             tag_value: "member_typed_struct"
+          ],
+          member_regular_struct: [
+            type: PersonRegularStruct,
+            tag: :type,
+            tag_value: "member_regular_struct"
           ]
         ]
       ]
