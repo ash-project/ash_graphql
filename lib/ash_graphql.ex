@@ -745,8 +745,23 @@ defmodule AshGraphql do
       Ash.Type.NewType.new_type?(type) && type not in already_checked ->
         already_checked = [type | already_checked]
         constraints = Ash.Type.NewType.constraints(type, constraints)
-        type = Ash.Type.NewType.subtype_of(type)
-        nested_attrs(type, all_domains, constraints, already_checked)
+        subtype = Ash.Type.NewType.subtype_of(type)
+
+        if subtype in [Ash.Type.Map, Ash.Type.Struct] &&
+             !Enum.empty?(constraints[:fields] || []) &&
+             function_exported?(type, :graphql_type, 1) do
+          fake_attr = %{
+            name: :nested_type,
+            type: type,
+            constraints: constraints,
+            description: nil,
+            allow_nil?: true
+          }
+
+          {[fake_attr], already_checked}
+        else
+          nested_attrs(subtype, all_domains, constraints, already_checked)
+        end
 
       true ->
         {[], already_checked}
