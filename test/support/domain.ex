@@ -65,5 +65,6 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.ResourceWithTypeInsideType)
     resource(AshGraphql.Test.Product)
     resource(AshGraphql.Test.ResourceWithUnion)
+    resource(AshGraphql.Test.ResourceWithTypedStruct)
   end
 end
