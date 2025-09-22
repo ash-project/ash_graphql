@@ -260,21 +260,12 @@ defmodule AshGraphql.ResourceTest do
     categories_field = Enum.find(category_hierarchy["fields"], &(&1["name"] == "categories"))
     assert categories_field != nil
 
-    # Verify the type structure: [Category!]!
-    # Outer type is NON_NULL
     assert categories_field["type"]["kind"] == "NON_NULL"
-
-    # Next level is LIST
     assert categories_field["type"]["ofType"]["kind"] == "LIST"
-
-    # List items are NON_NULL
     assert categories_field["type"]["ofType"]["ofType"]["kind"] == "NON_NULL"
-
-    # Inner type is Category (an OBJECT type)
     assert categories_field["type"]["ofType"]["ofType"]["ofType"]["name"] == "Category"
     assert categories_field["type"]["ofType"]["ofType"]["ofType"]["kind"] == "OBJECT"
 
-    # Also verify the Category type has a name field
     assert {:ok, %{data: category_data}} =
              """
              query {
@@ -304,14 +295,12 @@ defmodule AshGraphql.ResourceTest do
     name_field = Enum.find(category_type["fields"], &(&1["name"] == "name"))
     assert name_field != nil
 
-    # The name field should be non-null String
     assert name_field["type"]["kind"] == "NON_NULL"
     assert name_field["type"]["ofType"]["name"] == "String"
     assert name_field["type"]["ofType"]["kind"] == "SCALAR"
   end
 
   test "can create resource from typed struct and read it back as typed struct" do
-    # First, create a resource using the typed struct as input
     create_mutation = """
     mutation {
       createFromTypedStruct(input:{
@@ -327,7 +316,6 @@ defmodule AshGraphql.ResourceTest do
     assert {:ok, %{data: %{"createFromTypedStruct" => resource_id}}} =
              Absinthe.run(create_mutation, AshGraphql.Test.Schema)
 
-    # Then, read it back using the typed struct action
     get_mutation = """
     mutation {
       getAsTypedStruct(input:{

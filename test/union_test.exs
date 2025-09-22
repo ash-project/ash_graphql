@@ -35,7 +35,6 @@ defmodule AshGraphql.UnionTest do
   end
 
   test "custom map type from union member is generated" do
-    # Test that PersonMapType (the custom type referenced by union member) exists
     {:ok, %{data: data}} =
       """
       query {
@@ -54,17 +53,14 @@ defmodule AshGraphql.UnionTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    # Should find the PersonMapType
     assert data["__type"]["name"] == "PersonMapType"
     assert data["__type"]["kind"] == "OBJECT"
 
-    # Should have the expected fields from PersonMap constraints
     field_names = Enum.map(data["__type"]["fields"], & &1["name"]) |> Enum.sort()
     assert ["age", "email", "name"] = field_names
   end
 
   test "custom map input type from union member is generated" do
-    # Test that PersonMapInputType (for mutations) exists
     {:ok, %{data: data}} =
       """
       query {
@@ -83,17 +79,14 @@ defmodule AshGraphql.UnionTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    # Should find the PersonMapInputType
     assert data["__type"]["name"] == "PersonMapInputType"
     assert data["__type"]["kind"] == "INPUT_OBJECT"
 
-    # Should have the expected input fields
     field_names = Enum.map(data["__type"]["inputFields"], & &1["name"]) |> Enum.sort()
     assert ["age", "email", "name"] = field_names
   end
 
   test "union wrapper references custom type correctly" do
-    # Test that UniontypeMemberTypedStruct properly references PersonType (TypedStruct)
     {:ok, %{data: data}} =
       """
       query {
@@ -116,17 +109,14 @@ defmodule AshGraphql.UnionTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    # Should find the wrapper type
     assert data["__type"]["name"] == "UniontypeMemberTypedStruct"
     assert data["__type"]["kind"] == "OBJECT"
 
-    # Should have a value field that references PersonType (wrapped in NonNull)
     value_field = Enum.find(data["__type"]["fields"], &(&1["name"] == "value"))
     assert value_field["type"]["kind"] == "NON_NULL"
     assert value_field["type"]["ofType"]["name"] == "PersonType"
     assert value_field["type"]["ofType"]["kind"] == "OBJECT"
 
-    # Test that UniontypeMemberMap properly references PersonMapType (Map)
     {:ok, %{data: map_data}} =
       """
       query {
@@ -149,14 +139,12 @@ defmodule AshGraphql.UnionTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    # Should find the wrapper type for Map
     assert map_data["__type"]["name"] == "UniontypeMemberMap"
     map_value_field = Enum.find(map_data["__type"]["fields"], &(&1["name"] == "value"))
     assert map_value_field["type"]["kind"] == "NON_NULL"
     assert map_value_field["type"]["ofType"]["name"] == "PersonMapType"
     assert map_value_field["type"]["ofType"]["kind"] == "OBJECT"
 
-    # Test that UniontypeMemberRegularStruct properly references PersonRegularType (Struct)
     {:ok, %{data: struct_data}} =
       """
       query {
@@ -179,7 +167,6 @@ defmodule AshGraphql.UnionTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    # Should find the wrapper type for regular struct
     assert struct_data["__type"]["name"] == "UniontypeMemberRegularStruct"
     struct_value_field = Enum.find(struct_data["__type"]["fields"], &(&1["name"] == "value"))
     assert struct_value_field["type"]["kind"] == "NON_NULL"
@@ -188,7 +175,6 @@ defmodule AshGraphql.UnionTest do
   end
 
   test "all custom types from union members are accessible via GraphQL introspection" do
-    # Test PersonMapType (Map custom type)
     {:ok, %{data: map_data}} =
       """
       query {
@@ -203,7 +189,6 @@ defmodule AshGraphql.UnionTest do
     assert map_data["__type"]["name"] == "PersonMapType"
     assert map_data["__type"]["kind"] == "OBJECT"
 
-    # Test PersonType (TypedStruct custom type)
     {:ok, %{data: typed_data}} =
       """
       query {
@@ -218,7 +203,6 @@ defmodule AshGraphql.UnionTest do
     assert typed_data["__type"]["name"] == "PersonType"
     assert typed_data["__type"]["kind"] == "OBJECT"
 
-    # Test PersonRegularType (Regular Struct custom type)
     {:ok, %{data: struct_data}} =
       """
       query {
@@ -233,7 +217,6 @@ defmodule AshGraphql.UnionTest do
     assert struct_data["__type"]["name"] == "PersonRegularType"
     assert struct_data["__type"]["kind"] == "OBJECT"
 
-    # Test corresponding input types
     custom_input_types = [
       "PersonMapInputType",
       "PersonInputType",
