@@ -747,7 +747,7 @@ defmodule AshGraphql do
         constraints = Ash.Type.NewType.constraints(type, constraints)
         subtype = Ash.Type.NewType.subtype_of(type)
 
-        if subtype in [Ash.Type.Map, Ash.Type.Struct] &&
+        if subtype in [Ash.Type.Map, Ash.Type.Struct, Ash.Type.Keyword, Ash.Type.Tuple] &&
              !Enum.empty?(constraints[:fields] || []) &&
              function_exported?(type, :graphql_type, 1) do
           fake_attr = %{
