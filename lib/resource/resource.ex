@@ -2045,6 +2045,7 @@ defmodule AshGraphql.Resource do
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_type_definitions(resource, schema)) ++
+      List.wrap(struct_input_type_definition(resource, schema)) ++
       enum_definitions(resource, schema, __ENV__)
   end
 
@@ -2887,6 +2888,53 @@ defmodule AshGraphql.Resource do
     else
       nil
     end
+  end
+
+  # Generate input type definition for resources that can be used as struct types
+  def struct_input_type_definition(resource, schema) do
+    if AshGraphql.Resource.Info.type(resource) do
+      # Generate input type based on the resource's public attributes
+      # This will be used when the resource is referenced as `instance_of` in struct types
+      input_type_name = String.to_atom("#{AshGraphql.Resource.Info.type(resource)}_input")
+
+      # Get the fields from the resource's public attributes
+      fields = struct_input_fields(resource, schema)
+
+      if Enum.empty?(fields) do
+        nil
+      else
+        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+          identifier: input_type_name,
+          module: schema,
+          name: input_type_name |> to_string() |> Macro.camelize(),
+          fields: fields,
+          __reference__: ref(__ENV__)
+        }
+      end
+    else
+      nil
+    end
+  end
+
+  # Generate input fields for struct input types
+  def struct_input_fields(resource, schema) do
+    field_names = AshGraphql.Resource.Info.field_names(resource)
+
+    resource
+    |> Ash.Resource.Info.public_attributes()
+    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
+    |> Enum.map(fn attribute ->
+      field_type = field_type(attribute.type, attribute, resource, true)
+
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: attribute.name,
+        module: schema,
+        name: to_string(field_names[attribute.name] || attribute.name),
+        description: attribute.description,
+        type: field_type,
+        __reference__: ref(__ENV__)
+      }
+    end)
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
@@ -4937,9 +4985,27 @@ defmodule AshGraphql.Resource do
 
   defp get_specific_field_type(Ash.Type.Struct, %{constraints: constraints}, resource, input?) do
     type =
-      if !input? && constraints[:instance_of] &&
+      if constraints[:instance_of] &&
            Ash.Resource.Info.resource?(constraints[:instance_of]) do
-        AshGraphql.Resource.Info.type(constraints[:instance_of])
+        instance_of = constraints[:instance_of]
+        base_type = AshGraphql.Resource.Info.type(instance_of)
+
+        if input? do
+          # For input types, generate input type from the struct resource
+          # Check if the instance_of resource has GraphQL mutations defined
+          if AshGraphql.Resource.Info.mutations(instance_of) != [] do
+            # If mutations exist, we can generate an input type
+            # Use the embedded_type_input pattern for struct resources
+            String.to_atom("#{base_type}_input")
+          else
+            # If no mutations, we can still generate a basic input type
+            # based on the resource's attributes for struct instances
+            String.to_atom("#{base_type}_input")
+          end
+        else
+          # For output types, use the regular type
+          base_type
+        end
       end
 
     type || get_specific_field_type(Ash.Type.Map, %{constraints: constraints}, resource, input?)
