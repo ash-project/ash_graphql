@@ -343,6 +343,7 @@ defmodule AshGraphql.ResourceTest do
 
       # Create a mock resource and attribute for testing
       mock_resource = AshGraphql.Test.User
+
       mock_attribute = %{
         type: Ash.Type.Struct,
         constraints: [instance_of: AshGraphql.Test.Post],
@@ -350,12 +351,14 @@ defmodule AshGraphql.ResourceTest do
       }
 
       # Test that output types are properly generated
-      result = AshGraphql.Resource.field_type(
-        mock_attribute.type,
-        mock_attribute,
-        mock_resource,
-        false  # input? = false (output type)
-      )
+      result =
+        AshGraphql.Resource.field_type(
+          mock_attribute.type,
+          mock_attribute,
+          mock_resource,
+          # input? = false (output type)
+          false
+        )
 
       # Should return the proper type, not :json_string
       assert result == :post
@@ -366,6 +369,7 @@ defmodule AshGraphql.ResourceTest do
       # They should now generate proper input types instead of falling back to JSON
 
       mock_resource = AshGraphql.Test.User
+
       mock_attribute = %{
         type: Ash.Type.Struct,
         constraints: [instance_of: AshGraphql.Test.Post],
@@ -373,12 +377,14 @@ defmodule AshGraphql.ResourceTest do
       }
 
       # Test that input types now generate proper input type references
-      result = AshGraphql.Resource.field_type(
-        mock_attribute.type,
-        mock_attribute,
-        mock_resource,
-        true  # input? = true (input type)
-      )
+      result =
+        AshGraphql.Resource.field_type(
+          mock_attribute.type,
+          mock_attribute,
+          mock_resource,
+          # input? = true (input type)
+          true
+        )
 
       # Should return the proper input type, not :json_string
       assert result == :post_input
@@ -393,7 +399,13 @@ defmodule AshGraphql.ResourceTest do
       schema = AshGraphql.Test.Schema
 
       # Generate the struct input type definition
-      result = AshGraphql.Resource.struct_input_type_definition(resource, schema)
+      result =
+        AshGraphql.Resource.struct_input_type_definition(
+          resource,
+          AshGraphql.Test.Domain,
+          [AshGraphql.Test.Domain],
+          schema
+        )
 
       # Should generate an input object type definition
       assert %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{} = result

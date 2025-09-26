@@ -2045,7 +2045,7 @@ defmodule AshGraphql.Resource do
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
       List.wrap(page_type_definitions(resource, schema)) ++
-      List.wrap(struct_input_type_definition(resource, schema)) ++
+      List.wrap(struct_input_type_definition(resource, domain, all_domains, schema)) ++
       enum_definitions(resource, schema, __ENV__)
   end
 
@@ -2891,50 +2891,137 @@ defmodule AshGraphql.Resource do
   end
 
   # Generate input type definition for resources that can be used as struct types
-  def struct_input_type_definition(resource, schema) do
+  # Only generates if no conflicting type exists
+  def struct_input_type_definition(resource, _domain, all_domains, schema) do
     if AshGraphql.Resource.Info.type(resource) do
       # Generate input type based on the resource's public attributes
       # This will be used when the resource is referenced as `instance_of` in struct types
       input_type_name = String.to_atom("#{AshGraphql.Resource.Info.type(resource)}_input")
 
-      # Get the fields from the resource's public attributes
-      fields = struct_input_fields(resource, schema)
-
-      if Enum.empty?(fields) do
+      # Check if this input type would conflict with existing types (both domain resources and embedded resources)
+      if input_type_conflicts_with_existing_types?(input_type_name, all_domains, schema) do
+        # Skip generation to avoid conflicts with dedicated input resources
         nil
       else
-        %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
-          identifier: input_type_name,
-          module: schema,
-          name: input_type_name |> to_string() |> Macro.camelize(),
-          fields: fields,
-          __reference__: ref(__ENV__)
-        }
+        # Get the fields from the resource's public attributes
+        fields = struct_input_fields(resource, schema)
+
+        if Enum.empty?(fields) do
+          nil
+        else
+          %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
+            identifier: input_type_name,
+            module: schema,
+            name: input_type_name |> to_string() |> Macro.camelize(),
+            fields: fields,
+            __reference__: ref(__ENV__)
+          }
+        end
       end
     else
       nil
     end
   end
 
+  # Check if the proposed input type name conflicts with existing types
+  # This includes both domain resources and embedded resources that generate GraphQL types
+  defp input_type_conflicts_with_existing_types?(input_type_name, all_domains, _schema) do
+    # First check domain resources
+    domain_resource_conflict =
+      all_domains
+      |> Enum.flat_map(&Ash.Domain.Info.resources/1)
+      |> Enum.any?(fn resource ->
+        try do
+          AshGraphql.Resource in Spark.extensions(resource) &&
+            AshGraphql.Resource.Info.type(resource) == input_type_name
+        rescue
+          _ -> false
+        end
+      end)
+
+    # Since we can't reliably look up types during schema compilation,
+    # we'll use a broader approach: check if any Ash resource with AshGraphql
+    # extension anywhere in the system has this type name
+    global_resource_conflict =
+      try do
+        # Get all compiled modules that might be Ash resources
+        :code.all_loaded()
+        |> Enum.map(&elem(&1, 0))
+        |> Enum.any?(fn module ->
+          try do
+            # Check if this module is an Ash resource with AshGraphql extension
+            Ash.Resource.Info.resource?(module) &&
+              AshGraphql.Resource in Spark.extensions(module) &&
+              AshGraphql.Resource.Info.type(module) == input_type_name
+          rescue
+            _ -> false
+          end
+        end)
+      rescue
+        _ -> false
+      end
+
+    domain_resource_conflict || global_resource_conflict
+  end
+
   # Generate input fields for struct input types
   def struct_input_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
-    resource
-    |> Ash.Resource.Info.public_attributes()
-    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
-    |> Enum.map(fn attribute ->
-      field_type = field_type(attribute.type, attribute, resource, true)
+    # Get attribute fields
+    attribute_fields =
+      resource
+      |> Ash.Resource.Info.public_attributes()
+      |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
+      |> Enum.map(fn attribute ->
+        field_type = field_type(attribute.type, attribute, resource, true)
 
-      %Absinthe.Blueprint.Schema.FieldDefinition{
-        identifier: attribute.name,
-        module: schema,
-        name: to_string(field_names[attribute.name] || attribute.name),
-        description: attribute.description,
-        type: field_type,
-        __reference__: ref(__ENV__)
-      }
-    end)
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: attribute.name,
+          module: schema,
+          name: to_string(field_names[attribute.name] || attribute.name),
+          description: attribute.description,
+          type: field_type,
+          __reference__: ref(__ENV__)
+        }
+      end)
+
+    # Get relationship fields
+    relationship_fields =
+      resource
+      |> Ash.Resource.Info.public_relationships()
+      |> Enum.filter(fn relationship ->
+        # Filter relationships similar to how it's done elsewhere in the codebase
+        AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
+          AshGraphql.Resource in Spark.extensions(relationship.destination) &&
+          AshGraphql.Resource.Info.type(relationship.destination)
+      end)
+      |> Enum.map(fn relationship ->
+        destination_type = AshGraphql.Resource.Info.type(relationship.destination)
+
+        field_type =
+          case relationship.cardinality do
+            :one ->
+              String.to_atom("#{destination_type}_input")
+
+            :many ->
+              %Absinthe.Blueprint.TypeReference.List{
+                of_type: String.to_atom("#{destination_type}_input")
+              }
+          end
+
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: relationship.name,
+          module: schema,
+          name: to_string(field_names[relationship.name] || relationship.name),
+          description: relationship.description,
+          type: field_type,
+          __reference__: ref(__ENV__)
+        }
+      end)
+
+    # Combine attribute and relationship fields
+    attribute_fields ++ relationship_fields
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
