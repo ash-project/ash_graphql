@@ -2,9 +2,7 @@ defmodule AshGraphql.StructTypeTest do
   use ExUnit.Case, async: false
 
   describe "Ash.Type.Struct field type generation" do
-    test "generates correct output type for struct with instance_of" do
-      mock_resource = AshGraphql.Test.User
-
+    test "generates correct output and input types for struct with instance_of" do
       mock_attribute = %{
         type: Ash.Type.Struct,
         constraints: [instance_of: AshGraphql.Test.Post],
@@ -12,133 +10,73 @@ defmodule AshGraphql.StructTypeTest do
         allow_nil?: false
       }
 
-      result =
+      output_result =
         AshGraphql.Resource.field_type(
           mock_attribute.type,
           mock_attribute,
-          mock_resource,
-          # output type
+          AshGraphql.Test.User,
           false
         )
 
-      assert result == :post
-    end
-
-    test "generates correct input type for struct with instance_of" do
-      mock_resource = AshGraphql.Test.User
-
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        constraints: [instance_of: AshGraphql.Test.Post],
-        name: :post_struct,
-        allow_nil?: false
-      }
-
-      result =
+      input_result =
         AshGraphql.Resource.field_type(
           mock_attribute.type,
           mock_attribute,
-          mock_resource,
-          # input type
+          AshGraphql.Test.User,
           true
         )
 
-      assert result == :post_input
+      assert output_result == :post
+      assert input_result == :post_input
     end
 
-    test "handles struct types with different resource constraints" do
-      # Test with User resource
-      user_attribute = %{
+    test "handles different resource constraints" do
+      user_attr = %{
         type: Ash.Type.Struct,
         constraints: [instance_of: AshGraphql.Test.User],
         name: :user_struct
       }
 
-      user_result =
-        AshGraphql.Resource.field_type(
-          user_attribute.type,
-          user_attribute,
-          AshGraphql.Test.Post,
-          true
-        )
-
-      assert user_result == :user_input
-
-      # Test with different resource
-      post_attribute = %{
+      post_attr = %{
         type: Ash.Type.Struct,
         constraints: [instance_of: AshGraphql.Test.Post],
         name: :post_struct
       }
 
-      post_result =
-        AshGraphql.Resource.field_type(
-          post_attribute.type,
-          post_attribute,
-          AshGraphql.Test.User,
-          true
-        )
+      user_result =
+        AshGraphql.Resource.field_type(user_attr.type, user_attr, AshGraphql.Test.Post, true)
 
+      post_result =
+        AshGraphql.Resource.field_type(post_attr.type, post_attr, AshGraphql.Test.User, true)
+
+      assert user_result == :user_input
       assert post_result == :post_input
     end
 
-    test "falls back to Map behavior when instance_of is not a resource" do
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        # Not a resource
-        constraints: [instance_of: String],
-        name: :invalid_struct
-      }
+    test "falls back to Map behavior for invalid constraints" do
+      test_cases = [
+        {[instance_of: String], "non-resource instance_of"},
+        {[], "empty constraints"},
+        {nil, "nil constraints"}
+      ]
 
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
+      Enum.each(test_cases, fn {constraints, _description} ->
+        mock_attribute = %{
+          type: Ash.Type.Struct,
+          constraints: constraints,
+          name: :test_struct
+        }
 
-      # Should fall back to Map behavior (json_string)
-      assert result == :json_string || result == :json
-    end
+        result =
+          AshGraphql.Resource.field_type(
+            mock_attribute.type,
+            mock_attribute,
+            AshGraphql.Test.User,
+            true
+          )
 
-    test "falls back to Map behavior when no instance_of constraint" do
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        # No instance_of
-        constraints: [],
-        name: :plain_struct
-      }
-
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
-
-      # Should fall back to Map behavior
-      assert result == :json_string || result == :json
-    end
-
-    test "handles nil constraints gracefully" do
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        constraints: nil,
-        name: :nil_constraints_struct
-      }
-
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
-
-      # Should fall back to Map behavior
-      assert result == :json_string || result == :json
+        assert result == :json_string || result == :json
+      end)
     end
 
     test "handles array of struct types" do
@@ -162,41 +100,30 @@ defmodule AshGraphql.StructTypeTest do
   end
 
   describe "struct input type definition generation" do
-    test "generates input type definition for valid resource" do
-      resource = AshGraphql.Test.Post
+    test "generates input type definitions for valid resources" do
+      test_resources = [
+        {AshGraphql.Test.Post, :post_input, "PostInput"},
+        {AshGraphql.Test.User, :user_input, "UserInput"}
+      ]
+
       schema = AshGraphql.Test.Schema
 
-      result =
-        AshGraphql.Resource.struct_input_type_definition(
-          resource,
-          AshGraphql.Test.Domain,
-          [AshGraphql.Test.Domain],
-          schema
-        )
+      Enum.each(test_resources, fn {resource, expected_id, expected_name} ->
+        result =
+          AshGraphql.Resource.struct_input_type_definition(
+            resource,
+            AshGraphql.Test.Domain,
+            [AshGraphql.Test.Domain],
+            schema
+          )
 
-      assert %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{} = result
-      assert result.identifier == :post_input
-      assert result.name == "PostInput"
-      assert result.module == schema
-      assert is_list(result.fields)
-      assert length(result.fields) > 0
-    end
-
-    test "generates input type definition for User resource" do
-      resource = AshGraphql.Test.User
-      schema = AshGraphql.Test.Schema
-
-      result =
-        AshGraphql.Resource.struct_input_type_definition(
-          resource,
-          AshGraphql.Test.Domain,
-          [AshGraphql.Test.Domain],
-          schema
-        )
-
-      assert %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{} = result
-      assert result.identifier == :user_input
-      assert result.name == "UserInput"
+        assert %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{} = result
+        assert result.identifier == expected_id
+        assert result.name == expected_name
+        assert result.module == schema
+        assert is_list(result.fields)
+        assert length(result.fields) > 0
+      end)
     end
 
     test "returns nil for resource without GraphQL type" do
@@ -280,22 +207,15 @@ defmodule AshGraphql.StructTypeTest do
       schema = AshGraphql.Test.Schema
 
       fields = AshGraphql.Resource.struct_input_fields(resource, schema)
-
-      # All fields should be for shown attributes and relationships only
       field_names = Enum.map(fields, & &1.identifier)
 
-      # Get all public attributes and relationships
       public_attrs = Ash.Resource.Info.public_attributes(resource)
       public_rels = Ash.Resource.Info.public_relationships(resource)
 
-      # Check that all generated fields correspond to either public attributes or relationships
       Enum.each(field_names, fn field_name ->
-        # Check if it's a valid attribute
-        # Check if it's a valid relationship
         is_valid_field =
           Enum.any?(public_attrs, fn attr ->
-            attr.name == field_name &&
-              AshGraphql.Resource.Info.show_field?(resource, attr.name)
+            attr.name == field_name && AshGraphql.Resource.Info.show_field?(resource, attr.name)
           end) ||
             Enum.any?(public_rels, fn rel ->
               rel.name == field_name &&
@@ -516,80 +436,39 @@ defmodule AshGraphql.StructTypeTest do
   end
 
   describe "edge cases and error handling" do
-    test "handles malformed constraints gracefully" do
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        # nil instance_of
-        constraints: [instance_of: nil],
-        name: :malformed_struct
-      }
+    test "handles invalid constraints gracefully" do
+      test_cases = [
+        {[instance_of: nil], "nil instance_of"},
+        {[instance_of: NonExistentResource], "non-existent resource"},
+        {[instance_of: String], "non-Ash resource"}
+      ]
 
-      # Should not crash
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
+      Enum.each(test_cases, fn {constraints, _description} ->
+        mock_attribute = %{
+          type: Ash.Type.Struct,
+          constraints: constraints,
+          name: :test_struct
+        }
 
-      assert result == :json_string || result == :json
-    end
+        result =
+          AshGraphql.Resource.field_type(
+            mock_attribute.type,
+            mock_attribute,
+            AshGraphql.Test.User,
+            true
+          )
 
-    test "handles non-existent resource in instance_of" do
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        constraints: [instance_of: NonExistentResource],
-        name: :non_existent_struct
-      }
-
-      # Should handle gracefully without crashing
-      # Non-existent resources should fall back to JSON behavior
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
-
-      assert result == :json_string || result == :json
-    end
-
-    test "validates that instance_of points to actual Ash resource" do
-      # Test with a regular module that's not an Ash resource
-      defmodule NotAnAshResource do
-        def some_function, do: :ok
-      end
-
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        constraints: [instance_of: NotAnAshResource],
-        name: :not_resource_struct
-      }
-
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
-
-      # Should fall back to JSON since it's not a valid Ash resource
-      assert result == :json_string || result == :json
+        assert result == :json_string || result == :json
+      end)
     end
 
     test "handles empty field list gracefully" do
-      # This tests the nil return when no fields are generated
       result =
         AshGraphql.Resource.struct_input_fields(
-          # Resource with no shown fields
           AshGraphql.Test.NoObject,
           AshGraphql.Test.Schema
         )
 
-      # Should return empty list or handle gracefully
       assert is_list(result)
     end
   end
@@ -977,43 +856,29 @@ defmodule AshGraphql.StructTypeTest do
   end
 
   describe "backward compatibility" do
-    test "does not break existing Map type behavior" do
-      mock_attribute = %{
-        type: Ash.Type.Map,
-        constraints: [],
-        name: :map_field
-      }
+    test "preserves existing behavior for Map and Struct types" do
+      test_cases = [
+        {Ash.Type.Map, [], "Map type"},
+        {Ash.Type.Struct, [fields: [name: [type: :string]]], "Struct with fields"}
+      ]
 
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
+      Enum.each(test_cases, fn {type, constraints, _description} ->
+        mock_attribute = %{
+          type: type,
+          constraints: constraints,
+          name: :test_field
+        }
 
-      # Map types should still work as before
-      assert result == :json_string || result == :json
-    end
+        result =
+          AshGraphql.Resource.field_type(
+            mock_attribute.type,
+            mock_attribute,
+            AshGraphql.Test.User,
+            true
+          )
 
-    test "does not affect other struct type scenarios" do
-      # Test struct type without instance_of constraint
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        constraints: [fields: [name: [type: :string]]],
-        name: :struct_with_fields
-      }
-
-      result =
-        AshGraphql.Resource.field_type(
-          mock_attribute.type,
-          mock_attribute,
-          AshGraphql.Test.User,
-          true
-        )
-
-      # Should fall back to Map behavior as before
-      assert result == :json_string || result == :json
+        assert result == :json_string || result == :json
+      end)
     end
   end
 
@@ -1033,12 +898,12 @@ defmodule AshGraphql.StructTypeTest do
         end
 
         attributes do
-          uuid_primary_key :id
-          attribute :name, :string, public?: true
+          uuid_primary_key(:id)
+          attribute(:name, :string, public?: true)
         end
 
         actions do
-          defaults [:create, :read, :update, :destroy]
+          defaults([:create, :read, :update, :destroy])
         end
       end
 
@@ -1050,16 +915,17 @@ defmodule AshGraphql.StructTypeTest do
           extensions: [AshGraphql.Resource]
 
         graphql do
-          type :plan_job_input  # This conflicts with what TestPlanJob would generate
+          # This conflicts with what TestPlanJob would generate
+          type :plan_job_input
         end
 
         attributes do
-          uuid_primary_key :id
-          attribute :data, :string, public?: true
+          uuid_primary_key(:id)
+          attribute(:data, :string, public?: true)
         end
 
         actions do
-          defaults [:create]
+          defaults([:create])
         end
       end
 
@@ -1068,7 +934,7 @@ defmodule AshGraphql.StructTypeTest do
         use Ash.Domain
 
         resources do
-          resource TestPlanJob
+          resource(TestPlanJob)
           # Note: TestPlanJobInput is NOT included here, just like in Zelo
         end
       end
@@ -1083,12 +949,12 @@ defmodule AshGraphql.StructTypeTest do
 
         # Add a basic query root to satisfy Absinthe schema requirements
         query do
-          field :test, :string
+          field(:test, :string)
         end
 
         # Manually add the embedded resource type to simulate how it appears in real schemas
         input_object :plan_job_input do
-          field :data, :string
+          field(:data, :string)
         end
       end
 

@@ -2890,20 +2890,17 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  # Generate input type definition for resources that can be used as struct types
-  # Only generates if no conflicting type exists
+  @doc """
+  Generate input type definition for resources that can be used as struct types.
+  Only generates if no conflicting type exists.
+  """
   def struct_input_type_definition(resource, _domain, all_domains, schema) do
     if AshGraphql.Resource.Info.type(resource) do
-      # Generate input type based on the resource's public attributes
-      # This will be used when the resource is referenced as `instance_of` in struct types
       input_type_name = String.to_atom("#{AshGraphql.Resource.Info.type(resource)}_input")
 
-      # Check if this input type would conflict with existing types (both domain resources and embedded resources)
       if input_type_conflicts_with_existing_types?(input_type_name, all_domains, schema) do
-        # Skip generation to avoid conflicts with dedicated input resources
         nil
       else
-        # Get the fields from the resource's public attributes
         fields = struct_input_fields(resource, schema)
 
         if Enum.empty?(fields) do
@@ -2923,10 +2920,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  # Check if the proposed input type name conflicts with existing types
-  # This includes both domain resources and embedded resources that generate GraphQL types
   defp input_type_conflicts_with_existing_types?(input_type_name, all_domains, _schema) do
-    # First check domain resources
     domain_resource_conflict =
       all_domains
       |> Enum.flat_map(&Ash.Domain.Info.resources/1)
@@ -2939,17 +2933,12 @@ defmodule AshGraphql.Resource do
         end
       end)
 
-    # Since we can't reliably look up types during schema compilation,
-    # we'll use a broader approach: check if any Ash resource with AshGraphql
-    # extension anywhere in the system has this type name
     global_resource_conflict =
       try do
-        # Get all compiled modules that might be Ash resources
         :code.all_loaded()
         |> Enum.map(&elem(&1, 0))
         |> Enum.any?(fn module ->
           try do
-            # Check if this module is an Ash resource with AshGraphql extension
             Ash.Resource.Info.resource?(module) &&
               AshGraphql.Resource in Spark.extensions(module) &&
               AshGraphql.Resource.Info.type(module) == input_type_name
@@ -2964,11 +2953,12 @@ defmodule AshGraphql.Resource do
     domain_resource_conflict || global_resource_conflict
   end
 
-  # Generate input fields for struct input types
+  @doc """
+  Generate input fields for struct input types from resource attributes and relationships.
+  """
   def struct_input_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
-    # Get attribute fields
     attribute_fields =
       resource
       |> Ash.Resource.Info.public_attributes()
@@ -2986,12 +2976,10 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    # Get relationship fields
     relationship_fields =
       resource
       |> Ash.Resource.Info.public_relationships()
       |> Enum.filter(fn relationship ->
-        # Filter relationships similar to how it's done elsewhere in the codebase
         AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
           AshGraphql.Resource in Spark.extensions(relationship.destination) &&
           AshGraphql.Resource.Info.type(relationship.destination)
@@ -3020,7 +3008,6 @@ defmodule AshGraphql.Resource do
         }
       end)
 
-    # Combine attribute and relationship fields
     attribute_fields ++ relationship_fields
   end
 

@@ -337,68 +337,37 @@ defmodule AshGraphql.ResourceTest do
   end
 
   describe "Ash.Type.Struct with instance_of constraint" do
-    test "generates proper output type for struct with instance_of resource" do
-      # This test verifies that struct types with instance_of constraints
-      # properly generate GraphQL types for output (non-input) contexts
-
-      # Create a mock resource and attribute for testing
-      mock_resource = AshGraphql.Test.User
-
+    test "generates proper output and input types for struct with instance_of resource" do
       mock_attribute = %{
         type: Ash.Type.Struct,
         constraints: [instance_of: AshGraphql.Test.Post],
         name: :test_struct
       }
 
-      # Test that output types are properly generated
-      result =
+      output_result =
         AshGraphql.Resource.field_type(
           mock_attribute.type,
           mock_attribute,
-          mock_resource,
-          # input? = false (output type)
+          AshGraphql.Test.User,
           false
         )
 
-      # Should return the proper type, not :json_string
-      assert result == :post
-    end
-
-    test "generates proper input type for struct with instance_of constraint" do
-      # This test verifies the fix for struct types with instance_of constraints
-      # They should now generate proper input types instead of falling back to JSON
-
-      mock_resource = AshGraphql.Test.User
-
-      mock_attribute = %{
-        type: Ash.Type.Struct,
-        constraints: [instance_of: AshGraphql.Test.Post],
-        name: :test_struct
-      }
-
-      # Test that input types now generate proper input type references
-      result =
+      input_result =
         AshGraphql.Resource.field_type(
           mock_attribute.type,
           mock_attribute,
-          mock_resource,
-          # input? = true (input type)
+          AshGraphql.Test.User,
           true
         )
 
-      # Should return the proper input type, not :json_string
-      assert result == :post_input
+      assert output_result == :post
+      assert input_result == :post_input
     end
 
-    test "struct input type definition is generated for resources" do
-      # Test that the struct_input_type_definition function generates
-      # proper input type definitions for resources
-
-      # Get a test resource
+    test "struct input type definition and fields are generated for resources" do
       resource = AshGraphql.Test.Post
       schema = AshGraphql.Test.Schema
 
-      # Generate the struct input type definition
       result =
         AshGraphql.Resource.struct_input_type_definition(
           resource,
@@ -407,28 +376,16 @@ defmodule AshGraphql.ResourceTest do
           schema
         )
 
-      # Should generate an input object type definition
       assert %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{} = result
       assert result.identifier == :post_input
       assert result.name == "PostInput"
       assert is_list(result.fields)
       assert length(result.fields) > 0
-    end
 
-    test "struct input fields are generated from resource attributes" do
-      # Test that struct input fields are properly generated from resource attributes
-
-      resource = AshGraphql.Test.Post
-      schema = AshGraphql.Test.Schema
-
-      # Generate struct input fields
       fields = AshGraphql.Resource.struct_input_fields(resource, schema)
-
-      # Should generate field definitions for each public attribute
       assert is_list(fields)
       assert length(fields) > 0
 
-      # Check that fields are proper field definitions
       field = List.first(fields)
       assert %Absinthe.Blueprint.Schema.FieldDefinition{} = field
       assert is_atom(field.identifier)
