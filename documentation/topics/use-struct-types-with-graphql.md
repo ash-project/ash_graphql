@@ -1,33 +1,23 @@
 # Use Struct Types with GraphQL
 
-When you need to pass structured data as standalone arguments (not creating relationships), custom struct types provide structured GraphQL input validation instead of generic JSON strings.
+Custom struct types provide structured GraphQL input validation for standalone data arguments instead of generic JSON strings.
 
-## When You Need This
+## The Problem
 
-**Relationship arguments** automatically get structured inputs:
+Relationship arguments automatically get structured inputs, but standalone data arguments default to JsonString:
+
 ```elixir
-# ✅ Gets structured CreateAddressInput automatically
+# Relationship: Gets structured CreateAddressInput
 argument :address, :map
 change manage_relationship(:address, type: :direct_control)
+
+# Standalone data: Becomes JsonString (no validation)
+argument :metadata, :map
 ```
 
-**Standalone data arguments** fall back to JsonString:
-```elixir
-# ❌ Becomes JsonString! (no structure validation)
-argument :metadata, :map  # Just passing data, not creating a relationship
-```
+## Solution: Custom Struct Types
 
-Custom struct types solve this by providing structured validation for standalone data arguments.
-
-## Creating Custom Struct Types
-
-To get structured GraphQL input types for standalone data arguments, create a custom type that references an existing resource's input schema.
-
-### Step 1: Create a custom type
-
-## Choosing Your Approach
-
-**For new standalone data structures:**
+### Using Ash.TypedStruct (new structures)
 
 ```elixir
 defmodule MyApp.Types.TicketMetadataType do
@@ -49,7 +39,7 @@ defmodule MyApp.Types.TicketMetadataType do
 end
 ```
 
-**For referencing existing resource structures:**
+### Using NewType (reference existing resources)
 
 ```elixir
 defmodule MyApp.Types.TicketMetadataType do
@@ -69,24 +59,14 @@ defmodule MyApp.Types.TicketMetadataType do
 end
 ```
 
-## Comparison
+**Key Differences:**
+- **TypedStruct**: Define fields manually, full control, requires manual sync
+- **NewType**: Auto-inherits from resource, stays in sync, less flexible
 
-| Aspect | Ash.TypedStruct | Ash.Type.NewType + instance_of |
-|--------|-----------------|--------------------------------|
-| **Best for** | New standalone structures | Referencing existing resources |
-| **Field definition** | Manual field declarations | Automatic from target resource |
-| **Type safety** | Constructor functions (`new/1`, `new!/1`) | Inherits from target resource |
-| **Validation** | Custom field constraints | Resource's existing validations |
-| **Maintenance** | Fields must be kept in sync manually | Automatically syncs with resource changes |
-| **DRY principle** | Duplicates field definitions | References single source of truth |
-| **Flexibility** | Full control over structure | Constrained by target resource |
-
-### Step 2: Use the custom type in your resource
+### Use in your resource
 
 ```elixir
 defmodule MyApp.Ticket do
-  # ...
-  
   actions do
     action :add_metadata do
       argument :metadata, MyApp.Types.TicketMetadataType,
@@ -96,7 +76,7 @@ defmodule MyApp.Ticket do
 end
 ```
 
-## Result: Structured Input Types
+## Result
 
 ```graphql
 input AddMetadataInput {
@@ -110,41 +90,18 @@ input CreateTicketMetadataInput {
 }
 ```
 
-## Troubleshooting
+## Common Issues & Solutions
 
-**Input still shows JsonString?**
-- Verify `graphql_input_type` points to existing input type (e.g., `:create_ticket_metadata_input`)
-- Ensure target resource has GraphQL mutations defined (creates the input type)
-- Regenerate schema with `mix ash.codegen`
+**Still seeing JsonString?**
+1. Ensure `graphql_input_type` references an existing input type
+2. Target resource must have GraphQL mutations defined:
+   ```elixir
+   graphql do
+     mutations do
+       create :create_ticket_metadata, :create
+     end
+   end
+   ```
+3. Run `mix ash.codegen` to regenerate schema
 
-**Using `:struct` with `instance_of` directly?**
-Raw struct constraints also fall back to JsonString for standalone arguments:
-
-```elixir
-# This also generates JsonString! for standalone arguments
-argument :metadata, :struct,
-  constraints: [instance_of: MyApp.TicketMetadata]
-```
-
-Use the custom type approach instead for structured validation.
-
-**Target resource has no mutations?**
-The target resource needs GraphQL mutations to provide input types to reference:
-
-```elixir
-defmodule MyApp.TicketMetadata do
-  # ...
-  
-  graphql do
-    type :ticket_metadata
-    
-    mutations do
-      create :create_ticket_metadata, :create
-    end
-  end
-end
-```
-
-**Schema not updating?**
-- Run `mix ash.codegen` to regenerate GraphQL schema
-- In test environment, use `MIX_ENV=test mix ash.codegen`
+**Note:** Using `:struct` with `instance_of` directly also falls back to JsonString. Always wrap in a custom type for structured validation.
