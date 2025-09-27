@@ -25,6 +25,32 @@ To get structured GraphQL input types for standalone data arguments, create a cu
 
 ### Step 1: Create a custom type
 
+## Choosing Your Approach
+
+**For new standalone data structures:**
+
+```elixir
+defmodule MyApp.Types.TicketMetadataType do
+  use Ash.TypedStruct
+
+  typed_struct do
+    field :priority, :string, allow_nil?: false
+    field :category, :string, allow_nil?: false
+    field :tags, {:array, :string}, allow_nil?: true
+  end
+
+  use AshGraphql.Type
+
+  @impl true
+  def graphql_type(_), do: :ticket_metadata
+
+  @impl true
+  def graphql_input_type(_), do: :create_ticket_metadata_input
+end
+```
+
+**For referencing existing resource structures:**
+
 ```elixir
 defmodule MyApp.Types.TicketMetadataType do
   use Ash.Type.NewType,
@@ -42,6 +68,18 @@ defmodule MyApp.Types.TicketMetadataType do
   def graphql_input_type(_), do: :create_ticket_metadata_input
 end
 ```
+
+## Comparison
+
+| Aspect | Ash.TypedStruct | Ash.Type.NewType + instance_of |
+|--------|-----------------|--------------------------------|
+| **Best for** | New standalone structures | Referencing existing resources |
+| **Field definition** | Manual field declarations | Automatic from target resource |
+| **Type safety** | Constructor functions (`new/1`, `new!/1`) | Inherits from target resource |
+| **Validation** | Custom field constraints | Resource's existing validations |
+| **Maintenance** | Fields must be kept in sync manually | Automatically syncs with resource changes |
+| **DRY principle** | Duplicates field definitions | References single source of truth |
+| **Flexibility** | Full control over structure | Constrained by target resource |
 
 ### Step 2: Use the custom type in your resource
 
@@ -68,6 +106,7 @@ input AddMetadataInput {
 input CreateTicketMetadataInput {
   priority: String!
   category: String!
+  tags: [String!]
 }
 ```
 
