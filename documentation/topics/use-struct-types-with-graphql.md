@@ -104,4 +104,4 @@ input CreateTicketMetadataInput {
    ```
 3. Run `mix ash.codegen` to regenerate schema
 
-**Note:** Using `:struct` with `instance_of` directly also falls back to JsonString. Always wrap in a custom type for structured validation.
+**Note:** Using `:struct` with `instance_of` directly also falls back to JsonString when used as an input. Always wrap in a custom type for structured validation.
