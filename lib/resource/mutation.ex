@@ -12,6 +12,7 @@ defmodule AshGraphql.Resource.Mutation do
     :modify_resolution,
     :relay_id_translations,
     :description,
+    :__spark_metadata__,
     args: [],
     hide_inputs: [],
     meta: []

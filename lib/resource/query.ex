@@ -11,6 +11,7 @@ defmodule AshGraphql.Resource.Query do
     :relay_id_translations,
     :description,
     :complexity,
+    :__spark_metadata__,
     as_mutation?: false,
     hide_inputs: [],
     metadata_names: [],
