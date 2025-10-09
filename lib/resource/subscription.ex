@@ -9,7 +9,8 @@ defmodule AshGraphql.Resource.Subscription do
     :actor,
     :hide_inputs,
     :relay_id_translations,
-    :meta
+    :meta,
+    :__spark_metadata__
   ]
 
   @subscription_schema [

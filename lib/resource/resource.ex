@@ -105,6 +105,7 @@ defmodule AshGraphql.Resource do
       :relay_id_translations,
       :error_location,
       :modify_resolution,
+      :__spark_metadata__,
       args: [],
       hide_inputs: [],
       meta: []

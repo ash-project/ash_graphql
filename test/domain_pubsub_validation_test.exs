@@ -1,92 +1,99 @@
 defmodule AshGraphql.DomainPubsubValidationTest do
   use ExUnit.Case, async: false
+  import ExUnit.CaptureIO
 
   describe "domain pubsub validation during compilation" do
     test "raises error when resource has subscriptions but no pubsub and domain has no pubsub" do
-      assert_raise Spark.Error.DslError, fn ->
-        defmodule TestResourceWithoutPubsub do
-          use Ash.Resource,
-            domain: TestDomainWithoutPubsub,
-            extensions: [AshGraphql.Resource]
+      output =
+        capture_io(:stderr, fn ->
+          defmodule TestResourceWithoutPubsub do
+            use Ash.Resource,
+              domain: TestDomainWithoutPubsub,
+              extensions: [AshGraphql.Resource]
 
-          graphql do
-            type :test_resource_without_pubsub
+            graphql do
+              type :test_resource_without_pubsub
 
-            subscriptions do
-              subscribe(:test_subscription) do
-                action_types([:create])
+              subscriptions do
+                subscribe(:test_subscription) do
+                  action_types([:create])
+                end
               end
             end
-          end
 
-          actions do
-            default_accept(:*)
-            defaults([:create])
-          end
+            actions do
+              default_accept(:*)
+              defaults([:create])
+            end
 
-          attributes do
-            uuid_primary_key(:id)
-          end
-        end
-
-        defmodule TestDomainWithoutPubsub do
-          use Ash.Domain, extensions: [AshGraphql.Domain]
-
-          graphql do
-            subscriptions do
+            attributes do
+              uuid_primary_key(:id)
             end
           end
 
-          resources do
-            resource(TestResourceWithoutPubsub)
+          defmodule TestDomainWithoutPubsub do
+            use Ash.Domain, extensions: [AshGraphql.Domain]
+
+            graphql do
+              subscriptions do
+              end
+            end
+
+            resources do
+              resource(TestResourceWithoutPubsub)
+            end
           end
-        end
-      end
+        end)
+
+      assert output =~ "Spark.Error.DslError"
     end
 
     test "raises error when domain has subscriptions but no pubsub and resource has no pubsub" do
-      assert_raise Spark.Error.DslError, fn ->
-        defmodule TestResourceWithoutPubsub2 do
-          use Ash.Resource,
-            domain: TestDomainWithoutPubsub2,
-            extensions: [AshGraphql.Resource]
+      output =
+        capture_io(:stderr, fn ->
+          defmodule TestResourceWithoutPubsub2 do
+            use Ash.Resource,
+              domain: TestDomainWithoutPubsub2,
+              extensions: [AshGraphql.Resource]
 
-          graphql do
-            type :test_resource_without_pubsub2
+            graphql do
+              type :test_resource_without_pubsub2
 
-            subscriptions do
-              subscribe(:test_subscription) do
-                action_types([:create])
+              subscriptions do
+                subscribe(:test_subscription) do
+                  action_types([:create])
+                end
               end
+            end
+
+            actions do
+              default_accept(:*)
+              defaults([:create])
+            end
+
+            attributes do
+              uuid_primary_key(:id)
             end
           end
 
-          actions do
-            default_accept(:*)
-            defaults([:create])
-          end
+          defmodule TestDomainWithoutPubsub2 do
+            use Ash.Domain, extensions: [AshGraphql.Domain]
 
-          attributes do
-            uuid_primary_key(:id)
-          end
-        end
-
-        defmodule TestDomainWithoutPubsub2 do
-          use Ash.Domain, extensions: [AshGraphql.Domain]
-
-          graphql do
-            subscriptions do
-              subscribe TestResourceWithoutPubsub2, :test_subscription do
-                action_types([:create])
+            graphql do
+              subscriptions do
+                subscribe TestResourceWithoutPubsub2, :test_subscription do
+                  action_types([:create])
+                end
               end
             end
-          end
 
-          resources do
-            resource(TestResourceWithoutPubsub2)
+            resources do
+              resource(TestResourceWithoutPubsub2)
+            end
           end
-        end
-      end
+        end)
+
+      assert output =~ "Spark.Error.DslError"
     end
 
     test "succeeds when domain has pubsub and resource has no pubsub" do

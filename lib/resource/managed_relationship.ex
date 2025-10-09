@@ -8,7 +8,8 @@ defmodule AshGraphql.Resource.ManagedRelationship do
     :type_name,
     :lookup_with_primary_key?,
     :lookup_identities,
-    :ignore?
+    :ignore?,
+    :__spark_metadata__
   ]
 
   @schema [
