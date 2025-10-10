@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Subscription.Config do
   @moduledoc """
   Creates a config function used for the absinthe subscription definition

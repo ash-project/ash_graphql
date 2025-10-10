@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Plug do
   @moduledoc """
   Automatically set up the GraphQL `actor` and `tenant`.

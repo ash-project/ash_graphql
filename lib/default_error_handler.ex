@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.DefaultErrorHandler do
   @moduledoc "Replaces any text in message or short_message with variables"
 

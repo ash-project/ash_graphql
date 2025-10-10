@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Subscription.Notifier do
   @moduledoc """
   AshNotifier that triggers absinthe if subscriptions are listening

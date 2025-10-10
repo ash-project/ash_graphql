@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Monitoring
 
 Please read [the Ash monitoring guide](https://hexdocs.pm/ash/monitoring.html) for more information. Here we simply cover the additional traces & telemetry events that we publish from this extension.

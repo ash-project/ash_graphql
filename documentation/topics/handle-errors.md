@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Handling Errors
 
 There are various options that can be set on the Domain module to determine how errors behave and/or are shown in the GraphQL.

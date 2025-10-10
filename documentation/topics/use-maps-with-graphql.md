@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Use Maps with GraphQL
 
 If you define an `Ash.Type.NewType` that is a subtype of `:map`, _and_ you add the `fields` constraint which specifies field names and their types, `AshGraphql` will automatically derive an appropriate GraphQL type for it.

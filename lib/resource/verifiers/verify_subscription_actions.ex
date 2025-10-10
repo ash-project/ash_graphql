@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource.Verifiers.VerifySubscriptionActions do
   # Validates the paginate_relationship_with option
   @moduledoc false

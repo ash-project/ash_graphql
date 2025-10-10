@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Relay
 
 Enabling Relay for a resource sets it up to follow the [Relay specification](https://relay.dev/graphql/connections.htm).

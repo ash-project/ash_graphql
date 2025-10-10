@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource.Subscription do
   @moduledoc "Represents a configured query on a resource"
   defstruct [

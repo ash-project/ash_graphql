@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule GF.ActiveMemberPolicy do
   @moduledoc false
   use Ash.Policy.SimpleCheck

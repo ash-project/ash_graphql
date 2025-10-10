@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource.Verifiers.VerifyQueryMetadata do
   # Ensures that queries for actions with metadata have a type set
   @moduledoc false

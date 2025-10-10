@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Domain.Transformers.ValidateCompatibleNames do
   # Ensures that all field names are valid or remapped to something valid exist
   @moduledoc false

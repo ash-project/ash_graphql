@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Use Unions with GraphQL
 
 Unions must be defined with `Ash.Type.NewType`:

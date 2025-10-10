@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Domain.Transformers.ValidateActions do
   # Ensures that all referenced actiosn exist
   @moduledoc false

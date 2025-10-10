@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Upgrading to 1.0
 
 AshGraphql 1.0 is a major release that introduces 3.0 support as well as a few

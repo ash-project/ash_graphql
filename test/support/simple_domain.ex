@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Test.SimpleDomain do
   @moduledoc false
   # Used for simple one-off manual tests

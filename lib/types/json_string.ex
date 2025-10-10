@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Types.JSONString do
   @moduledoc """
   The Json scalar type allows arbitrary JSON values to be passed in and out.

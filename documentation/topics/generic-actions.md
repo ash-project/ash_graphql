@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Generic Actions
 
 Generic actions allow us to build any interface we want in Ash. AshGraphql
