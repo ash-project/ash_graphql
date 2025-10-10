@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Use Enums with GraphQL
 
 If you define an `Ash.Type.Enum`, that enum type can be used both in attributes _and_ arguments. You will need to add `graphql_type/0` to your implementation. AshGraphql will ensure that a single type is defined for it, which will be reused across all occurrences. If an enum

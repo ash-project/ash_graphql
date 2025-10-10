@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Using the SDL File
 
 By passing the `generate_sdl_file` to `use AshGraphql`, AshGraphql will generate

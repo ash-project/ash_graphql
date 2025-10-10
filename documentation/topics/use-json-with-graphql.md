@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Use JSON with GraphQL
 
 AshGraphql provides two JSON types that may be used. They are the same except for how the type is serialized in responses.

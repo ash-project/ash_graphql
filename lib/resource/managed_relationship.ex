@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource.ManagedRelationship do
   @moduledoc "Represents a managed relationship configuration on a mutation"
 

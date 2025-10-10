@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Subscription.Runner do
   @moduledoc """
   Custom implementation if the run_docset function for the PubSub module used for Subscriptions

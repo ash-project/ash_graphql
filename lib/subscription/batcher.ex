@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Subscription.Batcher do
   @moduledoc """
   If started as a GenServer, this module will batch notifications and send them in bulk.

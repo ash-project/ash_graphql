@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource.Verifiers.RequirePkeyDelimiter do
   # Ensures that the resource has a primary key called `id`
   @moduledoc false

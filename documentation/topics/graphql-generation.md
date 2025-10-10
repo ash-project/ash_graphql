@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # GraphQL Query Generation
 
 Following where we left off from [Getting Started with GraphQL](/documentation/tutorials/getting-started-with-graphql.md), this guide explores what the GraphQL requests and responses look like for different queries defined with the AshGraphql DSL.

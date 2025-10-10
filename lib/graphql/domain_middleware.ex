@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Graphql.DomainMiddleware do
   @moduledoc false
   def set_domain(resolution, domain) do

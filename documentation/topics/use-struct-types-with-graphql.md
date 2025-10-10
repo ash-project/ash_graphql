@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Use Struct Types with GraphQL
 
 Custom struct types provide structured GraphQL input validation for standalone data arguments instead of generic JSON strings.

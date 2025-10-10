@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource do
   alias Ash.Changeset.ManagedRelationshipHelpers
   alias Ash.Query.Aggregate

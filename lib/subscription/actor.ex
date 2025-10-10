@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Subscription.Actor do
   @moduledoc """
   Allows the user to substitue an actor for another more generic actor, 

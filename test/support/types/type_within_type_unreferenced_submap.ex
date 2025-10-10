@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Test.TypeWithinTypeUnreferencedSubmap do
   @moduledoc """
   This type exists due to a previous bug that types were not traversed

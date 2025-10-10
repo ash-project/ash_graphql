@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule GF.Types.MemberStatus do
   @moduledoc false
   use Ash.Type.Enum, values: [:non_member, :inactive, :active, :banned]

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Resource.Verifiers.VerifyArgumentInputTypes do
   # Ensures that argument_input_types configuration is properly formatted
   @moduledoc false

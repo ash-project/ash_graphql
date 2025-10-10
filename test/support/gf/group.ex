@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule GF.Group do
   @moduledoc "An Ash-managed GroupFlow Group (customer)"
 

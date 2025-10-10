@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Domain.Transformers.RequireKeysetForRelayQueries do
   # Ensures that all relay queries configure keyset pagination
   @moduledoc false

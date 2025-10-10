@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Modifying the Resolution
 
 Using the `modify_resolution` option, you can alter the `Absinthe.Resolution`.

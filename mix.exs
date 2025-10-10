@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.MixProject do
   use Mix.Project
 
@@ -125,9 +129,10 @@ defmodule AshGraphql.MixProject do
 
   defp package do
     [
-      name: :ash_graphql,
+      maintainers: [
+        "Zach Daniel <zach@zachdaniel.dev>"
+      ],
       licenses: ["MIT"],
-      maintainers: "Zach Daniel",
       files: ~w(lib .formatter.exs mix.exs README* LICENSE*
       CHANGELOG* documentation usage-rules.md),
       links: %{
@@ -135,7 +140,8 @@ defmodule AshGraphql.MixProject do
         "Discord" => "https://discord.gg/HTHRaaVPUc",
         "Website" => "https://ash-hq.org",
         "Forum" => "https://elixirforum.com/c/ash-framework-forum/",
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "REUSE Compliance" => "https://api.reuse.software/info/github.com/ash-project/ash_graphql"
       }
     ]
   end

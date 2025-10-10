@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Graphql.MetadataMiddleware do
   @moduledoc false
   def set_metadata(resolution, metadata) do

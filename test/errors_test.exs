@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.ErrorsTest do
   use ExUnit.Case, async: false
   import ExUnit.CaptureLog

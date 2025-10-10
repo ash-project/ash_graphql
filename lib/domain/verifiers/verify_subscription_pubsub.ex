@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshGraphql.Domain.Verifiers.VerifySubscriptionPubsub do
   @moduledoc """
   Verifies that pubsub is properly configured for subscriptions at the domain level.
