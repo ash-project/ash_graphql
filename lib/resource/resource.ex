@@ -3722,7 +3722,8 @@ defmodule AshGraphql.Resource do
                   config[:type],
                   %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
                   resource,
-                  true
+                  true,
+                  warn_unknown?: false
                 )
             }
           end)
@@ -4721,7 +4722,7 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def field_type(type, field, resource, input? \\ false) do
+  def field_type(type, field, resource, input? \\ false, opts \\ []) do
     case field do
       %Ash.Resource.Attribute{name: name} ->
         override =
@@ -4734,54 +4735,62 @@ defmodule AshGraphql.Resource do
         if override do
           unwrap_literal_type(override)
         else
-          do_field_type(type, field, resource, input?)
+          do_field_type(type, field, resource, input?, nil, opts)
         end
 
       _ ->
-        do_field_type(type, field, resource, input?)
+        do_field_type(type, field, resource, input?, nil, opts)
     end
   end
 
-  defp do_field_type(type, field, resource, input?, constraints \\ nil)
+  defp do_field_type(type, field, resource, input?, constraints \\ nil, opts \\ [])
 
   defp do_field_type(
          {:array, type},
          %Ash.Resource.Aggregate{kind: :list} = aggregate,
          resource,
          input?,
-         _
+         _,
+         opts
        ) do
     with related when not is_nil(related) <-
            Ash.Resource.Info.related(resource, aggregate.relationship_path),
          attr when not is_nil(related) <- Ash.Resource.Info.attribute(related, aggregate.field) do
       if attr.allow_nil? do
         %Absinthe.Blueprint.TypeReference.List{
-          of_type: do_field_type(type, aggregate, resource, input?)
+          of_type: do_field_type(type, aggregate, resource, input?, opts)
         }
       else
         %Absinthe.Blueprint.TypeReference.List{
           of_type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: do_field_type(type, aggregate, resource, input?)
+            of_type: do_field_type(type, aggregate, resource, input?, opts)
           }
         }
       end
     end
   end
 
-  defp do_field_type({:array, type}, %Ash.Resource.Aggregate{} = aggregate, resource, input?, _) do
+  defp do_field_type(
+         {:array, type},
+         %Ash.Resource.Aggregate{} = aggregate,
+         resource,
+         input?,
+         _,
+         opts
+       ) do
     %Absinthe.Blueprint.TypeReference.List{
-      of_type: do_field_type(type, aggregate, resource, input?)
+      of_type: do_field_type(type, aggregate, resource, input?, opts)
     }
   end
 
-  defp do_field_type({:array, type}, nil, resource, input?, constraints) do
+  defp do_field_type({:array, type}, nil, resource, input?, constraints, opts) do
     # Due to ash not automatically adding the default array constraints to
     # types defined outside of an `attribute` we need to default to true here
     # and not to false.
     nil_items? = Keyword.get(constraints || [], :nil_items?, true)
 
     field_type =
-      do_field_type(type, nil, resource, input?, constraints[:items] || [])
+      do_field_type(type, nil, resource, input?, constraints[:items] || [], opts)
       |> maybe_wrap_non_null(!nil_items?)
 
     %Absinthe.Blueprint.TypeReference.List{
@@ -4789,13 +4798,13 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp do_field_type({:array, type}, attribute, resource, input?, _) do
+  defp do_field_type({:array, type}, attribute, resource, input?, _, opts) do
     new_constraints = attribute.constraints[:items] || []
     new_attribute = %{attribute | constraints: new_constraints, type: type}
 
     field_type =
       type
-      |> do_field_type(new_attribute, resource, input?, new_constraints)
+      |> do_field_type(new_attribute, resource, input?, new_constraints, opts)
       |> maybe_wrap_non_null(!attribute.constraints[:nil_items?] || embedded?(attribute.type))
 
     %Absinthe.Blueprint.TypeReference.List{
@@ -4804,7 +4813,7 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
-  defp do_field_type(type, attribute, resource, input?, constraints) do
+  defp do_field_type(type, attribute, resource, input?, constraints, opts) do
     type = Ash.Type.get_type(type)
 
     constraints =
@@ -4828,9 +4837,11 @@ defmodule AshGraphql.Resource do
           if input? && type(type) do
             case embedded_type_input(resource, attribute, type, nil) do
               nil ->
-                IO.warn(
-                  "Embedded type #{inspect(type)} does not have an input type defined, but is accepted as input in at least one location."
-                )
+                if Keyword.get(opts, :warn_unknown?, true) do
+                  IO.warn(
+                    "Embedded type #{inspect(type)} does not have an input type defined, but is accepted as input in at least one location."
+                  )
+                end
 
                 Application.get_env(:ash_graphql, :json_type) || :json_string
 
@@ -4882,7 +4893,8 @@ defmodule AshGraphql.Resource do
                         constraints: Ash.Type.NewType.constraints(type, constraints)
                     },
                     resource,
-                    input?
+                    input?,
+                    opts
                   )
                 else
                   raise """
