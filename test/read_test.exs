@@ -1629,4 +1629,34 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
   end
+
+  describe "calculations" do
+    test "loads calculated struct type that uses constraint" do
+      post =
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(:create,
+          text: "a",
+          published: true
+        )
+        |> Ash.create!()
+
+      resp =
+        """
+        query postLibrary {
+          postLibrary(sort: {field: TEXT}) {
+            structCalc {
+              some
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{data: %{"postLibrary" => [%{"structCalc" => %{"some" => "string"}}]}} = result
+    end
+  end
 end

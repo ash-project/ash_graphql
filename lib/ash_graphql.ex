@@ -767,6 +767,16 @@ defmodule AshGraphql do
           nested_attrs(subtype, all_domains, constraints, already_checked)
         end
 
+      type == Ash.Type.Struct && Keyword.has_key?(constraints, :instance_of) ->
+        type = Keyword.get(constraints, :instance_of)
+
+        if function_exported?(type, :subtype_constraints, 0) do
+          constraints = apply(type, :subtype_constraints, [])
+          nested_attrs(type, all_domains, constraints, already_checked)
+        else
+          {[], already_checked}
+        end
+
       true ->
         {[], already_checked}
     end
