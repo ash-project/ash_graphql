@@ -2185,7 +2185,9 @@ defmodule AshGraphql.Graphql.Resolver do
     Enum.flat_map(fields, fn selection ->
       cond do
         aggregate = Ash.Resource.Info.aggregate(resource, selection.schema_node.identifier) ->
-          [aggregate.name]
+          # Load the aggregate and any parent-referenced fields
+          parent_fields = extract_parent_fields(aggregate.filter)
+          [aggregate.name | parent_fields]
 
         calculation = Ash.Resource.Info.calculation(resource, selection.schema_node.identifier) ->
           arguments =
@@ -3309,4 +3311,56 @@ defmodule AshGraphql.Graphql.Resolver do
        end
      end)}
   end
+
+  # Extract field names referenced in parent() expressions from a filter
+  @doc false
+  def extract_parent_fields(filter) when is_list(filter) do
+    filter
+    |> Enum.flat_map(&extract_parent_fields/1)
+    |> Enum.uniq()
+  end
+
+  def extract_parent_fields(%Ash.Query.Parent{expr: expr}) do
+    # When we encounter a parent(), extract refs from within it
+    extract_refs_from_parent(expr)
+  end
+
+  def extract_parent_fields(%Ash.Query.Call{args: args}) do
+    args
+    |> Enum.flat_map(&extract_parent_fields/1)
+    |> Enum.uniq()
+  end
+
+  def extract_parent_fields(%Ash.Query.BooleanExpression{left: left, right: right}) do
+    (extract_parent_fields(left) ++ extract_parent_fields(right))
+    |> Enum.uniq()
+  end
+
+  def extract_parent_fields(%Ash.Query.Not{expression: expression}) do
+    extract_parent_fields(expression)
+  end
+
+  def extract_parent_fields(_other), do: []
+
+  # Helper to extract refs from within a parent() expression
+  defp extract_refs_from_parent(%Ash.Query.Ref{} = ref) do
+    [Ash.Query.Ref.name(ref)]
+  end
+
+  defp extract_refs_from_parent(%Ash.Query.Call{args: args}) do
+    args
+    |> Enum.flat_map(&extract_refs_from_parent/1)
+    |> Enum.uniq()
+  end
+
+  defp extract_refs_from_parent(%Ash.Query.BooleanExpression{left: left, right: right}) do
+    (extract_refs_from_parent(left) ++ extract_refs_from_parent(right))
+    |> Enum.uniq()
+  end
+
+  defp extract_refs_from_parent(%Ash.Query.Not{expression: expression}) do
+    extract_refs_from_parent(expression)
+  end
+
+  defp extract_refs_from_parent(_other), do: []
 end
