@@ -11,6 +11,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.8.4](https://github.com/ash-project/ash_graphql/compare/v1.8.3...v1.8.4) (2025-11-05)
+
+
+
+
+### Bug Fixes:
+
+* suppress embedded type warning in arrays when building unions by [@zachdaniel](https://github.com/zachdaniel)
+
+* like/ilike not showing up on string calculations (#369) by Jesse Williams
+
+* structs, maps and typedstructs becoming orphans if only referenced in unions (#364) by olivermt
+
 ## [v1.8.3](https://github.com/ash-project/ash_graphql/compare/v1.8.2...v1.8.3) (2025-08-21)
 
 
