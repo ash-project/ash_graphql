@@ -84,6 +84,7 @@ defmodule AshGraphql.Domain do
           "The pubsub module to use for subscriptions in this domain. Resources can override this by specifying their own pubsub."
       ]
     ],
+    no_depend_modules: [:pubsub],
     entities:
       Enum.map(
         AshGraphql.Resource.subscriptions(),
