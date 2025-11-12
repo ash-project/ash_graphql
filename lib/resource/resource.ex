@@ -317,6 +317,7 @@ defmodule AshGraphql.Resource do
           "The pubsub module to use for the subscription. If not specified, will use the domain's pubsub configuration."
       ]
     ],
+    no_depend_modules: [:pubsub],
     describe: """
     Subscriptions (notifications) to expose for the resource.
     """,
