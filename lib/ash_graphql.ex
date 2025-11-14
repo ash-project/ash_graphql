@@ -260,9 +260,14 @@ defmodule AshGraphql do
                 Absinthe.Blueprint.add_field(blueprint, "RootSubscriptionType", subscription)
               end)
 
+            managed_relationship_requirements =
+              Process.get(:managed_relationship_requirements, [])
+
+            Process.put(:managed_relationship_requirements, [])
+
             managed_relationship_types =
               AshGraphql.Resource.managed_relationship_definitions(
-                Process.get(:managed_relationship_requirements, []),
+                managed_relationship_requirements,
                 unquote(schema)
               )
               |> Enum.uniq_by(& &1.identifier)
