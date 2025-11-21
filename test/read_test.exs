@@ -1629,4 +1629,19 @@ defmodule AshGraphql.ReadTest do
              } = result
     end
   end
+
+  test "domain tracer configuration is correctly retrieved" do
+    # Create a test domain with tracer configuration
+    defmodule TestDomainWithTracer do
+      use Ash.Domain,
+        extensions: [AshGraphql.Domain]
+
+      graphql do
+        tracer MyApp.Tracer
+      end
+    end
+
+    # Verify that the tracer configuration is correctly retrieved
+    assert AshGraphql.Domain.Info.tracer(TestDomainWithTracer) == [MyApp.Tracer]
+  end
 end
