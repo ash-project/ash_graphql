@@ -12,7 +12,7 @@ A tracer can be configured in the domain. It will fallback to the global tracer 
 
 ```elixir
 graphql do
-  trace MyApp.Tracer
+  tracer MyApp.Tracer
 end
 ```
 
