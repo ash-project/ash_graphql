@@ -57,7 +57,7 @@ defmodule AshGraphql.Test.Subscribable do
     end
 
     policy action(:read) do
-      authorize_if(expr(actor_id == ^actor(:id)))
+      authorize_if(relates_to_actor_via([:actor]))
     end
 
     policy action([:open_read, :read_with_arg]) do
@@ -101,8 +101,11 @@ defmodule AshGraphql.Test.Subscribable do
 
     attribute(:text, :string, public?: true)
     attribute(:topic, :string, public?: true)
-    attribute(:actor_id, :integer, public?: true)
     create_timestamp(:created_at)
     update_timestamp(:updated_at)
+  end
+
+  relationships do
+    belongs_to(:actor, AshGraphql.Test.Actor, public?: true)
   end
 end

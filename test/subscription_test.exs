@@ -36,7 +36,7 @@ defmodule AshGraphql.SubscriptionTest do
   end
 
   @admin %{
-    id: 1,
+    id: Ash.UUID.generate(),
     role: :admin
   }
 
@@ -245,15 +245,15 @@ defmodule AshGraphql.SubscriptionTest do
   end
 
   test "policies are applied to subscriptions" do
-    actor1 = %{
-      id: 1,
-      role: :user
-    }
+    actor1 =
+      AshGraphql.Test.Actor
+      |> Ash.Changeset.for_create(:create, %{role: :user}, actor: @admin)
+      |> Ash.create!()
 
-    actor2 = %{
-      id: 2,
-      role: :user
-    }
+    actor2 =
+      AshGraphql.Test.Actor
+      |> Ash.Changeset.for_create(:create, %{role: :user}, actor: @admin)
+      |> Ash.create!()
 
     assert {:ok, %{"subscribed" => topic1}} =
              Absinthe.run(
@@ -301,7 +301,7 @@ defmodule AshGraphql.SubscriptionTest do
 
     subscribable =
       Subscribable
-      |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
+      |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: actor1.id}, actor: @admin)
       |> Ash.create!()
 
     # actor1 will get data because it can see the resource
@@ -315,12 +315,12 @@ defmodule AshGraphql.SubscriptionTest do
 
   test "can dedup with actor fun" do
     actor1 = %{
-      id: 1,
+      id: Ash.UUID.generate(),
       role: :user
     }
 
     actor2 = %{
-      id: 2,
+      id: Ash.UUID.generate(),
       role: :user
     }
 
@@ -358,7 +358,7 @@ defmodule AshGraphql.SubscriptionTest do
 
     subscribable =
       Subscribable
-      |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: 1}, actor: @admin)
+      |> Ash.Changeset.for_create(:create, %{text: "foo", actor_id: actor1.id}, actor: @admin)
       |> Ash.create!()
 
     assert_receive {^topic1, %{data: subscription_data}}
@@ -369,7 +369,7 @@ defmodule AshGraphql.SubscriptionTest do
 
   test "can subscribe to read actions that take arguments" do
     actor1 = %{
-      id: 1,
+      id: Ash.UUID.generate(),
       role: :user
     }
 
@@ -394,7 +394,7 @@ defmodule AshGraphql.SubscriptionTest do
 
     subscribable =
       Subscribable
-      |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: 1},
+      |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: actor1.id},
         actor: @admin
       )
       |> Ash.create!()
@@ -461,10 +461,10 @@ defmodule AshGraphql.SubscriptionTest do
   end
 
   test "can subscribe on the domain" do
-    actor1 = %{
-      id: 1,
-      role: :user
-    }
+    actor1 =
+      AshGraphql.Test.Actor
+      |> Ash.Changeset.for_create(:create, %{role: :user}, actor: @admin)
+      |> Ash.create!()
 
     subscription = """
     subscription {
@@ -486,7 +486,7 @@ defmodule AshGraphql.SubscriptionTest do
 
     subscribable =
       Subscribable
-      |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: 1},
+      |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: actor1.id},
         actor: @admin
       )
       |> Ash.create!()
@@ -498,10 +498,10 @@ defmodule AshGraphql.SubscriptionTest do
   end
 
   test "can not see forbidden field" do
-    actor1 = %{
-      id: 1,
-      role: :user
-    }
+    actor1 =
+      AshGraphql.Test.Actor
+      |> Ash.Changeset.for_create(:create, %{role: :user}, actor: @admin)
+      |> Ash.create!()
 
     subscription = """
     subscription {
@@ -523,7 +523,7 @@ defmodule AshGraphql.SubscriptionTest do
              )
 
     Subscribable
-    |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: 1},
+    |> Ash.Changeset.for_create(:create, %{text: "foo", topic: "news", actor_id: actor1.id},
       actor: @admin
     )
     |> Ash.create!()
