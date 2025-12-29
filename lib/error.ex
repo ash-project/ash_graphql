@@ -80,6 +80,18 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidArgument do
   end
 end
 
+defimpl AshGraphql.Error, for: Ash.Error.Action.InvalidArgument do
+  def to_error(error) do
+    %{
+      message: error.message,
+      short_message: error.message,
+      code: "invalid_argument",
+      vars: Map.new(error.vars),
+      fields: [error.field]
+    }
+  end
+end
+
 defimpl AshGraphql.Error, for: Ash.Error.Changes.Required do
   def to_error(error) do
     %{
