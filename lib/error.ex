@@ -184,26 +184,30 @@ defimpl AshGraphql.Error, for: Ash.Error.Invalid.InvalidPrimaryKey do
   end
 end
 
-defimpl AshGraphql.Error, for: AshAuthentication.Errors.AuthenticationFailed do
-  def to_error(_error) do
-    %{
-      message: "Authentication failed",
-      short_message: "Authentication failed",
-      fields: [],
-      code: "authentication_failed",
-      vars: %{}
-    }
+if Code.ensure_loaded?(AshAuthentication.Errors.AuthenticationFailed) do
+  defimpl AshGraphql.Error, for: AshAuthentication.Errors.AuthenticationFailed do
+    def to_error(_error) do
+      %{
+        message: "Authentication failed",
+        short_message: "Authentication failed",
+        fields: [],
+        code: "authentication_failed",
+        vars: %{}
+      }
+    end
   end
 end
 
-defimpl AshGraphql.Error, for: AshAuthentication.Errors.InvalidToken do
-  def to_error(_error) do
-    %{
-      message: "An invalid token was presented",
-      short_message: "Invalid token",
-      fields: [],
-      code: "invalid_token",
-      vars: %{}
-    }
+if Code.ensure_loaded?(AshAuthentication.Errors.InvalidToken) do
+  defimpl AshGraphql.Error, for: AshAuthentication.Errors.InvalidToken do
+    def to_error(_error) do
+      %{
+        message: "An invalid token was presented",
+        short_message: "Invalid token",
+        fields: [],
+        code: "invalid_token",
+        vars: %{}
+      }
+    end
   end
 end
