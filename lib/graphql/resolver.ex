@@ -3233,16 +3233,16 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp apply_load_arguments(arguments, query, will_paginate?) do
     Enum.reduce(arguments, query, fn
-      {:limit, limit}, query when not will_paginate? ->
+      {:limit, limit}, query when is_integer(limit) and not will_paginate? ->
         Ash.Query.limit(query, limit)
 
-      {:offset, offset}, query when not will_paginate? ->
+      {:offset, offset}, query when is_integer(offset) and not will_paginate? ->
         Ash.Query.offset(query, offset)
 
-      {:filter, value}, query ->
+      {:filter, value}, query when is_map(value) ->
         Ash.Query.filter_input(query, massage_filter(query.resource, value))
 
-      {:sort, value}, query ->
+      {:sort, value}, query when is_list(value) ->
         keyword_sort =
           Enum.map(value, fn %{order: order, field: field} = input ->
             case Ash.Resource.Info.calculation(query.resource, field) do
