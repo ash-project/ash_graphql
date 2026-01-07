@@ -25,6 +25,7 @@ defmodule AshGraphql.Test.Actor do
     uuid_primary_key(:id)
 
     attribute(:name, :string, public?: true)
+    attribute(:role, :atom, public?: true)
   end
 
   relationships do

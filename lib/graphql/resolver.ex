@@ -660,8 +660,10 @@ defmodule AshGraphql.Graphql.Resolver do
                     {:ok, true, %{authorize_results: []} = query} ->
                       Enum.reduce(data, {[], []}, fn record, {known, refetch} ->
                         case Ash.Expr.eval(query.filter,
-                               record: data,
-                               unknown_on_unknown_refs?: true
+                               record: record,
+                               unknown_on_unknown_refs?: true,
+                               context: context,
+                               resource: resource
                              ) do
                           {:ok, true} ->
                             {[record | known], refetch}

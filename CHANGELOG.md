@@ -11,6 +11,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.8.5](https://github.com/ash-project/ash_graphql/compare/v1.8.4...v1.8.5) (2025-12-08)
+
+
+
+
+### Bug Fixes:
+
+* filter evaluation for subscriptions by JVMartyns
+
+* clear out managed relationship requirements process variable once it's been used by Jesse Williams
+
+* subscriptions: prevent resource recompilation when endpoint changes by [@barnabasJ](https://github.com/barnabasJ) [(#385)](https://github.com/ash-project/ash_graphql/pull/385)
+
+### Improvements:
+
+* Add GraphQL tracer integration for AppSignal monitoring by [@lukegalea](https://github.com/lukegalea)
+
 ## [v1.8.4](https://github.com/ash-project/ash_graphql/compare/v1.8.3...v1.8.4) (2025-11-05)
 
 

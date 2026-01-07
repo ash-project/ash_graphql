@@ -80,6 +80,18 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidArgument do
   end
 end
 
+defimpl AshGraphql.Error, for: Ash.Error.Action.InvalidArgument do
+  def to_error(error) do
+    %{
+      message: error.message,
+      short_message: error.message,
+      code: "invalid_argument",
+      vars: Map.new(error.vars),
+      fields: [error.field]
+    }
+  end
+end
+
 defimpl AshGraphql.Error, for: Ash.Error.Changes.Required do
   def to_error(error) do
     %{
@@ -172,26 +184,30 @@ defimpl AshGraphql.Error, for: Ash.Error.Invalid.InvalidPrimaryKey do
   end
 end
 
-defimpl AshGraphql.Error, for: AshAuthentication.Errors.AuthenticationFailed do
-  def to_error(_error) do
-    %{
-      message: "Authentication failed",
-      short_message: "Authentication failed",
-      fields: [],
-      code: "authentication_failed",
-      vars: %{}
-    }
+if Code.ensure_loaded?(AshAuthentication.Errors.AuthenticationFailed) do
+  defimpl AshGraphql.Error, for: AshAuthentication.Errors.AuthenticationFailed do
+    def to_error(_error) do
+      %{
+        message: "Authentication failed",
+        short_message: "Authentication failed",
+        fields: [],
+        code: "authentication_failed",
+        vars: %{}
+      }
+    end
   end
 end
 
-defimpl AshGraphql.Error, for: AshAuthentication.Errors.InvalidToken do
-  def to_error(_error) do
-    %{
-      message: "An invalid token was presented",
-      short_message: "Invalid token",
-      fields: [],
-      code: "invalid_token",
-      vars: %{}
-    }
+if Code.ensure_loaded?(AshAuthentication.Errors.InvalidToken) do
+  defimpl AshGraphql.Error, for: AshAuthentication.Errors.InvalidToken do
+    def to_error(_error) do
+      %{
+        message: "An invalid token was presented",
+        short_message: "Invalid token",
+        fields: [],
+        code: "invalid_token",
+        vars: %{}
+      }
+    end
   end
 end

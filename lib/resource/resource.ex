@@ -4961,7 +4961,26 @@ defmodule AshGraphql.Resource do
         AshGraphql.Resource.Info.type(constraints[:instance_of])
       end
 
-    type || get_specific_field_type(Ash.Type.Map, %{constraints: constraints}, resource, input?)
+    result =
+      type || get_specific_field_type(Ash.Type.Map, %{constraints: constraints}, resource, input?)
+
+    # Warn when struct with instance_of falls back to JsonString for input
+    if input? && constraints[:instance_of] &&
+         Ash.Resource.Info.resource?(constraints[:instance_of]) &&
+         result == (Application.get_env(:ash_graphql, :json_type) || :json_string) do
+      IO.warn("""
+      Struct type with instance_of constraint falls back to JsonString for input. 
+      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1` 
+      for structured validation.
+
+      Resource: #{inspect(resource)}
+      Target: #{inspect(constraints[:instance_of])}
+
+      See: https://hexdocs.pm/ash_graphql/use-struct-types-with-graphql.html
+      """)
+    end
+
+    result
   end
 
   defp get_specific_field_type(Ash.Type.File, _, _, _), do: :upload
