@@ -487,6 +487,40 @@ defmodule AshGraphql.PaginateTest do
                 }
               }} = Absinthe.run(doc, AshGraphql.Test.Schema)
     end
+
+    test "does not raise when limit, offset, filter, or sort are nil in nested query" do
+      doc = """
+      query PaginatedPosts($commentsLimit: Int, $commentsOffset: Int, $commentsSort: [CommentSortInput], $commentsFilter: CommentFilterInput) {
+        paginatedPosts(limit: 2, offset: 2) {
+          count
+          results{
+            comments(limit: $commentsLimit, offset: $commentsOffset, sort: $commentsSort, filter: $commentsFilter){
+              text
+            }
+          }
+        }
+      }
+      """
+
+      variables = %{}
+
+      assert {:ok,
+              %{
+                data: %{
+                  "paginatedPosts" => %{
+                    "count" => 5,
+                    "results" => [
+                      %{
+                        "comments" => _
+                      },
+                      %{
+                        "comments" => _
+                      }
+                    ]
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema, variables: variables)
+    end
   end
 
   describe "pagination errors" do
