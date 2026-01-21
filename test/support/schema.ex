@@ -7,7 +7,11 @@ defmodule AshGraphql.Test.Schema do
 
   use Absinthe.Schema
 
-  @domains [AshGraphql.Test.Domain, AshGraphql.Test.OtherDomain]
+  @domains [
+    AshGraphql.Test.Domain,
+    AshGraphql.Test.OtherDomain,
+    AshGraphql.Test.RequireActorDomain
+  ]
 
   use AshGraphql, domains: @domains, generate_sdl_file: "priv/schema.graphql"
 

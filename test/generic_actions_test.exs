@@ -199,4 +199,38 @@ defmodule AshGraphql.GenericActionsTest do
       )
     end
   end
+
+  describe "generic action with require_actor? domain" do
+    test "succeeds when actor is provided via GraphQL context" do
+      resp =
+        """
+        query {
+          requireActorPing
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema, context: %{actor: %{id: "an-actor"}})
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{data: %{"requireActorPing" => true}} = result
+    end
+
+    test "succeeds with nil actor (opts always passed with actor key)" do
+      resp =
+        """
+        query {
+          requireActorPing
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, result} = resp
+
+      refute Map.has_key?(result, :errors)
+
+      assert %{data: %{"requireActorPing" => true}} = result
+    end
+  end
 end
