@@ -62,7 +62,7 @@ defmodule AshGraphql.Graphql.Resolver do
           input =
             %Ash.ActionInput{domain: domain, resource: resource}
             |> Ash.ActionInput.set_context(get_context(context))
-            |> Ash.ActionInput.for_action(action.name, arguments)
+            |> Ash.ActionInput.for_action(action.name, arguments, opts)
 
           result =
             input
