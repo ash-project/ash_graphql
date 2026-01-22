@@ -15,7 +15,10 @@ defmodule AshGraphql.Test.ChannelSimple do
     type :channel_simple
 
     mutations do
-      update :update_channel, :update_channel, read_action: :read_channel, identity: false
+      update :update_channel, :update_channel,
+        read_action: :read_channel,
+        identity: false,
+        hide_inputs: [:channel]
     end
   end
 
@@ -81,6 +84,7 @@ defmodule AshGraphql.Test.ChannelSimple do
       constraints(instance_of: AshGraphql.Test.Channel)
       allow_nil?(false)
       public?(true)
+      filterable?(false)
     end
 
     create_timestamp(:created_at, public?: true)
