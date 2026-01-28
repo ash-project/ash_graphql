@@ -70,5 +70,7 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.Product)
     resource(AshGraphql.Test.ResourceWithUnion)
     resource(AshGraphql.Test.ResourceWithTypedStruct)
+    resource(AshGraphql.Test.GenericActionCorrectUsageResource)
+    resource(AshGraphql.Test.GenericActionTypedActionsResource)
   end
 end
