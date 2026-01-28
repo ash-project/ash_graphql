@@ -695,8 +695,160 @@ defmodule AshGraphql.ErrorsTest do
                message: message,
                fields: [:email],
                vars: %{},
-               short_message: message
+               short_message: message,
+               path: ["email"]
              }
            ] == errors
+  end
+
+  describe "path field" do
+    test "path field is included in error responses with camelCase field name" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidArgument.exception(
+              field: :variant_key,
+              message: "invalid value"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input", "override"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_argument",
+                 message: "invalid value",
+                 fields: [:variant_key],
+                 path: ["input", "override", "variantKey"]
+               }
+             ] = errors
+    end
+
+    test "path field converts snake_case to camelCase" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :user_name,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path field is nil when no path information is available" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Forbidden.Policy.exception(
+              vars: %{}
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          nil
+        )
+
+      assert [
+               %{
+                 code: "forbidden",
+                 fields: [],
+                 path: nil
+               }
+             ] = errors
+    end
+
+    test "path field appears in GraphQL mutation error response" do
+      resp =
+        """
+        mutation CreatePost($input: CreatePostInput) {
+          createPost(input: $input) {
+            result {
+              text
+            }
+            errors {
+              message
+              code
+              fields
+              path
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema,
+          variables: %{
+            "input" => %{
+              "text" => "foobar",
+              "confirmation" => "foobar2"
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      assert %{
+               data: %{
+                 "createPost" => %{
+                   "errors" => [error]
+                 }
+               }
+             } = result
+
+      assert %{"code" => _, "message" => _, "fields" => _, "path" => path} = error
+      # Path should be present (may be nil if no field-specific error)
+      assert is_list(path) or is_nil(path)
+    end
+
+    test "path field is included in MutationError schema" do
+      {:ok, %{data: data}} =
+        """
+        query {
+          __type(name: "MutationError") {
+            fields {
+              name
+              type {
+                kind
+                ofType {
+                  kind
+                  ofType {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      path_field =
+        data["__type"]["fields"]
+        |> Enum.find(fn field -> field["name"] == "path" end)
+
+      assert path_field != nil
+      assert path_field["name"] == "path"
+      assert path_field["type"]["kind"] == "LIST"
+      assert path_field["type"]["ofType"]["kind"] == "NON_NULL"
+      assert path_field["type"]["ofType"]["ofType"]["name"] == "String"
+    end
   end
 end

@@ -502,6 +502,18 @@ defmodule AshGraphql.Domain do
             of_type: :string
           }
         }
+      },
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        description: "The path to the field that produced the error",
+        identifier: :path,
+        module: schema,
+        __reference__: AshGraphql.Resource.ref(env),
+        name: "path",
+        type: %Absinthe.Blueprint.TypeReference.List{
+          of_type: %Absinthe.Blueprint.TypeReference.NonNull{
+            of_type: :string
+          }
+        }
       }
     ]
   end
