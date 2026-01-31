@@ -80,11 +80,14 @@ defmodule AshGraphql do
             action_middleware: opts[:action_middleware] || [],
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
             relay_ids?: Keyword.get(opts, :relay_ids?, false),
+            response_metadata: opts[:response_metadata],
             auto_import_types: Macro.escape(auto_import_types)
           ],
           location: :keep,
           generated: true do
       require Ash.Domain.Info
+
+      AshGraphql.validate_response_metadata!(response_metadata)
 
       import Absinthe.Schema,
         except: [
@@ -146,6 +149,13 @@ defmodule AshGraphql do
       @doc false
       def auto_generate_sdl_file? do
         @auto_generate_sdl_file?
+      end
+
+      @response_metadata response_metadata
+
+      @doc false
+      def response_metadata do
+        @response_metadata
       end
 
       @doc false
@@ -1192,5 +1202,31 @@ defmodule AshGraphql do
     |> Enum.flat_map(fn {attribute, embedded} ->
       [{embedded_type, attribute, embedded}] ++ get_nested_embedded_types(embedded)
     end)
+  end
+
+  @doc false
+  def validate_response_metadata!(nil), do: :ok
+  def validate_response_metadata!(true), do: :ok
+  def validate_response_metadata!(false), do: :ok
+
+  def validate_response_metadata!({module, function, args})
+      when is_atom(module) and is_atom(function) and is_list(args) do
+    :ok
+  end
+
+  def validate_response_metadata!(invalid) do
+    raise ArgumentError, """
+    Invalid `response_metadata` configuration: #{inspect(invalid)}
+
+    Expected one of:
+      - `true` to use the default metadata handler
+      - `false` or `nil` to disable response metadata
+      - `{Module, :function, args}` tuple for a custom handler
+
+    Example:
+      use AshGraphql,
+        domains: [...],
+        response_metadata: {MyApp.MetadataHandler, :build, []}
+    """
   end
 end
