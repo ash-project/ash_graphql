@@ -9,6 +9,16 @@ defmodule AshGraphql.DefaultMetadataHandler do
   Returns complexity and duration_ms in the response extensions.
   """
 
+  @doc """
+  Builds metadata from execution info. Used when `response_metadata: true`.
+
+  ## Info Map
+
+  - `:complexity` - Query complexity (integer or nil if analysis disabled)
+  - `:duration_ms` - Execution time in milliseconds
+  - `:operation_name` - The GraphQL operation name (or nil)
+  - `:operation_type` - `:query`, `:mutation`, or `:subscription`
+  """
   def build_metadata(info) do
     %{
       complexity: info.complexity,

@@ -1204,7 +1204,12 @@ defmodule AshGraphql do
     end)
   end
 
-  @doc false
+  @doc """
+  Validates the `response_metadata` configuration at compile time.
+
+  Accepts `nil`, `true`, `false`, or `{module, function, args}` tuple.
+  Raises `ArgumentError` for invalid values.
+  """
   def validate_response_metadata!(nil), do: :ok
   def validate_response_metadata!(true), do: :ok
   def validate_response_metadata!(false), do: :ok

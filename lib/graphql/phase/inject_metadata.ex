@@ -3,12 +3,18 @@
 # SPDX-License-Identifier: MIT
 
 defmodule AshGraphql.Phase.InjectMetadata do
-  @moduledoc false
+  @moduledoc """
+  Absinthe phase that injects metadata into `response.extensions.ash`.
+
+  Automatically added to the pipeline by `AshGraphql.Plugin.ResponseMetadata`
+  when `response_metadata` is enabled.
+  """
 
   use Absinthe.Phase
 
   require Logger
 
+  @doc false
   def run(blueprint, options) do
     schema = Keyword.fetch!(options, :schema)
     response_metadata_config = schema.response_metadata()

@@ -22,6 +22,12 @@ defmodule AshGraphql.Plugin.ResponseMetadata do
 
   @behaviour Absinthe.Plugin
 
+  @doc """
+  Records start time for duration calculation.
+
+  Stores `System.monotonic_time()` in `execution.acc[:ash_graphql][:start_time]`.
+  Only sets the value if not already present (idempotent).
+  """
   @impl Absinthe.Plugin
   def before_resolution(execution) do
     acc =
@@ -32,6 +38,12 @@ defmodule AshGraphql.Plugin.ResponseMetadata do
     %{execution | acc: acc}
   end
 
+  @doc """
+  Records end time for duration calculation.
+
+  Stores `System.monotonic_time()` in `execution.acc[:ash_graphql][:end_time]`.
+  Always overwrites (captures the latest resolution end).
+  """
   @impl Absinthe.Plugin
   def after_resolution(execution) do
     end_time = System.monotonic_time()
@@ -44,6 +56,12 @@ defmodule AshGraphql.Plugin.ResponseMetadata do
     %{execution | acc: acc}
   end
 
+  @doc """
+  Conditionally adds the metadata injection phase to the pipeline.
+
+  If the schema has `response_metadata` enabled, prepends
+  `AshGraphql.Phase.InjectMetadata` to process the captured timing data.
+  """
   @impl Absinthe.Plugin
   def pipeline(pipeline, execution) do
     schema = execution.schema
