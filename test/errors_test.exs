@@ -753,6 +753,113 @@ defmodule AshGraphql.ErrorsTest do
              ] = errors
     end
 
+    test "path field respects graphql field name overrides (field_names/1)" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :text_1_and_2,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:text_1_and_2],
+                 # post.ex has: field_names text_1_and_2: :text1_and2
+                 path: ["input", "text1And2"]
+               }
+             ] = errors
+    end
+
+    test "path maps each Ash.Error.path segment using DSL mappings (stepwise)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :user_name,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path([:text_1_and_2])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 # Ash.Error.path was [:text_1_and_2] which is mapped via field_names to :text1_and2
+                 # then camelCased to "text1And2"
+                 path: ["input", "text1And2", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path stepwise mapping supports list index segments (integers)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :user_name,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path([:text_1_and_2, 0])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "text1And2", "0", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path building does not crash when resource/action are nil" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :user_name,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "userName"]
+               }
+             ] = errors
+    end
+
     test "path field is nil when no path information is available" do
       errors =
         AshGraphql.Errors.to_errors(
@@ -814,7 +921,6 @@ defmodule AshGraphql.ErrorsTest do
              } = result
 
       assert %{"code" => _, "message" => _, "fields" => _, "path" => path} = error
-      # Path should be present (may be nil if no field-specific error)
       assert is_list(path) or is_nil(path)
     end
 

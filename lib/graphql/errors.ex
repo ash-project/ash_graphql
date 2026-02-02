@@ -30,7 +30,7 @@ defmodule AshGraphql.Errors do
         context = Map.put(context, :action, action)
 
         # Build path from GraphQL input path, Ash.Error.path, and field name
-        path = build_error_path(error, error_map, graphql_path)
+        path = build_error_path(error, error_map, graphql_path, resource, action)
 
         error_with_path = Map.put(error_map, :path, path)
 
@@ -83,7 +83,7 @@ defmodule AshGraphql.Errors do
   end
 
   # Builds the error path by combining the GraphQL input path, Ash.Error.path, and field name
-  defp build_error_path(error, error_map, graphql_path) do
+  defp build_error_path(error, error_map, graphql_path, resource, action) do
     # Start with GraphQL input path(e.g., ["input", "override"])
     base_path =
       case graphql_path do
@@ -92,19 +92,13 @@ defmodule AshGraphql.Errors do
         _ -> []
       end
 
-      #  Add Ash.Error.path if available
-      ash_path =
-        if function_exported?(Ash.Error, :path, 1) do
-          try do
-            Ash.Error.path(error)
-          rescue
-            _ -> nil
-          catch
-            _ -> nil
-          end
-        else
-          nil
-        end
+      action_struct = resolve_action_struct(resource, action)
+
+      # Add path from the Ash error if present.
+      #
+      # NOTE: `Ash.Error.set_path/2` stores the path on the error itself (typically in `:path`),
+      # and there isn't a stable `Ash.Error.path/1` function across versions.
+      ash_path = Map.get(error, :path)
 
       path_from_ash =
         case ash_path do
@@ -113,24 +107,139 @@ defmodule AshGraphql.Errors do
           _ -> []
         end
 
-      # Get field name from error map and convert to camelCase
+      mapped_base_path =
+        base_path
+        |> Enum.map(&resolve_graphql_path_segment(&1, resource, action_struct))
+        |> Enum.reject(&is_nil/1)
+
+      mapped_path_from_ash =
+        path_from_ash
+        |> Enum.map(&resolve_graphql_path_segment(&1, resource, action_struct))
+        |> Enum.reject(&is_nil/1)
+
+      # Get field name from error map and convert to camelCase.
+      #
+      # IMPORTANT: the GraphQL name may not be the camelCased Ash field name.
+      # We consult the resource's configured `field_names` and the action's `argument_names`
+      # mappings (if available) to get the actual GraphQL name.
       field_name =
         case Map.get(error_map, :fields) do
-          [field | _] when is_atom(field) -> to_camel_case(field)
-          [field | _] when is_binary(field) -> to_camel_case(field)
+          [field | _] when is_atom(field) ->
+            field
+            |> resolve_graphql_field_name(resource, action_struct)
+            |> to_camel_case()
+
+          [field | _] when is_binary(field) ->
+            field
+            |> resolve_graphql_field_name(resource, action_struct)
+            |> to_camel_case()
+
           _ -> nil
         end
 
       # Combine paths: GraphQL path + Ash path + field name
       result_path =
-        base_path
-        |> Enum.concat(path_from_ash)
+        mapped_base_path
+        |> Enum.concat(mapped_path_from_ash)
         |> then(fn path ->
           if field_name, do: path ++ [field_name], else: path
         end)
 
       # Return nil if path is empty (for backward compatibility)
       if result_path == [], do: nil, else: result_path
+  end
+
+  defp resolve_action_struct(resource, action) do
+    cond do
+      is_map(action) && Map.has_key?(action, :name) ->
+        action
+
+      is_atom(action) && is_atom(resource) ->
+        # Only attempt lookup if we have a real resource module
+        try do
+          Ash.Resource.Info.action(resource, action)
+        rescue
+          _ -> nil
+        end
+
+      true ->
+        nil
+    end
+  end
+
+  # Resolve and format ONE segment of an Ash path into the GraphQL field name for that segment.
+  # This is where we "check what the field is" (argument vs attribute/relationship/calculation/aggregate)
+  # and use the correct DSL mapping.
+  defp resolve_graphql_path_segment(segment, resource, action) do
+    # Support integer segments (e.g. list indexes) by stringifying them.
+    cond do
+      is_integer(segment) ->
+        Integer.to_string(segment)
+
+      is_atom(segment) ->
+        segment
+        |> resolve_graphql_field_name(resource, action)
+        |> to_camel_case()
+
+      is_binary(segment) ->
+        # Avoid creating atoms from arbitrary strings.
+        segment_atom =
+          try do
+            String.to_existing_atom(segment)
+          rescue
+            _ -> nil
+          end
+
+        if segment_atom do
+          segment_atom
+          |> resolve_graphql_field_name(resource, action)
+          |> to_camel_case()
+        else
+          # If we can't safely treat it as an atom key, just camelCase the string.
+          to_camel_case(segment)
+        end
+
+      true ->
+        nil
+    end
+  end
+
+  defp resolve_graphql_argument_name(argument, resource, action) do
+    if argument && resource && action && Map.has_key?(action, :name) do
+      resource
+      |> AshGraphql.Resource.Info.argument_names()
+      |> then(fn argument_names -> argument_names[action.name] end)
+      |> case do
+        nil -> nil
+        argument_names -> argument_names[argument]
+      end
+    end
+  end
+
+  defp resolve_graphql_field_name(field, resource, action) do
+    field_atom =
+      case field do
+        field when is_atom(field) ->
+          field
+
+        field when is_binary(field) ->
+          try do
+            String.to_existing_atom(field)
+          rescue
+            _ -> nil
+          end
+      end
+
+    # Prefer action argument name mappings, if any.
+    # Then fall back to field name mappings.
+    argument_name_override = resolve_graphql_argument_name(field_atom, resource, action)
+
+    field_name_override =
+      if resource && field_atom do
+        AshGraphql.Resource.Info.field_names(resource)[field_atom]
+      end
+
+    argument_name_override || field_name_override || field_atom || field
   end
 
   # Converts snake_case to camelCase
