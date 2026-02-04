@@ -17,7 +17,7 @@ defmodule AshGraphql.ResponseMetadataTest do
 
       assert %{
                data: %{"sayHello" => "Hello!"},
-               extensions: %{ash: metadata}
+               extensions: %{metadata: metadata}
              } = result
 
       assert is_map(metadata)
@@ -33,7 +33,7 @@ defmodule AshGraphql.ResponseMetadataTest do
 
       assert {:ok, result} = Absinthe.run(query, AshGraphql.Test.ResponseMetadata.Schema)
 
-      assert %{extensions: %{ash: %{duration_ms: duration_ms}}} = result
+      assert %{extensions: %{metadata: %{duration_ms: duration_ms}}} = result
       assert is_integer(duration_ms)
       assert duration_ms >= 0
     end
@@ -50,7 +50,7 @@ defmodule AshGraphql.ResponseMetadataTest do
                  analyze_complexity: true
                )
 
-      assert %{extensions: %{ash: %{complexity: complexity}}} = result
+      assert %{extensions: %{metadata: %{complexity: complexity}}} = result
       assert is_integer(complexity) or is_nil(complexity)
     end
 
@@ -63,7 +63,7 @@ defmodule AshGraphql.ResponseMetadataTest do
 
       assert {:ok, result} = Absinthe.run(query, AshGraphql.Test.ResponseMetadata.Schema)
 
-      assert %{extensions: %{ash: %{complexity: complexity}}} = result
+      assert %{extensions: %{metadata: %{complexity: complexity}}} = result
       assert is_nil(complexity)
     end
   end
@@ -81,7 +81,7 @@ defmodule AshGraphql.ResponseMetadataTest do
 
       assert %{
                data: %{"sayHello" => "Hello!"},
-               extensions: %{ash: metadata}
+               extensions: %{metadata: metadata}
              } = result
 
       assert metadata[:custom_field] == "custom_value"
@@ -136,7 +136,7 @@ defmodule AshGraphql.ResponseMetadataTest do
   end
 
   describe "extensions merging" do
-    test "existing extensions.ash data is preserved when adding metadata" do
+    test "existing extensions data is preserved when adding metadata" do
       blueprint = %Absinthe.Blueprint{
         execution: %Absinthe.Blueprint.Execution{
           acc: %{
@@ -151,7 +151,7 @@ defmodule AshGraphql.ResponseMetadataTest do
         },
         result: %{
           extensions: %{
-            ash: %{existing_key: "existing_value"}
+            metadata: %{existing_key: "existing_value"}
           }
         }
       }
@@ -161,8 +161,42 @@ defmodule AshGraphql.ResponseMetadataTest do
           schema: AshGraphql.Test.ResponseMetadata.Schema
         )
 
-      assert result.result.extensions.ash[:existing_key] == "existing_value"
-      assert Map.has_key?(result.result.extensions.ash, :duration_ms)
+      assert result.result.extensions.metadata[:existing_key] == "existing_value"
+      assert Map.has_key?(result.result.extensions.metadata, :duration_ms)
+    end
+  end
+
+  describe "response_metadata validation" do
+    test "true is rejected and requires a key" do
+      assert_raise ArgumentError, ~r/You must specify the key/, fn ->
+        AshGraphql.validate_response_metadata!(true)
+      end
+    end
+
+    test "atom key is accepted" do
+      assert :ok = AshGraphql.validate_response_metadata!(:my_key)
+    end
+
+    test "key with custom handler tuple is accepted" do
+      assert :ok = AshGraphql.validate_response_metadata!({:my_key, {MyModule, :my_function, []}})
+    end
+
+    test "false is accepted" do
+      assert :ok = AshGraphql.validate_response_metadata!(false)
+    end
+
+    test "nil is accepted" do
+      assert :ok = AshGraphql.validate_response_metadata!(nil)
+    end
+
+    test "invalid values are rejected" do
+      assert_raise ArgumentError, ~r/Invalid `response_metadata` configuration/, fn ->
+        AshGraphql.validate_response_metadata!("invalid")
+      end
+
+      assert_raise ArgumentError, ~r/Invalid `response_metadata` configuration/, fn ->
+        AshGraphql.validate_response_metadata!({:key, :not_a_tuple})
+      end
     end
   end
 

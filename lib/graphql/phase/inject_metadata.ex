@@ -4,8 +4,9 @@
 
 defmodule AshGraphql.Phase.InjectMetadata do
   @moduledoc """
-  Absinthe phase that injects metadata into `response.extensions.ash`.
+  Absinthe phase that injects metadata into response extensions.
 
+  The key under which metadata appears is configured via the `response_metadata` option.
   Automatically added to the pipeline by `AshGraphql.Plugin.ResponseMetadata`
   when `response_metadata` is enabled.
   """
@@ -58,15 +59,15 @@ defmodule AshGraphql.Phase.InjectMetadata do
       operation_type: operation_type
     }
 
-    metadata = build_metadata(response_metadata_config, info)
+    {key, metadata} = build_metadata(response_metadata_config, info)
 
     if is_map(metadata) && map_size(metadata) > 0 do
       update_in(blueprint.result, fn result ->
         result = result || %{}
         extensions = Map.get(result, :extensions, %{})
-        existing_ash = Map.get(extensions, :ash, %{})
-        merged_ash = Map.merge(existing_ash, metadata)
-        extensions = Map.put(extensions, :ash, merged_ash)
+        existing = Map.get(extensions, key, %{})
+        merged = Map.merge(existing, metadata)
+        extensions = Map.put(extensions, key, merged)
         Map.put(result, :extensions, extensions)
       end)
     else
@@ -74,20 +75,29 @@ defmodule AshGraphql.Phase.InjectMetadata do
     end
   end
 
-  defp build_metadata(true, info) do
-    AshGraphql.DefaultMetadataHandler.build_metadata(info)
+  defp build_metadata(true, _info) do
+    Logger.warning(
+      "AshGraphql response_metadata is set to `true` but requires a key. " <>
+        "Use `response_metadata: :my_extension_key` to specify the extensions key."
+    )
+
+    {nil, nil}
   end
 
-  defp build_metadata({module, function, args}, info)
-       when is_atom(module) and is_atom(function) and is_list(args) do
+  defp build_metadata(key, info) when is_atom(key) do
+    {key, AshGraphql.DefaultMetadataHandler.build_metadata(info)}
+  end
+
+  defp build_metadata({key, {module, function, args}}, info)
+       when is_atom(key) and is_atom(module) and is_atom(function) and is_list(args) do
     result = apply(module, function, [info | args])
 
     case result do
       map when is_map(map) ->
-        map
+        {key, map}
 
       nil ->
-        nil
+        {key, nil}
 
       other ->
         Logger.warning(
@@ -95,7 +105,7 @@ defmodule AshGraphql.Phase.InjectMetadata do
             "returned #{inspect(other)}, expected a map or nil. Metadata will not be included."
         )
 
-        nil
+        {key, nil}
     end
   rescue
     e ->
@@ -104,15 +114,15 @@ defmodule AshGraphql.Phase.InjectMetadata do
           "raised: #{Exception.format(:error, e, __STACKTRACE__)}. Metadata will not be included."
       )
 
-      nil
+      {key, nil}
   catch
     :throw, value ->
       Logger.warning(
         "AshGraphql response_metadata handler #{inspect(module)}.#{function}/#{length(args) + 1} " <>
           "threw: #{inspect(value)}. Metadata will not be included."
-      )
+        )
 
-      nil
+      {key, nil}
 
     :exit, reason ->
       Logger.warning(
@@ -120,19 +130,19 @@ defmodule AshGraphql.Phase.InjectMetadata do
           "exited: #{inspect(reason)}. Metadata will not be included."
       )
 
-      nil
+      {key, nil}
   end
 
-  defp build_metadata(false, _info), do: nil
-  defp build_metadata(nil, _info), do: nil
+  defp build_metadata(false, _info), do: {nil, nil}
+  defp build_metadata(nil, _info), do: {nil, nil}
 
   defp build_metadata(invalid_config, _info) do
     Logger.warning(
       "AshGraphql response_metadata received invalid configuration: #{inspect(invalid_config)}. " <>
-        "Expected `true`, `false`, or `{Module, :function, args}` tuple. Metadata will not be included."
+        "Expected an atom key, `false`, or `{key, {Module, :function, args}}` tuple. Metadata will not be included."
     )
 
-    nil
+    {nil, nil}
   end
 
   defp calculate_complexity(blueprint) do

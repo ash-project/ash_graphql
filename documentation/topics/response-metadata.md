@@ -6,11 +6,11 @@ SPDX-License-Identifier: MIT
 
 # Response Metadata
 
-AshGraphql can inject execution metadata into the `extensions.ash` field of GraphQL responses, providing information about timing and query complexity.
+AshGraphql can inject execution metadata into GraphQL response extensions, providing information about timing and query complexity.
 
 ## Setup
 
-Two steps are required:
+Two steps are required. You must specify the key under which metadata will appear in the response:
 
 ```elixir
 defmodule MyApp.Schema do
@@ -18,7 +18,7 @@ defmodule MyApp.Schema do
 
   use AshGraphql,
     domains: [MyApp.Domain],
-    response_metadata: true
+    response_metadata: :my_extension_key
 
   def plugins do
     [AshGraphql.Plugin.ResponseMetadata | Absinthe.Plugin.defaults()]
@@ -36,7 +36,7 @@ This produces responses like:
 {
   "data": { "users": [...] },
   "extensions": {
-    "ash": {
+    "my_extension_key": {
       "complexity": 10,
       "duration_ms": 42,
       "operation_name": "GetUsers",
@@ -50,13 +50,13 @@ This produces responses like:
 
 | `response_metadata` value | Behavior |
 |---------------------------|----------|
-| `true` | Uses default handler |
+| `:key` (any atom) | Uses default handler, metadata under `extensions.key` |
 | `false` or `nil` | Disabled (default) |
-| `{Module, :function, args}` | Custom handler |
+| `{:key, {Module, :function, args}}` | Custom handler with configured key |
 
 ## Default Metadata Fields
 
-When using `response_metadata: true`, these fields are included:
+When using the default handler, these fields are included:
 
 - **`complexity`** - Query complexity (requires `analyze_complexity: true`)
 - **`duration_ms`** - Execution time in milliseconds
@@ -65,12 +65,12 @@ When using `response_metadata: true`, these fields are included:
 
 ## Custom Handler
 
-Provide an MFA tuple to customize the metadata:
+Provide a key and MFA tuple to customize the metadata:
 
 ```elixir
 use AshGraphql,
   domains: [MyApp.Domain],
-  response_metadata: {__MODULE__, :build_metadata, []}
+  response_metadata: {:metrics, {__MODULE__, :build_metadata, []}}
 
 def build_metadata(info) do
   %{
@@ -82,7 +82,7 @@ end
 
 The handler receives an `info` map with keys `:complexity`, `:duration_ms`, `:operation_name`, and `:operation_type`. It must return:
 
-- A map to include in `extensions.ash`
+- A map to include in `extensions.<key>`
 - `nil` to omit metadata entirely
 
 If the handler raises an exception or returns an invalid value, a warning is logged and the request completes without metadata.
@@ -107,7 +107,7 @@ Without this option, the `complexity` field will be `nil`.
 **Metadata not appearing in responses**
 
 Ensure both pieces are configured:
-1. `response_metadata` is set in your `use AshGraphql` call
+1. `response_metadata` is set to an atom key in your `use AshGraphql` call
 2. `AshGraphql.Plugin.ResponseMetadata` is in your `plugins/0` function
 
 **Warning about missing start_time**

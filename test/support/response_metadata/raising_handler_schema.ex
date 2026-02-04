@@ -11,7 +11,7 @@ defmodule AshGraphql.Test.ResponseMetadata.RaisingHandlerSchema do
 
   use AshGraphql,
     domains: @domains,
-    response_metadata: {__MODULE__, :raise_error, []}
+    response_metadata: {:metadata, {__MODULE__, :raise_error, []}}
 
   def plugins do
     [AshGraphql.Plugin.ResponseMetadata | Absinthe.Plugin.defaults()]

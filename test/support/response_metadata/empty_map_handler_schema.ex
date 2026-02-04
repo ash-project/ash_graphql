@@ -11,7 +11,7 @@ defmodule AshGraphql.Test.ResponseMetadata.EmptyMapHandlerSchema do
 
   use AshGraphql,
     domains: @domains,
-    response_metadata: {__MODULE__, :return_empty_map, []}
+    response_metadata: {:metadata, {__MODULE__, :return_empty_map, []}}
 
   def plugins do
     [AshGraphql.Plugin.ResponseMetadata | Absinthe.Plugin.defaults()]

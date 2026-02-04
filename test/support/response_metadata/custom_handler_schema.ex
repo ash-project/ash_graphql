@@ -11,7 +11,7 @@ defmodule AshGraphql.Test.ResponseMetadata.CustomHandlerSchema do
 
   use AshGraphql,
     domains: @domains,
-    response_metadata: {__MODULE__, :build_custom_metadata, []}
+    response_metadata: {:metadata, {__MODULE__, :build_custom_metadata, []}}
 
   def plugins do
     [AshGraphql.Plugin.ResponseMetadata | Absinthe.Plugin.defaults()]

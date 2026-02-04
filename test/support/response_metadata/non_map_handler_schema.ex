@@ -11,7 +11,7 @@ defmodule AshGraphql.Test.ResponseMetadata.NonMapHandlerSchema do
 
   use AshGraphql,
     domains: @domains,
-    response_metadata: {__MODULE__, :return_non_map, []}
+    response_metadata: {:metadata, {__MODULE__, :return_non_map, []}}
 
   def plugins do
     [AshGraphql.Plugin.ResponseMetadata | Absinthe.Plugin.defaults()]

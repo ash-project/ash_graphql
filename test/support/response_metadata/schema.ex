@@ -11,7 +11,7 @@ defmodule AshGraphql.Test.ResponseMetadata.Schema do
 
   use AshGraphql,
     domains: @domains,
-    response_metadata: true
+    response_metadata: :metadata
 
   def plugins do
     [AshGraphql.Plugin.ResponseMetadata | Absinthe.Plugin.defaults()]

@@ -1207,15 +1207,35 @@ defmodule AshGraphql do
   @doc """
   Validates the `response_metadata` configuration at compile time.
 
-  Accepts `nil`, `true`, `false`, or `{module, function, args}` tuple.
+  Accepts:
+  - `nil` or `false` to disable
+  - An atom key to enable with default handler (e.g., `:metadata`)
+  - `{key, {module, function, args}}` tuple for a custom handler
+
   Raises `ArgumentError` for invalid values.
   """
   def validate_response_metadata!(nil), do: :ok
-  def validate_response_metadata!(true), do: :ok
   def validate_response_metadata!(false), do: :ok
 
-  def validate_response_metadata!({module, function, args})
-      when is_atom(module) and is_atom(function) and is_list(args) do
+  def validate_response_metadata!(true) do
+    raise ArgumentError, """
+    Invalid `response_metadata` configuration: true
+
+    You must specify the key under which metadata will appear in extensions.
+
+    Example:
+      use AshGraphql,
+        domains: [...],
+        response_metadata: :my_extension_key
+    """
+  end
+
+  def validate_response_metadata!(key) when is_atom(key) do
+    :ok
+  end
+
+  def validate_response_metadata!({key, {module, function, args}})
+      when is_atom(key) and is_atom(module) and is_atom(function) and is_list(args) do
     :ok
   end
 
@@ -1224,14 +1244,19 @@ defmodule AshGraphql do
     Invalid `response_metadata` configuration: #{inspect(invalid)}
 
     Expected one of:
-      - `true` to use the default metadata handler
+      - An atom key to enable with default handler
       - `false` or `nil` to disable response metadata
-      - `{Module, :function, args}` tuple for a custom handler
+      - `{key, {Module, :function, args}}` tuple for a custom handler
 
     Example:
       use AshGraphql,
         domains: [...],
-        response_metadata: {MyApp.MetadataHandler, :build, []}
+        response_metadata: :my_extension_key
+
+    Or with a custom handler:
+      use AshGraphql,
+        domains: [...],
+        response_metadata: {:my_extension_key, {MyApp.MetadataHandler, :build, []}}
     """
   end
 end
