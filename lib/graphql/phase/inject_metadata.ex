@@ -47,10 +47,25 @@ defmodule AshGraphql.Phase.InjectMetadata do
         nil
       end
 
-    complexity = calculate_complexity(blueprint)
+    operation = Enum.find(blueprint.operations, & &1.current)
 
-    operation_name = get_operation_name(blueprint)
-    operation_type = get_operation_type(blueprint)
+    complexity =
+      case operation do
+        %{complexity: c} when is_integer(c) -> c
+        _ -> nil
+      end
+
+    operation_name =
+      case operation do
+        %{name: name} when not is_nil(name) -> name
+        _ -> nil
+      end
+
+    operation_type =
+      case operation do
+        %{type: t} -> t
+        _ -> nil
+      end
 
     info = %{
       complexity: complexity,
@@ -120,7 +135,7 @@ defmodule AshGraphql.Phase.InjectMetadata do
       Logger.warning(
         "AshGraphql response_metadata handler #{inspect(module)}.#{function}/#{length(args) + 1} " <>
           "threw: #{inspect(value)}. Metadata will not be included."
-        )
+      )
 
       {key, nil}
 
@@ -143,61 +158,5 @@ defmodule AshGraphql.Phase.InjectMetadata do
     )
 
     {nil, nil}
-  end
-
-  defp calculate_complexity(blueprint) do
-    case blueprint.execution.result do
-      %{emitter: emitter} when not is_nil(emitter) ->
-        sum_complexity(emitter)
-
-      _ ->
-        nil
-    end
-  end
-
-  defp sum_complexity(%Absinthe.Blueprint.Document.Field{complexity: nil}), do: nil
-
-  defp sum_complexity(%Absinthe.Blueprint.Document.Field{} = field) do
-    own_complexity = field.complexity || 0
-
-    children_complexity =
-      field.selections
-      |> Enum.map(&sum_complexity/1)
-      |> Enum.reject(&is_nil/1)
-      |> case do
-        [] -> 0
-        list -> Enum.sum(list)
-      end
-
-    own_complexity + children_complexity
-  end
-
-  defp sum_complexity(%{selections: selections}) when is_list(selections) do
-    complexities =
-      selections
-      |> Enum.map(&sum_complexity/1)
-      |> Enum.reject(&is_nil/1)
-
-    if Enum.empty?(complexities) do
-      nil
-    else
-      Enum.sum(complexities)
-    end
-  end
-
-  defp sum_complexity(_), do: nil
-
-  defp get_operation_name(blueprint) do
-    case blueprint.execution.result do
-      %{emitter: %{name: name}} when is_binary(name) and name != "" -> name
-      _ -> nil
-    end
-  end
-
-  defp get_operation_type(blueprint) do
-    case blueprint.execution.result do
-      %{emitter: %{type: type}} -> type
-      _ -> nil
-    end
   end
 end

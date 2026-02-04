@@ -138,6 +138,14 @@ defmodule AshGraphql.ResponseMetadataTest do
   describe "extensions merging" do
     test "existing extensions data is preserved when adding metadata" do
       blueprint = %Absinthe.Blueprint{
+        operations: [
+          %Absinthe.Blueprint.Document.Operation{
+            current: true,
+            name: "TestOp",
+            type: :query,
+            complexity: 42
+          }
+        ],
         execution: %Absinthe.Blueprint.Execution{
           acc: %{
             ash_graphql: %{
@@ -163,6 +171,9 @@ defmodule AshGraphql.ResponseMetadataTest do
 
       assert result.result.extensions.metadata[:existing_key] == "existing_value"
       assert Map.has_key?(result.result.extensions.metadata, :duration_ms)
+      assert result.result.extensions.metadata[:complexity] == 42
+      assert result.result.extensions.metadata[:operation_name] == "TestOp"
+      assert result.result.extensions.metadata[:operation_type] == :query
     end
   end
 
