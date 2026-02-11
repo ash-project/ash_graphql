@@ -984,12 +984,28 @@ defmodule AshGraphql.Resource do
     resource
     |> mutations(all_domains)
     |> Enum.map(fn mutation ->
-      %{
-        mutation
-        | action:
-            Ash.Resource.Info.action(resource, mutation.action) ||
-              raise("No such action #{mutation.action} for #{inspect(resource)}")
-      }
+      action =
+        Ash.Resource.Info.action(resource, mutation.action) ||
+          raise("No such action #{mutation.action} for #{inspect(resource)}")
+
+      # Validate that generic actions are not used in mutation blocks (create/update/destroy)
+      if action.type == :action && mutation.type != :action do
+        raise """
+        Invalid GraphQL mutation.
+
+        `#{mutation.type}` references Ash action `#{mutation.action}`, but that action has type `:action`.
+
+        GraphQL `#{mutation.type}` mutations require an Ash action with type `:#{mutation.type}`.
+
+        Resource: #{inspect(resource)}
+
+        Fix:
+          • Define an Ash `:#{mutation.type}` action
+          • Or expose the generic action under `graphql.actions`
+        """
+      end
+
+      %{mutation | action: action}
     end)
     |> Enum.flat_map(fn mutation ->
       description =
@@ -1077,7 +1093,9 @@ defmodule AshGraphql.Resource do
         end
 
       result =
-        if mutation.action.type == :action && mutation.error_location == :top_level do
+        if mutation.action.type == :action &&
+             mutation.type == :action &&
+             Map.get(mutation, :error_location) == :top_level do
           []
         else
           [
@@ -4971,8 +4989,8 @@ defmodule AshGraphql.Resource do
          Ash.Resource.Info.resource?(constraints[:instance_of]) &&
          result == (Application.get_env(:ash_graphql, :json_type) || :json_string) do
       IO.warn("""
-      Struct type with instance_of constraint falls back to JsonString for input. 
-      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1` 
+      Struct type with instance_of constraint falls back to JsonString for input.
+      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1`
       for structured validation.
 
       Resource: #{inspect(resource)}
