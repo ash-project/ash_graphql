@@ -2617,7 +2617,9 @@ defmodule AshGraphql.Graphql.Resolver do
                 resolution
               )
 
-            if selection = Enum.find(fields, &(&1.schema_node.identifier == :value)) do
+            selection = Enum.find(fields, &(&1.schema_node.identifier == :value))
+
+            if selection do
               Keyword.put(
                 acc,
                 type_name,
