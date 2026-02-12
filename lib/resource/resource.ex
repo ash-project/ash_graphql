@@ -4970,16 +4970,7 @@ defmodule AshGraphql.Resource do
     if input? && constraints[:instance_of] &&
          Ash.Resource.Info.resource?(constraints[:instance_of]) &&
          result == (Application.get_env(:ash_graphql, :json_type) || :json_string) do
-      IO.warn("""
-      Struct type with instance_of constraint falls back to JsonString for input. 
-      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1` 
-      for structured validation.
-
-      Resource: #{inspect(resource)}
-      Target: #{inspect(constraints[:instance_of])}
-
-      See: https://hexdocs.pm/ash_graphql/use-struct-types-with-graphql.html
-      """)
+      warn_on_json_fallback(resource, constraints)
     end
 
     result
@@ -5020,6 +5011,25 @@ defmodule AshGraphql.Resource do
       Ash.Resource.Info.embedded?(resource_or_type)
     else
       Ash.Type.embedded_type?(resource_or_type)
+    end
+  end
+
+  if Application.compile_env(:ash_graphql, :warn_on_json_fallback?, true) do
+    defp warn_on_json_fallback(resource, constraints) do
+      IO.warn("""
+      Struct type with instance_of constraint falls back to JsonString for input. 
+      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1` 
+      for structured validation.
+
+      Resource: #{inspect(resource)}
+      Target: #{inspect(constraints[:instance_of])}
+
+      See: https://hexdocs.pm/ash_graphql/use-struct-types-with-graphql.html
+      """)
+    end
+  else
+    defp warn_on_json_fallback(_resource, _constraints) do
+      :ok
     end
   end
 end

@@ -12,7 +12,7 @@ config :ash, :pub_sub, debug?: true
 config :logger, level: :info, default_formatter: [metadata: [:crash_reason]]
 
 if Mix.env() == :test do
-  config :ash_graphql, :simulate_subscription_slowness?, true
+  config :ash_graphql, simulate_subscription_slowness?: true, warn_on_json_fallback?: false
 end
 
 config :ash_graphql, :authorize_update_destroy_with_error?, true
