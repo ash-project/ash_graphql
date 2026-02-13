@@ -695,8 +695,570 @@ defmodule AshGraphql.ErrorsTest do
                message: message,
                fields: [:email],
                vars: %{},
-               short_message: message
+               short_message: message,
+               path: ["email"]
              }
            ] == errors
+  end
+
+  describe "path field" do
+    test "path field is included in error responses with camelCase field name" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidArgument.exception(
+              field: :variant_key,
+              message: "invalid value"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input", "override"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_argument",
+                 message: "invalid value",
+                 fields: [:variant_key],
+                 path: ["input", "override", "variantKey"]
+               }
+             ] = errors
+    end
+
+    test "path field converts snake_case to camelCase" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :user_name,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path field respects graphql field name overrides (field_names/1)" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :text_1_and_2,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:text_1_and_2],
+                 # post.ex has: field_names text_1_and_2: :text1_and2
+                 path: ["input", "text1And2"]
+               }
+             ] = errors
+    end
+
+    test "path maps each Ash.Error.path segment using DSL mappings (stepwise)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :user_name,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path([:text_1_and_2])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 # Ash.Error.path was [:text_1_and_2] which is mapped via field_names to :text1_and2
+                 # then camelCased to "text1And2"
+                 path: ["input", "text1And2", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path stepwise mapping supports list index segments (integers)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :user_name,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path([:text_1_and_2, 0])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "text1And2", "0", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path building does not crash when resource/action are nil" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :user_name,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path field is nil when no path information is available" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Forbidden.Policy.exception(
+              vars: %{}
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          nil
+        )
+
+      assert [
+               %{
+                 code: "forbidden",
+                 fields: [],
+                 path: nil
+               }
+             ] = errors
+    end
+
+    test "path field appears in GraphQL mutation error response" do
+      resp =
+        """
+        mutation CreatePost($input: CreatePostInput) {
+          createPost(input: $input) {
+            result {
+              text
+            }
+            errors {
+              message
+              code
+              fields
+              path
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema,
+          variables: %{
+            "input" => %{
+              "text" => "foobar",
+              "confirmation" => "foobar2"
+            }
+          }
+        )
+
+      assert {:ok, result} = resp
+
+      assert %{
+               data: %{
+                 "createPost" => %{
+                   "errors" => [error]
+                 }
+               }
+             } = result
+
+      assert %{"code" => _, "message" => _, "fields" => _, "path" => path} = error
+      assert is_list(path) or is_nil(path)
+    end
+
+    test "path field is included in MutationError schema" do
+      {:ok, %{data: data}} =
+        """
+        query {
+          __type(name: "MutationError") {
+            fields {
+              name
+              type {
+                kind
+                ofType {
+                  kind
+                  ofType {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      path_field =
+        data["__type"]["fields"]
+        |> Enum.find(fn field -> field["name"] == "path" end)
+
+      assert path_field != nil
+      assert path_field["name"] == "path"
+      assert path_field["type"]["kind"] == "LIST"
+      assert path_field["type"]["ofType"]["kind"] == "NON_NULL"
+      assert path_field["type"]["ofType"]["ofType"]["name"] == "String"
+    end
+
+    test "path handles Ash error path with string segments" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :user_name,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path(["input", "foo", "bar"])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          nil,
+          nil
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "foo", "bar", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path is built from ash path only when error has no :fields (no field name appended)" do
+      # Forbidden has fields: [] in error map; path should be resolved segments only.
+      error =
+        Ash.Error.Forbidden.Policy.exception(vars: %{})
+        |> Ash.Error.set_path([:input])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          nil
+        )
+
+      assert [
+               %{
+                 code: "forbidden",
+                 path: ["input"]
+               }
+             ] = errors
+    end
+
+    test "path building does not crash when action name is invalid (action_struct nil)" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Changes.InvalidAttribute.exception(
+              field: :user_name,
+              message: "invalid"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          :nonexistent_action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path resolves union argument and variant segment (composite type)" do
+      # ResourceWithUnion has action_with_union_arg with argument :union_arg (Union type).
+      # Union has variants member_map, member_string, etc. Path [:union_arg, :member_map]
+      # should resolve to ["unionArg", "memberMap"].
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :value,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path([:union_arg, :member_map])
+
+      action = Ash.Resource.Info.action(AshGraphql.Test.ResourceWithUnion, :action_with_union_arg)
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.ResourceWithUnion,
+          action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:value],
+                 path: ["input", "unionArg", "memberMap", "value"]
+               }
+             ] = errors
+    end
+
+    test "path with string segment in Ash path is resolved (camelCase)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :name, message: "invalid")
+        |> Ash.Error.set_path([:union_arg, "member_map"])
+
+      action = Ash.Resource.Info.action(AshGraphql.Test.ResourceWithUnion, :action_with_union_arg)
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.ResourceWithUnion,
+          action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:name],
+                 path: ["input", "unionArg", "memberMap", "name"]
+               }
+             ] = errors
+    end
+
+    test "path when error has no :fields (path from segments only)" do
+      error =
+        Ash.Error.Forbidden.Policy.exception(vars: %{})
+        |> Ash.Error.set_path([:override])
+
+      action = Ash.Resource.Info.action(AshGraphql.Test.Post, :create_confirm)
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "forbidden",
+                 fields: [],
+                 path: ["input", "override"]
+               }
+             ] = errors
+    end
+
+    test "path resolves union argument and variant segment (composite)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :name, message: "invalid")
+        |> Ash.Error.set_path([:union_arg, :member_map])
+
+      action = Ash.Resource.Info.action(AshGraphql.Test.ResourceWithUnion, :action_with_union_arg)
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.ResourceWithUnion,
+          action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:name],
+                 path: ["input", "unionArg", "memberMap", "name"]
+               }
+             ] = errors
+    end
+
+    test "path resolves map-with-fields composite (nested argument type)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :foo_bar, message: "required")
+        |> Ash.Error.set_path([:module_values])
+
+      action = Ash.Resource.Info.action(AshGraphql.Test.MapTypes, :module)
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.MapTypes,
+          action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:foo_bar],
+                 path: ["input", "moduleValues", "fooBar"]
+               }
+             ] = errors
+    end
+
+    test "path with list index then field (array-of-composite)" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :user_name, message: "invalid")
+        |> Ash.Error.set_path([:text_1_and_2, 0])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          Ash.Resource.Info.action(AshGraphql.Test.Post, :create_confirm),
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "text1And2", "0", "userName"]
+               }
+             ] = errors
+    end
+
+    test "path with unknown segment type falls back to name resolution" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :user_name, message: "invalid")
+        |> Ash.Error.set_path([:text_1_and_2, :unknown_segment])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          Ash.Resource.Info.action(AshGraphql.Test.Post, :create_confirm),
+          ["input"]
+        )
+
+      # unknown_segment not in schema; falls back to camelCase
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:user_name],
+                 path: ["input", "text1And2", "unknownSegment", "userName"]
+               }
+             ] = errors
+    end
+
+    test "multiple errors with different paths each get correct path" do
+      e1 =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :user_name, message: "invalid")
+        |> Ash.Error.set_path([])
+
+      e2 =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :text_1_and_2, message: "invalid")
+        |> Ash.Error.set_path([])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [e1, e2],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          Ash.Resource.Info.action(AshGraphql.Test.Post, :create_confirm),
+          ["input"]
+        )
+
+      assert [
+               %{path: ["input", "userName"]},
+               %{path: ["input", "text1And2"]}
+             ] = errors
+    end
+
+    test "path uses only resolution path when Ash path is empty and no field" do
+      error =
+        Ash.Error.Forbidden.Policy.exception(vars: %{})
+        |> Ash.Error.set_path([])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil,
+          ["input", "nested"]
+        )
+
+      assert [%{code: "forbidden", fields: [], path: ["input", "nested"]}] = errors
+    end
   end
 end
