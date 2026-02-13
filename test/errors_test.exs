@@ -864,9 +864,7 @@ defmodule AshGraphql.ErrorsTest do
       errors =
         AshGraphql.Errors.to_errors(
           [
-            Ash.Error.Forbidden.Policy.exception(
-              vars: %{}
-            )
+            Ash.Error.Forbidden.Policy.exception(vars: %{})
           ],
           %{},
           AshGraphql.Test.Domain,

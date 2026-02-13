@@ -96,6 +96,7 @@ defmodule AshGraphql.Errors do
     action_struct = resolve_action_struct(resource, action)
 
     ash_path = Map.get(error, :path)
+
     path_from_ash =
       case ash_path do
         nil -> []
@@ -106,6 +107,7 @@ defmodule AshGraphql.Errors do
     # Resolve all path segments with type context (handles composite types).
     initial_context = %{resource: resource, action: action_struct, type: nil, constraints: []}
     all_segments = base_path ++ path_from_ash
+
     {mapped_path, _context} =
       Enum.reduce(all_segments, {[], initial_context}, fn segment, {acc, ctx} ->
         {resolved, next_ctx} = resolve_segment_with_context(segment, ctx)
@@ -168,9 +170,14 @@ defmodule AshGraphql.Errors do
 
     {type, constraints} =
       case type_result do
-        nil -> {nil, []}
-        {arg_type, arg_constraints} when arg_type != nil -> unwrap_type(arg_type, arg_constraints || [])
-        _ -> {nil, []}
+        nil ->
+          {nil, []}
+
+        {arg_type, arg_constraints} when arg_type != nil ->
+          unwrap_type(arg_type, arg_constraints || [])
+
+        _ ->
+          {nil, []}
       end
 
     next_context = %{context | type: type, constraints: constraints}
@@ -180,16 +187,28 @@ defmodule AshGraphql.Errors do
   defp resolve_union_segment(segment, context) do
     types = context.constraints[:types] || context.constraints["types"] || %{}
     segment_atom = segment_to_atom(segment)
+
     config =
       cond do
-        is_list(types) -> Keyword.get(types, segment_atom)
-        is_map(types) -> Map.get(types, segment_atom) || (is_binary(segment) && Map.get(types, segment))
-        true -> nil
+        is_list(types) ->
+          Keyword.get(types, segment_atom)
+
+        is_map(types) ->
+          Map.get(types, segment_atom) || (is_binary(segment) && Map.get(types, segment))
+
+        true ->
+          nil
       end
 
     if config != nil do
-      type = (is_list(config) && Keyword.get(config, :type)) || Map.get(config, :type) || Map.get(config, "type")
-      constraints = (is_list(config) && Keyword.get(config, :constraints)) || Map.get(config, :constraints) || Map.get(config, "constraints") || []
+      type =
+        (is_list(config) && Keyword.get(config, :type)) || Map.get(config, :type) ||
+          Map.get(config, "type")
+
+      constraints =
+        (is_list(config) && Keyword.get(config, :constraints)) || Map.get(config, :constraints) ||
+          Map.get(config, "constraints") || []
+
       {type, constraints} = unwrap_type(type, constraints)
       # GraphQL union input uses variant key as field name (string).
       name_str = segment_to_graphql_name(segment)
@@ -202,16 +221,28 @@ defmodule AshGraphql.Errors do
   defp resolve_map_struct_segment(segment, context) do
     fields = context.constraints[:fields] || context.constraints["fields"] || []
     segment_atom = segment_to_atom(segment)
+
     field_config =
       cond do
-        is_list(fields) -> Keyword.get(fields, segment_atom)
-        is_map(fields) -> Map.get(fields, segment_atom) || (is_binary(segment) && Map.get(fields, segment))
-        true -> nil
+        is_list(fields) ->
+          Keyword.get(fields, segment_atom)
+
+        is_map(fields) ->
+          Map.get(fields, segment_atom) || (is_binary(segment) && Map.get(fields, segment))
+
+        true ->
+          nil
       end
 
     if field_config != nil do
-      type = (is_list(field_config) && Keyword.get(field_config, :type)) || Map.get(field_config, :type) || Map.get(field_config, "type")
-      constraints = (is_list(field_config) && Keyword.get(field_config, :constraints)) || Map.get(field_config, :constraints) || Map.get(field_config, "constraints") || []
+      type =
+        (is_list(field_config) && Keyword.get(field_config, :type)) ||
+          Map.get(field_config, :type) || Map.get(field_config, "type")
+
+      constraints =
+        (is_list(field_config) && Keyword.get(field_config, :constraints)) ||
+          Map.get(field_config, :constraints) || Map.get(field_config, "constraints") || []
+
       {type, constraints} = unwrap_type(type, constraints)
       name_str = segment_to_graphql_name(segment)
       {name_str, %{context | type: type, constraints: constraints}}
@@ -231,41 +262,61 @@ defmodule AshGraphql.Errors do
 
   defp resolve_segment_name_only(segment, context) do
     case segment do
-      s when is_atom(s) -> s |> resolve_graphql_field_name(context.resource, context.action) |> to_camel_case()
+      s when is_atom(s) ->
+        s |> resolve_graphql_field_name(context.resource, context.action) |> to_camel_case()
+
       s when is_binary(s) ->
-        atom = try do
-          String.to_existing_atom(s)
-        rescue
-          _ -> nil
-        end
-        if atom, do: (resolve_graphql_field_name(atom, context.resource, context.action) || atom) |> to_camel_case(), else: to_camel_case(s)
-      _ -> to_string(segment)
+        atom =
+          try do
+            String.to_existing_atom(s)
+          rescue
+            _ -> nil
+          end
+
+        if atom,
+          do:
+            (resolve_graphql_field_name(atom, context.resource, context.action) || atom)
+            |> to_camel_case(),
+          else: to_camel_case(s)
+
+      _ ->
+        to_string(segment)
     end
   end
 
   defp segment_to_atom(segment) when is_atom(segment), do: segment
+
   defp segment_to_atom(segment) when is_binary(segment) do
-    try do
-      String.to_existing_atom(segment)
-    rescue
-      _ -> nil
-    end
+    String.to_existing_atom(segment)
+  rescue
+    _ -> nil
   end
+
   defp segment_to_atom(_), do: nil
 
-  defp segment_to_graphql_name(segment) when is_atom(segment), do: segment |> Atom.to_string() |> to_camel_case()
+  defp segment_to_graphql_name(segment) when is_atom(segment),
+    do: segment |> Atom.to_string() |> to_camel_case()
+
   defp segment_to_graphql_name(segment) when is_binary(segment), do: to_camel_case(segment)
   defp segment_to_graphql_name(segment), do: to_string(segment)
 
   # Returns :union, :map_struct, :array, or nil (primitive / unknown).
   defp composite_kind(type, constraints) do
     {type, constraints} = unwrap_type(type, constraints)
+
     cond do
-      type == nil -> nil
-      type == Ash.Type.Union -> :union
-      match?({:array, _}, type) -> :array
+      type == nil ->
+        nil
+
+      type == Ash.Type.Union ->
+        :union
+
+      match?({:array, _}, type) ->
+        :array
+
       type in [:map, Ash.Type.Map, :struct, Ash.Type.Struct] ->
         if (constraints[:fields] || constraints["fields"] || []) != [], do: :map_struct, else: nil
+
       true ->
         if new_type?(type) do
           subtype = Ash.Type.NewType.subtype_of(type)
@@ -287,15 +338,20 @@ defmodule AshGraphql.Errors do
 
   defp unwrap_type(type, constraints) do
     cond do
-      type == nil -> {nil, constraints || []}
+      type == nil ->
+        {nil, constraints || []}
+
       match?({:array, _}, type) ->
         {:array, inner} = type
         {{:array, inner}, constraints || []}
+
       new_type?(type) ->
         subtype = Ash.Type.NewType.subtype_of(type)
         sub_constraints = Ash.Type.NewType.constraints(type, constraints || [])
         unwrap_type(subtype, sub_constraints)
-      true -> {type, constraints || []}
+
+      true ->
+        {type, constraints || []}
     end
   end
 
@@ -304,17 +360,17 @@ defmodule AshGraphql.Errors do
     arg = Enum.find(args, fn a -> Map.get(a, :name) == name end)
     if arg, do: {Map.get(arg, :type), Map.get(arg, :constraints) || []}, else: nil
   end
+
   defp find_argument_type(_, _), do: nil
 
   defp find_attribute_type(name, resource) when is_atom(name) and not is_nil(resource) do
-    try do
-      attrs = Ash.Resource.Info.attributes(resource) || []
-      attr = Enum.find(attrs, fn a -> Map.get(a, :name) == name end)
-      if attr, do: {Map.get(attr, :type), Map.get(attr, :constraints) || []}, else: nil
-    rescue
-      _ -> nil
-    end
+    attrs = Ash.Resource.Info.attributes(resource) || []
+    attr = Enum.find(attrs, fn a -> Map.get(a, :name) == name end)
+    if attr, do: {Map.get(attr, :type), Map.get(attr, :constraints) || []}, else: nil
+  rescue
+    _ -> nil
   end
+
   defp find_attribute_type(_, _), do: nil
 
   # Resolve field name for error_map[:fields] using same DSL; no context needed for single field.
@@ -394,6 +450,7 @@ defmodule AshGraphql.Errors do
     case camelized do
       <<char::utf8, rest::binary>> when char >= ?A and char <= ?Z ->
         <<char + 32::utf8, rest::binary>>
+
       _ ->
         camelized
     end
