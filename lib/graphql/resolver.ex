@@ -2937,7 +2937,7 @@ defmodule AshGraphql.Graphql.Resolver do
     end)
   end
 
-  defp to_errors(errors, context, domain, resource, action, resolution \\ nil) do
+  defp to_errors(errors, context, domain, resource, action, resolution) do
     graphql_path =
       case resolution do
         %{path: path} when is_list(path) ->
