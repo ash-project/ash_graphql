@@ -1554,7 +1554,6 @@ defmodule AshGraphql.Graphql.Resolver do
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Domain.Info.authorize?(domain)
             )
-            |> select_fields(resource, resolution, type_name, ["result"])
             |> load_fields(
               [
                 domain: domain,
@@ -1687,10 +1686,6 @@ defmodule AshGraphql.Graphql.Resolver do
                   read_action: read_action,
                   domain: domain,
                   actor: Map.get(context, :actor),
-                  select:
-                    get_select(resource, resolution, mutation_result_type(mutation_name), [
-                      "result"
-                    ]),
                   load:
                     get_loads(
                       [
@@ -1857,11 +1852,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   context: get_context(context) || %{},
                   authorize?: AshGraphql.Domain.Info.authorize?(domain),
                   actor: Map.get(context, :actor),
-                  domain: domain,
-                  select:
-                    get_select(resource, resolution, mutation_result_type(mutation_name), [
-                      "result"
-                    ])
+                  domain: domain
                 )
                 |> case do
                   %Ash.BulkResult{status: :success, records: [value]} ->
