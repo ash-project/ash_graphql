@@ -8,6 +8,7 @@ defmodule AshGraphql.Test.Subscribable do
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [AshGraphql.Test.NotificationSpy],
     extensions: [AshGraphql.Resource]
 
   require Ash.Query
