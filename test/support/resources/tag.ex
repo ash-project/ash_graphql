@@ -13,7 +13,7 @@ defmodule AshGraphql.Test.Tag do
   graphql do
     type(:tag)
 
-    filterable_fields [:name]
+    filterable_fields [:name, popularity: [:eq, :in]]
     sortable_fields [:popularity]
 
     queries do

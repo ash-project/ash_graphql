@@ -464,10 +464,10 @@ defmodule AshGraphql.Resource do
         default: true
       ],
       filterable_fields: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         doc:
-          "A list of fields that are allowed to be filtered on. Defaults to all filterable fields for which a GraphQL type can be created."
+          "A list of fields that are allowed to be filtered on. Supports bare atoms (all operators) and keyword tuples with operator allowlists (e.g. `[:name, id: [:eq, :in]]`). Defaults to all filterable fields for which a GraphQL type can be created."
       ],
       sortable_fields: [
         type: {:list, :atom},
@@ -506,7 +506,8 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
     AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
     AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
-    AshGraphql.Resource.Verifiers.VerifyArgumentInputTypes
+    AshGraphql.Resource.Verifiers.VerifyArgumentInputTypes,
+    AshGraphql.Resource.Verifiers.VerifyFilterableFields
   ]
 
   @sections [@graphql]
@@ -2629,6 +2630,7 @@ defmodule AshGraphql.Resource do
       |> Enum.concat(Ash.DataLayer.functions(resource))
       |> Enum.filter(& &1.predicate?())
       |> restrict_for_lists(type)
+      |> restrict_for_field(resource, attribute_or_aggregate)
       |> Enum.flat_map(fn operator ->
         filter_fields(operator, type, array_type?, schema, attribute_or_aggregate, resource)
       end)
@@ -2781,6 +2783,13 @@ defmodule AshGraphql.Resource do
   end
 
   defp restrict_for_lists(operators, _), do: operators
+
+  defp restrict_for_field(operators, resource, attribute_or_aggregate) do
+    case AshGraphql.Resource.Info.allowed_filter_operators(resource, attribute_or_aggregate.name) do
+      nil -> operators
+      allowed_ops -> Enum.filter(operators, &(&1.name() in allowed_ops))
+    end
+  end
 
   defp constraints_to_item_constraints(
          {:array, _},

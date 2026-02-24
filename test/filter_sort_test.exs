@@ -37,7 +37,55 @@ defmodule AshGraphql.FilterSortTest do
     assert {:ok, %{data: %{"__type" => %{"inputFields" => input_fields}}}} = resp
 
     assert input_fields |> Enum.find(fn field -> field["name"] == "name" end)
-    refute input_fields |> Enum.find(fn field -> field["name"] == "popularity" end)
+    assert input_fields |> Enum.find(fn field -> field["name"] == "popularity" end)
+    refute input_fields |> Enum.find(fn field -> field["name"] == "id" end)
+  end
+
+  test "filterable_fields per-field operator restriction is applied" do
+    resp =
+      """
+      query {
+        __type(name: "TagFilterPopularity") {
+          inputFields {
+            name
+          }
+        }
+      }
+
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"inputFields" => input_fields}}}} = resp
+
+    field_names = Enum.map(input_fields, & &1["name"])
+    assert "eq" in field_names
+    assert "in" in field_names
+    refute "lessThan" in field_names
+    refute "greaterThan" in field_names
+    refute "lessThanOrEqual" in field_names
+    refute "greaterThanOrEqual" in field_names
+  end
+
+  test "filterable_fields bare atom allows all operators" do
+    resp =
+      """
+      query {
+        __type(name: "TagFilterName") {
+          inputFields {
+            name
+          }
+        }
+      }
+
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"inputFields" => input_fields}}}} = resp
+
+    field_names = Enum.map(input_fields, & &1["name"])
+    assert "eq" in field_names
+    assert "lessThan" in field_names
+    assert "greaterThan" in field_names
   end
 
   test "sortable_fields option is applied" do

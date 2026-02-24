@@ -226,7 +226,28 @@ defmodule AshGraphql.Resource.Info do
   def filterable_field?(resource, field_name) do
     filterable_fields = AshGraphql.Resource.Info.filterable_fields(resource)
 
-    is_nil(filterable_fields) or field_name in filterable_fields
+    is_nil(filterable_fields) or
+      Enum.any?(filterable_fields, fn
+        ^field_name -> true
+        {^field_name, _ops} -> true
+        _ -> false
+      end)
+  end
+
+  @doc "Returns the allowed filter operators for a field, or nil if all are allowed"
+  def allowed_filter_operators(resource, field_name) do
+    filterable_fields = AshGraphql.Resource.Info.filterable_fields(resource)
+
+    case filterable_fields do
+      nil ->
+        nil
+
+      fields ->
+        Enum.find_value(fields, fn
+          {^field_name, ops} when is_list(ops) -> ops
+          _ -> nil
+        end)
+    end
   end
 
   @doc "Fields that may be sorted on"
