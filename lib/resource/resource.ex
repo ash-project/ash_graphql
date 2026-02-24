@@ -2924,6 +2924,7 @@ defmodule AshGraphql.Resource do
         |> Enum.concat(Ash.DataLayer.functions(resource))
         |> Enum.filter(& &1.predicate?())
         |> restrict_for_lists(field_type)
+        |> restrict_for_field(resource, calculation)
         |> Enum.flat_map(
           &filter_fields(
             &1,

@@ -17,24 +17,47 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterableFields do
       :ok
     else
       resource = Transformer.get_persisted(dsl, :module)
-      valid_operator_names = valid_operator_names()
+
+      unless is_list(filterable_fields) do
+        raise Spark.Error.DslError,
+          module: resource,
+          message: """
+          Invalid value for `filterable_fields`: #{inspect(filterable_fields)}.
+
+          The `filterable_fields` option must be a list of field names or keyword entries,
+          for example: `[:name, id: [:eq, :in]]`.
+          """
+      end
+
+      valid_operator_names = valid_operator_names(dsl)
 
       Enum.each(filterable_fields, fn
         field when is_atom(field) ->
           :ok
 
         {field, ops} when is_atom(field) and is_list(ops) ->
-          Enum.each(ops, fn op ->
-            unless op in valid_operator_names do
-              raise Spark.Error.DslError,
-                module: resource,
-                message: """
-                Invalid operator `#{inspect(op)}` for field `#{inspect(field)}` in `filterable_fields`.
+          if Enum.empty?(ops) do
+            raise Spark.Error.DslError,
+              module: resource,
+              message: """
+              Empty operator allowlist for field `#{inspect(field)}` in `filterable_fields`.
 
-                Valid operator names are: #{Enum.map_join(valid_operator_names, ", ", &inspect/1)}
-                """
-            end
-          end)
+              Provide at least one valid operator (e.g. `#{inspect(field)}: [:eq]`), or
+              list the field as a bare atom to allow all default operators (e.g. `#{inspect(field)}`).
+              """
+          else
+            Enum.each(ops, fn op ->
+              unless op in valid_operator_names do
+                raise Spark.Error.DslError,
+                  module: resource,
+                  message: """
+                  Invalid operator `#{inspect(op)}` for field `#{inspect(field)}` in `filterable_fields`.
+
+                  Valid operator names are: #{Enum.map_join(valid_operator_names, ", ", &inspect/1)}
+                  """
+              end
+            end)
+          end
 
         other ->
           raise Spark.Error.DslError,
@@ -51,9 +74,23 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterableFields do
     end
   end
 
-  defp valid_operator_names do
-    Ash.Filter.builtin_operators()
-    |> Enum.filter(& &1.predicate?())
-    |> Enum.map(& &1.name())
+  defp valid_operator_names(dsl) do
+    resource = Transformer.get_persisted(dsl, :module)
+
+    builtin =
+      Ash.Filter.builtin_operators()
+      |> Enum.filter(& &1.predicate?())
+      |> Enum.map(& &1.name())
+
+    data_layer_functions =
+      try do
+        Ash.DataLayer.functions(resource)
+        |> Enum.filter(& &1.predicate?())
+        |> Enum.map(& &1.name())
+      rescue
+        _ -> []
+      end
+
+    Enum.uniq(builtin ++ data_layer_functions)
   end
 end

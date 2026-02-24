@@ -13,7 +13,7 @@ defmodule AshGraphql.Test.Tag do
   graphql do
     type(:tag)
 
-    filterable_fields [:name, popularity: [:eq, :in]]
+    filterable_fields [:name, popularity: [:eq, :in], double_popularity: [:eq]]
     sortable_fields [:popularity]
 
     queries do
@@ -41,6 +41,10 @@ defmodule AshGraphql.Test.Tag do
 
     attribute(:name, :string, public?: true)
     attribute(:popularity, :integer, public?: true)
+  end
+
+  calculations do
+    calculate(:double_popularity, :integer, expr(popularity * 2), public?: true)
   end
 
   identities do

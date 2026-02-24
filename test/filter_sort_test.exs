@@ -66,6 +66,28 @@ defmodule AshGraphql.FilterSortTest do
     refute "greaterThanOrEqual" in field_names
   end
 
+  test "filterable_fields operator restriction applies to calculations" do
+    resp =
+      """
+      query {
+        __type(name: "TagFilterDoublePopularity") {
+          inputFields {
+            name
+          }
+        }
+      }
+
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"inputFields" => input_fields}}}} = resp
+
+    field_names = Enum.map(input_fields, & &1["name"])
+    assert "eq" in field_names
+    refute "in" in field_names
+    refute "lessThan" in field_names
+  end
+
   test "filterable_fields bare atom allows all operators" do
     resp =
       """
