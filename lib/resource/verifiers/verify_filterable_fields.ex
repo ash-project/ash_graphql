@@ -18,7 +18,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterableFields do
     else
       resource = Transformer.get_persisted(dsl, :module)
 
-      unless is_list(filterable_fields) do
+      if not is_list(filterable_fields) do
         raise Spark.Error.DslError,
           module: resource,
           message: """
@@ -47,7 +47,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterableFields do
               """
           else
             Enum.each(ops, fn op ->
-              unless op in valid_operator_names do
+              if op not in valid_operator_names do
                 raise Spark.Error.DslError,
                   module: resource,
                   message: """
