@@ -206,6 +206,7 @@ defmodule AshGraphql.Test.Post do
       list :paginated_posts, :paginated
       list :keyset_paginated_posts, :keyset_paginated
       list :other_keyset_paginated_posts, :keyset_and_offset_paginated, paginate_with: :keyset
+      list :keyset_paginated_posts_with_default_limit, :keyset_paginated_with_default_limit
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
       list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
@@ -417,6 +418,16 @@ defmodule AshGraphql.Test.Post do
         keyset?: true,
         countable: true,
         default_limit: 20
+      )
+    end
+
+    read :keyset_paginated_with_default_limit do
+      pagination(
+        required?: true,
+        keyset?: true,
+        countable: true,
+        default_limit: 2,
+        max_page_size: 5
       )
     end
 
