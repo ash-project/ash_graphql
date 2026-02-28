@@ -72,6 +72,33 @@ defmodule AshGraphql.PaginateTest do
       assert is_binary(end_keyset)
     end
 
+    test "default_limit is used instead of max_page_size when first/last not provided" do
+      doc = """
+      query KeysetPaginatedPostsWithDefaultLimit {
+        keysetPaginatedPostsWithDefaultLimit(sort: [{field: TEXT, order: ASC_NULLS_LAST}]) {
+          count
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "keysetPaginatedPostsWithDefaultLimit" => %{
+                    "count" => 5,
+                    "results" => results
+                  }
+                }
+              }} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+      # default_limit is 2, max_page_size is 5
+      # Without first/last, should use default_limit (2), not max_page_size (5)
+      assert length(results) == 2
+    end
+
     test "works if action has both offset and keyset pagination" do
       doc = """
       query OtherKeysetPaginatedPosts {

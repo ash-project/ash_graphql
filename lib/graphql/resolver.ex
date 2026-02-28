@@ -1219,14 +1219,17 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
-  defp validate_offset_opts(opts, :offset, %{max_page_size: max_page_size}) do
+  defp validate_offset_opts(opts, :offset, %{
+         max_page_size: max_page_size,
+         default_limit: default_limit
+       }) do
     limit =
       case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
         %{limit: limit} ->
           min(limit, max_page_size)
 
         _ ->
-          max_page_size
+          default_limit || max_page_size
       end
 
     {:ok, Keyword.put(opts, :limit, limit)}
@@ -1236,7 +1239,10 @@ defmodule AshGraphql.Graphql.Resolver do
     {:ok, opts}
   end
 
-  defp validate_keyset_opts(opts, strategy, %{max_page_size: max_page_size})
+  defp validate_keyset_opts(opts, strategy, %{
+         max_page_size: max_page_size,
+         default_limit: default_limit
+       })
        when strategy in [:keyset, :relay] do
     case opts |> Keyword.take([:first, :last, :after, :before]) |> Enum.into(%{}) do
       %{first: _first, last: _last} ->
@@ -1276,7 +1282,7 @@ defmodule AshGraphql.Graphql.Resolver do
          }}
 
       _ ->
-        {:ok, Keyword.put(opts, :limit, max_page_size)}
+        {:ok, Keyword.put(opts, :limit, default_limit || max_page_size)}
     end
   end
 
