@@ -110,6 +110,29 @@ defmodule AshGraphql.FilterSortTest do
     assert "greaterThan" in field_names
   end
 
+  test "filterable_fields resolves NewType subtype_of for data layer function operator matching" do
+    resp =
+      """
+      query {
+        __type(name: "TagWithIlikeFilterLabel") {
+          inputFields {
+            name
+          }
+        }
+      }
+
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"inputFields" => input_fields}}}} = resp
+
+    field_names = Enum.map(input_fields, & &1["name"])
+    assert "eq" in field_names
+    assert "ilike" in field_names
+    refute "lessThan" in field_names
+    refute "in" in field_names
+  end
+
   test "sortable_fields option is applied" do
     resp =
       """
