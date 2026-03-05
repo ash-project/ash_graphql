@@ -2749,12 +2749,21 @@ defmodule AshGraphql.Resource do
   end
 
   defp do_get_expressable_types(operator_types, field_type, array_type?) do
-    field_type_short_name =
-      case Ash.Type.short_names()
-           |> Enum.find(fn {_, type} -> type == field_type end) do
-        nil -> nil
-        {short_name, _} -> short_name
+    # For NewType subtypes, also match against the base type's short name
+    field_types =
+      case Ash.Type.NewType.new_type?(field_type) do
+        true ->
+          base_type = Ash.Type.NewType.subtype_of(field_type)
+          [base_type, field_type]
+
+        false ->
+          [field_type]
       end
+
+    field_type_short_names =
+      Ash.Type.short_names()
+      |> Enum.filter(fn {_short_name, field_type} -> field_type in field_types end)
+      |> Enum.map(fn {short_name, _field_type} -> short_name end)
 
     operator_types
     |> Enum.filter(fn
@@ -2773,8 +2782,8 @@ defmodule AshGraphql.Resource do
       [:any, type] when is_atom(type) ->
         true
 
-      [^field_type_short_name, type] when is_atom(type) and not is_nil(field_type_short_name) ->
-        true
+      [expected_type, type] when is_atom(type) and is_atom(expected_type) ->
+        expected_type in field_type_short_names
 
       _ ->
         false
