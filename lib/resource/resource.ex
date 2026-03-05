@@ -2626,8 +2626,12 @@ defmodule AshGraphql.Resource do
     array_type? = match?({:array, _}, type)
 
     fields =
-      Ash.Filter.builtin_operators()
-      |> Enum.concat(Ash.DataLayer.functions(resource))
+      [
+        Ash.Filter.builtin_operators(),
+        Ash.Filter.builtin_functions(),
+        Ash.DataLayer.functions(resource)
+      ]
+      |> Enum.concat()
       |> Enum.filter(& &1.predicate?())
       |> restrict_for_lists(type)
       |> restrict_for_field(resource, attribute_or_aggregate)
@@ -2920,8 +2924,12 @@ defmodule AshGraphql.Resource do
       array_type? = match?({:array, _}, field_type)
 
       filter_fields =
-        Ash.Filter.builtin_operators()
-        |> Enum.concat(Ash.DataLayer.functions(resource))
+        [
+          Ash.Filter.builtin_operators(),
+          Ash.Filter.builtin_functions(),
+          Ash.DataLayer.functions(resource)
+        ]
+        |> Enum.concat()
         |> Enum.filter(& &1.predicate?())
         |> restrict_for_lists(field_type)
         |> restrict_for_field(resource, calculation)
@@ -5027,8 +5035,8 @@ defmodule AshGraphql.Resource do
   if Application.compile_env(:ash_graphql, :warn_on_json_fallback?, true) do
     defp warn_on_json_fallback(resource, constraints) do
       IO.warn("""
-      Struct type with instance_of constraint falls back to JsonString for input. 
-      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1` 
+      Struct type with instance_of constraint falls back to JsonString for input.
+      Consider creating a custom type with `use AshGraphql.Type` and `graphql_input_type/1`
       for structured validation.
 
       Resource: #{inspect(resource)}

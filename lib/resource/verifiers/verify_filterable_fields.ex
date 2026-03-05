@@ -78,7 +78,8 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterableFields do
     resource = Transformer.get_persisted(dsl, :module)
 
     builtin =
-      Ash.Filter.builtin_operators()
+      [Ash.Filter.builtin_operators(), Ash.Filter.builtin_functions()]
+      |> Enum.concat()
       |> Enum.filter(& &1.predicate?())
       |> Enum.map(& &1.name())
 

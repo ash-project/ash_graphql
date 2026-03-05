@@ -108,6 +108,7 @@ defmodule AshGraphql.FilterSortTest do
     assert "eq" in field_names
     assert "lessThan" in field_names
     assert "greaterThan" in field_names
+    assert "contains" in field_names
   end
 
   test "sortable_fields option is applied" do
