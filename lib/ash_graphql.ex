@@ -167,6 +167,11 @@ defmodule AshGraphql do
 
       Enum.each(ash_resources, &Code.ensure_compiled!/1)
 
+      AshGraphql.validate_domains_for_relationships!(
+        ash_resources,
+        Enum.map(domains, &elem(&1, 0))
+      )
+
       schema = __MODULE__
       schema_env = __ENV__
 
@@ -1258,5 +1263,33 @@ defmodule AshGraphql do
         domains: [...],
         response_metadata: {:my_extension_key, {MyApp.MetadataHandler, :build, []}}
     """
+  end
+
+  @doc false
+  def validate_domains_for_relationships!(ash_resources, all_domains) do
+    for resource <- ash_resources,
+        AshGraphql.Resource in Spark.extensions(resource),
+        relationship <- Ash.Resource.Info.public_relationships(resource),
+        AshGraphql.Resource in Spark.extensions(relationship.destination),
+        relationship.destination not in ash_resources do
+      destination_domain = Ash.Resource.Info.domain(relationship.destination)
+
+      domain_hint =
+        if destination_domain do
+          "Add #{inspect(destination_domain)} to your schema's domain list:\n\n" <>
+            "    use AshGraphql, domains: #{inspect(all_domains ++ [destination_domain])}"
+        else
+          "Make sure the domain for #{inspect(relationship.destination)} is included in your schema's domain list."
+        end
+
+      raise """
+      #{inspect(resource)} has a relationship `#{relationship.name}` to #{inspect(relationship.destination)}, \
+      but #{inspect(relationship.destination)}'s domain is not included in this schema.
+
+      #{domain_hint}
+      """
+    end
+
+    :ok
   end
 end
