@@ -67,16 +67,16 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldReferences do
   end
 
   defp validate_field_exists(resource, option, field, valid_fields, field_type_desc) do
-    if field not in valid_fields do
+    if not MapSet.member?(valid_fields, field) do
       available = valid_fields |> MapSet.to_list() |> Enum.sort()
 
       raise Spark.Error.DslError,
         module: resource,
         path: [:graphql, option],
         message: """
-        Unknown field `#{inspect(field)}` in `#{option}`.
+        Unknown #{field_type_desc} `#{inspect(field)}` in `#{option}`.
 
-        Available #{field_type_desc}s: #{inspect(available)}
+        Available: #{inspect(available)}
         """
     end
   end

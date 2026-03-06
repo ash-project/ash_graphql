@@ -53,7 +53,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for unknown field" do
       dsl = set_graphql_option(dsl_state(), :show_fields, [:id, :nonexistent])
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:nonexistent`.*show_fields/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:nonexistent`.*show_fields/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
@@ -68,7 +68,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for unknown field" do
       dsl = set_graphql_option(dsl_state(), :hide_fields, [:nonexistent])
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:nonexistent`.*hide_fields/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:nonexistent`.*hide_fields/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
@@ -83,7 +83,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for unknown field key" do
       dsl = set_graphql_option(dsl_state(), :field_names, nonexistent: :renamed)
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:nonexistent`.*field_names/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:nonexistent`.*field_names/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
@@ -98,7 +98,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for unknown field" do
       dsl = set_graphql_option(dsl_state(), :sortable_fields, [:nonexistent])
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:nonexistent`.*sortable_fields/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:nonexistent`.*sortable_fields/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
@@ -106,7 +106,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for relationship name" do
       dsl = set_graphql_option(dsl_state(), :sortable_fields, [:related])
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:related`.*sortable_fields/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:related`.*sortable_fields/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
@@ -122,7 +122,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
       dsl = set_graphql_option(dsl_state(), :filterable_fields, [:nonexistent])
 
       assert_raise Spark.Error.DslError,
-                   ~r/Unknown field `:nonexistent`.*filterable_fields/s,
+                   ~r/`:nonexistent`.*filterable_fields/s,
                    fn ->
                      VerifyFieldReferences.verify(dsl)
                    end
@@ -132,7 +132,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
       dsl = set_graphql_option(dsl_state(), :filterable_fields, nonexistent: [:eq])
 
       assert_raise Spark.Error.DslError,
-                   ~r/Unknown field `:nonexistent`.*filterable_fields/s,
+                   ~r/`:nonexistent`.*filterable_fields/s,
                    fn ->
                      VerifyFieldReferences.verify(dsl)
                    end
@@ -153,7 +153,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for unknown field" do
       dsl = set_graphql_option(dsl_state(), :nullable_fields, [:nonexistent])
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:nonexistent`.*nullable_fields/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:nonexistent`.*nullable_fields/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
@@ -168,7 +168,7 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
     test "raises for non-relationship field" do
       dsl = set_graphql_option(dsl_state(), :relationships, [:name])
 
-      assert_raise Spark.Error.DslError, ~r/Unknown field `:name`.*relationships/s, fn ->
+      assert_raise Spark.Error.DslError, ~r/`:name`.*relationships/s, fn ->
         VerifyFieldReferences.verify(dsl)
       end
     end
