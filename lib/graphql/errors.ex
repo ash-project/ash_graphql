@@ -111,7 +111,7 @@ defmodule AshGraphql.Errors do
     {mapped_path, _context} =
       Enum.reduce(all_segments, {[], initial_context}, fn segment, {acc, ctx} ->
         {resolved, next_ctx} = resolve_segment_with_context(segment, ctx)
-        acc = if resolved, do: acc ++ [resolved], else: acc
+        acc = acc ++ [resolved]
         {acc, next_ctx}
       end)
 
@@ -364,7 +364,7 @@ defmodule AshGraphql.Errors do
   defp find_argument_type(_, _), do: nil
 
   defp find_attribute_type(name, resource) when is_atom(name) and not is_nil(resource) do
-    attrs = Ash.Resource.Info.attributes(resource) || []
+    attrs = Ash.Resource.Info.attributes(resource)
     attr = Enum.find(attrs, fn a -> Map.get(a, :name) == name end)
     if attr, do: {Map.get(attr, :type), Map.get(attr, :constraints) || []}, else: nil
   rescue
