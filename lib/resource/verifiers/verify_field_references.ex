@@ -45,6 +45,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldReferences do
     )
 
     validate_option(dsl, resource, :relationships, relationship_names, "relationship")
+    validate_option(dsl, resource, :attribute_input_types, attribute_names, "attribute")
 
     :ok
   end
@@ -87,6 +88,9 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldReferences do
   defp get_option(dsl, :nullable_fields), do: AshGraphql.Resource.Info.nullable_fields(dsl)
   defp get_option(dsl, :sortable_fields), do: AshGraphql.Resource.Info.sortable_fields(dsl)
   defp get_option(dsl, :filterable_fields), do: AshGraphql.Resource.Info.filterable_fields(dsl)
+
+  defp get_option(dsl, :attribute_input_types),
+    do: AshGraphql.Resource.Info.attribute_input_types(dsl)
 
   # relationships/1 in Info falls back to all public relationships when nil,
   # so we read the raw option to only validate when explicitly set by the user.

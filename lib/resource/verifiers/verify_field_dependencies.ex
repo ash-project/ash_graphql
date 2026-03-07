@@ -183,8 +183,13 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
     input_types = AshGraphql.Resource.Info.attribute_input_types(dsl)
 
     if is_list(input_types) and input_types != [] do
+      # Only check keys that are actual public attributes. Non-attribute keys
+      # (e.g. relationships) are caught by VerifyFieldReferences as invalid.
+      attribute_names =
+        dsl |> Ash.Resource.Info.public_attributes() |> MapSet.new(& &1.name)
+
       Enum.reduce(input_types, warnings, fn {attr, _type}, acc ->
-        if MapSet.member?(visible, attr) do
+        if not MapSet.member?(attribute_names, attr) or MapSet.member?(visible, attr) do
           acc
         else
           [invisible_field_warning(resource, attr, "attribute_input_types") | acc]
