@@ -508,7 +508,8 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
     AshGraphql.Resource.Verifiers.VerifyArgumentInputTypes,
     AshGraphql.Resource.Verifiers.VerifyFieldReferences,
-    AshGraphql.Resource.Verifiers.VerifyFilterableFields
+    AshGraphql.Resource.Verifiers.VerifyFilterableFields,
+    AshGraphql.Resource.Verifiers.VerifyFieldDependencies
   ]
 
   @sections [@graphql]

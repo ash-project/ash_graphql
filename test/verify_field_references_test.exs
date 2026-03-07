@@ -182,4 +182,27 @@ defmodule AshGraphql.VerifyFieldReferencesTest do
       assert :ok = VerifyFieldReferences.verify(dsl_state())
     end
   end
+
+  describe "attribute_input_types" do
+    test "raises for unknown attribute" do
+      dsl = set_graphql_option(dsl_state(), :attribute_input_types, nonexistent: :string)
+
+      assert_raise Spark.Error.DslError, ~r/`:nonexistent`.*attribute_input_types/s, fn ->
+        VerifyFieldReferences.verify(dsl)
+      end
+    end
+
+    test "raises for relationship name (not an attribute)" do
+      dsl = set_graphql_option(dsl_state(), :attribute_input_types, related: :string)
+
+      assert_raise Spark.Error.DslError, ~r/`:related`.*attribute_input_types/s, fn ->
+        VerifyFieldReferences.verify(dsl)
+      end
+    end
+
+    test "passes for valid attribute" do
+      dsl = set_graphql_option(dsl_state(), :attribute_input_types, name: :string)
+      assert :ok = VerifyFieldReferences.verify(dsl)
+    end
+  end
 end
