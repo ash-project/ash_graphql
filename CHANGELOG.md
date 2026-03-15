@@ -11,6 +11,37 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.9.0](https://github.com/ash-project/ash_graphql/compare/v1.8.5...v1.9.0) (2026-03-15)
+
+
+
+
+### Features:
+
+* include builtin predicate functions in GraphQL filter schema (#413) by [@nallwhy](https://github.com/nallwhy) [(#413)](https://github.com/ash-project/ash_graphql/pull/413)
+
+* support per-field operator allowlists in filterable_fields (#407) by [@nallwhy](https://github.com/nallwhy) [(#407)](https://github.com/ash-project/ash_graphql/pull/407)
+
+### Bug Fixes:
+
+* resolve NewType subtype_of matching for filter args (#412) by [@nallwhy](https://github.com/nallwhy) [(#412)](https://github.com/ash-project/ash_graphql/pull/412)
+
+* use default_limit instead of max_page_size when first/last/limit not provided (#408) by [@nallwhy](https://github.com/nallwhy) [(#408)](https://github.com/ash-project/ash_graphql/pull/408)
+
+* map fields on error propagation correctly (#399) by lincolnhuls [(#399)](https://github.com/ash-project/ash_graphql/pull/399)
+
+* pass opts to for_action for generic actions by [@barnabasJ](https://github.com/barnabasJ) [(#396)](https://github.com/ash-project/ash_graphql/pull/396)
+
+### Improvements:
+
+* validate cross-field dependencies in graphql DSL options at compile time (#416) by [@nallwhy](https://github.com/nallwhy) [(#416)](https://github.com/ash-project/ash_graphql/pull/416)
+
+* validate field references in graphql DSL options at compile time (#415) by [@nallwhy](https://github.com/nallwhy) [(#415)](https://github.com/ash-project/ash_graphql/pull/415)
+
+* raise at compile time when related resource's domain is missing from schema (#414) by [@nallwhy](https://github.com/nallwhy) [(#414)](https://github.com/ash-project/ash_graphql/pull/414)
+
+* Split up usage rules (#404) by [@mylanconnolly](https://github.com/mylanconnolly) [(#404)](https://github.com/ash-project/ash_graphql/pull/404)
+
 ## [v1.8.5](https://github.com/ash-project/ash_graphql/compare/v1.8.4...v1.8.5) (2025-12-08)
 
 
