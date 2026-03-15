@@ -36,6 +36,8 @@ defmodule AshGraphql.Test.User do
       destroy :delete_current_user, :destroy_current_user do
         identity false
       end
+
+      action :preparation, :preparation
     end
   end
 
@@ -99,6 +101,22 @@ defmodule AshGraphql.Test.User do
     destroy :destroy_current_user do
       filter(expr(id == ^actor(:id)))
     end
+
+    action :preparation, :string do
+      prepare fn
+        input, %{actor: %{name: name}} ->
+          Ash.ActionInput.set_context(input, %{name: name})
+
+        input, _context ->
+          input
+      end
+
+      run fn _input, %{source_context: source_context} ->
+        name = Map.get(source_context, :name)
+
+        {:ok, name}
+      end
+    end
   end
 
   attributes do
@@ -132,6 +150,10 @@ defmodule AshGraphql.Test.User do
 
     policy action_type(:destroy) do
       authorize_if(expr(id == ^actor(:id)))
+    end
+
+    policy action(:preparation) do
+      authorize_if always()
     end
   end
 

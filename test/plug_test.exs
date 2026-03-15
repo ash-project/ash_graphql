@@ -49,6 +49,27 @@ defmodule AshGraphql.PlugTest do
     assert resp["data"]["currentUser"]["name"] == user.name
   end
 
+  test "actor is set for preparations on Generic Actions" do
+    query = ~s|
+      mutation {
+        preparation
+      }
+    |
+
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create, %{name: "My Name"})
+      |> Ash.create!()
+
+    resp =
+      query
+      |> conn()
+      |> Ash.PlugHelpers.set_actor(user)
+      |> run()
+
+    assert resp["data"]["preparation"] == user.name
+  end
+
   test "when the actor is not set, the current user return nil" do
     resp =
       """
