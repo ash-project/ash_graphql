@@ -103,19 +103,19 @@ defmodule AshGraphql.Test.User do
     end
 
     action :preparation, :string do
-      prepare fn
+      prepare(fn
         input, %{actor: %{name: name}} ->
           Ash.ActionInput.set_context(input, %{name: name})
 
         input, _context ->
           input
-      end
+      end)
 
-      run fn _input, %{source_context: source_context} ->
+      run(fn _input, %{source_context: source_context} ->
         name = Map.get(source_context, :name)
 
         {:ok, name}
-      end
+      end)
     end
   end
 
@@ -153,7 +153,7 @@ defmodule AshGraphql.Test.User do
     end
 
     policy action(:preparation) do
-      authorize_if always()
+      authorize_if(always())
     end
   end
 
