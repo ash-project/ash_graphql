@@ -53,6 +53,30 @@ defmodule AshGraphql.Test.ResourceWithUnion do
     def graphql_input_type(_), do: :uniontype_input
   end
 
+  defmodule GenericActionUnion do
+    @moduledoc false
+
+    use Ash.Type.NewType,
+      subtype_of: :union,
+      constraints: [
+        types: [
+          string_result: [
+            type: :string,
+            tag: :type,
+            tag_value: "string_result"
+          ],
+          integer_result: [
+            type: :integer,
+            tag: :type,
+            tag_value: "integer_result"
+          ]
+        ]
+      ]
+
+    def graphql_type(_), do: :generic_action_union
+    def graphql_input_type(_), do: :generic_action_union_input
+  end
+
   use Ash.Resource,
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
@@ -62,6 +86,7 @@ defmodule AshGraphql.Test.ResourceWithUnion do
     type(:resource_with_union)
 
     queries do
+      action(:search_unions, :search_unions)
     end
 
     mutations do
@@ -71,6 +96,12 @@ defmodule AshGraphql.Test.ResourceWithUnion do
 
   actions do
     default_accept(:*)
+
+    action :search_unions, {:array, GenericActionUnion} do
+      run(fn _input, _ctx ->
+        {:ok, []}
+      end)
+    end
 
     action :action_with_union_arg, :boolean do
       argument(:union_arg, Union, allow_nil?: false)
