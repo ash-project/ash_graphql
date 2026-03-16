@@ -518,6 +518,7 @@ defmodule AshGraphql do
               type: action.returns,
               constraints: action.constraints,
               name: action.name,
+              description: nil,
               from_generic_action?: true
             }
           end)

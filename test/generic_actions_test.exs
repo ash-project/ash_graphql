@@ -200,6 +200,24 @@ defmodule AshGraphql.GenericActionsTest do
     end
   end
 
+  test "generic action returning an array of union NewType generates valid schema" do
+    resp =
+      """
+      query {
+        searchUnions {
+          ... on GenericActionUnionStringResult {
+            value
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"searchUnions" => []}} = result
+  end
+
   describe "generic action with require_actor? domain" do
     test "succeeds when actor is provided via GraphQL context" do
       resp =
