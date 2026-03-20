@@ -277,6 +277,9 @@ defmodule AshGraphql.Test.Post do
 
       destroy :delete_post_with_invalid_arguments_names, :destroy_with_invalid_arguments_names
 
+      create :create_post_with_metadata_enum, :create_with_metadata_enum
+      create :create_post_with_metadata_map, :create_with_metadata_map
+
       # this is a mutation just for testing
       action(:random_post, :random)
       action(:random_post_with_arg, :random, args: [:published])
@@ -293,6 +296,26 @@ defmodule AshGraphql.Test.Post do
 
       change(SetMetadata)
       change(set_attribute(:author_id, arg(:author_id)))
+    end
+
+    create :create_with_metadata_enum do
+      metadata(:status, AshGraphql.Test.MetadataOnlyEnum)
+
+      change(fn changeset, _ ->
+        Ash.Changeset.after_action(changeset, fn _changeset, result ->
+          {:ok, Ash.Resource.put_metadata(result, :status, :success)}
+        end)
+      end)
+    end
+
+    create :create_with_metadata_map do
+      metadata(:info, AshGraphql.Test.MetadataOnlyMap)
+
+      change(fn changeset, _ ->
+        Ash.Changeset.after_action(changeset, fn _changeset, result ->
+          {:ok, Ash.Resource.put_metadata(result, :info, %{code: 200, message: "created"})}
+        end)
+      end)
     end
 
     create :create_bar_with_foo do

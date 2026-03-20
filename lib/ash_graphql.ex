@@ -523,6 +523,7 @@ defmodule AshGraphql do
             }
           end)
         )
+        |> Enum.concat(all_metadata(resource, all_domains))
 
       {attrs, already_checked} =
         Enum.reduce(attrs, {[], already_checked}, fn
@@ -555,7 +556,7 @@ defmodule AshGraphql do
 
       attrs =
         Enum.filter(attrs, fn attr ->
-          if Map.get(attr, :from_generic_action?) do
+          if Map.get(attr, :from_generic_action?) || Map.get(attr, :from_metadata?) do
             true
           else
             AshGraphql.Resource.Info.show_field?(
@@ -1163,6 +1164,22 @@ defmodule AshGraphql do
       |> Enum.flat_map(& &1.arguments)
 
     action_arguments ++ calculation_arguments
+  end
+
+  defp all_metadata(resource, all_domains) do
+    resource
+    |> Ash.Resource.Info.actions()
+    |> Enum.filter(&used_in_gql?(resource, &1, all_domains))
+    |> Enum.flat_map(&Map.get(&1, :metadata, []))
+    |> Enum.map(fn metadata ->
+      %{
+        type: metadata.type,
+        constraints: metadata.constraints,
+        name: metadata.name,
+        description: metadata.description,
+        from_metadata?: true
+      }
+    end)
   end
 
   defp used_in_gql?(resource, %{name: name}, all_domains) do

@@ -55,6 +55,132 @@ defmodule AshGraphql.CreateTest do
            } = result
   end
 
+  test "NewType enum used only as metadata has its GraphQL type generated" do
+    {:ok, %{data: data}} =
+      """
+      {
+        __type(name: "MetadataOnlyEnum") {
+          enumValues {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert data["__type"] != nil
+    values = Enum.map(data["__type"]["enumValues"], & &1["name"])
+    assert "SUCCESS" in values
+    assert "PARTIAL" in values
+    assert "FAILED" in values
+  end
+
+  test "metadata with a NewType enum is returned correctly" do
+    resp =
+      """
+      mutation CreatePostWithMetadataEnum($input: CreatePostWithMetadataEnumInput) {
+        createPostWithMetadataEnum(input: $input) {
+          result{
+            text
+          }
+          metadata{
+            status
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"text" => "foobar"}}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithMetadataEnum" => %{
+                 "result" => %{
+                   "text" => "foobar"
+                 },
+                 "metadata" => %{
+                   "status" => "SUCCESS"
+                 }
+               }
+             }
+           } = result
+  end
+
+  test "NewType map used only as metadata has its GraphQL type generated" do
+    {:ok, %{data: data}} =
+      """
+      {
+        __type(name: "MetadataOnlyMap") {
+          fields {
+            name
+            type {
+              name
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert data["__type"] != nil
+    field_names = Enum.map(data["__type"]["fields"], & &1["name"])
+    assert "code" in field_names
+    assert "message" in field_names
+  end
+
+  test "metadata with a NewType map is returned correctly" do
+    resp =
+      """
+      mutation CreatePostWithMetadataMap($input: CreatePostWithMetadataMapInput) {
+        createPostWithMetadataMap(input: $input) {
+          result{
+            text
+          }
+          metadata{
+            info{
+              code
+              message
+            }
+          }
+          errors{
+            message
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{"input" => %{"text" => "foobar"}}
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "createPostWithMetadataMap" => %{
+                 "result" => %{
+                   "text" => "foobar"
+                 },
+                 "metadata" => %{
+                   "info" => %{
+                     "code" => 200,
+                     "message" => "created"
+                   }
+                 }
+               }
+             }
+           } = result
+  end
+
   test "a create with a managed relationship works" do
     resp =
       """
