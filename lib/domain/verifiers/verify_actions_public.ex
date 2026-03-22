@@ -32,13 +32,13 @@ defmodule AshGraphql.Domain.Verifiers.VerifyActionsPublic do
         [:graphql, :mutations, mutation.name]
       )
 
-      if mutation.read_action do
-        read_action = Ash.Resource.Info.action(mutation.resource, mutation.read_action)
+      if read_action = Map.get(mutation, :read_action) do
+        read_action_info = Ash.Resource.Info.action(mutation.resource, read_action)
 
         verify_action_public!(
           module,
           mutation.resource,
-          read_action,
+          read_action_info,
           [:graphql, :mutations, mutation.name]
         )
       end
