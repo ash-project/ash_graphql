@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.9.2](https://github.com/ash-project/ash_graphql/compare/v1.9.1...v1.9.2) (2026-03-22)
+
+
+
+
+### Bug Fixes:
+
+* Load read_action handling generic actions. (#421) by joshampton [(#421)](https://github.com/ash-project/ash_graphql/pull/421)
+
 ## [v1.9.1](https://github.com/ash-project/ash_graphql/compare/v1.9.0...v1.9.1) (2026-03-22)
 
 
