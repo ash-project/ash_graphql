@@ -9,7 +9,7 @@ defmodule AshGraphql.MixProject do
   The extension for building GraphQL APIs with Ash
   """
 
-  @version "1.9.0"
+  @version "1.9.1"
 
   @source_url "https://github.com/ash-project/ash_graphql"
 

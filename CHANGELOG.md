@@ -11,6 +11,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.9.1](https://github.com/ash-project/ash_graphql/compare/v1.9.0...v1.9.1) (2026-03-22)
+
+
+
+
+### Bug Fixes:
+
+* Add support for generating types only used in metadata (#420) by Mike Wilson [(#420)](https://github.com/ash-project/ash_graphql/pull/420)
+
+* add missing description field to fake attrs for generic actions returning union types (#419) by Justin Mills [(#419)](https://github.com/ash-project/ash_graphql/pull/419)
+
+### Improvements:
+
+* support Ash's new public? action option by [@zachdaniel](https://github.com/zachdaniel)
+
 ## [v1.9.0](https://github.com/ash-project/ash_graphql/compare/v1.8.5...v1.9.0) (2026-03-15)
 
 
