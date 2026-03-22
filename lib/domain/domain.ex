@@ -167,7 +167,8 @@ defmodule AshGraphql.Domain do
     ],
     verifiers: [
       AshGraphql.Resource.Verifiers.VerifyDomainQueryMetadata,
-      AshGraphql.Domain.Verifiers.VerifySubscriptionPubsub
+      AshGraphql.Domain.Verifiers.VerifySubscriptionPubsub,
+      AshGraphql.Domain.Verifiers.VerifyActionsPublic
     ]
 
   if Code.ensure_loaded?(Igniter) do
