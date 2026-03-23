@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.9.3](https://github.com/ash-project/ash_graphql/compare/v1.9.2...v1.9.3) (2026-03-23)
+
+
+
+
+### Improvements:
+
+* support field?: false calculations in graphql by [@zachdaniel](https://github.com/zachdaniel)
+
 ## [v1.9.2](https://github.com/ash-project/ash_graphql/compare/v1.9.1...v1.9.2) (2026-03-22)
 
 
