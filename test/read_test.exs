@@ -540,6 +540,33 @@ defmodule AshGraphql.ReadTest do
              result
   end
 
+  test "field?: false calculations can be queried via graphql" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", text1: "hello", published: true)
+    |> Ash.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          nonFieldCalc
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postLibrary" => [%{"nonFieldCalc" => "non_field: hello"}]}} =
+             result
+  end
+
   test "the same calculation can be loaded twice with different arguments via aliases" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", text1: "1", text2: "2", published: true)

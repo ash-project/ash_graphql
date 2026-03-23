@@ -2990,7 +2990,13 @@ defmodule AshGraphql.Graphql.Resolver do
       if resolution.definition.alias do
         Map.get(parent.calculations, {:__ash_graphql_calculation__, resolution.definition.alias})
       else
-        Map.get(parent, calculation.name)
+        resource_calculation = Ash.Resource.Info.calculation(resource, calculation.name)
+
+        if resource_calculation && !resource_calculation.field? do
+          Map.get(parent.calculations, calculation.name)
+        else
+          Map.get(parent, calculation.name)
+        end
       end
 
     case result do

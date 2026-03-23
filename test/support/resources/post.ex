@@ -663,6 +663,11 @@ defmodule AshGraphql.Test.Post do
       end,
       public?: true
     )
+
+    calculate :non_field_calc, :string, expr("non_field: " <> text1) do
+      public?(true)
+      field?(false)
+    end
   end
 
   aggregates do
