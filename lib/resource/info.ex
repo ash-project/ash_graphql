@@ -16,11 +16,17 @@ defmodule AshGraphql.Resource.Info do
         Spark.Dsl.Extension.get_persisted(resource, :module)
       end
 
-    domain_or_domains
-    |> List.wrap()
-    |> Enum.flat_map(&AshGraphql.Domain.Info.queries/1)
-    |> Enum.filter(&(&1.resource == module))
-    |> Enum.concat(Extension.get_entities(resource, [:graphql, :queries]))
+    domain_queries =
+      domain_or_domains
+      |> List.wrap()
+      |> Enum.flat_map(&AshGraphql.Domain.Info.queries/1)
+      |> Enum.filter(&(&1.resource == module))
+
+    resource_queries =
+      Extension.get_entities(resource, [:graphql, :queries])
+      |> List.wrap()
+
+    domain_queries ++ resource_queries
   end
 
   @doc "The mutations exposed for the resource"
@@ -32,11 +38,17 @@ defmodule AshGraphql.Resource.Info do
         Spark.Dsl.Extension.get_persisted(resource, :module)
       end
 
-    domain_or_domains
-    |> List.wrap()
-    |> Enum.flat_map(&AshGraphql.Domain.Info.mutations/1)
-    |> Enum.filter(&(&1.resource == module))
-    |> Enum.concat(Extension.get_entities(resource, [:graphql, :mutations]) || [])
+    domain_mutations =
+      domain_or_domains
+      |> List.wrap()
+      |> Enum.flat_map(&AshGraphql.Domain.Info.mutations/1)
+      |> Enum.filter(&(&1.resource == module))
+
+    resource_mutations =
+      Extension.get_entities(resource, [:graphql, :mutations])
+      |> List.wrap()
+
+    domain_mutations ++ resource_mutations
   end
 
   @doc "The subscriptions exposed for the resource"

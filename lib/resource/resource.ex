@@ -6,7 +6,7 @@ defmodule AshGraphql.Resource do
   alias Ash.Changeset.ManagedRelationshipHelpers
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
-  alias AshGraphql.Resource.{ManagedRelationship, Mutation, Query, Subscription}
+  alias AshGraphql.Resource.{ManagedRelationship, Mutation, MutationGroup, Query, QueryGroup, Subscription}
 
   @get %Spark.Dsl.Entity{
     name: :get,
@@ -112,7 +112,8 @@ defmodule AshGraphql.Resource do
       :__spark_metadata__,
       args: [],
       hide_inputs: [],
-      meta: []
+      meta: [],
+      group: nil
     ]
   end
 
@@ -191,6 +192,31 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  @query_group %Spark.Dsl.Entity{
+    name: :group,
+    args: [:name],
+    describe: """
+    A grouping construct for queries. All queries defined inside will be exposed under a GraphQL object field with this name.
+    """,
+    schema: [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The GraphQL field name for this group on the root query type."
+      ]
+    ],
+    target: QueryGroup,
+    identifier: :name,
+    entities: [
+      queries: [
+        @get,
+        @read_one,
+        @list,
+        @query_action
+      ]
+    ]
+  }
+
   @queries %Spark.Dsl.Section{
     name: :queries,
     describe: """
@@ -209,7 +235,8 @@ defmodule AshGraphql.Resource do
       @get,
       @read_one,
       @list,
-      @query_action
+      @query_action,
+      @query_group
     ]
   }
 
@@ -269,6 +296,31 @@ defmodule AshGraphql.Resource do
     ]
   }
 
+  @mutation_group %Spark.Dsl.Entity{
+    name: :group,
+    args: [:name],
+    describe: """
+    A grouping construct for mutations. All mutations defined inside will be exposed under a GraphQL object field with this name.
+    """,
+    schema: [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The GraphQL field name for this group on the root mutation type."
+      ]
+    ],
+    target: MutationGroup,
+    identifier: :name,
+    entities: [
+      mutations: [
+        @create,
+        @update,
+        @destroy,
+        @mutation_action
+      ]
+    ]
+  }
+
   @mutations %Spark.Dsl.Section{
     name: :mutations,
     describe: """
@@ -287,7 +339,8 @@ defmodule AshGraphql.Resource do
       @create,
       @update,
       @destroy,
-      @mutation_action
+      @mutation_action,
+      @mutation_group
     ]
   }
 
@@ -496,6 +549,7 @@ defmodule AshGraphql.Resource do
   }
 
   @transformers [
+    AshGraphql.Resource.Transformers.FlattenQueryMutationGroups,
     AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries,
     AshGraphql.Resource.Transformers.ValidateActions,
     AshGraphql.Resource.Transformers.ValidateCompatibleNames,
@@ -695,19 +749,16 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def queries(
-        domain,
-        all_domains,
+  def query_field_definition(
         resource,
+        domain,
+        _all_domains,
+        query,
         action_middleware,
         schema,
-        relay_ids?,
-        as_mutations? \\ false
+        relay_ids?
       ) do
-    resource
-    |> queries(all_domains)
-    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
-    |> Enum.map(fn
+    case query do
       %{type: :action, name: name, action: action} = query ->
         query_action =
           Ash.Resource.Info.action(resource, action) ||
@@ -773,59 +824,453 @@ defmodule AshGraphql.Resource do
           type: query_type(query, resource, query_action, type),
           __reference__: ref(__ENV__)
         }
+    end
+  end
+
+  @doc false
+  def mutation_entity_field_definition(
+        resource,
+        domain,
+        _all_domains,
+        mutation,
+        action_middleware,
+        schema,
+        relay_ids?
+      ) do
+    action =
+      Ash.Resource.Info.action(resource, mutation.action) ||
+        raise "No such action #{mutation.action} for #{inspect(resource)}"
+
+    if mutation.type == :action do
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        arguments: mutation_args(mutation, resource, action, schema),
+        identifier: mutation.name,
+        middleware:
+          action_middleware ++
+            domain_middleware(domain) ++
+            metadata_middleware(mutation.meta) ++
+            id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
+            [
+              {{AshGraphql.Graphql.Resolver, :resolve},
+               {domain, resource, mutation, mutation.args}}
+            ],
+        complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
+        module: schema,
+        name: to_string(mutation.name),
+        description: mutation.description || action.description,
+        type: generic_action_type(action, resource, domain, mutation),
+        __reference__: ref(__ENV__)
+      }
+    else
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        arguments: mutation_args(mutation, resource, action, schema),
+        identifier: mutation.name,
+        middleware:
+          action_middleware ++
+            domain_middleware(domain) ++
+            metadata_middleware(mutation.meta) ++
+            id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
+            [{{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}],
+        module: schema,
+        name: to_string(mutation.name),
+        description: mutation.description || action.description,
+        type: mutation_result_type(mutation.name, domain),
+        __reference__: ref(__ENV__)
+      }
+    end
+  end
+
+  @doc false
+  def mutation_field_definition(
+        resource,
+        domain,
+        all_domains,
+        %Query{} = query,
+        action_middleware,
+        schema,
+        relay_ids?
+      ) do
+    query_field_definition(
+      resource,
+      domain,
+      all_domains,
+      query,
+      action_middleware,
+      schema,
+      relay_ids?
+    )
+  end
+
+  def mutation_field_definition(
+        resource,
+        domain,
+        all_domains,
+        mutation,
+        action_middleware,
+        schema,
+        relay_ids?
+      ) do
+    mutation_entity_field_definition(
+      resource,
+      domain,
+      all_domains,
+      mutation,
+      action_middleware,
+      schema,
+      relay_ids?
+    )
+  end
+
+  @doc false
+  def all_query_root_fields(
+        domain,
+        all_domains,
+        resources,
+        action_middleware,
+        schema,
+        relay_ids?,
+        env
+      ) do
+    indexed =
+      Enum.flat_map(resources, fn resource ->
+        if AshGraphql.Resource in Spark.extensions(resource) do
+          resource
+          |> AshGraphql.Resource.Info.queries(all_domains)
+          |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == false))
+          |> Enum.map(&{resource, &1})
+        else
+          []
+        end
+      end)
+
+    {ungrouped, grouped} =
+      Enum.split_with(indexed, fn {_, q} -> is_nil(Map.get(q, :group)) end)
+
+    ungrouped_fields =
+      Enum.map(ungrouped, fn {resource, query} ->
+        query_field_definition(
+          resource,
+          domain,
+          all_domains,
+          query,
+          action_middleware,
+          schema,
+          relay_ids?
+        )
+      end)
+
+    group_roots =
+      grouped
+      |> Enum.group_by(fn {_, q} -> q.group end)
+      |> Enum.map(fn {group, pairs} ->
+        assert_no_duplicate_names_in_group!(pairs, group, :query)
+        root_query_group_field(group, pairs, domain, all_domains, action_middleware, schema, relay_ids?, env)
+      end)
+
+    ungrouped_fields ++ group_roots
+  end
+
+  @doc false
+  def all_mutation_root_fields(
+        domain,
+        all_domains,
+        resources,
+        action_middleware,
+        schema,
+        relay_ids?,
+        env
+      ) do
+    indexed =
+      Enum.flat_map(resources, fn resource ->
+        if AshGraphql.Resource in Spark.extensions(resource) do
+          mutations =
+            AshGraphql.Resource.Info.mutations(resource, all_domains)
+
+          as_mutations =
+            AshGraphql.Resource.Info.queries(resource, all_domains)
+            |> Enum.filter(&Map.get(&1, :as_mutation?, false))
+
+          Enum.map(mutations ++ as_mutations, &{resource, &1})
+        else
+          []
+        end
+      end)
+
+    {ungrouped, grouped} =
+      Enum.split_with(indexed, fn {_, m} -> is_nil(Map.get(m, :group)) end)
+
+    ungrouped_fields =
+      Enum.map(ungrouped, fn {resource, entity} ->
+        mutation_field_definition(
+          resource,
+          domain,
+          all_domains,
+          entity,
+          action_middleware,
+          schema,
+          relay_ids?
+        )
+      end)
+
+    group_roots =
+      grouped
+      |> Enum.group_by(fn {_, m} -> m.group end)
+      |> Enum.map(fn {group, pairs} ->
+        assert_no_duplicate_names_in_group!(pairs, group, :mutation)
+        root_mutation_group_field(group, pairs, domain, all_domains, action_middleware, schema, relay_ids?, env)
+      end)
+
+    ungrouped_fields ++ group_roots
+  end
+
+  @doc false
+  def group_wrapper_type_definitions(
+        resources,
+        domain,
+        all_domains,
+        action_middleware,
+        schema,
+        env,
+        relay_ids?
+      ) do
+    query_groups =
+      resources
+      |> Enum.flat_map(fn resource ->
+        resource
+        |> AshGraphql.Resource.Info.queries(all_domains)
+        |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == false && Map.get(&1, :group)))
+        |> Enum.map(&{resource, &1})
+      end)
+      |> Enum.group_by(fn {_, q} -> q.group end)
+
+    mutation_groups =
+      resources
+      |> Enum.flat_map(fn resource ->
+        mutations =
+          AshGraphql.Resource.Info.mutations(resource, all_domains)
+
+        as_mutations =
+          AshGraphql.Resource.Info.queries(resource, all_domains)
+          |> Enum.filter(&Map.get(&1, :as_mutation?, false))
+
+        Enum.map(mutations ++ as_mutations, &{resource, &1})
+      end)
+      |> Enum.filter(fn {_, m} -> Map.get(m, :group) end)
+      |> Enum.group_by(fn {_, m} -> m.group end)
+
+    Enum.map(query_groups, fn {group, pairs} ->
+      assert_no_duplicate_names_in_group!(pairs, group, :query)
+
+      fields =
+        Enum.map(pairs, fn {resource, query} ->
+          query_field_definition(
+            resource,
+            domain,
+            all_domains,
+            query,
+            action_middleware,
+            schema,
+            relay_ids?
+          )
+        end)
+
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        description: "Grouped query fields for `#{group}`",
+        fields: fields,
+        identifier: query_group_type_identifier(group),
+        module: schema,
+        name: graphql_query_group_type_name(group),
+        __reference__: ref(env)
+      }
     end)
+    ++
+      Enum.map(mutation_groups, fn {group, pairs} ->
+        assert_no_duplicate_names_in_group!(pairs, group, :mutation)
+
+        fields =
+          Enum.map(pairs, fn {resource, entity} ->
+            mutation_field_definition(
+              resource,
+              domain,
+              all_domains,
+              entity,
+              action_middleware,
+              schema,
+              relay_ids?
+            )
+          end)
+
+        %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+          description: "Grouped mutation fields for `#{group}`",
+          fields: fields,
+          identifier: mutation_group_type_identifier(group),
+          module: schema,
+          name: graphql_mutation_group_type_name(group),
+          __reference__: ref(env)
+        }
+      end)
+  end
+
+  defp assert_no_duplicate_names_in_group!(pairs, group, kind) do
+    pairs
+    |> Enum.map(fn {_, e} -> to_string(e.name) end)
+    |> Enum.frequencies()
+    |> Enum.each(fn
+      {_, 1} ->
+        :ok
+
+      {name, n} when n > 1 ->
+        resources =
+          pairs
+          |> Enum.filter(fn {_, e} -> to_string(e.name) == name end)
+          |> Enum.map(&elem(&1, 0))
+          |> Enum.uniq()
+
+        raise """
+        Duplicate GraphQL #{kind} field `#{name}` in #{kind} group `#{inspect(group)}` (resources: #{Enum.map_join(resources, ", ", &inspect/1)}).
+        """
+    end)
+  end
+
+  defp root_query_group_field(
+         group,
+         _pairs,
+         _domain,
+         all_domains,
+         _action_middleware,
+         schema,
+         _relay_ids?,
+         env
+       ) do
+    _ = all_domains
+
+    %Absinthe.Blueprint.Schema.FieldDefinition{
+      identifier: group,
+      middleware: [
+        {{AshGraphql.Graphql.Resolver, :resolve_group_root}, nil}
+      ],
+      module: schema,
+      name: to_string(group),
+      description: "Query group `#{group}`",
+      type:
+        %Absinthe.Blueprint.TypeReference.NonNull{
+          of_type: query_group_type_identifier(group)
+        },
+      __reference__: ref(env)
+    }
+  end
+
+  defp root_mutation_group_field(
+         group,
+         _pairs,
+         _domain,
+         all_domains,
+         _action_middleware,
+         schema,
+         _relay_ids?,
+         env
+       ) do
+    _ = all_domains
+
+    %Absinthe.Blueprint.Schema.FieldDefinition{
+      identifier: group,
+      middleware: [
+        {{AshGraphql.Graphql.Resolver, :resolve_mutation_group_root}, nil}
+      ],
+      module: schema,
+      name: to_string(group),
+      description: "Mutation group `#{group}`",
+      type:
+        %Absinthe.Blueprint.TypeReference.NonNull{
+          of_type: mutation_group_type_identifier(group)
+        },
+      __reference__: ref(env)
+    }
+  end
+
+  # Absinthe blueprint identifiers — same `String.to_atom("...#{name}")` style as `mutation_result_type/2`.
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp query_group_type_identifier(group) do
+    String.to_atom("ash_graphql_query_group_#{group}")
+  end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp mutation_group_type_identifier(group) do
+    String.to_atom("ash_graphql_mutation_group_#{group}")
+  end
+
+  defp graphql_query_group_type_name(group) do
+    Macro.camelize(to_string(group)) <> "QueryGroup"
+  end
+
+  defp graphql_mutation_group_type_name(group) do
+    Macro.camelize(to_string(group)) <> "MutationGroup"
+  end
+
+  @doc false
+  def queries(
+        domain,
+        all_domains,
+        resource,
+        action_middleware,
+        schema,
+        relay_ids?,
+        as_mutations? \\ false
+      ) do
+    resource
+    |> queries(all_domains)
+    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
+    |> Enum.filter(&(Map.get(&1, :group) == nil))
+    |> Enum.map(
+      &query_field_definition(
+        resource,
+        domain,
+        all_domains,
+        &1,
+        action_middleware,
+        schema,
+        relay_ids?
+      )
+    )
   end
 
   @doc false
   def mutations(domain, all_domains, resource, action_middleware, schema, relay_ids?) do
-    resource
-    |> mutations(all_domains)
-    |> Enum.map(fn mutation ->
-      action =
-        Ash.Resource.Info.action(resource, mutation.action) ||
-          raise "No such action #{mutation.action} for #{inspect(resource)}"
+    regular =
+      resource
+      |> mutations(all_domains)
+      |> Enum.filter(&(Map.get(&1, :group) == nil))
+      |> Enum.map(
+        &mutation_entity_field_definition(
+          resource,
+          domain,
+          all_domains,
+          &1,
+          action_middleware,
+          schema,
+          relay_ids?
+        )
+      )
 
-      if mutation.type == :action do
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: mutation_args(mutation, resource, action, schema),
-          identifier: mutation.name,
-          middleware:
-            action_middleware ++
-              domain_middleware(domain) ++
-              metadata_middleware(mutation.meta) ++
-              id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-              [
-                {{AshGraphql.Graphql.Resolver, :resolve},
-                 {domain, resource, mutation, mutation.args}}
-              ],
-          complexity: {AshGraphql.Graphql.Resolver, :query_complexity},
-          module: schema,
-          name: to_string(mutation.name),
-          description: mutation.description || action.description,
-          type: generic_action_type(action, resource, domain, mutation),
-          __reference__: ref(__ENV__)
-        }
-      else
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          arguments: mutation_args(mutation, resource, action, schema),
-          identifier: mutation.name,
-          middleware:
-            action_middleware ++
-              domain_middleware(domain) ++
-              metadata_middleware(mutation.meta) ++
-              id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
-              [{{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}],
-          module: schema,
-          name: to_string(mutation.name),
-          description: mutation.description || action.description,
-          type: mutation_result_type(mutation.name, domain),
-          __reference__: ref(__ENV__)
-        }
-      end
-    end)
-    |> Enum.concat(
-      queries(domain, all_domains, resource, action_middleware, schema, relay_ids?, true)
-    )
+    as_mutations =
+      resource
+      |> queries(all_domains)
+      |> Enum.filter(
+        &(Map.get(&1, :as_mutation?, false) && Map.get(&1, :group) == nil)
+      )
+      |> Enum.map(
+        &query_field_definition(
+          resource,
+          domain,
+          all_domains,
+          &1,
+          action_middleware,
+          schema,
+          relay_ids?
+        )
+      )
+
+    regular ++ as_mutations
   end
 
   # sobelow_skip ["DOS.StringToAtom"]

@@ -235,15 +235,17 @@ defmodule AshGraphql.Domain do
 
   @doc false
   def queries(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
-    Enum.flat_map(
-      resources,
-      &AshGraphql.Resource.queries(
+    resources
+    |> Enum.filter(&(AshGraphql.Resource in Spark.extensions(&1)))
+    |> then(
+      &AshGraphql.Resource.all_query_root_fields(
         domain,
         all_domains,
         &1,
         action_middleware,
         schema,
-        relay_ids?
+        relay_ids?,
+        __ENV__
       )
     )
   end
@@ -251,17 +253,16 @@ defmodule AshGraphql.Domain do
   @doc false
   def mutations(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
     resources
-    |> Enum.filter(fn resource ->
-      AshGraphql.Resource in Spark.extensions(resource)
-    end)
-    |> Enum.flat_map(
-      &AshGraphql.Resource.mutations(
+    |> Enum.filter(&(AshGraphql.Resource in Spark.extensions(&1)))
+    |> then(
+      &AshGraphql.Resource.all_mutation_root_fields(
         domain,
         all_domains,
         &1,
         action_middleware,
         schema,
-        relay_ids?
+        relay_ids?,
+        __ENV__
       )
     )
   end
@@ -292,8 +293,14 @@ defmodule AshGraphql.Domain do
         env,
         first?,
         define_relay_types?,
-        relay_ids?
+        relay_ids?,
+        action_middleware \\ []
       ) do
+    graphql_resources =
+      resources
+      |> Enum.reject(&Ash.Resource.Info.embedded?/1)
+      |> Enum.filter(&(AshGraphql.Resource in Spark.extensions(&1)))
+
     resource_types =
       resources
       |> Enum.reject(&Ash.Resource.Info.embedded?/1)
@@ -313,6 +320,19 @@ defmodule AshGraphql.Domain do
           AshGraphql.Resource.no_graphql_types(resource, schema)
         end
       end)
+
+    group_wrapper_types =
+      AshGraphql.Resource.group_wrapper_type_definitions(
+        graphql_resources,
+        domain,
+        all_domains,
+        action_middleware,
+        schema,
+        env,
+        relay_ids?
+      )
+
+    resource_types = resource_types ++ group_wrapper_types
 
     if first? do
       relay_types =
