@@ -377,7 +377,7 @@ defmodule AshGraphql do
                   (type_definitions ++ managed_relationship_types)
                   |> Enum.reject(fn type ->
                     Enum.any?(schema_def.type_definitions, fn existing ->
-                      existing.identifier == type.identifier and existing == type
+                      existing == type
                     end)
                   end)
 
