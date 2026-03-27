@@ -370,11 +370,21 @@ defmodule AshGraphql do
 
             new_defs =
               List.update_at(blueprint_with_subscriptions.schema_definitions, 0, fn schema_def ->
+                # Deduplicate only structurally identical types — if two types
+                # share an identifier but differ in structure, let Absinthe's
+                # TypeNamesAreUnique phase report the conflict.
+                new_types =
+                  (type_definitions ++ managed_relationship_types)
+                  |> Enum.reject(fn type ->
+                    Enum.any?(schema_def.type_definitions, fn existing ->
+                      existing.identifier == type.identifier and existing == type
+                    end)
+                  end)
+
                 %{
                   schema_def
                   | type_definitions:
-                      schema_def.type_definitions ++
-                        type_definitions ++ managed_relationship_types
+                      schema_def.type_definitions ++ new_types
                 }
               end)
 
