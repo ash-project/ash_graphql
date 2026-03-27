@@ -199,7 +199,7 @@ defmodule AshGraphql do
       end
 
       for {domain, resources, first?} <- domains do
-        defmodule Module.concat(domain, AshTypes) do
+        defmodule Module.concat([__MODULE__, domain, AshTypes]) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
 
@@ -386,7 +386,7 @@ defmodule AshGraphql do
           Code.eval_quoted(auto_import_types, [], __ENV__)
         end
 
-        @pipeline_modifier Module.concat(domain, AshTypes)
+        @pipeline_modifier Module.concat([__MODULE__, domain, AshTypes])
       end
     end
   end
