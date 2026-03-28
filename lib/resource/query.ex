@@ -17,6 +17,7 @@ defmodule AshGraphql.Resource.Query do
     :complexity,
     :__spark_metadata__,
     as_mutation?: false,
+    group: nil,
     hide_inputs: [],
     metadata_names: [],
     metadata_types: [],
@@ -99,6 +100,10 @@ defmodule AshGraphql.Resource.Query do
       type: :keyword_list,
       doc: "A keyword list of metadata for the query.",
       default: []
+    ],
+    group: [
+      type: :atom,
+      doc: "An optional grouping key used to nest this query under a group wrapper."
     ]
   ]
 

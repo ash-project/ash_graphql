@@ -73,5 +73,6 @@ defmodule AshGraphql.Test.Domain do
     resource(AshGraphql.Test.AfterTransactionEts)
     resource(AshGraphql.Test.AfterTransactionMnesia)
     resource(AshGraphql.Test.TagWithIlike)
+    resource(AshGraphql.Test.GroupedQueriesResource)
   end
 end

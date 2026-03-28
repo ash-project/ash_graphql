@@ -3380,4 +3380,12 @@ defmodule AshGraphql.Graphql.Resolver do
        end
      end)}
   end
+
+  def resolve_group_root(resolution, _) do
+    Absinthe.Resolution.put_result(resolution, {:ok, %{}})
+  end
+
+  def resolve_mutation_group_root(resolution, _) do
+    Absinthe.Resolution.put_result(resolution, {:ok, %{}})
+  end
 end
