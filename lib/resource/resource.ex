@@ -1383,6 +1383,7 @@ defmodule AshGraphql.Resource do
           end
         end
       end)
+      |> Enum.sort_by(& &1.name)
 
     unless Enum.empty?(fields) do
       name = "#{AshGraphql.Resource.Info.type(source_resource)}_#{attribute.name}_input"
