@@ -1258,5 +1258,34 @@ defmodule AshGraphql.ErrorsTest do
 
       assert [%{code: "forbidden", fields: [], path: ["input", "nested"]}] = errors
     end
+
+    test "path resolves through {:array, :map} argument without crashing" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(
+          field: :text,
+          message: "invalid"
+        )
+        |> Ash.Error.set_path([:comments, 0])
+
+      action = Ash.Resource.Info.action(AshGraphql.Test.Post, :with_comments)
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.Post,
+          action,
+          ["input"]
+        )
+
+      assert [
+               %{
+                 code: "invalid_attribute",
+                 fields: [:text],
+                 path: ["input", "comments", "0", "text"]
+               }
+             ] = errors
+    end
   end
 end
