@@ -19,7 +19,8 @@ defmodule AshGraphql.Resource.Mutation do
     :__spark_metadata__,
     args: [],
     hide_inputs: [],
-    meta: []
+    meta: [],
+    group: nil
   ]
 
   @mutation_schema [
@@ -65,6 +66,10 @@ defmodule AshGraphql.Resource.Mutation do
       type: :keyword_list,
       doc: "A keyword list of metadata for the mutation.",
       default: []
+    ],
+    group: [
+      type: :atom,
+      doc: "An optional grouping key used to nest this mutation under a group wrapper."
     ]
   ]
 

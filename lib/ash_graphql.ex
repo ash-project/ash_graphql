@@ -347,7 +347,8 @@ defmodule AshGraphql do
                       __ENV__,
                       true,
                       unquote(define_relay_types?),
-                      unquote(relay_ids?)
+                      unquote(relay_ids?),
+                      action_middleware
                     ) ++
                     global_maps ++
                     global_enums ++
@@ -364,7 +365,8 @@ defmodule AshGraphql do
                   __ENV__,
                   false,
                   false,
-                  unquote(relay_ids?)
+                  unquote(relay_ids?),
+                  action_middleware
                 )
               end
 

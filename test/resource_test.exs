@@ -28,6 +28,63 @@ defmodule AshGraphql.ResourceTest do
     assert %{data: %{"noObjectCount" => [1, 2, 3, 4, 5]}} = result
   end
 
+  test "grouped graphql queries expose a root query field for the group" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          queryType {
+            fields {
+              name
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    names =
+      data["__schema"]["queryType"]["fields"]
+      |> Enum.map(& &1["name"])
+
+    assert "content" in names
+  end
+
+  test "grouped graphql query fields are not on root Query; they appear only on the group type" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __schema {
+          queryType {
+            fields {
+              name
+            }
+          }
+        }
+        groupType: __type(name: "ContentQueryGroup") {
+          fields {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    root_names =
+      data["__schema"]["queryType"]["fields"]
+      |> Enum.map(& &1["name"])
+
+    refute "gqUniqueItems" in root_names
+    refute "gqUniqueStats" in root_names
+
+    group_field_names =
+      data["groupType"]["fields"]
+      |> Enum.map(& &1["name"])
+
+    assert "gqUniqueItems" in group_field_names
+    assert "gqUniqueStats" in group_field_names
+  end
+
   test "queries can be created with custom descriptions" do
     {:ok, %{data: data}} =
       """
