@@ -9,7 +9,8 @@ defmodule AshGraphql.FlattenQueryMutationGroupsTest do
   alias Spark.Dsl.Extension
 
   test "flattening assigns the same group to list queries and query actions under group" do
-    entities = Extension.get_entities(AshGraphql.Test.GroupedQueriesResource, [:graphql, :queries])
+    entities =
+      Extension.get_entities(AshGraphql.Test.GroupedQueriesResource, [:graphql, :queries])
 
     assert length(entities) == 2
 

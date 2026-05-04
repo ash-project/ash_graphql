@@ -16,11 +16,21 @@ Configuration for a given resource in graphql
    * read_one
    * list
    * action
+   * group
+     * get
+     * read_one
+     * list
+     * action
  * [mutations](#graphql-mutations)
    * create
    * update
    * destroy
    * action
+   * group
+     * create
+     * update
+     * destroy
+     * action
  * [subscriptions](#graphql-subscriptions)
    * subscribe
  * [managed_relationships](#graphql-managed_relationships)
@@ -86,6 +96,11 @@ Queries (read actions) to expose for the resource.
  * [read_one](#graphql-queries-read_one)
  * [list](#graphql-queries-list)
  * [action](#graphql-queries-action)
+ * [group](#graphql-queries-group)
+   * get
+   * read_one
+   * list
+   * action
 
 
 ### Examples
@@ -141,6 +156,7 @@ get :get_post, :read
 | [`complexity`](#graphql-queries-get-complexity){: #graphql-queries-get-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-queries-get-meta){: #graphql-queries-get-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-get-group){: #graphql-queries-get-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
 
 
 
@@ -189,6 +205,7 @@ read_one :current_user, :current_user
 | [`complexity`](#graphql-queries-read_one-complexity){: #graphql-queries-read_one-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-read_one-modify_resolution){: #graphql-queries-read_one-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-queries-read_one-meta){: #graphql-queries-read_one-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-read_one-group){: #graphql-queries-read_one-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
 
 
 
@@ -242,6 +259,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`complexity`](#graphql-queries-list-complexity){: #graphql-queries-list-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-list-modify_resolution){: #graphql-queries-list-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-queries-list-meta){: #graphql-queries-list-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-list-group){: #graphql-queries-list-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
 
 
 
@@ -293,6 +311,231 @@ action :check_status, :check_status
 
 Target: `AshGraphql.Resource.Action`
 
+### graphql.queries.group
+```elixir
+group name
+```
+
+
+A grouping construct for queries. All queries defined inside will be exposed under a GraphQL object field with this name.
+
+
+### Nested DSLs
+ * [get](#graphql-queries-group-get)
+ * [read_one](#graphql-queries-group-read_one)
+ * [list](#graphql-queries-group-list)
+ * [action](#graphql-queries-group-action)
+
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-queries-group-name){: #graphql-queries-group-name .spark-required} | `atom` |  | The GraphQL field name for this group on the root query type. |
+
+
+
+### graphql.queries.group.get
+```elixir
+get name, action
+```
+
+
+A query to fetch a record by primary key
+
+
+
+### Examples
+```
+get :get_post, :read
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-queries-group-get-name){: #graphql-queries-group-get-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-group-get-action){: #graphql-queries-group-get-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`identity`](#graphql-queries-group-get-identity){: #graphql-queries-group-get-identity } | `atom` |  | The identity to use for looking up the record. Pass `false` to not use an identity. |
+| [`allow_nil?`](#graphql-queries-group-get-allow_nil?){: #graphql-queries-group-get-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
+| [`type_name`](#graphql-queries-group-get-type_name){: #graphql-queries-group-get-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-group-get-description){: #graphql-queries-group-get-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`metadata_names`](#graphql-queries-group-get-metadata_names){: #graphql-queries-group-get-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
+| [`metadata_types`](#graphql-queries-group-get-metadata_types){: #graphql-queries-group-get-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
+| [`show_metadata`](#graphql-queries-group-get-show_metadata){: #graphql-queries-group-get-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
+| [`as_mutation?`](#graphql-queries-group-get-as_mutation?){: #graphql-queries-group-get-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-group-get-relay_id_translations){: #graphql-queries-group-get-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-queries-group-get-hide_inputs){: #graphql-queries-group-get-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`complexity`](#graphql-queries-group-get-complexity){: #graphql-queries-group-get-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
+| [`modify_resolution`](#graphql-queries-group-get-modify_resolution){: #graphql-queries-group-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-queries-group-get-meta){: #graphql-queries-group-get-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-group-get-group){: #graphql-queries-group-get-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Query`
+
+### graphql.queries.group.read_one
+```elixir
+read_one name, action
+```
+
+
+A query to fetch a record
+
+
+
+### Examples
+```
+read_one :current_user, :current_user
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-queries-group-read_one-name){: #graphql-queries-group-read_one-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-group-read_one-action){: #graphql-queries-group-read_one-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`allow_nil?`](#graphql-queries-group-read_one-allow_nil?){: #graphql-queries-group-read_one-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
+| [`type_name`](#graphql-queries-group-read_one-type_name){: #graphql-queries-group-read_one-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-group-read_one-description){: #graphql-queries-group-read_one-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`metadata_names`](#graphql-queries-group-read_one-metadata_names){: #graphql-queries-group-read_one-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
+| [`metadata_types`](#graphql-queries-group-read_one-metadata_types){: #graphql-queries-group-read_one-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
+| [`show_metadata`](#graphql-queries-group-read_one-show_metadata){: #graphql-queries-group-read_one-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
+| [`as_mutation?`](#graphql-queries-group-read_one-as_mutation?){: #graphql-queries-group-read_one-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-group-read_one-relay_id_translations){: #graphql-queries-group-read_one-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-queries-group-read_one-hide_inputs){: #graphql-queries-group-read_one-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`complexity`](#graphql-queries-group-read_one-complexity){: #graphql-queries-group-read_one-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
+| [`modify_resolution`](#graphql-queries-group-read_one-modify_resolution){: #graphql-queries-group-read_one-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-queries-group-read_one-meta){: #graphql-queries-group-read_one-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-group-read_one-group){: #graphql-queries-group-read_one-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Query`
+
+### graphql.queries.group.list
+```elixir
+list name, action
+```
+
+
+A query to fetch a list of records
+
+
+
+### Examples
+```
+list :list_posts, :read
+```
+
+```
+list :list_posts_paginated, :read, relay?: true
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-queries-group-list-name){: #graphql-queries-group-list-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-group-list-action){: #graphql-queries-group-list-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`relay?`](#graphql-queries-group-list-relay?){: #graphql-queries-group-list-relay? } | `boolean` | `false` | If true, the graphql queries/resolvers for this resource will be built to honor the relay specification. See [the relay guide](/documentation/topics/relay.html) for more. |
+| [`paginate_with`](#graphql-queries-group-list-paginate_with){: #graphql-queries-group-list-paginate_with } | `:keyset \| :offset \| nil` | `:keyset` | Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used. |
+| [`type_name`](#graphql-queries-group-list-type_name){: #graphql-queries-group-list-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
+| [`description`](#graphql-queries-group-list-description){: #graphql-queries-group-list-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`metadata_names`](#graphql-queries-group-list-metadata_names){: #graphql-queries-group-list-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
+| [`metadata_types`](#graphql-queries-group-list-metadata_types){: #graphql-queries-group-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
+| [`show_metadata`](#graphql-queries-group-list-show_metadata){: #graphql-queries-group-list-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
+| [`as_mutation?`](#graphql-queries-group-list-as_mutation?){: #graphql-queries-group-list-as_mutation? } | `boolean` | `false` | Places the query in the `mutations` key instead. Not typically necessary, but is often paired with `as_mutation?`. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-group-list-relay_id_translations){: #graphql-queries-group-list-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`hide_inputs`](#graphql-queries-group-list-hide_inputs){: #graphql-queries-group-list-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the mutation. |
+| [`complexity`](#graphql-queries-group-list-complexity){: #graphql-queries-group-list-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
+| [`modify_resolution`](#graphql-queries-group-list-modify_resolution){: #graphql-queries-group-list-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-queries-group-list-meta){: #graphql-queries-group-list-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-group-list-group){: #graphql-queries-group-list-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Query`
+
+### graphql.queries.group.action
+```elixir
+action name, action
+```
+
+
+Runs a generic action
+
+
+
+### Examples
+```
+action :check_status, :check_status
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-queries-group-action-name){: #graphql-queries-group-action-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-queries-group-action-action){: #graphql-queries-group-action-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`description`](#graphql-queries-group-action-description){: #graphql-queries-group-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`hide_inputs`](#graphql-queries-group-action-hide_inputs){: #graphql-queries-group-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
+| [`error_location`](#graphql-queries-group-action-error_location){: #graphql-queries-group-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
+| [`modify_resolution`](#graphql-queries-group-action-modify_resolution){: #graphql-queries-group-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-queries-group-action-relay_id_translations){: #graphql-queries-group-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`meta`](#graphql-queries-group-action-meta){: #graphql-queries-group-action-meta } | `keyword` | `[]` | A keyword list of metadata for the action. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Action`
+
+
+
+
+
 
 ### graphql.mutations
 Mutations (create/update/destroy actions) to expose for the resource.
@@ -303,6 +546,11 @@ Mutations (create/update/destroy actions) to expose for the resource.
  * [update](#graphql-mutations-update)
  * [destroy](#graphql-mutations-destroy)
  * [action](#graphql-mutations-action)
+ * [group](#graphql-mutations-group)
+   * create
+   * update
+   * destroy
+   * action
 
 
 ### Examples
@@ -353,6 +601,7 @@ create :create_post, :create
 | [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-create-meta){: #graphql-mutations-create-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-create-group){: #graphql-mutations-create-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
 
 
 
@@ -397,6 +646,7 @@ update :update_post, :update
 | [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-update-modify_resolution){: #graphql-mutations-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-update-meta){: #graphql-mutations-update-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-update-group){: #graphql-mutations-update-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
 
 
 
@@ -441,6 +691,7 @@ destroy :destroy_post, :destroy
 | [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-destroy-modify_resolution){: #graphql-mutations-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-destroy-meta){: #graphql-mutations-destroy-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-destroy-group){: #graphql-mutations-destroy-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
 
 
 
@@ -492,6 +743,214 @@ action :check_status, :check_status
 ### Introspection
 
 Target: `AshGraphql.Resource.Action`
+
+### graphql.mutations.group
+```elixir
+group name
+```
+
+
+A grouping construct for mutations. All mutations defined inside will be exposed under a GraphQL object field with this name.
+
+
+### Nested DSLs
+ * [create](#graphql-mutations-group-create)
+ * [update](#graphql-mutations-group-update)
+ * [destroy](#graphql-mutations-group-destroy)
+ * [action](#graphql-mutations-group-action)
+
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-mutations-group-name){: #graphql-mutations-group-name .spark-required} | `atom` |  | The GraphQL field name for this group on the root mutation type. |
+
+
+
+### graphql.mutations.group.create
+```elixir
+create name, action
+```
+
+
+A mutation to create a record
+
+
+
+### Examples
+```
+create :create_post, :create
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-mutations-group-create-name){: #graphql-mutations-group-create-name } | `atom` | `:get` | The name to use for the mutation. |
+| [`action`](#graphql-mutations-group-create-action){: #graphql-mutations-group-create-action .spark-required} | `atom` |  | The action to use for the mutation. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`upsert?`](#graphql-mutations-group-create-upsert?){: #graphql-mutations-group-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
+| [`upsert_identity`](#graphql-mutations-group-create-upsert_identity){: #graphql-mutations-group-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
+| [`description`](#graphql-mutations-group-create-description){: #graphql-mutations-group-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`relay_id_translations`](#graphql-mutations-group-create-relay_id_translations){: #graphql-mutations-group-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-group-create-args){: #graphql-mutations-group-create-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
+| [`hide_inputs`](#graphql-mutations-group-create-hide_inputs){: #graphql-mutations-group-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`modify_resolution`](#graphql-mutations-group-create-modify_resolution){: #graphql-mutations-group-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-mutations-group-create-meta){: #graphql-mutations-group-create-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-group-create-group){: #graphql-mutations-group-create-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Mutation`
+
+### graphql.mutations.group.update
+```elixir
+update name, action
+```
+
+
+A mutation to update a record
+
+
+
+### Examples
+```
+update :update_post, :update
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-mutations-group-update-name){: #graphql-mutations-group-update-name } | `atom` | `:get` | The name to use for the mutation. |
+| [`action`](#graphql-mutations-group-update-action){: #graphql-mutations-group-update-action .spark-required} | `atom` |  | The action to use for the mutation. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`identity`](#graphql-mutations-group-update-identity){: #graphql-mutations-group-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
+| [`read_action`](#graphql-mutations-group-update-read_action){: #graphql-mutations-group-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
+| [`description`](#graphql-mutations-group-update-description){: #graphql-mutations-group-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`relay_id_translations`](#graphql-mutations-group-update-relay_id_translations){: #graphql-mutations-group-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-group-update-args){: #graphql-mutations-group-update-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
+| [`hide_inputs`](#graphql-mutations-group-update-hide_inputs){: #graphql-mutations-group-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`modify_resolution`](#graphql-mutations-group-update-modify_resolution){: #graphql-mutations-group-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-mutations-group-update-meta){: #graphql-mutations-group-update-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-group-update-group){: #graphql-mutations-group-update-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Mutation`
+
+### graphql.mutations.group.destroy
+```elixir
+destroy name, action
+```
+
+
+A mutation to destroy a record
+
+
+
+### Examples
+```
+destroy :destroy_post, :destroy
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-mutations-group-destroy-name){: #graphql-mutations-group-destroy-name } | `atom` | `:get` | The name to use for the mutation. |
+| [`action`](#graphql-mutations-group-destroy-action){: #graphql-mutations-group-destroy-action .spark-required} | `atom` |  | The action to use for the mutation. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`identity`](#graphql-mutations-group-destroy-identity){: #graphql-mutations-group-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
+| [`read_action`](#graphql-mutations-group-destroy-read_action){: #graphql-mutations-group-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
+| [`description`](#graphql-mutations-group-destroy-description){: #graphql-mutations-group-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`relay_id_translations`](#graphql-mutations-group-destroy-relay_id_translations){: #graphql-mutations-group-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`args`](#graphql-mutations-group-destroy-args){: #graphql-mutations-group-destroy-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
+| [`hide_inputs`](#graphql-mutations-group-destroy-hide_inputs){: #graphql-mutations-group-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
+| [`modify_resolution`](#graphql-mutations-group-destroy-modify_resolution){: #graphql-mutations-group-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`meta`](#graphql-mutations-group-destroy-meta){: #graphql-mutations-group-destroy-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-group-destroy-group){: #graphql-mutations-group-destroy-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Mutation`
+
+### graphql.mutations.group.action
+```elixir
+action name, action
+```
+
+
+Runs a generic action
+
+
+
+### Examples
+```
+action :check_status, :check_status
+```
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#graphql-mutations-group-action-name){: #graphql-mutations-group-action-name } | `atom` | `:get` | The name to use for the query. |
+| [`action`](#graphql-mutations-group-action-action){: #graphql-mutations-group-action-action .spark-required} | `atom` |  | The action to use for the query. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`description`](#graphql-mutations-group-action-description){: #graphql-mutations-group-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`hide_inputs`](#graphql-mutations-group-action-hide_inputs){: #graphql-mutations-group-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
+| [`error_location`](#graphql-mutations-group-action-error_location){: #graphql-mutations-group-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
+| [`modify_resolution`](#graphql-mutations-group-action-modify_resolution){: #graphql-mutations-group-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
+| [`relay_id_translations`](#graphql-mutations-group-action-relay_id_translations){: #graphql-mutations-group-action-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
+| [`meta`](#graphql-mutations-group-action-meta){: #graphql-mutations-group-action-meta } | `keyword` | `[]` | A keyword list of metadata for the action. |
+| [`args`](#graphql-mutations-group-action-args){: #graphql-mutations-group-action-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
+
+
+
+
+
+### Introspection
+
+Target: `AshGraphql.Resource.Action`
+
+
+
+
 
 
 ### graphql.subscriptions

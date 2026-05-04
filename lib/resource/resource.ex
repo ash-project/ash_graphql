@@ -6,7 +6,15 @@ defmodule AshGraphql.Resource do
   alias Ash.Changeset.ManagedRelationshipHelpers
   alias Ash.Query.Aggregate
   alias AshGraphql.Resource
-  alias AshGraphql.Resource.{ManagedRelationship, Mutation, MutationGroup, Query, QueryGroup, Subscription}
+
+  alias AshGraphql.Resource.{
+    ManagedRelationship,
+    Mutation,
+    MutationGroup,
+    Query,
+    QueryGroup,
+    Subscription
+  }
 
   @get %Spark.Dsl.Entity{
     name: :get,
@@ -965,7 +973,17 @@ defmodule AshGraphql.Resource do
       |> Enum.group_by(fn {_, q} -> q.group end)
       |> Enum.map(fn {group, pairs} ->
         assert_no_duplicate_names_in_group!(pairs, group, :query)
-        root_query_group_field(group, pairs, domain, all_domains, action_middleware, schema, relay_ids?, env)
+
+        root_query_group_field(
+          group,
+          pairs,
+          domain,
+          all_domains,
+          action_middleware,
+          schema,
+          relay_ids?,
+          env
+        )
       end)
 
     ungrouped_fields ++ group_roots
@@ -1018,7 +1036,17 @@ defmodule AshGraphql.Resource do
       |> Enum.group_by(fn {_, m} -> m.group end)
       |> Enum.map(fn {group, pairs} ->
         assert_no_duplicate_names_in_group!(pairs, group, :mutation)
-        root_mutation_group_field(group, pairs, domain, all_domains, action_middleware, schema, relay_ids?, env)
+
+        root_mutation_group_field(
+          group,
+          pairs,
+          domain,
+          all_domains,
+          action_middleware,
+          schema,
+          relay_ids?,
+          env
+        )
       end)
 
     ungrouped_fields ++ group_roots
@@ -1083,8 +1111,7 @@ defmodule AshGraphql.Resource do
         name: graphql_query_group_type_name(group),
         __reference__: ref(env)
       }
-    end)
-    ++
+    end) ++
       Enum.map(mutation_groups, fn {group, pairs} ->
         assert_no_duplicate_names_in_group!(pairs, group, :mutation)
 
@@ -1153,10 +1180,9 @@ defmodule AshGraphql.Resource do
       module: schema,
       name: to_string(group),
       description: "Query group `#{group}`",
-      type:
-        %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: query_group_type_identifier(group)
-        },
+      type: %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: query_group_type_identifier(group)
+      },
       __reference__: ref(env)
     }
   end
@@ -1181,10 +1207,9 @@ defmodule AshGraphql.Resource do
       module: schema,
       name: to_string(group),
       description: "Mutation group `#{group}`",
-      type:
-        %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: mutation_group_type_identifier(group)
-        },
+      type: %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: mutation_group_type_identifier(group)
+      },
       __reference__: ref(env)
     }
   end
@@ -1220,8 +1245,7 @@ defmodule AshGraphql.Resource do
       ) do
     resource
     |> queries(all_domains)
-    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations?))
-    |> Enum.filter(&(Map.get(&1, :group) == nil))
+    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group == nil)))
     |> Enum.map(
       &query_field_definition(
         resource,
@@ -1256,9 +1280,7 @@ defmodule AshGraphql.Resource do
     as_mutations =
       resource
       |> queries(all_domains)
-      |> Enum.filter(
-        &(Map.get(&1, :as_mutation?, false) && Map.get(&1, :group) == nil)
-      )
+      |> Enum.filter(&(Map.get(&1, :as_mutation?, false) && Map.get(&1, :group) == nil))
       |> Enum.map(
         &query_field_definition(
           resource,

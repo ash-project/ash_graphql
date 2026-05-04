@@ -53,7 +53,8 @@ defmodule AshGraphql.Resource.Transformers.FlattenQueryMutationGroups do
       %QueryGroup{} ->
         raise Spark.Error.DslError,
           module: module,
-          message: "Nested `group` inside `queries` is not supported (only one level of grouping is allowed)."
+          message:
+            "Nested `group` inside `queries` is not supported (only one level of grouping is allowed)."
 
       %MutationGroup{} ->
         raise Spark.Error.DslError,
@@ -88,7 +89,8 @@ defmodule AshGraphql.Resource.Transformers.FlattenQueryMutationGroups do
       %MutationGroup{} ->
         raise Spark.Error.DslError,
           module: module,
-          message: "Nested `group` inside `mutations` is not supported (only one level of grouping is allowed)."
+          message:
+            "Nested `group` inside `mutations` is not supported (only one level of grouping is allowed)."
 
       %QueryGroup{} ->
         raise Spark.Error.DslError,

@@ -38,6 +38,8 @@ spark_locals_without_parens = [
   get: 2,
   get: 3,
   get: 4,
+  group: 1,
+  group: 2,
   hide_fields: 1,
   hide_inputs: 1,
   identity: 1,

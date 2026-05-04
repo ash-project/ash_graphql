@@ -112,6 +112,7 @@ get :get_post, :read
 | [`complexity`](#graphql-queries-get-complexity){: #graphql-queries-get-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-get-modify_resolution){: #graphql-queries-get-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-queries-get-meta){: #graphql-queries-get-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-get-group){: #graphql-queries-get-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
 
 
 
@@ -161,6 +162,7 @@ read_one :current_user, :current_user
 | [`complexity`](#graphql-queries-read_one-complexity){: #graphql-queries-read_one-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-read_one-modify_resolution){: #graphql-queries-read_one-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-queries-read_one-meta){: #graphql-queries-read_one-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-read_one-group){: #graphql-queries-read_one-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
 
 
 
@@ -215,6 +217,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`complexity`](#graphql-queries-list-complexity){: #graphql-queries-list-complexity } | `{module, list(any)}` | `{AshGraphql.Graphql.Resolver, :query_complexity}` | An {module, function} that will be called with the arguments and complexity value of the child fields query. It should return the complexity of this query. |
 | [`modify_resolution`](#graphql-queries-list-modify_resolution){: #graphql-queries-list-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-queries-list-meta){: #graphql-queries-list-meta } | `keyword` | `[]` | A keyword list of metadata for the query. |
+| [`group`](#graphql-queries-list-group){: #graphql-queries-list-group } | `atom` |  | An optional grouping key used to nest this query under a group wrapper. |
 
 
 
@@ -328,6 +331,7 @@ create :create_post, :create
 | [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-create-meta){: #graphql-mutations-create-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-create-group){: #graphql-mutations-create-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
 
 
 
@@ -373,6 +377,7 @@ update :update_post, :update
 | [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-update-modify_resolution){: #graphql-mutations-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-update-meta){: #graphql-mutations-update-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-update-group){: #graphql-mutations-update-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
 
 
 
@@ -418,6 +423,7 @@ destroy :destroy_post, :destroy
 | [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
 | [`modify_resolution`](#graphql-mutations-destroy-modify_resolution){: #graphql-mutations-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-destroy-meta){: #graphql-mutations-destroy-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
+| [`group`](#graphql-mutations-destroy-group){: #graphql-mutations-destroy-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
 
 
 
