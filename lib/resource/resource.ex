@@ -3105,6 +3105,17 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  # Operator and function names are atoms like `:eq`, `:string_starts_with?`,
+  # `:contains`. Predicate variants end in `?`, which isn't a legal character
+  # in GraphQL field names (per the spec, names must match
+  # `[_A-Za-z][_0-9A-Za-z]*`). Strip the trailing `?` so the schema is valid;
+  # the identifier stays as the original atom for internal lookups.
+  defp graphql_safe_predicate_name(name) do
+    name
+    |> to_string()
+    |> String.trim_trailing("?")
+  end
+
   defp filter_fields(
          operator,
          type,
@@ -3120,7 +3131,7 @@ defmodule AshGraphql.Resource do
         %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: operator.name(),
           module: schema,
-          name: to_string(operator.name()),
+          name: graphql_safe_predicate_name(operator.name()),
           type: field_type(type, attribute_or_aggregate, resource, true),
           __reference__: ref(__ENV__)
         }
@@ -3170,7 +3181,7 @@ defmodule AshGraphql.Resource do
             %Absinthe.Blueprint.Schema.FieldDefinition{
               identifier: operator.name(),
               module: schema,
-              name: to_string(operator.name()),
+              name: graphql_safe_predicate_name(operator.name()),
               type: field_type(type, attribute_or_aggregate, resource, true),
               __reference__: ref(__ENV__)
             }
