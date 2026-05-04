@@ -1245,7 +1245,7 @@ defmodule AshGraphql.Resource do
       ) do
     resource
     |> queries(all_domains)
-    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group == nil)))
+    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group) == nil))
     |> Enum.map(
       &query_field_definition(
         resource,
