@@ -1245,7 +1245,9 @@ defmodule AshGraphql.Resource do
       ) do
     resource
     |> queries(all_domains)
-    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group) == nil))
+    |> Enum.filter(
+      &(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group) == nil)
+    )
     |> Enum.map(
       &query_field_definition(
         resource,
@@ -3573,6 +3575,14 @@ defmodule AshGraphql.Resource do
            attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
         attr
       end
+
+    if aggregate.field && is_nil(attribute) do
+      raise Spark.Error.DslError,
+        module: resource,
+        path: [:aggregates, aggregate.name],
+        message:
+          "All aggregate fields must be attributes or calculations. Got: #{inspect(aggregate.field)}"
+    end
 
     field_type =
       if attribute do

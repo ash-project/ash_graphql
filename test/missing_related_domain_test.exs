@@ -5,6 +5,8 @@
 defmodule AshGraphql.MissingRelatedDomainTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureIO
+
   # Define RelatedResource, RelatedDomain, SourceResource, and SourceDomain as valid,
   # fully-compiled modules outside of the test.
   # The test scenario is: both domains are valid, but the schema only registers SourceDomain.
@@ -13,7 +15,10 @@ defmodule AshGraphql.MissingRelatedDomainTest do
     RelatedDomain,
     RelatedResource,
     SourceDomain,
-    SourceResource
+    SourceResource,
+    AggregateTypoChild,
+    AggregateTypoParent,
+    AggregateTypoDomain
   }
 
   defmodule RelatedResource do
@@ -78,6 +83,78 @@ defmodule AshGraphql.MissingRelatedDomainTest do
     end
   end
 
+  defmodule AggregateTypoChild do
+    use Ash.Resource,
+      domain: AggregateTypoDomain,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshGraphql.Resource]
+
+    graphql do
+      type :agg_typo_child
+    end
+
+    actions do
+      default_accept(:*)
+      defaults([:read])
+    end
+
+    attributes do
+      uuid_primary_key(:id)
+      attribute(:parent_id, :uuid, public?: true)
+      create_timestamp(:created_at, public?: true)
+    end
+
+    calculations do
+      calculate :timestamp, :utc_datetime_usec, expr(created_at) do
+        public?(true)
+      end
+    end
+  end
+
+  defmodule AggregateTypoParent do
+    use Ash.Resource,
+      domain: AggregateTypoDomain,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshGraphql.Resource]
+
+    graphql do
+      type :agg_typo_parent
+
+      queries do
+        list :list_parents, :read
+      end
+    end
+
+    actions do
+      default_accept(:*)
+      defaults([:read])
+    end
+
+    attributes do
+      uuid_primary_key(:id)
+    end
+
+    relationships do
+      has_many :children, AggregateTypoChild do
+        public?(true)
+        destination_attribute(:parent_id)
+      end
+    end
+
+    aggregates do
+      max(:latest_child_at, [:children], :time_stamp, public?: true)
+    end
+  end
+
+  defmodule AggregateTypoDomain do
+    use Ash.Domain, extensions: [AshGraphql.Domain]
+
+    resources do
+      resource(AggregateTypoParent)
+      resource(AggregateTypoChild)
+    end
+  end
+
   test "raises at compile time when a related resource's domain is not in the schema" do
     assert_raise RuntimeError, ~r/RelatedDomain/, fn ->
       defmodule TestSchemaMissingDomain do
@@ -88,5 +165,16 @@ defmodule AshGraphql.MissingRelatedDomainTest do
         use AshGraphql, domains: @domains
       end
     end
+  end
+
+  test "typoed aggregate field raises a helpful DSL error" do
+    capture_io(:stderr, fn ->
+      assert_raise Spark.Error.DslError, ~r/:time_stamp/, fn ->
+        defmodule TestSchemaAggregateFieldTypo do
+          use Absinthe.Schema
+          use AshGraphql, domains: [AggregateTypoDomain]
+        end
+      end
+    end)
   end
 end
