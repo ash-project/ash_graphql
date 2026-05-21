@@ -253,7 +253,11 @@ defmodule AshGraphql.Errors do
 
   defp resolve_array_element_segment(segment, context) do
     # Context type is {:array, elem_type}; after index we're "in" element.
-    elem_type = match?({:array, _}, context.type) && elem(context.type, 2)
+    elem_type =
+      case context.type do
+        {:array, inner} -> inner
+        _ -> nil
+      end
     elem_constraints = context.constraints[:items] || context.constraints["items"] || []
     {elem_type, elem_constraints} = unwrap_type(elem_type, elem_constraints)
     inner_context = %{context | type: elem_type, constraints: elem_constraints}
