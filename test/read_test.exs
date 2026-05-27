@@ -677,6 +677,71 @@ defmodule AshGraphql.ReadTest do
              result
   end
 
+  test "auto typed map expression calculations can contain resource values" do
+    user =
+      AshGraphql.Test.User
+      |> Ash.Changeset.for_create(:create, %{name: "Alice"}, authorize?: false)
+      |> Ash.create!()
+
+    raw_resource = %AshGraphql.Test.NoGraphql{id: Ash.UUID.generate(), name: "Raw"}
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(
+      :create,
+      %{text: "bar", text1: "hello", text2: "world", published: true},
+      authorize?: false
+    )
+    |> Ash.Changeset.force_change_attribute(:graphql_user_struct, user)
+    |> Ash.Changeset.force_change_attribute(:no_graphql_struct, raw_resource)
+    |> Ash.create!()
+
+    assert {:ok, %{data: %{"postLibrary" => [result]}}} =
+             """
+             query PostLibrary($published: Boolean) {
+               postLibrary(published: $published) {
+                 autoResourceSummary {
+                   graphqlUser {
+                     name
+                   }
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema,
+               variables: %{
+                 "published" => true
+               }
+             )
+
+    assert %{"autoResourceSummary" => %{"graphqlUser" => %{"name" => "Alice"}}} = result
+
+    assert {:ok, %{data: %{"__type" => %{"fields" => fields}}}} =
+             """
+             query {
+               __type(name: "PostAutoResourceSummary") {
+                 fields {
+                   name
+                   type {
+                     name
+                     kind
+                   }
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert Enum.find(fields, &(&1["name"] == "graphqlUser"))["type"] == %{
+             "kind" => "OBJECT",
+             "name" => "User"
+           }
+
+    assert Enum.find(fields, &(&1["name"] == "rawResource"))["type"] == %{
+             "kind" => "SCALAR",
+             "name" => "JsonString"
+           }
+  end
+
   test "field?: false calculations can be queried via graphql" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", text1: "hello", published: true)

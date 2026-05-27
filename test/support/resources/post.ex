@@ -607,6 +607,14 @@ defmodule AshGraphql.Test.Post do
       public?(true)
     end
 
+    attribute :graphql_user_struct, Ash.Type.Struct do
+      constraints(instance_of: AshGraphql.Test.User)
+    end
+
+    attribute :no_graphql_struct, Ash.Type.Struct do
+      constraints(instance_of: AshGraphql.Test.NoGraphql)
+    end
+
     create_timestamp(:created_at, public?: true)
   end
 
@@ -647,6 +655,13 @@ defmodule AshGraphql.Test.Post do
           status: status
         }
       }),
+      public?: true
+    )
+
+    calculate(
+      :auto_resource_summary,
+      :auto,
+      expr(%{graphql_user: graphql_user_struct, raw_resource: no_graphql_struct}),
       public?: true
     )
 
