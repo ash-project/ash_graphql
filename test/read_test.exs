@@ -540,6 +540,143 @@ defmodule AshGraphql.ReadTest do
              result
   end
 
+  test "auto typed expression calculations can be queried via graphql" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "bar",
+      text1: "hello",
+      text2: "world",
+      published: true
+    )
+    |> Ash.create!()
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "baz",
+      text1: "good",
+      text2: "bye",
+      published: true
+    )
+    |> Ash.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(
+          published: $published
+          filter: {autoFullText: {eq: "helloworld"}}
+          sort: {field: AUTO_FULL_TEXT, order: DESC}
+        ) {
+          autoFullText
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "postLibrary" => [
+                 %{"autoFullText" => "helloworld"}
+               ]
+             }
+           } =
+             result
+  end
+
+  test "auto typed map expression calculations can be queried as objects via graphql" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "bar",
+      text1: "hello",
+      text2: "world",
+      status: :open,
+      common_map_attribute: %{some: "hello", stuff: "world"},
+      published: true
+    )
+    |> Ash.create!()
+
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create,
+      text: "baz",
+      text1: "good",
+      text2: "bye",
+      status: :closed,
+      common_map_attribute: %{some: "good", stuff: "bye"},
+      published: true
+    )
+    |> Ash.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(
+          published: $published
+          filter: {
+            autoSummary: {
+              in: [
+                {
+                  some: "hello"
+                  details: {
+                    stuff: "world"
+                    typed: {some: "hello", stuff: "world"}
+                    status: OPEN
+                  }
+                }
+              ]
+            }
+          }
+        ) {
+          autoSummary {
+            some
+            details {
+              stuff
+              typed {
+                some
+                stuff
+              }
+              status
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "postLibrary" => [
+                 %{
+                   "autoSummary" => %{
+                     "some" => "hello",
+                     "details" => %{
+                       "stuff" => "world",
+                       "typed" => %{"some" => "hello", "stuff" => "world"},
+                       "status" => "OPEN"
+                     }
+                   }
+                 }
+               ]
+             }
+           } =
+             result
+  end
+
   test "field?: false calculations can be queried via graphql" do
     AshGraphql.Test.Post
     |> Ash.Changeset.for_create(:create, text: "bar", text1: "hello", published: true)

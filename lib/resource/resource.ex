@@ -1245,7 +1245,9 @@ defmodule AshGraphql.Resource do
       ) do
     resource
     |> queries(all_domains)
-    |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group) == nil))
+    |> Enum.filter(
+      &(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group) == nil)
+    )
     |> Enum.map(
       &query_field_definition(
         resource,
@@ -3302,6 +3304,22 @@ defmodule AshGraphql.Resource do
     }
   end
 
+  defp constraints_to_item_constraints(
+         {:array, _},
+         %Ash.Resource.Calculation{
+           constraints: constraints,
+           allow_nil?: allow_nil?
+         } = calculation
+       ) do
+    %{
+      calculation
+      | constraints: [
+          items: constraints,
+          nil_items?: allow_nil? || embedded?(calculation.type)
+        ]
+    }
+  end
+
   defp constraints_to_item_constraints(_, attribute_or_aggregate), do: attribute_or_aggregate
 
   defp sort_input(resource, schema) do
@@ -3748,15 +3766,8 @@ defmodule AshGraphql.Resource do
       resource
       |> global_maps(all_domains)
       |> Enum.flat_map(fn attribute ->
-        type_name =
-          if function_exported?(attribute.type, :graphql_type, 1) do
-            attribute.type.graphql_type(attribute.constraints)
-          end
-
-        input_type_name =
-          if function_exported?(attribute.type, :graphql_input_type, 1) do
-            attribute.type.graphql_input_type(attribute.constraints)
-          end
+        type_name = map_graphql_type(attribute, resource)
+        input_type_name = map_graphql_input_type(attribute, resource)
 
         description = AshGraphql.Type.description(attribute.type, attribute.constraints)
 
@@ -3791,6 +3802,49 @@ defmodule AshGraphql.Resource do
       []
     end
   end
+
+  defp map_graphql_type(attribute, resource) do
+    cond do
+      function_exported?(attribute.type, :graphql_type, 1) ->
+        attribute.type.graphql_type(attribute.constraints)
+
+      inferred_calculation_map_type?(attribute) ->
+        inferred_calculation_map_type_name(attribute, resource)
+
+      true ->
+        nil
+    end
+  end
+
+  defp map_graphql_input_type(attribute, resource) do
+    cond do
+      function_exported?(attribute.type, :graphql_input_type, 1) ->
+        attribute.type.graphql_input_type(attribute.constraints)
+
+      inferred_calculation_map_type?(attribute) ->
+        :"#{inferred_calculation_map_type_name(attribute, resource)}_input"
+
+      true ->
+        nil
+    end
+  end
+
+  defp inferred_calculation_map_type_name(attribute, resource) do
+    :"#{AshGraphql.Resource.Info.type(resource)}_#{attribute.name}"
+  end
+
+  defp inferred_calculation_map_type?(%Ash.Resource.Calculation{
+         type: type,
+         constraints: constraints
+       }) do
+    type = Ash.Type.get_type(type)
+
+    !Ash.Type.NewType.new_type?(type) &&
+      type in [Ash.Type.Map, Ash.Type.Struct] &&
+      !Enum.empty?(constraints[:fields] || [])
+  end
+
+  defp inferred_calculation_map_type?(_), do: false
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp define_map_types(
@@ -5427,6 +5481,23 @@ defmodule AshGraphql.Resource do
          _input?
        ) do
     :string
+  end
+
+  defp get_specific_field_type(
+         Ash.Type.Map,
+         %Ash.Resource.Calculation{} = calculation,
+         resource,
+         input?
+       ) do
+    if inferred_calculation_map_type?(calculation) do
+      if input? do
+        map_graphql_input_type(calculation, resource)
+      else
+        map_graphql_type(calculation, resource)
+      end
+    else
+      Application.get_env(:ash_graphql, :json_type) || :json_string
+    end
   end
 
   defp get_specific_field_type(

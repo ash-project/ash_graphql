@@ -634,6 +634,22 @@ defmodule AshGraphql.Test.Post do
 
     calculate(:full_text, :string, FullTextCalculation, public?: true)
 
+    calculate(:auto_full_text, :auto, expr(text1 <> text2), public?: true)
+
+    calculate(
+      :auto_summary,
+      :auto,
+      expr(%{
+        some: text1,
+        details: %{
+          stuff: text2,
+          typed: common_map_attribute,
+          status: status
+        }
+      }),
+      public?: true
+    )
+
     calculate(:text_1_and_2, :string, expr(text1 <> ^arg(:separator) <> text2)) do
       public?(true)
 
