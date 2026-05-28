@@ -12,13 +12,13 @@ defmodule AshGraphql.MissingRelatedDomainTest do
   # The test scenario is: both domains are valid, but the schema only registers SourceDomain.
 
   alias AshGraphql.MissingRelatedDomainTest.{
+    AggregateTypoChild,
+    AggregateTypoDomain,
+    AggregateTypoParent,
     RelatedDomain,
     RelatedResource,
     SourceDomain,
-    SourceResource,
-    AggregateTypoChild,
-    AggregateTypoParent,
-    AggregateTypoDomain
+    SourceResource
   }
 
   defmodule RelatedResource do
