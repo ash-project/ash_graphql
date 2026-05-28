@@ -2977,12 +2977,16 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve_calculation(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
 
+  def resolve_calculation(resolution, {domain, resource, calculation}) do
+    resolve_calculation(resolution, {domain, resource, calculation, nil})
+  end
+
   def resolve_calculation(
         %Absinthe.Resolution{
           source: parent,
           context: context
         } = resolution,
-        {domain, resource, calculation}
+        {domain, resource, calculation, field_policy_type}
       ) do
     domain = domain || context[:domain]
 
@@ -3001,18 +3005,25 @@ defmodule AshGraphql.Graphql.Resolver do
 
     case result do
       %struct{} when struct == Ash.ForbiddenField ->
-        Absinthe.Resolution.put_result(
-          resolution,
-          to_resolution(
-            {:error,
-             Ash.Error.Forbidden.ForbiddenField.exception(
-               resource: resource,
-               field: resolution.definition.name
-             )},
-            context,
-            domain
+        if field_policy_type do
+          Absinthe.Resolution.put_result(
+            resolution,
+            {:ok, materialize_forbidden_field(result, resolution)}
           )
-        )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution(
+              {:error,
+               Ash.Error.Forbidden.ForbiddenField.exception(
+                 resource: resource,
+                 field: resolution.definition.name
+               )},
+              context,
+              domain
+            )
+          )
+        end
 
       result ->
         unwrapped_type =
@@ -3032,6 +3043,8 @@ defmodule AshGraphql.Graphql.Resolver do
             result
           end
 
+        result = materialize_field_policy_value(result, field_policy_type)
+
         Absinthe.Resolution.put_result(resolution, to_resolution({:ok, result}, context, domain))
     end
   end
@@ -3041,12 +3054,46 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp unwrap_type(other), do: other
 
+  def resolve_field_policy_type(%{__field_policy_type__: type}, _resolution), do: type
+
+  def resolve_field_policy_type(%Ash.ForbiddenField{}, _resolution), do: :forbidden_field
+
+  def resolve_field_policy_type(%resource{}, _resolution) do
+    if Ash.Resource.Info.resource?(resource) do
+      AshGraphql.Resource.Info.type(resource)
+    end
+  end
+
+  defp materialize_field_policy_value(value, nil), do: value
+
+  defp materialize_field_policy_value(value, field_policy_type) do
+    %{
+      __field_policy_type__: field_policy_type,
+      value: value
+    }
+  end
+
+  defp materialize_forbidden_field(%Ash.ForbiddenField{} = forbidden, resolution) do
+    field = resolution.definition.name || forbidden.field
+
+    %{
+      __field_policy_type__: :forbidden_field,
+      field: if(field, do: to_string(field)),
+      type: if(forbidden.type, do: to_string(forbidden.type)),
+      message: "forbidden field"
+    }
+  end
+
   def resolve_assoc_one(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
 
+  def resolve_assoc_one(resolution, {domain, relationship}) do
+    resolve_assoc_one(resolution, {domain, relationship, false})
+  end
+
   def resolve_assoc_one(
         %{source: parent} = resolution,
-        {_domain, relationship}
+        {_domain, relationship, materialize_forbidden?}
       ) do
     value =
       if resolution.definition.alias do
@@ -3055,7 +3102,16 @@ defmodule AshGraphql.Graphql.Resolver do
         Map.get(parent, relationship.name)
       end
 
-    Absinthe.Resolution.put_result(resolution, {:ok, value})
+    case value do
+      %Ash.ForbiddenField{} when materialize_forbidden? ->
+        Absinthe.Resolution.put_result(
+          resolution,
+          {:ok, materialize_forbidden_field(value, resolution)}
+        )
+
+      value ->
+        Absinthe.Resolution.put_result(resolution, {:ok, value})
+    end
   end
 
   def resolve_assoc_many(%Absinthe.Resolution{state: :resolved} = resolution, _),
@@ -3093,9 +3149,13 @@ defmodule AshGraphql.Graphql.Resolver do
   def resolve_union(%Absinthe.Resolution{state: :resolved} = resolution, _),
     do: resolution
 
+  def resolve_union(resolution, {name, field_type, field, resource, unnested_types, domain}) do
+    resolve_union(resolution, {name, field_type, field, resource, unnested_types, domain, nil})
+  end
+
   def resolve_union(
         %{source: parent, context: context} = resolution,
-        {name, _field_type, _field, resource, _unnested_types, domain} = data
+        {name, _field_type, _field, resource, _unnested_types, domain, field_policy_type} = data
       ) do
     domain = domain || context[:domain]
 
@@ -3108,29 +3168,41 @@ defmodule AshGraphql.Graphql.Resolver do
 
     case value do
       %struct{} when struct == Ash.ForbiddenField ->
-        Absinthe.Resolution.put_result(
-          resolution,
-          to_resolution(
-            {:error,
-             Ash.Error.Forbidden.ForbiddenField.exception(
-               resource: resource,
-               field: resolution.definition.name
-             )},
-            context,
-            domain
+        if field_policy_type do
+          Absinthe.Resolution.put_result(
+            resolution,
+            {:ok, materialize_forbidden_field(value, resolution)}
           )
-        )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution(
+              {:error,
+               Ash.Error.Forbidden.ForbiddenField.exception(
+                 resource: resource,
+                 field: resolution.definition.name
+               )},
+              context,
+              domain
+            )
+          )
+        end
 
       value ->
         result = resolve_union_result(value, data)
+        result = materialize_field_policy_value(result, field_policy_type)
 
         Absinthe.Resolution.put_result(resolution, {:ok, result})
     end
   end
 
+  def resolve_attribute(resolution, {name, type, constraints, domain}) do
+    resolve_attribute(resolution, {name, type, constraints, domain, nil})
+  end
+
   def resolve_attribute(
         %{source: %resource{} = parent, context: context} = resolution,
-        {name, type, constraints, domain}
+        {name, type, constraints, domain, field_policy_type}
       ) do
     domain = domain || context[:domain]
 
@@ -3143,20 +3215,29 @@ defmodule AshGraphql.Graphql.Resolver do
 
     case value do
       %struct{} when struct == Ash.ForbiddenField ->
-        Absinthe.Resolution.put_result(
-          resolution,
-          to_resolution(
-            {:error,
-             Ash.Error.Forbidden.ForbiddenField.exception(
-               resource: resource,
-               field: resolution.definition.name
-             )},
-            context,
-            domain
+        if field_policy_type do
+          Absinthe.Resolution.put_result(
+            resolution,
+            {:ok, materialize_forbidden_field(value, resolution)}
           )
-        )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            to_resolution(
+              {:error,
+               Ash.Error.Forbidden.ForbiddenField.exception(
+                 resource: resource,
+                 field: resolution.definition.name
+               )},
+              context,
+              domain
+            )
+          )
+        end
 
       value ->
+        value = materialize_field_policy_value(value, field_policy_type)
+
         Absinthe.Resolution.put_result(resolution, {:ok, value})
     end
   end
@@ -3170,7 +3251,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
   def resolve_attribute(
         %{source: parent} = resolution,
-        {name, type, constraints, _domain}
+        {name, type, constraints, _domain, field_policy_type}
       )
       when is_map(parent) do
     value =
@@ -3180,7 +3261,26 @@ defmodule AshGraphql.Graphql.Resolver do
         Map.get(parent, name)
       end
 
-    Absinthe.Resolution.put_result(resolution, {:ok, value})
+    case value do
+      %struct{} when struct == Ash.ForbiddenField ->
+        if field_policy_type do
+          Absinthe.Resolution.put_result(
+            resolution,
+            {:ok, materialize_forbidden_field(value, resolution)}
+          )
+        else
+          Absinthe.Resolution.put_result(
+            resolution,
+            {:error,
+             Ash.Error.Forbidden.ForbiddenField.exception(field: resolution.definition.name)}
+          )
+        end
+
+      value ->
+        value = materialize_field_policy_value(value, field_policy_type)
+
+        Absinthe.Resolution.put_result(resolution, {:ok, value})
+    end
   end
 
   def resolve_attribute(
@@ -3188,6 +3288,13 @@ defmodule AshGraphql.Graphql.Resolver do
         _
       ) do
     raise "unknown source #{inspect(source)}"
+  end
+
+  defp resolve_union_result(
+         value,
+         {name, field_type, field, resource, unnested_types, domain, _field_policy_type}
+       ) do
+    resolve_union_result(value, {name, field_type, field, resource, unnested_types, domain})
   end
 
   defp resolve_union_result(

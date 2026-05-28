@@ -165,6 +165,15 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :nullable_fields, [])
   end
 
+  @doc "How GraphQL should expose fields with non-trivial Ash field policies"
+  def field_policy_mode(resource) do
+    case Extension.get_opt(resource, [:graphql], :field_policy_mode, :legacy) do
+      :override_nullability -> :nullable
+      :materialize_fully -> :materialized
+      mode -> mode
+    end
+  end
+
   @doc "The field name to place the keyset of a result in"
   def keyset_field(resource) do
     Extension.get_opt(resource, [:graphql], :keyset_field, nil)

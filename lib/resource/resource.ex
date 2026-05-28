@@ -541,6 +541,19 @@ defmodule AshGraphql.Resource do
         doc:
           "Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more."
       ],
+      field_policy_mode: [
+        type:
+          {:one_of,
+           [:legacy, :nullable, :override_nullability, :materialized, :materialize_fully]},
+        default: :legacy,
+        doc: """
+        How fields that may be hidden by authorization are exposed.
+
+        `:legacy` preserves the existing behavior.
+        `:nullable`/`:override_nullability` makes those fields nullable, even if they are required.
+        `:materialized`/`:materialize_fully` exposes those fields as value-or-ForbiddenField unions.
+        """
+      ],
       error_handler: [
         type: :mfa,
         doc: """
@@ -2520,6 +2533,7 @@ defmodule AshGraphql.Resource do
   @doc false
   def type_definitions(resource, domain, all_domains, schema, relay_ids?) do
     List.wrap(type_definition(resource, domain, all_domains, schema, relay_ids?)) ++
+      field_policy_type_definitions(resource, schema) ++
       List.wrap(query_type_definitions(resource, domain, all_domains, schema, relay_ids?)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
@@ -2530,6 +2544,162 @@ defmodule AshGraphql.Resource do
 
   def no_graphql_types(resource, schema) do
     enum_definitions(resource, schema, __ENV__)
+  end
+
+  @doc false
+  def field_policy_type_definitions(resource, schema) do
+    if AshGraphql.Resource.Info.field_policy_mode(resource) == :materialized &&
+         AshGraphql.Resource.Info.type(resource) do
+      value_fields = materialized_field_policy_value_fields(resource)
+      singular_relationships = materialized_singular_relationships(resource)
+
+      if Enum.empty?(value_fields) && Enum.empty?(singular_relationships) do
+        []
+      else
+        [
+          forbidden_field_type_definition(schema)
+          | Enum.flat_map(value_fields, fn {field, value_type} ->
+              field_policy_type_definitions(resource, field, value_type, schema)
+            end) ++
+              Enum.map(singular_relationships, fn relationship ->
+                singular_relationship_type_definition(resource, relationship, schema)
+              end)
+        ]
+      end
+    else
+      []
+    end
+  end
+
+  defp forbidden_field_type_definition(schema) do
+    %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+      description: "A field that was hidden by authorization rules.",
+      fields: [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :field,
+          module: schema,
+          name: "field",
+          type: :string,
+          __reference__: ref(__ENV__)
+        },
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :type,
+          module: schema,
+          name: "type",
+          type: :string,
+          __reference__: ref(__ENV__)
+        },
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: :message,
+          module: schema,
+          name: "message",
+          type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :string},
+          __reference__: ref(__ENV__)
+        }
+      ],
+      identifier: :forbidden_field,
+      module: schema,
+      name: "ForbiddenField",
+      __reference__: ref(__ENV__)
+    }
+  end
+
+  defp field_policy_type_definitions(resource, field, value_type, schema) do
+    value_type_name = field_policy_value_type(resource, field)
+    result_type_name = field_policy_result_type(resource, field)
+
+    [
+      %Absinthe.Blueprint.Schema.ObjectTypeDefinition{
+        description: "The authorized value for #{inspect(resource)}.#{field}.",
+        fields: [
+          %Absinthe.Blueprint.Schema.FieldDefinition{
+            identifier: :value,
+            module: schema,
+            name: "value",
+            type: value_type,
+            __reference__: ref(__ENV__)
+          }
+        ],
+        identifier: value_type_name,
+        module: schema,
+        name: value_type_name |> to_string() |> Macro.camelize(),
+        __reference__: ref(__ENV__)
+      },
+      %Absinthe.Blueprint.Schema.UnionTypeDefinition{
+        description: "The value of #{inspect(resource)}.#{field}, or ForbiddenField.",
+        identifier: result_type_name,
+        module: schema,
+        name: result_type_name |> to_string() |> Macro.camelize(),
+        resolve_type: &AshGraphql.Graphql.Resolver.resolve_field_policy_type/2,
+        types: [
+          %Absinthe.Blueprint.TypeReference.Name{
+            name: value_type_name |> to_string() |> Macro.camelize()
+          },
+          %Absinthe.Blueprint.TypeReference.Name{name: "ForbiddenField"}
+        ],
+        __reference__: ref(__ENV__)
+      }
+    ]
+  end
+
+  defp singular_relationship_type_definition(resource, relationship, schema) do
+    result_type_name = singular_relationship_result_type(resource, relationship)
+    destination_type = AshGraphql.Resource.Info.type(relationship.destination)
+
+    %Absinthe.Blueprint.Schema.UnionTypeDefinition{
+      description:
+        "The related #{inspect(relationship.destination)} for #{inspect(resource)}.#{relationship.name}, or ForbiddenField.",
+      identifier: result_type_name,
+      module: schema,
+      name: result_type_name |> to_string() |> Macro.camelize(),
+      resolve_type: &AshGraphql.Graphql.Resolver.resolve_field_policy_type/2,
+      types: [
+        %Absinthe.Blueprint.TypeReference.Name{
+          name: destination_type |> to_string() |> Macro.camelize()
+        },
+        %Absinthe.Blueprint.TypeReference.Name{name: "ForbiddenField"}
+      ],
+      __reference__: ref(__ENV__)
+    }
+  end
+
+  defp materialized_field_policy_value_fields(resource) do
+    attribute_field_policy_value_fields(resource) ++
+      aggregate_field_policy_value_fields(resource) ++
+      calculation_field_policy_value_fields(resource)
+  end
+
+  defp attribute_field_policy_value_fields(resource) do
+    resource
+    |> public_attributes_for_graphql()
+    |> Enum.filter(&materialized_field_policy_field?(resource, &1.name))
+    |> Enum.map(&{&1.name, attribute_output_type(resource, &1)})
+  end
+
+  defp aggregate_field_policy_value_fields(resource) do
+    resource
+    |> Ash.Resource.Info.public_aggregates()
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
+          materialized_field_policy_field?(resource, &1.name))
+    )
+    |> Enum.map(&{&1.name, aggregate_output_type(resource, &1)})
+  end
+
+  defp calculation_field_policy_value_fields(resource) do
+    resource
+    |> Ash.Resource.Info.public_calculations()
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
+          materialized_field_policy_field?(resource, &1.name))
+    )
+    |> Enum.map(&{&1.name, calculation_value_type(&1, resource)})
+  end
+
+  defp materialized_singular_relationships(resource) do
+    resource
+    |> graphql_relationships()
+    |> Enum.filter(&materialized_singular_relationship?(resource, &1))
   end
 
   def managed_relationship_definitions(used, schema) do
@@ -4815,24 +4985,14 @@ defmodule AshGraphql.Resource do
     attribute_names = AshGraphql.Resource.Info.field_names(resource)
 
     attributes =
-      if AshGraphql.Resource.Info.encode_primary_key?(resource) do
-        resource
-        |> Ash.Resource.Info.public_attributes()
-        |> Enum.reject(&(&1.name == :id))
-      else
-        Ash.Resource.Info.public_attributes(resource)
-      end
-
-    attributes =
-      attributes
+      resource
+      |> public_attributes_for_graphql()
       |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
       |> Enum.map(fn attribute ->
         field_type =
-          attribute.type
-          |> field_type(attribute, resource)
-          |> maybe_wrap_non_null(
-            not (nullable_field?(resource, attribute.name) or attribute.allow_nil?)
-          )
+          resource
+          |> attribute_output_type(attribute)
+          |> maybe_materialize_field_policy_type(resource, attribute.name)
 
         name = attribute_names[attribute.name] || attribute.name
 
@@ -4861,6 +5021,24 @@ defmodule AshGraphql.Resource do
     else
       attributes
     end
+  end
+
+  defp public_attributes_for_graphql(resource) do
+    if AshGraphql.Resource.Info.encode_primary_key?(resource) do
+      resource
+      |> Ash.Resource.Info.public_attributes()
+      |> Enum.reject(&(&1.name == :id))
+    else
+      Ash.Resource.Info.public_attributes(resource)
+    end
+  end
+
+  defp attribute_output_type(resource, attribute) do
+    attribute.type
+    |> field_type(attribute, resource)
+    |> maybe_wrap_non_null(
+      not (nullable_field?(resource, attribute.name) or attribute.allow_nil?)
+    )
   end
 
   defp encoded_id(resource, schema, relay_ids?) do
@@ -4955,26 +5133,13 @@ defmodule AshGraphql.Resource do
   defp relationships(resource, domain, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
-    relationships = AshGraphql.Resource.Info.relationships(resource)
-
     resource
-    |> Ash.Resource.Info.public_relationships()
-    |> Enum.filter(fn relationship ->
-      AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
-        Resource in Spark.extensions(relationship.destination) &&
-        relationship.name in relationships &&
-        AshGraphql.Resource.Info.type(relationship.destination)
-    end)
+    |> graphql_relationships()
     |> Enum.map(fn
       %{cardinality: :one} = relationship ->
         name = field_names[relationship.name] || relationship.name
 
-        type =
-          relationship.destination
-          |> AshGraphql.Resource.Info.type()
-          |> maybe_wrap_non_null(
-            not (nullable_field?(resource, relationship.name) or relationship.allow_nil?)
-          )
+        type = singular_relationship_type(resource, relationship)
 
         read_action =
           if relationship.read_action do
@@ -4990,7 +5155,8 @@ defmodule AshGraphql.Resource do
           description: relationship.description,
           arguments: args(:one_related, relationship.destination, read_action, schema),
           middleware: [
-            {{AshGraphql.Graphql.Resolver, :resolve_assoc_one}, {domain, relationship}}
+            {{AshGraphql.Graphql.Resolver, :resolve_assoc_one},
+             {domain, relationship, materialized_singular_relationship?(resource, relationship)}}
           ],
           type: type,
           __reference__: ref(__ENV__)
@@ -5036,6 +5202,33 @@ defmodule AshGraphql.Resource do
           __reference__: ref(__ENV__)
         }
     end)
+  end
+
+  defp graphql_relationships(resource) do
+    relationships = AshGraphql.Resource.Info.relationships(resource)
+
+    resource
+    |> Ash.Resource.Info.public_relationships()
+    |> Enum.filter(fn relationship ->
+      AshGraphql.Resource.Info.show_field?(resource, relationship.name) &&
+        Resource in Spark.extensions(relationship.destination) &&
+        relationship.name in relationships &&
+        AshGraphql.Resource.Info.type(relationship.destination)
+    end)
+  end
+
+  defp singular_relationship_type(resource, relationship) do
+    type =
+      if materialized_singular_relationship?(resource, relationship) do
+        singular_relationship_result_type(resource, relationship)
+      else
+        AshGraphql.Resource.Info.type(relationship.destination)
+      end
+
+    maybe_wrap_non_null(
+      type,
+      not (nullable_field?(resource, relationship.name) or relationship.allow_nil?)
+    )
   end
 
   defp related_list_type(value, type, resource, relationship)
@@ -5094,8 +5287,74 @@ defmodule AshGraphql.Resource do
     end
   end
 
+  @doc false
+  def field_policy_field?(resource, field) do
+    field in Ash.Resource.Info.protected_fields(resource)
+  end
+
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+  def field_policy_result_type(resource, field) do
+    String.to_atom("#{field_policy_type_prefix(resource, field)}_field_policy")
+  end
+
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+  def field_policy_value_type(resource, field) do
+    String.to_atom("#{field_policy_type_prefix(resource, field)}_field_policy_value")
+  end
+
+  defp field_policy_type_prefix(resource, field) do
+    resource_type = AshGraphql.Resource.Info.type(resource)
+    field_names = AshGraphql.Resource.Info.field_names(resource)
+
+    "#{resource_type}_#{field_names[field] || field}"
+  end
+
+  defp materialized_field_policy_field?(resource, field) do
+    AshGraphql.Resource.Info.field_policy_mode(resource) == :materialized &&
+      field_policy_field?(resource, field)
+  end
+
+  defp materialized_singular_relationship?(resource, relationship) do
+    AshGraphql.Resource.Info.field_policy_mode(resource) == :materialized &&
+      relationship.cardinality == :one &&
+      relationship.allow_forbidden_field?
+  end
+
+  @doc false
+  # sobelow_skip ["DOS.StringToAtom"]
+  def singular_relationship_result_type(resource, relationship) do
+    String.to_atom("#{field_policy_type_prefix(resource, relationship.name)}_relationship")
+  end
+
+  defp maybe_materialize_field_policy_type(
+         %Absinthe.Blueprint.TypeReference.NonNull{} = type,
+         resource,
+         field
+       )
+       when is_atom(field) do
+    if materialized_field_policy_field?(resource, field) do
+      %Absinthe.Blueprint.TypeReference.NonNull{
+        of_type: field_policy_result_type(resource, field)
+      }
+    else
+      type
+    end
+  end
+
+  defp maybe_materialize_field_policy_type(type, resource, field) do
+    if materialized_field_policy_field?(resource, field) do
+      field_policy_result_type(resource, field)
+    else
+      type
+    end
+  end
+
   defp nullable_field?(resource, field) do
-    field in AshGraphql.Resource.Info.nullable_fields(resource)
+    field in AshGraphql.Resource.Info.nullable_fields(resource) ||
+      (AshGraphql.Resource.Info.field_policy_mode(resource) == :nullable &&
+         field_policy_field?(resource, field))
   end
 
   defp aggregates(resource, domain, schema) do
@@ -5107,45 +5366,12 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn aggregate ->
       name = field_names[aggregate.name] || aggregate.name
 
-      {field, field_type, constraints} =
-        with field when not is_nil(field) <- aggregate.field,
-             related when not is_nil(related) <-
-               Ash.Resource.Info.related(resource, aggregate.relationship_path),
-             attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
-          {attr, attr.type, attr.constraints}
-        else
-          _ ->
-            {nil, nil, []}
-        end
-
-      {:ok, agg_type, constraints} =
-        Aggregate.kind_to_type(aggregate.kind, field_type, constraints)
-
-      attribute = field || Map.put(aggregate, :constraints, constraints)
-
       type =
-        if is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) ||
-             nullable_field?(resource, attribute.name) do
-          resource =
-            if field do
-              Ash.Resource.Info.related(resource, aggregate.relationship_path)
-            else
-              resource
-            end
+        resource
+        |> aggregate_output_type(aggregate)
+        |> maybe_materialize_field_policy_type(resource, aggregate.name)
 
-          field_type(agg_type, attribute, resource)
-        else
-          resource =
-            if field && aggregate.type in [:first, :list] do
-              Ash.Resource.Info.related(resource, aggregate.relationship_path)
-            else
-              resource
-            end
-
-          %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(agg_type, attribute, resource)
-          }
-        end
+      {agg_type, constraints} = aggregate_type_and_constraints(resource, aggregate)
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: aggregate.name,
@@ -5160,10 +5386,64 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  defp aggregate_output_type(resource, aggregate) do
+    {field, agg_type, constraints} = aggregate_field_type_and_constraints(resource, aggregate)
+    attribute = field || Map.put(aggregate, :constraints, constraints)
+
+    nullable? =
+      is_nil(Ash.Query.Aggregate.default_value(aggregate.kind)) ||
+        nullable_field?(resource, attribute.name)
+
+    type_resource =
+      if nullable? do
+        if field do
+          Ash.Resource.Info.related(resource, aggregate.relationship_path)
+        else
+          resource
+        end
+      else
+        if field && aggregate.type in [:first, :list] do
+          Ash.Resource.Info.related(resource, aggregate.relationship_path)
+        else
+          resource
+        end
+      end
+
+    agg_type
+    |> field_type(attribute, type_resource)
+    |> maybe_wrap_non_null(not nullable?)
+  end
+
+  defp aggregate_type_and_constraints(resource, aggregate) do
+    {_field, agg_type, constraints} = aggregate_field_type_and_constraints(resource, aggregate)
+    {agg_type, constraints}
+  end
+
+  defp aggregate_field_type_and_constraints(resource, aggregate) do
+    {field, field_type, constraints} =
+      with field when not is_nil(field) <- aggregate.field,
+           related when not is_nil(related) <-
+             Ash.Resource.Info.related(resource, aggregate.relationship_path),
+           attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
+        {attr, attr.type, attr.constraints}
+      else
+        _ ->
+          {nil, nil, []}
+      end
+
+    {:ok, agg_type, constraints} =
+      Aggregate.kind_to_type(aggregate.kind, field_type, constraints)
+
+    {field, agg_type, constraints}
+  end
+
   defp middleware_for_field(resource, field, name, {:array, type}, constraints, domain) do
     case middleware_for_field(resource, field, name, type, constraints, domain) do
-      [{middleware, {name, type, field, resource, unnested_types, domain}}] ->
-        [{middleware, {name, {:array, type}, field, resource, unnested_types, domain}}]
+      [{middleware, {name, type, field, resource, unnested_types, domain, field_policy_type}}] ->
+        [
+          {middleware,
+           {name, {:array, type}, field, resource, unnested_types, domain, field_policy_type}}
+        ]
 
       middleware ->
         middleware
@@ -5171,6 +5451,11 @@ defmodule AshGraphql.Resource do
   end
 
   defp middleware_for_field(resource, field, name, type, constraints, domain) do
+    field_policy_type =
+      if materialized_field_policy_field?(resource, name) do
+        field_policy_value_type(resource, name)
+      end
+
     if Ash.Type.NewType.new_type?(type) &&
          Ash.Type.NewType.subtype_of(type) == Ash.Type.Union &&
          function_exported?(type, :graphql_unnested_unions, 1) do
@@ -5178,11 +5463,12 @@ defmodule AshGraphql.Resource do
 
       [
         {{AshGraphql.Graphql.Resolver, :resolve_union},
-         {name, type, field, resource, unnested_types, domain}}
+         {name, type, field, resource, unnested_types, domain, field_policy_type}}
       ]
     else
       [
-        {{AshGraphql.Graphql.Resolver, :resolve_attribute}, {name, type, constraints, domain}}
+        {{AshGraphql.Graphql.Resolver, :resolve_attribute},
+         {name, type, constraints, domain, field_policy_type}}
       ]
     end
   end
@@ -5199,13 +5485,19 @@ defmodule AshGraphql.Resource do
 
       arguments = calculation_args(calculation, resource, schema)
 
+      field_policy_type =
+        if materialized_field_policy_field?(resource, calculation.name) do
+          field_policy_value_type(resource, calculation.name)
+        end
+
       %Absinthe.Blueprint.Schema.FieldDefinition{
         identifier: calculation.name,
         module: schema,
         arguments: arguments,
         complexity: 2,
         middleware: [
-          {{AshGraphql.Graphql.Resolver, :resolve_calculation}, {domain, resource, calculation}}
+          {{AshGraphql.Graphql.Resolver, :resolve_calculation},
+           {domain, resource, calculation, field_policy_type}}
         ],
         name: to_string(name),
         description: calculation.description,
@@ -5216,6 +5508,12 @@ defmodule AshGraphql.Resource do
   end
 
   defp calculation_type(calculation, resource) do
+    calculation
+    |> calculation_value_type(resource)
+    |> maybe_materialize_field_policy_type(resource, calculation.name)
+  end
+
+  defp calculation_value_type(calculation, resource) do
     calculation.type
     |> Ash.Type.get_type()
     |> field_type(calculation, resource)

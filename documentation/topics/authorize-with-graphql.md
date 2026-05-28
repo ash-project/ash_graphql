@@ -115,13 +115,13 @@ Be careful, as this can be an attack vector in some systems (i.e "here is exactl
 
 ## Field Policies
 
-Field policies in AshGraphql work by producing a `null` value for any forbidden field, as well as an error in the errors list.
+By default, field policies in AshGraphql work by producing a `null` value for any forbidden field, as well as an error in the errors list.
 
 > ### nullability {: .warning}
 >
 > Any fields with field policies on them should be nullable. If they are not nullable, the _parent_ object will also be `null` (and considered in an error state), because `null` is not a valid type for that field.
 
-To make fields as nullable even if it is not nullable by its definition, use the `nullable_fields` option.
+To make specific fields nullable even if they are not nullable by definition, use the `nullable_fields` option.
 
 ```elixir
 graphql do
@@ -130,3 +130,66 @@ graphql do
   nullable_fields [:foo, :bar, :baz]
 end
 ```
+
+To automatically make fields that may be hidden by authorization nullable, use `field_policy_mode :nullable`.
+Built-in Ash field policies are detected automatically, excluding catch-all policies like `authorize_if always()`. Custom authorizers can participate by reporting the fields they may hide.
+
+```elixir
+graphql do
+  type :post
+
+  field_policy_mode :nullable
+end
+```
+
+To expose forbidden fields as data instead of GraphQL errors, use `field_policy_mode :materialized`.
+Fields that may be hidden by authorization are exposed as unions whose members are a field-specific value wrapper and `ForbiddenField`.
+Singular relationships with `allow_forbidden_field? true` are exposed as unions whose members are the destination type and `ForbiddenField`.
+
+```elixir
+graphql do
+  type :post
+
+  field_policy_mode :materialized
+end
+
+relationships do
+  belongs_to :organization, MyApp.Organization do
+    public? true
+    allow_forbidden_field? true
+  end
+end
+```
+
+### Relationships
+
+Field policies cover attributes, calculations, and aggregates. They do not currently target relationships.
+
+Singular relationships can still be materialized when Ash may return a forbidden relationship sentinel. To opt into that behavior, configure the relationship with `allow_forbidden_field? true` and use `field_policy_mode :materialized`.
+
+```elixir
+graphql do
+  type :post
+  field_policy_mode :materialized
+end
+
+relationships do
+  belongs_to :organization, MyApp.Organization do
+    public? true
+    allow_nil? false
+    allow_forbidden_field? true
+  end
+end
+```
+
+This exposes the singular relationship as a union of the destination type and `ForbiddenField`:
+
+```graphql
+type Post {
+  organization: PostOrganizationRelationship!
+}
+
+union PostOrganizationRelationship = Organization | ForbiddenField
+```
+
+This only applies to singular relationships. List, paginated, and Relay connection relationships are not materialized as forbidden unions.
