@@ -3079,7 +3079,6 @@ defmodule AshGraphql.Graphql.Resolver do
     %{
       __field_policy_type__: :forbidden_field,
       field: if(field, do: to_string(field)),
-      type: if(forbidden.type, do: to_string(forbidden.type)),
       message: "forbidden field"
     }
   end

@@ -283,6 +283,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
           dsl
           |> Ash.Resource.Info.authorizers()
           |> Enum.reject(&(&1 == Ash.Policy.Authorizer))
+          |> Enum.filter(&missing_protected_fields_callback?/1)
 
         if Enum.empty?(custom_authorizers) do
           warnings
@@ -294,10 +295,15 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
 
   defp custom_authorizers_warning(resource, mode, custom_authorizers) do
     "Resource #{inspect(resource)} uses `field_policy_mode #{inspect(mode)}` with custom " <>
-      "authorizer(s) #{inspect(custom_authorizers)}. AshGraphql uses " <>
+      "authorizer(s) #{inspect(custom_authorizers)} that do not implement " <>
+      "`Ash.Authorizer.protected_fields/1`. AshGraphql uses " <>
       "`Ash.Resource.Info.protected_fields/1` to infer protected schema fields; custom " <>
       "authorizers must implement `Ash.Authorizer.protected_fields/1` for nullable or " <>
       "materialized field-policy schema behavior to include their protected fields."
+  end
+
+  defp missing_protected_fields_callback?(authorizer) do
+    not (Code.ensure_loaded?(authorizer) and function_exported?(authorizer, :protected_fields, 1))
   end
 
   defp get_option(dsl, :sortable_fields), do: AshGraphql.Resource.Info.sortable_fields(dsl)

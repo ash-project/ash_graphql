@@ -2583,13 +2583,6 @@ defmodule AshGraphql.Resource do
           __reference__: ref(__ENV__)
         },
         %Absinthe.Blueprint.Schema.FieldDefinition{
-          identifier: :type,
-          module: schema,
-          name: "type",
-          type: :string,
-          __reference__: ref(__ENV__)
-        },
-        %Absinthe.Blueprint.Schema.FieldDefinition{
           identifier: :message,
           module: schema,
           name: "message",

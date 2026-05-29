@@ -176,7 +176,6 @@ defmodule AshGraphql.ReadTest do
           ... on ForbiddenField {
             field
             message
-            type
           }
           ... on FieldPolicyModeSecretFieldPolicyValue {
             value
@@ -210,8 +209,7 @@ defmodule AshGraphql.ReadTest do
                "secret" => %{
                  "__typename" => "ForbiddenField",
                  "field" => "secret",
-                 "message" => "forbidden field",
-                 "type" => "attribute"
+                 "message" => "forbidden field"
                },
                "maybeSecret" => %{
                  "__typename" => "FieldPolicyModeMaybeSecretFieldPolicyValue",
@@ -244,7 +242,6 @@ defmodule AshGraphql.ReadTest do
           ... on ForbiddenField {
             field
             message
-            type
           }
         }
       }
@@ -265,8 +262,7 @@ defmodule AshGraphql.ReadTest do
                  "org" => %{
                    "__typename" => "ForbiddenField",
                    "field" => "org",
-                   "message" => "forbidden field",
-                   "type" => "relationship"
+                   "message" => "forbidden field"
                  }
                }
              }
@@ -291,6 +287,26 @@ defmodule AshGraphql.ReadTest do
                }
              }
            } = authorized_result
+  end
+
+  test "forbidden field materialization does not expose Ash internal field type" do
+    doc = """
+    query {
+      __type(name: "ForbiddenField") {
+        fields {
+          name
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{data: data}} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+    field_names = Enum.map(data["__type"]["fields"], & &1["name"])
+
+    assert "field" in field_names
+    assert "message" in field_names
+    refute "type" in field_names
   end
 
   test "materialized field policy unions keep always-authorized field policies out of the type" do
