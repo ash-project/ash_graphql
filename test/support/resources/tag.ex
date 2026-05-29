@@ -17,13 +17,13 @@ defmodule AshGraphql.Test.Tag do
     sortable_fields [:popularity]
 
     queries do
-      get :get_tag, :read
-      list :get_tags, :read
+      get :get_tag, :read, labels: [:public, :backoffice]
+      list :get_tags, :read, labels: [:admin]
     end
 
     mutations do
-      create :create_tag, :create
-      destroy :destroy_tag, :destroy
+      create :create_tag, :create, labels: [:public]
+      destroy :destroy_tag, :destroy, labels: [:admin]
     end
   end
 

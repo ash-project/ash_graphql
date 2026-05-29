@@ -20,7 +20,9 @@ defmodule AshGraphql do
            Enum.any?(
              @ash_resources,
              fn resource ->
-               !Enum.empty?(AshGraphql.Resource.Info.mutations(resource, @all_domains))
+               !Enum.empty?(
+                 AshGraphql.Resource.Info.mutations(resource, @all_domains, @ash_graphql_labels)
+               )
              end
            ) do
         Code.eval_quoted(
@@ -81,11 +83,18 @@ defmodule AshGraphql do
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
             relay_ids?: Keyword.get(opts, :relay_ids?, false),
             response_metadata: opts[:response_metadata],
+            labels: opts[:labels],
+            labels_specified?: Keyword.has_key?(opts, :labels),
             auto_import_types: Macro.escape(auto_import_types)
           ],
           location: :keep,
           generated: true do
       require Ash.Domain.Info
+
+      labels =
+        if labels_specified? do
+          List.wrap(labels)
+        end
 
       AshGraphql.validate_response_metadata!(response_metadata)
 
@@ -152,10 +161,16 @@ defmodule AshGraphql do
       end
 
       @response_metadata response_metadata
+      @ash_graphql_labels labels
 
       @doc false
       def response_metadata do
         @response_metadata
+      end
+
+      @doc false
+      def ash_graphql_labels do
+        @ash_graphql_labels
       end
 
       @doc false
@@ -167,6 +182,12 @@ defmodule AshGraphql do
 
       Enum.each(ash_resources, &Code.ensure_compiled!/1)
 
+      AshGraphql.validate_labels!(
+        labels,
+        ash_resources,
+        Enum.map(domains, &elem(&1, 0))
+      )
+
       AshGraphql.validate_domains_for_relationships!(
         ash_resources,
         Enum.map(domains, &elem(&1, 0))
@@ -174,6 +195,7 @@ defmodule AshGraphql do
 
       schema = __MODULE__
       schema_env = __ENV__
+      last_domain = domains |> List.last() |> elem(0)
 
       for resource <- ash_resources do
         resource
@@ -199,6 +221,8 @@ defmodule AshGraphql do
       end
 
       for {domain, resources, first?} <- domains do
+        last? = domain == last_domain
+
         defmodule Module.concat([__MODULE__, domain, AshTypes]) do
           @moduledoc false
           alias Absinthe.{Blueprint, Phase, Pipeline}
@@ -218,6 +242,7 @@ defmodule AshGraphql do
             action_middleware = unquote(action_middleware)
 
             all_domains = unquote(Enum.map(domains, &elem(&1, 0)))
+            labels = unquote(labels)
 
             domain_queries =
               AshGraphql.Domain.queries(
@@ -226,7 +251,8 @@ defmodule AshGraphql do
                 unquote(resources),
                 action_middleware,
                 unquote(schema),
-                unquote(relay_ids?)
+                unquote(relay_ids?),
+                labels
               )
 
             relay_queries =
@@ -237,7 +263,8 @@ defmodule AshGraphql do
                   domains_with_resources,
                   all_domains,
                   unquote(schema),
-                  __ENV__
+                  __ENV__,
+                  labels
                 )
               else
                 []
@@ -256,7 +283,8 @@ defmodule AshGraphql do
                 unquote(resources),
                 action_middleware,
                 unquote(schema),
-                unquote(relay_ids?)
+                unquote(relay_ids?),
+                labels
               )
               |> Enum.reduce(blueprint_with_queries, fn mutation, blueprint ->
                 Absinthe.Blueprint.add_field(blueprint, "RootMutationType", mutation)
@@ -310,7 +338,8 @@ defmodule AshGraphql do
                     unquote(ash_resources),
                     domains,
                     unquote(schema),
-                    unquote(relay_ids?)
+                    unquote(relay_ids?),
+                    labels
                   )
 
                 global_maps =
@@ -318,7 +347,8 @@ defmodule AshGraphql do
                     unquote(ash_resources),
                     domains,
                     unquote(schema),
-                    __ENV__
+                    __ENV__,
+                    labels
                   )
 
                 global_enums =
@@ -326,7 +356,8 @@ defmodule AshGraphql do
                     unquote(ash_resources),
                     domains,
                     unquote(schema),
-                    __ENV__
+                    __ENV__,
+                    labels
                   )
 
                 global_unions =
@@ -334,7 +365,8 @@ defmodule AshGraphql do
                     unquote(ash_resources),
                     domains,
                     unquote(schema),
-                    __ENV__
+                    __ENV__,
+                    labels
                   )
 
                 Enum.uniq_by(
@@ -348,7 +380,8 @@ defmodule AshGraphql do
                       true,
                       unquote(define_relay_types?),
                       unquote(relay_ids?),
-                      action_middleware
+                      action_middleware,
+                      labels
                     ) ++
                     global_maps ++
                     global_enums ++
@@ -366,7 +399,8 @@ defmodule AshGraphql do
                   false,
                   false,
                   unquote(relay_ids?),
-                  action_middleware
+                  action_middleware,
+                  labels
                 )
               end
 
@@ -389,7 +423,13 @@ defmodule AshGraphql do
                 }
               end)
 
-            {:ok, %{blueprint_with_subscriptions | schema_definitions: new_defs}}
+            blueprint = %{blueprint_with_subscriptions | schema_definitions: new_defs}
+
+            if unquote(last?) do
+              AshGraphql.warn_on_missing_absinthe_types(blueprint, labels)
+            end
+
+            {:ok, blueprint}
           end
         end
 
@@ -403,16 +443,16 @@ defmodule AshGraphql do
   end
 
   @doc false
-  def global_maps(resources, all_domains, schema, env) do
+  def global_maps(resources, all_domains, schema, env, labels \\ nil) do
     resources
-    |> Enum.flat_map(&AshGraphql.Resource.map_definitions(&1, all_domains, schema, env))
+    |> Enum.flat_map(&AshGraphql.Resource.map_definitions(&1, all_domains, schema, env, labels))
     |> Enum.uniq_by(& &1.identifier)
   end
 
   @doc false
-  def global_enums(resources, all_domains, schema, env) do
+  def global_enums(resources, all_domains, schema, env, labels \\ nil) do
     resources
-    |> Enum.flat_map(&all_attributes_and_arguments(&1, all_domains))
+    |> Enum.flat_map(&all_attributes_and_arguments(&1, all_domains, [], false, labels))
     |> only_enum_types()
     |> Enum.uniq()
     |> Enum.map(fn type ->
@@ -471,11 +511,11 @@ defmodule AshGraphql do
   end
 
   @doc false
-  def global_unions(resources, all_domains, schema, env) do
+  def global_unions(resources, all_domains, schema, env, labels \\ nil) do
     resources
     |> Enum.flat_map(fn resource ->
       resource
-      |> AshGraphql.Resource.global_unions(all_domains)
+      |> AshGraphql.Resource.global_unions(all_domains, labels)
       |> Enum.flat_map(fn {type, attribute} ->
         type_name = type.graphql_type(attribute.constraints)
 
@@ -504,7 +544,8 @@ defmodule AshGraphql do
         resource,
         all_domains,
         already_checked \\ [],
-        return_new_checked? \\ false
+        return_new_checked? \\ false,
+        labels \\ nil
       ) do
     if resource in already_checked do
       if return_new_checked? do
@@ -518,12 +559,15 @@ defmodule AshGraphql do
       attrs =
         resource
         |> Ash.Resource.Info.public_attributes()
-        |> Enum.concat(all_arguments(resource, all_domains))
+        |> Enum.concat(all_arguments(resource, all_domains, labels))
         |> Enum.concat(Ash.Resource.Info.calculations(resource))
         |> Enum.concat(
           resource
           |> Ash.Resource.Info.actions()
-          |> Enum.filter(&(&1.type == :action && &1.returns))
+          |> Enum.filter(fn action ->
+            action.type == :action && action.returns &&
+              used_in_gql?(resource, action, all_domains, labels)
+          end)
           |> Enum.map(fn action ->
             %{
               type: action.returns,
@@ -534,7 +578,7 @@ defmodule AshGraphql do
             }
           end)
         )
-        |> Enum.concat(all_metadata(resource, all_domains))
+        |> Enum.concat(all_metadata(resource, all_domains, labels))
 
       {attrs, already_checked} =
         Enum.reduce(attrs, {[], already_checked}, fn
@@ -542,7 +586,7 @@ defmodule AshGraphql do
             constraints = Map.get(attr, :constraints, [])
 
             {nested, already_checked} =
-              nested_attrs(type, all_domains, constraints, already_checked)
+              nested_attrs(type, all_domains, constraints, already_checked, labels)
 
             nested =
               Enum.map(nested, &Map.put(&1, :original_name, attr.name))
@@ -701,7 +745,7 @@ defmodule AshGraphql do
   end
 
   @doc false
-  def relay_queries(domains_with_resources, all_domains, schema, env) do
+  def relay_queries(domains_with_resources, all_domains, schema, env, labels \\ nil) do
     type_to_domain_and_resource_map =
       domains_with_resources
       |> Enum.flat_map(fn {domain, resources} ->
@@ -709,7 +753,9 @@ defmodule AshGraphql do
         |> Enum.flat_map(fn resource ->
           type = AshGraphql.Resource.Info.type(resource)
 
-          if type do
+          if type &&
+               (is_nil(labels) ||
+                  AshGraphql.Resource.primary_key_get_query(resource, all_domains, labels)) do
             [{type, {domain, resource}}]
           else
             []
@@ -746,11 +792,11 @@ defmodule AshGraphql do
     ]
   end
 
-  defp nested_attrs({:array, type}, domain, constraints, already_checked) do
-    nested_attrs(type, domain, constraints[:items] || [], already_checked)
+  defp nested_attrs({:array, type}, domain, constraints, already_checked, labels) do
+    nested_attrs(type, domain, constraints[:items] || [], already_checked, labels)
   end
 
-  defp nested_attrs(Ash.Type.Union, domain, constraints, already_checked) do
+  defp nested_attrs(Ash.Type.Union, domain, constraints, already_checked, labels) do
     Enum.reduce(
       constraints[:types] || [],
       {[], already_checked},
@@ -758,13 +804,19 @@ defmodule AshGraphql do
         case config[:type] do
           {:array, type} ->
             {new, already_checked} =
-              nested_attrs(type, domain, config[:constraints][:items] || [], already_checked)
+              nested_attrs(
+                type,
+                domain,
+                config[:constraints][:items] || [],
+                already_checked,
+                labels
+              )
 
             {attrs ++ new, already_checked}
 
           type ->
             {new, already_checked} =
-              nested_attrs(type, domain, config[:constraints] || [], already_checked)
+              nested_attrs(type, domain, config[:constraints] || [], already_checked, labels)
 
             {attrs ++ new, already_checked}
         end
@@ -772,12 +824,12 @@ defmodule AshGraphql do
     )
   end
 
-  defp nested_attrs(type, all_domains, constraints, already_checked) do
+  defp nested_attrs(type, all_domains, constraints, already_checked, labels) do
     cond do
       AshGraphql.Resource.embedded?(type) ->
         type
         |> unwrap_type()
-        |> all_attributes_and_arguments(all_domains, already_checked, true)
+        |> all_attributes_and_arguments(all_domains, already_checked, true, labels)
 
       Ash.Type.NewType.new_type?(type) && type not in already_checked ->
         already_checked = [type | already_checked]
@@ -797,7 +849,7 @@ defmodule AshGraphql do
 
           {[fake_attr], already_checked}
         else
-          nested_attrs(subtype, all_domains, constraints, already_checked)
+          nested_attrs(subtype, all_domains, constraints, already_checked, labels)
         end
 
       true ->
@@ -1051,11 +1103,11 @@ defmodule AshGraphql do
 
   # sobelow_skip ["DOS.BinToAtom"]
   @doc false
-  def get_embedded_types(all_resources, all_domains, schema, relay_ids?) do
+  def get_embedded_types(all_resources, all_domains, schema, relay_ids?, labels \\ nil) do
     all_resources
     |> Enum.flat_map(fn resource ->
       resource
-      |> all_attributes_and_arguments(all_domains)
+      |> all_attributes_and_arguments(all_domains, [], false, labels)
       |> Enum.map(&{resource, &1})
     end)
     |> Enum.flat_map(fn
@@ -1162,11 +1214,11 @@ defmodule AshGraphql do
     |> Enum.uniq_by(& &1.identifier)
   end
 
-  defp all_arguments(resource, all_domains) do
+  defp all_arguments(resource, all_domains, labels) do
     action_arguments =
       resource
       |> Ash.Resource.Info.actions()
-      |> Enum.filter(&used_in_gql?(resource, &1, all_domains))
+      |> Enum.filter(&used_in_gql?(resource, &1, all_domains, labels))
       |> Enum.flat_map(& &1.arguments)
 
     calculation_arguments =
@@ -1177,10 +1229,10 @@ defmodule AshGraphql do
     action_arguments ++ calculation_arguments
   end
 
-  defp all_metadata(resource, all_domains) do
+  defp all_metadata(resource, all_domains, labels) do
     resource
     |> Ash.Resource.Info.actions()
-    |> Enum.filter(&used_in_gql?(resource, &1, all_domains))
+    |> Enum.filter(&used_in_gql?(resource, &1, all_domains, labels))
     |> Enum.flat_map(&Map.get(&1, :metadata, []))
     |> Enum.map(fn metadata ->
       %{
@@ -1193,13 +1245,13 @@ defmodule AshGraphql do
     end)
   end
 
-  defp used_in_gql?(resource, %{name: name}, all_domains) do
+  defp used_in_gql?(resource, %{name: name}, all_domains, labels) do
     if Ash.Resource.Info.embedded?(resource) do
       # We should actually check if any resource refers to this action for this
       true
     else
-      mutations = AshGraphql.Resource.Info.mutations(resource, all_domains)
-      queries = AshGraphql.Resource.Info.queries(resource, all_domains)
+      mutations = AshGraphql.Resource.Info.mutations(resource, all_domains, labels)
+      queries = AshGraphql.Resource.Info.queries(resource, all_domains, labels)
 
       Enum.any?(mutations, fn mutation ->
         mutation.action == name || Map.get(mutation, :read_action) == name
@@ -1293,6 +1345,116 @@ defmodule AshGraphql do
         response_metadata: {:my_extension_key, {MyApp.MetadataHandler, :build, []}}
     """
   end
+
+  @doc false
+  def validate_labels!(nil, _resources, _all_domains), do: :ok
+
+  def validate_labels!([], _resources, _all_domains) do
+    raise ArgumentError, """
+    Invalid `labels` configuration: []
+
+    When `labels` is provided, at least one label must be specified.
+    """
+  end
+
+  def validate_labels!(labels, resources, all_domains) do
+    labels = List.wrap(labels)
+
+    available_labels =
+      resources
+      |> Enum.filter(&(AshGraphql.Resource in Spark.extensions(&1)))
+      |> Enum.flat_map(fn resource ->
+        AshGraphql.Resource.Info.queries(resource, all_domains) ++
+          AshGraphql.Resource.Info.mutations(resource, all_domains)
+      end)
+      |> Enum.flat_map(&List.wrap(Map.get(&1, :labels, [])))
+      |> Enum.uniq()
+
+    missing_labels = labels -- available_labels
+
+    if missing_labels != [] do
+      raise ArgumentError, """
+      Invalid `labels` configuration: #{inspect(labels)}
+
+      The following labels are not used by any GraphQL query or mutation in the selected domains:
+
+      #{Enum.map_join(missing_labels, "\n", &"  * #{inspect(&1)}")}
+      """
+    end
+
+    :ok
+  end
+
+  @doc false
+  def warn_on_missing_absinthe_types(_blueprint, nil), do: :ok
+
+  def warn_on_missing_absinthe_types(blueprint, labels) do
+    missing_types =
+      blueprint
+      |> missing_absinthe_types()
+      |> Enum.sort()
+
+    if missing_types != [] do
+      IO.warn("""
+      AshGraphql schema labels #{inspect(List.wrap(labels))} include operations that reference GraphQL types not defined or imported in the Absinthe schema:
+
+      #{Enum.map_join(missing_types, "\n", &"  * #{inspect(&1)}")}
+
+      AshGraphql can generate transitive AshGraphql-managed types for labelled operations, but it cannot infer where manually defined Absinthe types are declared. Define them in the schema or import them with `import_types/1`.
+      """)
+    end
+
+    :ok
+  end
+
+  @builtin_absinthe_type_identifiers MapSet.new([
+                                       :id,
+                                       :string,
+                                       :integer,
+                                       :float,
+                                       :boolean
+                                     ])
+
+  defp missing_absinthe_types(blueprint) do
+    type_definitions =
+      blueprint
+      |> Map.get(:schema_definitions, [])
+      |> Enum.flat_map(&Map.get(&1, :type_definitions, []))
+
+    defined_types =
+      type_definitions
+      |> Enum.flat_map(&[Map.get(&1, :identifier), Map.get(&1, :name)])
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+      |> MapSet.union(@builtin_absinthe_type_identifiers)
+
+    referenced_types =
+      type_definitions
+      |> Enum.flat_map(&type_references/1)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    referenced_types
+    |> MapSet.difference(defined_types)
+    |> MapSet.to_list()
+  end
+
+  defp type_references(%Absinthe.Blueprint.TypeReference.Name{name: name}), do: [name]
+
+  defp type_references(%_struct{} = value) do
+    value
+    |> Map.from_struct()
+    |> Map.take([:arguments, :fields, :interfaces, :of_type, :type, :types])
+    |> Enum.flat_map(fn {_key, value} -> type_references(value) end)
+  end
+
+  defp type_references(value) when is_list(value) do
+    Enum.flat_map(value, &type_references/1)
+  end
+
+  defp type_references(value) when is_atom(value), do: [value]
+
+  defp type_references(_), do: []
 
   @doc false
   def validate_domains_for_relationships!(ash_resources, all_domains) do

@@ -17,8 +17,8 @@ defmodule AshGraphql.Test.ResourceWithTypeInsideType do
     end
 
     mutations do
-      action :create_type_inside_type, :custom_action
-      action :retrieve_type_inside_type, :custom_action_two
+      action :create_type_inside_type, :custom_action, labels: [:public]
+      action :retrieve_type_inside_type, :custom_action_two, labels: [:public]
     end
   end
 

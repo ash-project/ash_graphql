@@ -99,6 +99,11 @@ defmodule AshGraphql.Resource do
       """,
       default: []
     ],
+    labels: [
+      type: {:wrap_list, :atom},
+      doc: "Labels used to include or exclude this action from schemas with matching labels.",
+      default: []
+    ],
     meta: [
       type: :keyword_list,
       doc: "A keyword list of metadata for the action.",
@@ -120,6 +125,7 @@ defmodule AshGraphql.Resource do
       :__spark_metadata__,
       args: [],
       hide_inputs: [],
+      labels: [],
       meta: [],
       group: nil
     ]
@@ -584,10 +590,10 @@ defmodule AshGraphql.Resource do
   use Spark.Dsl.Extension, sections: @sections, transformers: @transformers, verifiers: @verifiers
 
   @deprecated "See `AshGraphql.Resource.Info.queries/1`"
-  defdelegate queries(resource, domain \\ []), to: AshGraphql.Resource.Info
+  defdelegate queries(resource, domain \\ [], labels \\ nil), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
-  defdelegate mutations(resource, domain \\ []), to: AshGraphql.Resource.Info
+  defdelegate mutations(resource, domain \\ [], labels \\ nil), to: AshGraphql.Resource.Info
 
   @deprecated "See `AshGraphql.Resource.Info.mutations/1`"
   defdelegate subscriptions(resource, domain \\ []), to: AshGraphql.Resource.Info
@@ -938,13 +944,14 @@ defmodule AshGraphql.Resource do
         action_middleware,
         schema,
         relay_ids?,
-        env
+        env,
+        labels \\ nil
       ) do
     indexed =
       Enum.flat_map(resources, fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
           resource
-          |> AshGraphql.Resource.Info.queries(all_domains)
+          |> AshGraphql.Resource.Info.queries(all_domains, labels)
           |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == false))
           |> Enum.map(&{resource, &1})
         else
@@ -997,16 +1004,17 @@ defmodule AshGraphql.Resource do
         action_middleware,
         schema,
         relay_ids?,
-        env
+        env,
+        labels \\ nil
       ) do
     indexed =
       Enum.flat_map(resources, fn resource ->
         if AshGraphql.Resource in Spark.extensions(resource) do
           mutations =
-            AshGraphql.Resource.Info.mutations(resource, all_domains)
+            AshGraphql.Resource.Info.mutations(resource, all_domains, labels)
 
           as_mutations =
-            AshGraphql.Resource.Info.queries(resource, all_domains)
+            AshGraphql.Resource.Info.queries(resource, all_domains, labels)
             |> Enum.filter(&Map.get(&1, :as_mutation?, false))
 
           Enum.map(mutations ++ as_mutations, &{resource, &1})
@@ -1060,13 +1068,14 @@ defmodule AshGraphql.Resource do
         action_middleware,
         schema,
         env,
-        relay_ids?
+        relay_ids?,
+        labels \\ nil
       ) do
     query_groups =
       resources
       |> Enum.flat_map(fn resource ->
         resource
-        |> AshGraphql.Resource.Info.queries(all_domains)
+        |> AshGraphql.Resource.Info.queries(all_domains, labels)
         |> Enum.filter(&(Map.get(&1, :as_mutation?, false) == false && Map.get(&1, :group)))
         |> Enum.map(&{resource, &1})
       end)
@@ -1076,10 +1085,10 @@ defmodule AshGraphql.Resource do
       resources
       |> Enum.flat_map(fn resource ->
         mutations =
-          AshGraphql.Resource.Info.mutations(resource, all_domains)
+          AshGraphql.Resource.Info.mutations(resource, all_domains, labels)
 
         as_mutations =
-          AshGraphql.Resource.Info.queries(resource, all_domains)
+          AshGraphql.Resource.Info.queries(resource, all_domains, labels)
           |> Enum.filter(&Map.get(&1, :as_mutation?, false))
 
         Enum.map(mutations ++ as_mutations, &{resource, &1})
@@ -1241,10 +1250,11 @@ defmodule AshGraphql.Resource do
         action_middleware,
         schema,
         relay_ids?,
-        as_mutations? \\ false
+        as_mutations? \\ false,
+        labels \\ nil
       ) do
     resource
-    |> queries(all_domains)
+    |> queries(all_domains, labels)
     |> Enum.filter(
       &(Map.get(&1, :as_mutation?, false) == as_mutations? and Map.get(&1, :group) == nil)
     )
@@ -1262,10 +1272,18 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def mutations(domain, all_domains, resource, action_middleware, schema, relay_ids?) do
+  def mutations(
+        domain,
+        all_domains,
+        resource,
+        action_middleware,
+        schema,
+        relay_ids?,
+        labels \\ nil
+      ) do
     regular =
       resource
-      |> mutations(all_domains)
+      |> mutations(all_domains, labels)
       |> Enum.filter(&(Map.get(&1, :group) == nil))
       |> Enum.map(
         &mutation_entity_field_definition(
@@ -1281,7 +1299,7 @@ defmodule AshGraphql.Resource do
 
     as_mutations =
       resource
-      |> queries(all_domains)
+      |> queries(all_domains, labels)
       |> Enum.filter(&(Map.get(&1, :as_mutation?, false) && Map.get(&1, :group) == nil))
       |> Enum.map(
         &query_field_definition(
@@ -1451,11 +1469,11 @@ defmodule AshGraphql.Resource do
 
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
-  def mutation_types(resource, domain, all_domains, schema) do
+  def mutation_types(resource, domain, all_domains, schema, labels \\ nil) do
     resource_type = AshGraphql.Resource.Info.type(resource)
 
     resource
-    |> mutations(all_domains)
+    |> mutations(all_domains, labels)
     |> Enum.map(fn mutation ->
       %{
         mutation
@@ -1591,9 +1609,9 @@ defmodule AshGraphql.Resource do
 
   @doc false
   # sobelow_skip ["DOS.StringToAtom"]
-  def query_types(resource, domain, all_domains, schema) do
+  def query_types(resource, domain, all_domains, schema, labels \\ nil) do
     resource
-    |> queries(all_domains)
+    |> queries(all_domains, labels)
     |> Enum.filter(&(&1.type == :action && &1.error_location == :in_result))
     |> Enum.map(fn mutation ->
       mutation =
@@ -2518,9 +2536,9 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def type_definitions(resource, domain, all_domains, schema, relay_ids?) do
-    List.wrap(type_definition(resource, domain, all_domains, schema, relay_ids?)) ++
-      List.wrap(query_type_definitions(resource, domain, all_domains, schema, relay_ids?)) ++
+  def type_definitions(resource, domain, all_domains, schema, relay_ids?, labels \\ nil) do
+    List.wrap(type_definition(resource, domain, all_domains, schema, relay_ids?, labels)) ++
+      List.wrap(query_type_definitions(resource, domain, all_domains, schema, relay_ids?, labels)) ++
       List.wrap(sort_input(resource, schema)) ++
       List.wrap(filter_input(resource, schema)) ++
       filter_field_types(resource, schema) ++
@@ -3753,10 +3771,10 @@ defmodule AshGraphql.Resource do
     String.to_atom(to_string(type) <> "_sort_field")
   end
 
-  def map_definitions(resource, all_domains, schema, env) do
+  def map_definitions(resource, all_domains, schema, env, labels \\ nil) do
     if AshGraphql.Resource.Info.type(resource) do
       resource
-      |> global_maps(all_domains)
+      |> global_maps(all_domains, labels)
       |> Enum.flat_map(fn attribute ->
         type_name =
           if function_exported?(attribute.type, :graphql_type, 1) do
@@ -4319,9 +4337,9 @@ defmodule AshGraphql.Resource do
   end
 
   @doc false
-  def global_maps(resource, all_domains) do
+  def global_maps(resource, all_domains, labels \\ nil) do
     resource
-    |> AshGraphql.all_attributes_and_arguments(all_domains)
+    |> AshGraphql.all_attributes_and_arguments(all_domains, [], false, labels)
     |> Enum.map(&unnest/1)
     |> Enum.filter(
       &(Ash.Type.NewType.subtype_of(&1.type) in [Ash.Type.Map, Ash.Type.Struct] &&
@@ -4351,9 +4369,9 @@ defmodule AshGraphql.Resource do
   def unnest(other), do: other
 
   @doc false
-  def global_unions(resource, all_domains) do
+  def global_unions(resource, all_domains, labels \\ nil) do
     resource
-    |> AshGraphql.all_attributes_and_arguments(all_domains)
+    |> AshGraphql.all_attributes_and_arguments(all_domains, [], false, labels)
     |> Enum.filter(&define_type?(&1.type, &1.constraints))
     |> AshGraphql.only_union_types()
     |> Enum.uniq_by(&elem(&1, 0))
@@ -4611,11 +4629,11 @@ defmodule AshGraphql.Resource do
     type.identifier == :node
   end
 
-  def query_type_definitions(resource, domain, all_domains, schema, relay_ids?) do
+  def query_type_definitions(resource, domain, all_domains, schema, relay_ids?, labels \\ nil) do
     resource_type = AshGraphql.Resource.Info.type(resource)
 
     resource
-    |> AshGraphql.Resource.Info.queries(domain)
+    |> AshGraphql.Resource.Info.queries(domain, labels)
     |> Enum.filter(&(Map.get(&1, :type_name) && &1.type_name != resource_type))
     |> Enum.map(fn query ->
       relay? = Map.get(query, :relay?)
@@ -4623,7 +4641,7 @@ defmodule AshGraphql.Resource do
       # We can implement the Relay node interface only if the resource has a get
       # query using the primary key as identity
       interfaces =
-        if relay? and primary_key_get_query(resource, all_domains) != nil do
+        if relay? and primary_key_get_query(resource, all_domains, labels) != nil do
           [:node]
         else
           []
@@ -4641,10 +4659,10 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  def type_definition(resource, domain, all_domains, schema, relay_ids?) do
+  def type_definition(resource, domain, all_domains, schema, relay_ids?, labels \\ nil) do
     actual_resource = Ash.Type.NewType.subtype_of(resource)
 
-    if generate_object?(resource, all_domains) do
+    if generate_object?(resource, all_domains, labels) do
       type =
         AshGraphql.Resource.Info.type(resource) ||
           raise """
@@ -4666,14 +4684,14 @@ defmodule AshGraphql.Resource do
 
       relay? =
         resource
-        |> queries(all_domains)
+        |> queries(all_domains, labels)
         |> Enum.any?(&Map.get(&1, :relay?))
         |> Kernel.or(relay_ids?)
 
       # We can implement the Relay node interface only if the resource has a get
       # query using the primary key as identity
       interfaces =
-        if relay? and primary_key_get_query(resource, all_domains) != nil do
+        if relay? and primary_key_get_query(resource, all_domains, labels) != nil do
           [:node]
         else
           []
@@ -4701,7 +4719,7 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp generate_object?(resource, all_domains) do
+  defp generate_object?(resource, all_domains, labels) do
     cond do
       AshGraphql.Resource.Info.type(resource) ->
         generate_object?(resource)
@@ -4709,10 +4727,10 @@ defmodule AshGraphql.Resource do
       !generate_object?(resource) ->
         false
 
-      referenced_by_action(resource) ->
+      referenced_by_action(resource, labels) ->
         generate_object?(resource)
 
-      referenced_by_type?(resource, all_domains) ->
+      referenced_by_type?(resource, all_domains, labels) ->
         true
 
       referenced_by_relationship?(resource, all_domains) ->
@@ -4723,9 +4741,10 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp referenced_by_action(resource) do
+  defp referenced_by_action(resource, labels) do
     Enum.any?(
-      AshGraphql.Resource.Info.queries(resource) ++ AshGraphql.Resource.Info.mutations(resource),
+      AshGraphql.Resource.Info.queries(resource, [], labels) ++
+        AshGraphql.Resource.Info.mutations(resource, [], labels),
       &(&1.type != :action)
     )
   end
@@ -4738,9 +4757,9 @@ defmodule AshGraphql.Resource do
     |> Enum.any?(&(&1.destination == resource))
   end
 
-  defp referenced_by_type?(resource, all_domains) do
+  defp referenced_by_type?(resource, all_domains, labels) do
     resource
-    |> AshGraphql.all_attributes_and_arguments(all_domains)
+    |> AshGraphql.all_attributes_and_arguments(all_domains, [], false, labels)
     |> Enum.map(&AshGraphql.Resource.unnest/1)
     |> Enum.any?(fn %{type: type, constraints: constraints} ->
       type == :struct and constraints[:instance_of] == resource
@@ -5514,10 +5533,10 @@ defmodule AshGraphql.Resource do
     """
   end
 
-  def primary_key_get_query(resource, all_domains) do
+  def primary_key_get_query(resource, all_domains, labels \\ nil) do
     # Find the get query with no identities, i.e. the one that uses the primary key
     resource
-    |> AshGraphql.Resource.Info.queries(all_domains)
+    |> AshGraphql.Resource.Info.queries(all_domains, labels)
     |> Enum.find(&(&1.type == :get and (&1.identity == nil or &1.identity == false)))
   end
 
