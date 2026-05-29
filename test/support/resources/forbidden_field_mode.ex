@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule AshGraphql.Test.FieldPolicyModeOrg do
+defmodule AshGraphql.Test.ForbiddenFieldModeOrg do
   @moduledoc false
 
   use Ash.Resource,
@@ -12,7 +12,7 @@ defmodule AshGraphql.Test.FieldPolicyModeOrg do
     extensions: [AshGraphql.Resource]
 
   graphql do
-    type(:field_policy_mode_org)
+    type(:forbidden_field_mode_org)
   end
 
   actions do
@@ -37,7 +37,7 @@ defmodule AshGraphql.Test.FieldPolicyModeOrg do
   end
 end
 
-defmodule AshGraphql.Test.FieldPolicyMode do
+defmodule AshGraphql.Test.ForbiddenFieldMode do
   @moduledoc false
 
   use Ash.Resource,
@@ -47,11 +47,11 @@ defmodule AshGraphql.Test.FieldPolicyMode do
     extensions: [AshGraphql.Resource]
 
   graphql do
-    type(:field_policy_mode)
-    field_policy_mode(:materialized)
+    type(:forbidden_field_mode)
+    forbidden_field_mode(:materialized)
 
     queries do
-      get(:get_field_policy_mode, :read)
+      get(:get_forbidden_field_mode, :read)
     end
   end
 
@@ -80,7 +80,7 @@ defmodule AshGraphql.Test.FieldPolicyMode do
   end
 
   relationships do
-    belongs_to :org, AshGraphql.Test.FieldPolicyModeOrg do
+    belongs_to :org, AshGraphql.Test.ForbiddenFieldModeOrg do
       public?(true)
       allow_nil?(false)
       allow_forbidden_field?(true)
@@ -109,7 +109,7 @@ defmodule AshGraphql.Test.FieldPolicyMode do
   end
 end
 
-defmodule AshGraphql.Test.FieldPolicyNullableMode do
+defmodule AshGraphql.Test.ForbiddenFieldNullableMode do
   @moduledoc false
 
   use Ash.Resource,
@@ -119,11 +119,11 @@ defmodule AshGraphql.Test.FieldPolicyNullableMode do
     extensions: [AshGraphql.Resource]
 
   graphql do
-    type(:field_policy_nullable_mode)
-    field_policy_mode(:nullable)
+    type(:forbidden_field_nullable_mode)
+    forbidden_field_mode(:nullable)
 
     queries do
-      get(:get_field_policy_nullable_mode, :read)
+      get(:get_forbidden_field_nullable_mode, :read)
     end
   end
 

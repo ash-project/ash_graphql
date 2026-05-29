@@ -71,7 +71,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
           warnings
         end
       end)
-      |> check_custom_authorizers_for_field_policy_mode(dsl, resource)
+      |> check_custom_authorizers_for_forbidden_field_mode(dsl, resource)
 
     case warnings do
       [] -> :ok
@@ -273,8 +273,8 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
       "(it is hidden or not in show_fields) and will have no effect in #{inspect(resource)}."
   end
 
-  defp check_custom_authorizers_for_field_policy_mode(warnings, dsl, resource) do
-    case AshGraphql.Resource.Info.field_policy_mode(dsl) do
+  defp check_custom_authorizers_for_forbidden_field_mode(warnings, dsl, resource) do
+    case AshGraphql.Resource.Info.forbidden_field_mode(dsl) do
       :legacy ->
         warnings
 
@@ -294,12 +294,12 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
   end
 
   defp custom_authorizers_warning(resource, mode, custom_authorizers) do
-    "Resource #{inspect(resource)} uses `field_policy_mode #{inspect(mode)}` with custom " <>
+    "Resource #{inspect(resource)} uses `forbidden_field_mode #{inspect(mode)}` with custom " <>
       "authorizer(s) #{inspect(custom_authorizers)} that do not implement " <>
       "`Ash.Authorizer.protected_fields/1`. AshGraphql uses " <>
       "`Ash.Resource.Info.protected_fields/1` to infer protected schema fields; custom " <>
       "authorizers must implement `Ash.Authorizer.protected_fields/1` for nullable or " <>
-      "materialized field-policy schema behavior to include their protected fields."
+      "materialized forbidden-field schema behavior to include their protected fields."
   end
 
   defp missing_protected_fields_callback?(authorizer) do

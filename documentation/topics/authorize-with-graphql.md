@@ -131,18 +131,18 @@ graphql do
 end
 ```
 
-To automatically make fields that may be hidden by authorization nullable, use `field_policy_mode :nullable`.
+To automatically make fields that may be hidden by authorization nullable, use `forbidden_field_mode :nullable`.
 Built-in Ash field policies are detected automatically, excluding catch-all policies like `authorize_if always()`. Custom authorizers can participate by reporting the fields they may hide.
 
 ```elixir
 graphql do
   type :post
 
-  field_policy_mode :nullable
+  forbidden_field_mode :nullable
 end
 ```
 
-To expose forbidden fields as data instead of GraphQL errors, use `field_policy_mode :materialized`.
+To expose forbidden fields as data instead of GraphQL errors, use `forbidden_field_mode :materialized`.
 Fields that may be hidden by authorization are exposed as unions whose members are a field-specific value wrapper and `ForbiddenField`.
 Singular relationships with `allow_forbidden_field? true` are exposed as unions whose members are the destination type and `ForbiddenField`.
 
@@ -150,7 +150,7 @@ Singular relationships with `allow_forbidden_field? true` are exposed as unions 
 graphql do
   type :post
 
-  field_policy_mode :materialized
+  forbidden_field_mode :materialized
 end
 
 relationships do
@@ -165,12 +165,12 @@ end
 
 Field policies cover attributes, calculations, and aggregates. They do not currently target relationships.
 
-Singular relationships can still be materialized when Ash may return a forbidden relationship sentinel. To opt into that behavior, configure the relationship with `allow_forbidden_field? true` and use `field_policy_mode :materialized`.
+Singular relationships can still be materialized when Ash may return a forbidden relationship sentinel. To opt into that behavior, configure the relationship with `allow_forbidden_field? true` and use `forbidden_field_mode :materialized`.
 
 ```elixir
 graphql do
   type :post
-  field_policy_mode :materialized
+  forbidden_field_mode :materialized
 end
 
 relationships do

@@ -412,7 +412,7 @@ defmodule AshGraphql.VerifyFieldDependenciesTest do
     end
   end
 
-  describe "field_policy_mode with custom authorizers" do
+  describe "forbidden_field_mode with custom authorizers" do
     test "protected field detection uses Ash.Resource.Info.protected_fields/1" do
       dsl =
         dsl_state()
@@ -425,11 +425,11 @@ defmodule AshGraphql.VerifyFieldDependenciesTest do
     test "warns for nullable mode" do
       dsl =
         dsl_state()
-        |> set_graphql_option(:field_policy_mode, :nullable)
+        |> set_graphql_option(:forbidden_field_mode, :nullable)
         |> set_authorizers([CustomAuthorizerWithoutProtectedFields])
 
       assert {:warn, warnings} = VerifyFieldDependencies.verify(dsl)
-      assert Enum.any?(warnings, &(&1 =~ "field_policy_mode :nullable"))
+      assert Enum.any?(warnings, &(&1 =~ "forbidden_field_mode :nullable"))
       assert Enum.any?(warnings, &(&1 =~ "CustomAuthorizerWithoutProtectedFields"))
       assert Enum.any?(warnings, &(&1 =~ "Ash.Authorizer.protected_fields/1"))
     end
@@ -437,11 +437,11 @@ defmodule AshGraphql.VerifyFieldDependenciesTest do
     test "warns for materialized mode when a custom authorizer is configured alongside Ash.Policy.Authorizer" do
       dsl =
         dsl_state()
-        |> set_graphql_option(:field_policy_mode, :materialized)
+        |> set_graphql_option(:forbidden_field_mode, :materialized)
         |> set_authorizers([CustomAuthorizerWithoutProtectedFields, Ash.Policy.Authorizer])
 
       assert {:warn, warnings} = VerifyFieldDependencies.verify(dsl)
-      assert Enum.any?(warnings, &(&1 =~ "field_policy_mode :materialized"))
+      assert Enum.any?(warnings, &(&1 =~ "forbidden_field_mode :materialized"))
       assert Enum.any?(warnings, &(&1 =~ "CustomAuthorizerWithoutProtectedFields"))
     end
 
@@ -450,7 +450,7 @@ defmodule AshGraphql.VerifyFieldDependenciesTest do
 
       builtin_dsl =
         dsl_state()
-        |> set_graphql_option(:field_policy_mode, :materialized)
+        |> set_graphql_option(:forbidden_field_mode, :materialized)
         |> set_authorizers([Ash.Policy.Authorizer])
 
       assert :ok = VerifyFieldDependencies.verify(legacy_dsl)
@@ -460,7 +460,7 @@ defmodule AshGraphql.VerifyFieldDependenciesTest do
     test "does not warn when custom authorizer implements protected_fields/1" do
       dsl =
         dsl_state()
-        |> set_graphql_option(:field_policy_mode, :materialized)
+        |> set_graphql_option(:forbidden_field_mode, :materialized)
         |> set_authorizers([CustomAuthorizer, Ash.Policy.Authorizer])
 
       assert :ok = VerifyFieldDependencies.verify(dsl)

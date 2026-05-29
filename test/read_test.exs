@@ -158,18 +158,18 @@ defmodule AshGraphql.ReadTest do
 
   test "materialized field policy fields are exposed as value-or-forbidden unions" do
     org =
-      AshGraphql.Test.FieldPolicyModeOrg
+      AshGraphql.Test.ForbiddenFieldModeOrg
       |> Ash.Changeset.for_create(:create, name: "Org")
       |> Ash.create!()
 
     record =
-      AshGraphql.Test.FieldPolicyMode
+      AshGraphql.Test.ForbiddenFieldMode
       |> Ash.Changeset.for_create(:create, org_id: org.id, maybe_secret: "maybe")
       |> Ash.create!()
 
     doc = """
-    query GetFieldPolicyMode($id: ID!) {
-      getFieldPolicyMode(id: $id) {
+    query GetForbiddenFieldMode($id: ID!) {
+      getForbiddenFieldMode(id: $id) {
         visible
         secret {
           __typename
@@ -177,7 +177,7 @@ defmodule AshGraphql.ReadTest do
             field
             message
           }
-          ... on FieldPolicyModeSecretFieldPolicyValue {
+          ... on ForbiddenFieldModeSecretFieldPolicyValue {
             value
           }
         }
@@ -186,7 +186,7 @@ defmodule AshGraphql.ReadTest do
           ... on ForbiddenField {
             message
           }
-          ... on FieldPolicyModeMaybeSecretFieldPolicyValue {
+          ... on ForbiddenFieldModeMaybeSecretFieldPolicyValue {
             value
           }
         }
@@ -204,7 +204,7 @@ defmodule AshGraphql.ReadTest do
     data = result.data
 
     assert %{
-             "getFieldPolicyMode" => %{
+             "getForbiddenFieldMode" => %{
                "visible" => "visible",
                "secret" => %{
                  "__typename" => "ForbiddenField",
@@ -212,7 +212,7 @@ defmodule AshGraphql.ReadTest do
                  "message" => "forbidden field"
                },
                "maybeSecret" => %{
-                 "__typename" => "FieldPolicyModeMaybeSecretFieldPolicyValue",
+                 "__typename" => "ForbiddenFieldModeMaybeSecretFieldPolicyValue",
                  "value" => "maybe"
                }
              }
@@ -221,21 +221,21 @@ defmodule AshGraphql.ReadTest do
 
   test "materialized singular relationships are exposed as related-or-forbidden unions" do
     org =
-      AshGraphql.Test.FieldPolicyModeOrg
+      AshGraphql.Test.ForbiddenFieldModeOrg
       |> Ash.Changeset.for_create(:create, name: "Org")
       |> Ash.create!()
 
     record =
-      AshGraphql.Test.FieldPolicyMode
+      AshGraphql.Test.ForbiddenFieldMode
       |> Ash.Changeset.for_create(:create, org_id: org.id)
       |> Ash.create!()
 
     doc = """
-    query GetFieldPolicyMode($id: ID!) {
-      getFieldPolicyMode(id: $id) {
+    query GetForbiddenFieldMode($id: ID!) {
+      getForbiddenFieldMode(id: $id) {
         org {
           __typename
-          ... on FieldPolicyModeOrg {
+          ... on ForbiddenFieldModeOrg {
             id
             name
           }
@@ -258,7 +258,7 @@ defmodule AshGraphql.ReadTest do
 
     assert %{
              data: %{
-               "getFieldPolicyMode" => %{
+               "getForbiddenFieldMode" => %{
                  "org" => %{
                    "__typename" => "ForbiddenField",
                    "field" => "org",
@@ -278,9 +278,9 @@ defmodule AshGraphql.ReadTest do
 
     assert %{
              data: %{
-               "getFieldPolicyMode" => %{
+               "getForbiddenFieldMode" => %{
                  "org" => %{
-                   "__typename" => "FieldPolicyModeOrg",
+                   "__typename" => "ForbiddenFieldModeOrg",
                    "id" => _,
                    "name" => "Org"
                  }
@@ -312,7 +312,7 @@ defmodule AshGraphql.ReadTest do
   test "materialized field policy unions keep always-authorized field policies out of the type" do
     doc = """
     query {
-      __type(name: "FieldPolicyMode") {
+      __type(name: "ForbiddenFieldMode") {
         fields {
           name
           type {
@@ -341,20 +341,20 @@ defmodule AshGraphql.ReadTest do
     assert fields["secret"] == %{
              "kind" => "NON_NULL",
              "name" => nil,
-             "ofType" => %{"kind" => "UNION", "name" => "FieldPolicyModeSecretFieldPolicy"}
+             "ofType" => %{"kind" => "UNION", "name" => "ForbiddenFieldModeSecretFieldPolicy"}
            }
 
     assert fields["org"] == %{
              "kind" => "NON_NULL",
              "name" => nil,
-             "ofType" => %{"kind" => "UNION", "name" => "FieldPolicyModeOrgRelationship"}
+             "ofType" => %{"kind" => "UNION", "name" => "ForbiddenFieldModeOrgRelationship"}
            }
   end
 
-  test "nullable field policy mode only overrides fields with non-trivial field policies" do
+  test "nullable forbidden field mode only overrides fields with non-trivial field policies" do
     doc = """
     query {
-      __type(name: "FieldPolicyNullableMode") {
+      __type(name: "ForbiddenFieldNullableMode") {
         fields {
           name
           type {

@@ -84,7 +84,7 @@ end
 | [`filterable_fields`](#graphql-filterable_fields){: #graphql-filterable_fields } | `any` |  | A list of fields that are allowed to be filtered on. Supports bare atoms (all operators) and keyword tuples with operator allowlists (e.g. `[:name, id: [:eq, :in]]`). Defaults to all filterable fields for which a GraphQL type can be created. |
 | [`sortable_fields`](#graphql-sortable_fields){: #graphql-sortable_fields } | `list(atom)` |  | A list of fields that are allowed to be sorted on. Defaults to all sortable fields for which a GraphQL type can be created. |
 | [`nullable_fields`](#graphql-nullable_fields){: #graphql-nullable_fields } | `atom \| list(atom)` |  | Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more. |
-| [`field_policy_mode`](#graphql-field_policy_mode){: #graphql-field_policy_mode } | `:legacy \| :nullable \| :override_nullability \| :materialized \| :materialize_fully` | `:legacy` | How fields that may be hidden by authorization are exposed. |
+| [`forbidden_field_mode`](#graphql-forbidden_field_mode){: #graphql-forbidden_field_mode } | `:legacy \| :nullable \| :override_nullability \| :materialized \| :materialize_fully` | `:legacy` | How forbidden field values are exposed. `:legacy` preserves the existing behavior. `:nullable`/`:override_nullability` makes those fields nullable, even if they are required. `:materialized`/`:materialize_fully` exposes those fields as value-or-ForbiddenField unions. |
 | [`error_handler`](#graphql-error_handler){: #graphql-error_handler } | `mfa` |  | Set an MFA to intercept/handle any errors that are generated. |
 
 

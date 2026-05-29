@@ -165,9 +165,9 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :nullable_fields, [])
   end
 
-  @doc "How GraphQL should expose fields with non-trivial Ash field policies"
-  def field_policy_mode(resource) do
-    case Extension.get_opt(resource, [:graphql], :field_policy_mode, :legacy) do
+  @doc "How GraphQL should expose forbidden field values"
+  def forbidden_field_mode(resource) do
+    case Extension.get_opt(resource, [:graphql], :forbidden_field_mode, :legacy) do
       :override_nullability -> :nullable
       :materialize_fully -> :materialized
       mode -> mode

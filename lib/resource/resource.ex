@@ -541,13 +541,13 @@ defmodule AshGraphql.Resource do
         doc:
           "Mark fields as nullable even if they are required. This is useful when using field policies. See the authorization guide for more."
       ],
-      field_policy_mode: [
+      forbidden_field_mode: [
         type:
           {:one_of,
            [:legacy, :nullable, :override_nullability, :materialized, :materialize_fully]},
         default: :legacy,
         doc: """
-        How fields that may be hidden by authorization are exposed.
+        How forbidden field values are exposed.
 
         `:legacy` preserves the existing behavior.
         `:nullable`/`:override_nullability` makes those fields nullable, even if they are required.
@@ -2548,7 +2548,7 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def field_policy_type_definitions(resource, schema) do
-    if AshGraphql.Resource.Info.field_policy_mode(resource) == :materialized &&
+    if AshGraphql.Resource.Info.forbidden_field_mode(resource) == :materialized &&
          AshGraphql.Resource.Info.type(resource) do
       value_fields = materialized_field_policy_value_fields(resource)
       singular_relationships = materialized_singular_relationships(resource)
@@ -5305,12 +5305,12 @@ defmodule AshGraphql.Resource do
   end
 
   defp materialized_field_policy_field?(resource, field) do
-    AshGraphql.Resource.Info.field_policy_mode(resource) == :materialized &&
+    AshGraphql.Resource.Info.forbidden_field_mode(resource) == :materialized &&
       field_policy_field?(resource, field)
   end
 
   defp materialized_singular_relationship?(resource, relationship) do
-    AshGraphql.Resource.Info.field_policy_mode(resource) == :materialized &&
+    AshGraphql.Resource.Info.forbidden_field_mode(resource) == :materialized &&
       relationship.cardinality == :one &&
       relationship.allow_forbidden_field?
   end
@@ -5346,7 +5346,7 @@ defmodule AshGraphql.Resource do
 
   defp nullable_field?(resource, field) do
     field in AshGraphql.Resource.Info.nullable_fields(resource) ||
-      (AshGraphql.Resource.Info.field_policy_mode(resource) == :nullable &&
+      (AshGraphql.Resource.Info.forbidden_field_mode(resource) == :nullable &&
          field_policy_field?(resource, field))
   end
 

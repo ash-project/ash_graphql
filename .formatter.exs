@@ -34,6 +34,7 @@ spark_locals_without_parens = [
   error_location: 1,
   field_names: 1,
   filterable_fields: 1,
+  forbidden_field_mode: 1,
   generate_object?: 1,
   get: 2,
   get: 3,
