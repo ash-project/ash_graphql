@@ -258,6 +258,7 @@ defmodule AshGraphql.Errors do
         {:array, inner} -> inner
         _ -> nil
       end
+
     elem_constraints = context.constraints[:items] || context.constraints["items"] || []
     {elem_type, elem_constraints} = unwrap_type(elem_type, elem_constraints)
     inner_context = %{context | type: elem_type, constraints: elem_constraints}
