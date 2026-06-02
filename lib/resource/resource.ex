@@ -3576,6 +3576,14 @@ defmodule AshGraphql.Resource do
         attr
       end
 
+    if aggregate.field && is_nil(attribute) do
+      raise Spark.Error.DslError,
+        module: resource,
+        path: [:aggregates, aggregate.name],
+        message:
+          "All aggregate fields must be attributes or calculations. Got: #{inspect(aggregate.field)}"
+    end
+
     field_type =
       if attribute do
         attribute.type
