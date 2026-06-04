@@ -563,6 +563,12 @@ defmodule AshGraphql.Test.Post do
     attribute(:status, AshGraphql.Test.Status, public?: true)
     attribute(:status_enum, AshGraphql.Test.StatusEnum, public?: true)
 
+    attribute(:new_type_with_description, AshGraphql.Test.NewTypeWithDescription, public?: true)
+
+    attribute(:enum_with_ash_type_description, AshGraphql.Test.EnumWithAshTypeDescription,
+      public?: true
+    )
+
     attribute(:enum_with_ash_graphql_description, AshGraphql.Test.EnumWithAshGraphqlDescription,
       public?: true
     )
