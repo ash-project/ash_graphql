@@ -780,7 +780,6 @@ defmodule AshGraphql do
         |> all_attributes_and_arguments(all_domains, already_checked, true)
 
       Ash.Type.NewType.new_type?(type) && type not in already_checked ->
-        already_checked = [type | already_checked]
         constraints = Ash.Type.NewType.constraints(type, constraints)
         subtype = Ash.Type.NewType.subtype_of(type)
 
@@ -797,7 +796,7 @@ defmodule AshGraphql do
 
           {[fake_attr], already_checked}
         else
-          nested_attrs(subtype, all_domains, constraints, already_checked)
+          nested_attrs(subtype, all_domains, constraints, [type | already_checked])
         end
 
       true ->
