@@ -211,7 +211,7 @@ defmodule AshGraphql.Test.Post do
       list :paginated_posts_limit_not_required, :paginated_limit_not_required
       list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
       list :lazyinit_search, :search
-      action(:post_count, :count)
+      action(:post_count, :count, labels: [:admin])
       action(:post_count_with_errors, :count, error_location: :in_result)
 
       action(
@@ -234,7 +234,7 @@ defmodule AshGraphql.Test.Post do
     end
 
     mutations do
-      create :simple_create_post, :create
+      create :simple_create_post, :create, labels: [:public]
       create :create_post_with_arg, :create, args: [:text]
       create :create_post_with_argument_types, :create_with_argument_types
       create :create_post_with_error, :create_with_error
@@ -257,7 +257,7 @@ defmodule AshGraphql.Test.Post do
 
       create :create_post_with_invalid_arguments_names, :create_with_invalid_arguments_names
 
-      update :update_post, :update
+      update :update_post, :update, labels: [:admin]
       update :update_post_with_arg, :update, args: [:text]
       update :update_post_with_comments, :update_with_comments
       update :update_post_confirm, :update_confirm
@@ -562,6 +562,12 @@ defmodule AshGraphql.Test.Post do
     attribute(:foo, AshGraphql.Test.Foo, public?: true)
     attribute(:status, AshGraphql.Test.Status, public?: true)
     attribute(:status_enum, AshGraphql.Test.StatusEnum, public?: true)
+
+    attribute(:new_type_with_description, AshGraphql.Test.NewTypeWithDescription, public?: true)
+
+    attribute(:enum_with_ash_type_description, AshGraphql.Test.EnumWithAshTypeDescription,
+      public?: true
+    )
 
     attribute(:enum_with_ash_graphql_description, AshGraphql.Test.EnumWithAshGraphqlDescription,
       public?: true

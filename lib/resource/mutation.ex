@@ -19,6 +19,7 @@ defmodule AshGraphql.Resource.Mutation do
     :__spark_metadata__,
     args: [],
     hide_inputs: [],
+    labels: [],
     meta: [],
     group: nil
   ]
@@ -55,6 +56,11 @@ defmodule AshGraphql.Resource.Mutation do
     hide_inputs: [
       type: {:list, :atom},
       doc: "A list of inputs to hide from the mutation."
+    ],
+    labels: [
+      type: {:wrap_list, :atom},
+      doc: "Labels used to include or exclude this mutation from schemas with matching labels.",
+      default: []
     ],
     modify_resolution: [
       type: :mfa,
