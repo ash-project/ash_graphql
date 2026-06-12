@@ -5192,7 +5192,9 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_calculations()
-    |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
+    |> Enum.filter(
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) and Map.get(&1, :field?, true))
+    )
     |> Enum.map(fn calculation ->
       name = field_names[calculation.name] || calculation.name
       field_type = calculation_type(calculation, resource)
