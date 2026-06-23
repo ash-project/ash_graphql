@@ -33,6 +33,7 @@ spark_locals_without_parens = [
   error_handler: 1,
   error_location: 1,
   field_names: 1,
+  filter_handlers: 1,
   filterable_fields: 1,
   generate_object?: 1,
   get: 2,

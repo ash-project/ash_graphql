@@ -1,4 +1,5 @@
 schema {
+  subscription: RootSubscriptionType
   mutation: RootMutationType
   query: RootQueryType
 }
@@ -39,6 +40,11 @@ input UserFilterNameTwice {
   greaterThan: String
   lessThanOrEqual: String
   greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
 }
 
 input UserFilterName {
@@ -50,6 +56,11 @@ input UserFilterName {
   greaterThan: String
   lessThanOrEqual: String
   greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
 }
 
 input UserFilterId {
@@ -61,6 +72,8 @@ input UserFilterId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input UserFilterInput {
@@ -204,6 +217,8 @@ input PostFilterAuthorId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input PostFilterText {
@@ -215,6 +230,11 @@ input PostFilterText {
   greaterThan: String
   lessThanOrEqual: String
   greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
 }
 
 input PostFilterId {
@@ -226,6 +246,8 @@ input PostFilterId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input PostFilterInput {
@@ -297,6 +319,8 @@ input CommentFilterTimestamp {
   greaterThan: DateTime
   lessThanOrEqual: DateTime
   greaterThanOrEqual: DateTime
+  isDistinctFrom: DateTime
+  isNotDistinctFrom: DateTime
 }
 
 input CommentFilterAuthorId {
@@ -308,6 +332,8 @@ input CommentFilterAuthorId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input CommentFilterPostId {
@@ -319,6 +345,8 @@ input CommentFilterPostId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input CommentFilterType {
@@ -330,6 +358,8 @@ input CommentFilterType {
   greaterThan: String
   lessThanOrEqual: String
   greaterThanOrEqual: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
 }
 
 input CommentFilterText {
@@ -341,6 +371,11 @@ input CommentFilterText {
   greaterThan: String
   lessThanOrEqual: String
   greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
 }
 
 input CommentFilterId {
@@ -352,6 +387,8 @@ input CommentFilterId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input CommentFilterInput {
@@ -382,6 +419,104 @@ type Comment {
   post: Post
   author: User
   timestamp: DateTime
+}
+
+type base_image_events_result {
+  created: BaseImage
+  updated: BaseImage
+}
+
+"The result of the :update_base_image mutation"
+type UpdateBaseImageResult {
+  "The successful result of the mutation"
+  result: BaseImage
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input UpdateBaseImageInput {
+  name: String
+}
+
+"The result of the :create_base_image mutation"
+type CreateBaseImageResult {
+  "The successful result of the mutation"
+  result: BaseImage
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateBaseImageInput {
+  name: String
+}
+
+enum BaseImageSortField {
+  ID
+  NAME
+}
+
+"A keyset page of :base_image"
+type KeysetPageOfBaseImage {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [BaseImage!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input BaseImageFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
+}
+
+input BaseImageFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+  isDistinctFrom: Int
+  isNotDistinctFrom: Int
+}
+
+input BaseImageFilterInput {
+  and: [BaseImageFilterInput!]
+  or: [BaseImageFilterInput!]
+  not: [BaseImageFilterInput!]
+  id: BaseImageFilterId
+  name: BaseImageFilterName
+}
+
+input BaseImageSortInput {
+  order: SortOrder
+  field: BaseImageSortField!
+}
+
+type BaseImage implements Node {
+  id: ID!
+  name: String
 }
 
 "A relay node"
@@ -415,6 +550,9 @@ type MutationError {
 
   "The field or fields that produced the error"
   fields: [String!]
+
+  "The path to the field that produced the error"
+  path: [String!]
 }
 
 type RootQueryType {
@@ -423,6 +561,36 @@ type RootQueryType {
     "The Node unique identifier"
     id: ID!
   ): Node!
+
+  getBaseImage(
+    "The id of the record"
+    id: ID!
+  ): BaseImage
+
+  listBaseImages(
+    "How to sort the records in the response"
+    sort: [BaseImageSortInput]
+
+    "A filter to limit the results"
+    filter: BaseImageFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfBaseImage
+
+  readOneBaseImage(
+    "A filter to limit the results"
+    filter: BaseImageFilterInput
+  ): BaseImage
 
   listComments(
     "How to sort the records in the response"
@@ -461,7 +629,7 @@ type RootQueryType {
     "The id of the record"
     id: ID!
 
-    name: String
+    name: String!
   ): ResourceWithNoPrimaryKeyGet
 
   getUser(
@@ -471,6 +639,8 @@ type RootQueryType {
 }
 
 type RootMutationType {
+  createBaseImage(input: CreateBaseImageInput): CreateBaseImageResult!
+  updateBaseImage(id: ID!, input: UpdateBaseImageInput): UpdateBaseImageResult!
   createComment(input: CreateCommentInput): CreateCommentResult!
   simpleCreatePost(input: SimpleCreatePostInput): SimpleCreatePostResult!
   updatePost(id: ID!, input: UpdatePostInput): UpdatePostResult!
@@ -479,6 +649,13 @@ type RootMutationType {
   createResource(input: CreateResourceInput!): CreateResourceResult!
   createUser(input: CreateUserInput): CreateUserResult!
   assignPosts(id: ID!, input: AssignPostsInput): AssignPostsResult!
+}
+
+type RootSubscriptionType {
+  baseImageEvents(
+    "A filter to limit the results"
+    filter: BaseImageFilterInput
+  ): base_image_events_result
 }
 
 """

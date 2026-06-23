@@ -17,6 +17,9 @@ defmodule AshGraphql.Test.RelayIds.Schema do
   mutation do
   end
 
+  subscription do
+  end
+
   object :foo do
     field(:foo, :string)
     field(:bar, :string)

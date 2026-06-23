@@ -36,6 +36,34 @@ use AshGraphql, relay_ids?: true
 
 This allows refetching a node using the `node` query and passing its global ID.
 
+### Filtering with Relay global IDs
+
+When a resource uses a non-string or non-UUID primary key, GraphQL filter inputs normally use the
+native Ash attribute type (for example `Int` for integer primary keys). To accept Relay global IDs in
+filters, configure per-field handlers on the resource:
+
+```elixir
+graphql do
+  filter_handlers [
+    id: [
+      type: :id,
+      handler: {AshGraphql.Graphql.FilterHandlers, :relay_id, [:base_image]},
+      description: "Filter by Relay global ID"
+    ]
+  ]
+end
+```
+
+Each handler is an MFA invoked as `handler.(value, context)`. The handler receives the filter operand
+(for example a Relay global ID string) and a context map with `:resource`, `:field`, `:operator`,
+`:handler_args`, `:relay_ids?`, `:actor`, and `:tenant`. It must return an Ash expression used in the
+resulting filter.
+
+`AshGraphql.Graphql.FilterHandlers.relay_id/2` decodes Relay global IDs using the type given in the
+handler MFA's extra arguments (for example `[:base_image]`). For `:eq` it returns
+`expr(^ref(field) == ^decoded_value)`; for `:in` it returns `expr(^ref(field) in ^decoded_values)`.
+
+
 ### Translating Relay Global IDs passed as arguments
 
 When `relay_ids?: true` is passed, users of the API will have access only to the global IDs, so they

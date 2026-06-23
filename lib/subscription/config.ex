@@ -11,18 +11,25 @@ defmodule AshGraphql.Subscription.Config do
   alias AshGraphql.Resource.Subscription
 
   # sobelow_skip ["DOS.StringToAtom"]
-  def create_config(%Subscription{} = subscription, _domain, resource) do
+  def create_config(%Subscription{} = subscription, _domain, resource, relay_ids?) do
     config_module = String.to_atom(Macro.camelize(Atom.to_string(subscription.name)) <> ".Config")
 
     Module.create(
       config_module,
       quote generated: true,
-            bind_quoted: [subscription: Macro.escape(subscription), resource: resource] do
+            bind_quoted: [
+              subscription: Macro.escape(subscription),
+              resource: resource,
+              relay_ids?: relay_ids?
+            ] do
         require Ash.Query
+        alias AshGraphql.Graphql.FilterHandlers
         alias AshGraphql.Graphql.Resolver
 
         @subscription subscription
         @resource resource
+        @relay_ids relay_ids?
+
         def config(args, %{context: context}) do
           read_action =
             @subscription.read_action || Ash.Resource.Info.primary_action!(@resource, :read).name
@@ -36,15 +43,20 @@ defmodule AshGraphql.Subscription.Config do
                 context[:actor]
             end
 
+          filter_context = %{
+            relay_ids?: @relay_ids,
+            actor: actor,
+            tenant: context[:tenant]
+          }
+
           # check with Ash.can? to make sure the user is able to read the resource
           # otherwise we return an error here instead of just never sending something
           # in the subscription
           case Ash.can(
                  @resource
-                 |> Ash.Query.new()
-                 # not sure if we need this here
-                 |> Ash.Query.do_filter(
-                   Resolver.massage_filter(@resource, Map.get(args, :filter))
+                 |> FilterHandlers.apply_filter_to_resource(
+                   Map.get(args, :filter),
+                   filter_context
                  )
                  |> Ash.Query.set_tenant(context[:tenant])
                  |> Ash.Query.for_read(read_action),

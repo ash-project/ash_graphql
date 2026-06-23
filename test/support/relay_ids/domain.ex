@@ -12,6 +12,7 @@ defmodule AshGraphql.Test.RelayIds.Domain do
     otp_app: :ash_graphql
 
   resources do
+    resource(AshGraphql.Test.RelayIds.BaseImage)
     resource(AshGraphql.Test.RelayIds.Comment)
     resource(AshGraphql.Test.RelayIds.Post)
     resource(AshGraphql.Test.RelayIds.ResourceWithNoPrimaryKeyGet)

@@ -335,7 +335,7 @@ defmodule AshGraphql.Graphql.Resolver do
            modify_resolution: modify,
            type_name: type_name
          } =
-           gql_query, _relay_ids?}
+           gql_query, relay_ids?}
       ) do
     metadata = %{
       domain: domain,
@@ -350,7 +350,7 @@ defmodule AshGraphql.Graphql.Resolver do
     }
 
     with {:ok, args} <- handle_arguments(resource, action, args),
-         {:ok, query} <- read_one_query(resource, args) do
+         {:ok, query} <- read_one_query(resource, args, context, relay_ids?) do
       trace domain,
             resource,
             :gql_query,
@@ -434,7 +434,7 @@ defmodule AshGraphql.Graphql.Resolver do
            action: action,
            type_name: type_name,
            modify_resolution: modify
-         } = gql_query, _relay_ids?}
+         } = gql_query, relay_ids?}
       ) do
     case handle_arguments(resource, action, args) do
       {:ok, args} ->
@@ -463,7 +463,7 @@ defmodule AshGraphql.Graphql.Resolver do
           ]
 
           pagination = Ash.Resource.Info.action(resource, action).pagination
-          query = apply_load_arguments(args, Ash.Query.new(resource), true)
+          query = apply_load_arguments(args, Ash.Query.new(resource), true, context, relay_ids?)
 
           {result, modify_args} =
             with {:ok, opts} <-
@@ -631,8 +631,11 @@ defmodule AshGraphql.Graphql.Resolver do
 
                 # read the records that were just created/updated
                 query =
-                  resource
-                  |> Ash.Query.do_filter(massage_filter(resource, filter))
+                  AshGraphql.Graphql.FilterHandlers.apply_filter_to_resource(
+                    resource,
+                    filter,
+                    filter_context(context, relay_ids?)
+                  )
                   |> Ash.Query.for_read(read_action, args, opts)
                   |> AshGraphql.Subscription.query_for_subscription(
                     domain,
@@ -783,16 +786,18 @@ defmodule AshGraphql.Graphql.Resolver do
                 read_action || Ash.Resource.Info.primary_action!(resource, :read).name
 
               query =
-                Ash.Resource.Info.primary_key(resource)
-                |> Enum.reduce(resource, fn key, query ->
-                  value = Map.get(data, key)
-                  Ash.Query.filter(query, ^ref(key) == ^value)
+                resource
+                |> Ash.Query.new()
+                |> then(fn query ->
+                  Ash.Resource.Info.primary_key(resource)
+                  |> Enum.reduce(query, fn key, query ->
+                    value = Map.get(data, key)
+                    Ash.Query.filter(query, ^ref(key) == ^value)
+                  end)
                 end)
-
-              query =
-                Ash.Query.do_filter(
-                  query,
-                  massage_filter(query.resource, filter)
+                |> AshGraphql.Graphql.FilterHandlers.apply_filter_to_query(
+                  filter,
+                  filter_context(context, relay_ids?)
                 )
 
               query =
@@ -891,20 +896,26 @@ defmodule AshGraphql.Graphql.Resolver do
   defp subcription_field_from_action_type(:update), do: "updated"
   defp subcription_field_from_action_type(:destroy), do: "destroyed"
 
-  defp read_one_query(resource, args) do
+  defp read_one_query(resource, args, context, relay_ids?) do
     case Map.fetch(args, :filter) do
       {:ok, filter} when filter != %{} ->
-        case Ash.Filter.parse_input(resource, filter) do
-          {:ok, parsed} ->
-            {:ok, Ash.Query.do_filter(resource, parsed)}
-
-          {:error, error} ->
-            {:error, error}
-        end
+        AshGraphql.Graphql.FilterHandlers.apply_read_one_filter(
+          resource,
+          filter,
+          filter_context(context, relay_ids?)
+        )
 
       _ ->
         {:ok, Ash.Query.new(resource)}
     end
+  end
+
+  defp filter_context(context, relay_ids?) do
+    %{
+      relay_ids?: relay_ids?,
+      actor: Map.get(context, :actor),
+      tenant: Map.get(context, :tenant)
+    }
   end
 
   defp handle_mutation_arguments(resource, action, read_action, arguments, mutation_args) do
@@ -2379,7 +2390,7 @@ defmodule AshGraphql.Graphql.Resolver do
 
           related_query =
             args
-            |> apply_load_arguments(related_query, will_paginate?)
+            |> apply_load_arguments(related_query, will_paginate?, context, false)
             |> set_query_arguments(read_action, args)
             |> select_fields(
               relationship.destination,
@@ -3298,7 +3309,7 @@ defmodule AshGraphql.Graphql.Resolver do
     AshGraphql.Resource.Info.type(resource)
   end
 
-  defp apply_load_arguments(arguments, query, will_paginate?) do
+  defp apply_load_arguments(arguments, query, will_paginate?, context, relay_ids?) do
     Enum.reduce(arguments, query, fn
       {:limit, limit}, query when is_integer(limit) and not will_paginate? ->
         Ash.Query.limit(query, limit)
@@ -3307,7 +3318,11 @@ defmodule AshGraphql.Graphql.Resolver do
         Ash.Query.offset(query, offset)
 
       {:filter, value}, query when is_map(value) ->
-        Ash.Query.filter_input(query, massage_filter(query.resource, value))
+        AshGraphql.Graphql.FilterHandlers.apply_filter_to_query(
+          query,
+          value,
+          filter_context(context, relay_ids?)
+        )
 
       {:sort, value}, query when is_list(value) ->
         keyword_sort =

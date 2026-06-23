@@ -530,6 +530,26 @@ defmodule AshGraphql.Resource do
         doc:
           "A list of fields that are allowed to be filtered on. Supports bare atoms (all operators) and keyword tuples with operator allowlists (e.g. `[:name, id: [:eq, :in]]`). Defaults to all filterable fields for which a GraphQL type can be created."
       ],
+      filter_handlers: [
+        type: :keyword_list,
+        required: false,
+        doc: """
+        Per-field filter handlers that customize GraphQL filter input types and runtime filter behavior.
+
+        Each entry maps a filterable field to a handler MFA and GraphQL input type. The handler
+        receives the filter operand and a context map, and returns an Ash expression used in the filter.
+
+        Example:
+
+            filter_handlers [
+              id: [
+                type: :id,
+                handler: {AshGraphql.Graphql.FilterHandlers, :relay_id, [:my_type]},
+                description: "Filter by Relay global ID"
+              ]
+            ]
+        """
+      ],
       sortable_fields: [
         type: {:list, :atom},
         required: false,
@@ -571,6 +591,7 @@ defmodule AshGraphql.Resource do
     AshGraphql.Resource.Verifiers.VerifyArgumentInputTypes,
     AshGraphql.Resource.Verifiers.VerifyFieldReferences,
     AshGraphql.Resource.Verifiers.VerifyFilterableFields,
+    AshGraphql.Resource.Verifiers.VerifyFilterHandlers,
     AshGraphql.Resource.Verifiers.VerifyFieldDependencies,
     AshGraphql.Resource.Verifiers.VerifyActionsPublic
   ]
@@ -1778,7 +1799,8 @@ defmodule AshGraphql.Resource do
           AshGraphql.Subscription.Config.create_config(
             subscription,
             domain,
-            resource
+            resource,
+            relay_ids?
           ),
         module: schema,
         middleware:
@@ -3140,6 +3162,46 @@ defmodule AshGraphql.Resource do
     |> String.trim_trailing("?")
   end
 
+  defp filter_handler_input_type(
+         resource,
+         attribute_or_aggregate,
+         operator,
+         attribute_type,
+         array_type?
+       ) do
+    case attribute_or_aggregate do
+      %{name: name} ->
+        case AshGraphql.Resource.Info.filter_handler(resource, name) do
+          nil ->
+            nil
+
+          %{type: type} ->
+            handler_type = handler_graphql_type(type)
+            expressable_types = get_expressable_types(operator, attribute_type, array_type?)
+
+            cond do
+              Enum.any?(expressable_types, &(&1 == :same)) ->
+                handler_type
+
+              match?([_, {:array, :same}], List.first(expressable_types)) ->
+                %Absinthe.Blueprint.TypeReference.List{
+                  of_type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: handler_type}
+                }
+
+              true ->
+                nil
+            end
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp handler_graphql_type(:id), do: :id
+  defp handler_graphql_type(:string), do: :string
+  defp handler_graphql_type(:integer), do: :integer
+
   defp filter_fields(
          operator,
          type,
@@ -3156,7 +3218,14 @@ defmodule AshGraphql.Resource do
           identifier: operator.name(),
           module: schema,
           name: graphql_safe_predicate_name(operator.name()),
-          type: field_type(type, attribute_or_aggregate, resource, true),
+          type:
+            filter_handler_input_type(
+              resource,
+              attribute_or_aggregate,
+              operator,
+              type,
+              array_type?
+            ) || field_type(type, attribute_or_aggregate, resource, true),
           __reference__: ref(__ENV__)
         }
       ]
@@ -3206,7 +3275,14 @@ defmodule AshGraphql.Resource do
               identifier: operator.name(),
               module: schema,
               name: graphql_safe_predicate_name(operator.name()),
-              type: field_type(type, attribute_or_aggregate, resource, true),
+              type:
+                filter_handler_input_type(
+                  resource,
+                  attribute_or_aggregate,
+                  operator,
+                  type,
+                  array_type?
+                ) || field_type(type, attribute_or_aggregate, resource, true),
               __reference__: ref(__ENV__)
             }
           ]
