@@ -71,6 +71,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
           warnings
         end
       end)
+      |> check_custom_authorizers_for_forbidden_field_mode(dsl, resource)
 
     case warnings do
       [] -> :ok
@@ -270,6 +271,39 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
   defp invisible_field_warning(resource, field, option_name) do
     "Field `#{inspect(field)}` in `#{option_name}` is not visible " <>
       "(it is hidden or not in show_fields) and will have no effect in #{inspect(resource)}."
+  end
+
+  defp check_custom_authorizers_for_forbidden_field_mode(warnings, dsl, resource) do
+    case AshGraphql.Resource.Info.forbidden_field_mode(dsl) do
+      :legacy ->
+        warnings
+
+      mode ->
+        custom_authorizers =
+          dsl
+          |> Ash.Resource.Info.authorizers()
+          |> Enum.reject(&(&1 == Ash.Policy.Authorizer))
+          |> Enum.filter(&missing_protected_fields_callback?/1)
+
+        if Enum.empty?(custom_authorizers) do
+          warnings
+        else
+          [custom_authorizers_warning(resource, mode, custom_authorizers) | warnings]
+        end
+    end
+  end
+
+  defp custom_authorizers_warning(resource, mode, custom_authorizers) do
+    "Resource #{inspect(resource)} uses `forbidden_field_mode #{inspect(mode)}` with custom " <>
+      "authorizer(s) #{inspect(custom_authorizers)} that do not implement " <>
+      "`Ash.Authorizer.protected_fields/1`. AshGraphql uses " <>
+      "`Ash.Resource.Info.protected_fields/1` to infer protected schema fields; custom " <>
+      "authorizers must implement `Ash.Authorizer.protected_fields/1` for nullable or " <>
+      "materialized forbidden-field schema behavior to include their protected fields."
+  end
+
+  defp missing_protected_fields_callback?(authorizer) do
+    not (Code.ensure_loaded?(authorizer) and function_exported?(authorizer, :protected_fields, 1))
   end
 
   defp get_option(dsl, :sortable_fields), do: AshGraphql.Resource.Info.sortable_fields(dsl)

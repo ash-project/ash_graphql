@@ -235,7 +235,15 @@ defmodule AshGraphql.Domain do
   defdelegate show_raised_errors?(domain), to: AshGraphql.Domain.Info
 
   @doc false
-  def queries(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
+  def queries(
+        domain,
+        all_domains,
+        resources,
+        action_middleware,
+        schema,
+        relay_ids?,
+        labels \\ nil
+      ) do
     resources
     |> Enum.filter(&(AshGraphql.Resource in Spark.extensions(&1)))
     |> then(
@@ -246,13 +254,22 @@ defmodule AshGraphql.Domain do
         action_middleware,
         schema,
         relay_ids?,
-        __ENV__
+        __ENV__,
+        labels
       )
     )
   end
 
   @doc false
-  def mutations(domain, all_domains, resources, action_middleware, schema, relay_ids?) do
+  def mutations(
+        domain,
+        all_domains,
+        resources,
+        action_middleware,
+        schema,
+        relay_ids?,
+        labels \\ nil
+      ) do
     resources
     |> Enum.filter(&(AshGraphql.Resource in Spark.extensions(&1)))
     |> then(
@@ -263,7 +280,8 @@ defmodule AshGraphql.Domain do
         action_middleware,
         schema,
         relay_ids?,
-        __ENV__
+        __ENV__,
+        labels
       )
     )
   end
@@ -295,7 +313,8 @@ defmodule AshGraphql.Domain do
         first?,
         define_relay_types?,
         relay_ids?,
-        action_middleware \\ []
+        action_middleware \\ [],
+        labels \\ nil
       ) do
     graphql_resources =
       resources
@@ -312,10 +331,11 @@ defmodule AshGraphql.Domain do
             domain,
             all_domains,
             schema,
-            relay_ids?
+            relay_ids?,
+            labels
           ) ++
-            AshGraphql.Resource.mutation_types(resource, domain, all_domains, schema) ++
-            AshGraphql.Resource.query_types(resource, domain, all_domains, schema) ++
+            AshGraphql.Resource.mutation_types(resource, domain, all_domains, schema, labels) ++
+            AshGraphql.Resource.query_types(resource, domain, all_domains, schema, labels) ++
             AshGraphql.Resource.subscription_types(resource, all_domains, schema)
         else
           AshGraphql.Resource.no_graphql_types(resource, schema)
@@ -330,7 +350,8 @@ defmodule AshGraphql.Domain do
         action_middleware,
         schema,
         env,
-        relay_ids?
+        relay_ids?,
+        labels
       )
 
     resource_types = resource_types ++ group_wrapper_types

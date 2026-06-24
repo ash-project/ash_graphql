@@ -15,10 +15,9 @@ defmodule AshGraphql.Test.GroupedQueriesResource do
 
     queries do
       group :content do
-        list(:gq_unique_items, :read)
+        list(:gq_unique_items, :read, labels: [:public])
 
-        action(:gq_unique_stats, :stats) do
-        end
+        action(:gq_unique_stats, :stats, labels: [:admin])
       end
     end
   end

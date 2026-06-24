@@ -85,4 +85,46 @@ defmodule AshGraphql.EnumTest do
              data["__type"]["enumValues"]
              |> Enum.find(fn value -> value["name"] == "NO_DESCRIPTION" end)
   end
+
+  test "Ash.Type.Enum type-level description flows through to GraphQL schema" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "EnumWithAshTypeDescription") {
+          description
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert data["__type"]["description"] == "A yes or no type-level description"
+  end
+
+  test "enum without graphql_description/1 has nil type-level description" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "EnumWithAshGraphqlDescription") {
+          description
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert data["__type"]["description"] == nil
+  end
+
+  test "graphql_description/1 sets type-level description for Ash.Type.NewType" do
+    {:ok, %{data: data}} =
+      """
+      query {
+        __type(name: "NewTypeWithDescription") {
+          description
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert data["__type"]["description"] == "A described NewType"
+  end
 end

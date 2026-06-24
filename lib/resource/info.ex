@@ -8,7 +8,7 @@ defmodule AshGraphql.Resource.Info do
   alias Spark.Dsl.Extension
 
   @doc "The queries exposed for the resource"
-  def queries(resource, domain_or_domains \\ []) do
+  def queries(resource, domain_or_domains \\ [], labels \\ nil) do
     module =
       if is_atom(resource) do
         resource
@@ -26,11 +26,13 @@ defmodule AshGraphql.Resource.Info do
       Extension.get_entities(resource, [:graphql, :queries])
       |> List.wrap()
 
-    domain_queries ++ resource_queries
+    domain_queries
+    |> Enum.concat(resource_queries)
+    |> filter_by_labels(labels)
   end
 
   @doc "The mutations exposed for the resource"
-  def mutations(resource, domain_or_domains \\ []) do
+  def mutations(resource, domain_or_domains \\ [], labels \\ nil) do
     module =
       if is_atom(resource) do
         resource
@@ -48,7 +50,22 @@ defmodule AshGraphql.Resource.Info do
       Extension.get_entities(resource, [:graphql, :mutations])
       |> List.wrap()
 
-    domain_mutations ++ resource_mutations
+    domain_mutations
+    |> Enum.concat(resource_mutations)
+    |> filter_by_labels(labels)
+  end
+
+  defp filter_by_labels(entities, nil), do: entities
+
+  defp filter_by_labels(entities, labels) do
+    labels = List.wrap(labels)
+
+    Enum.filter(entities, fn entity ->
+      entity
+      |> Map.get(:labels, [])
+      |> List.wrap()
+      |> Enum.any?(&(&1 in labels))
+    end)
   end
 
   @doc "The subscriptions exposed for the resource"
@@ -163,6 +180,15 @@ defmodule AshGraphql.Resource.Info do
   @doc "Graphql nullability overrides for the resource"
   def nullable_fields(resource) do
     Extension.get_opt(resource, [:graphql], :nullable_fields, [])
+  end
+
+  @doc "How GraphQL should expose forbidden field values"
+  def forbidden_field_mode(resource) do
+    case Extension.get_opt(resource, [:graphql], :forbidden_field_mode, :legacy) do
+      :override_nullability -> :nullable
+      :materialize_fully -> :materialized
+      mode -> mode
+    end
   end
 
   @doc "The field name to place the keyset of a result in"

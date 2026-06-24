@@ -156,6 +156,237 @@ defmodule AshGraphql.ReadTest do
     assert %{data: %{"currentUserWithMetadata" => nil}} = result
   end
 
+  test "materialized field policy fields are exposed as value-or-forbidden unions" do
+    org =
+      AshGraphql.Test.ForbiddenFieldModeOrg
+      |> Ash.Changeset.for_create(:create, name: "Org")
+      |> Ash.create!()
+
+    record =
+      AshGraphql.Test.ForbiddenFieldMode
+      |> Ash.Changeset.for_create(:create, org_id: org.id, maybe_secret: "maybe")
+      |> Ash.create!()
+
+    doc = """
+    query GetForbiddenFieldMode($id: ID!) {
+      getForbiddenFieldMode(id: $id) {
+        visible
+        secret {
+          __typename
+          ... on ForbiddenField {
+            field
+            message
+          }
+          ... on ForbiddenFieldModeSecretFieldPolicyValue {
+            value
+          }
+        }
+        maybeSecret {
+          __typename
+          ... on ForbiddenField {
+            message
+          }
+          ... on ForbiddenFieldModeMaybeSecretFieldPolicyValue {
+            value
+          }
+        }
+      }
+    }
+    """
+
+    assert {:ok, result} =
+             Absinthe.run(doc, AshGraphql.Test.Schema,
+               context: %{actor: %{can_read_secret: true}},
+               variables: %{"id" => record.id}
+             )
+
+    refute Map.has_key?(result, :errors)
+    data = result.data
+
+    assert %{
+             "getForbiddenFieldMode" => %{
+               "visible" => "visible",
+               "secret" => %{
+                 "__typename" => "ForbiddenField",
+                 "field" => "secret",
+                 "message" => "forbidden field"
+               },
+               "maybeSecret" => %{
+                 "__typename" => "ForbiddenFieldModeMaybeSecretFieldPolicyValue",
+                 "value" => "maybe"
+               }
+             }
+           } = data
+  end
+
+  test "materialized singular relationships are exposed as related-or-forbidden unions" do
+    org =
+      AshGraphql.Test.ForbiddenFieldModeOrg
+      |> Ash.Changeset.for_create(:create, name: "Org")
+      |> Ash.create!()
+
+    record =
+      AshGraphql.Test.ForbiddenFieldMode
+      |> Ash.Changeset.for_create(:create, org_id: org.id)
+      |> Ash.create!()
+
+    doc = """
+    query GetForbiddenFieldMode($id: ID!) {
+      getForbiddenFieldMode(id: $id) {
+        org {
+          __typename
+          ... on ForbiddenFieldModeOrg {
+            id
+            name
+          }
+          ... on ForbiddenField {
+            field
+            message
+          }
+        }
+      }
+    }
+    """
+
+    assert {:ok, forbidden_result} =
+             Absinthe.run(doc, AshGraphql.Test.Schema,
+               context: %{actor: %{}},
+               variables: %{"id" => record.id}
+             )
+
+    refute Map.has_key?(forbidden_result, :errors)
+
+    assert %{
+             data: %{
+               "getForbiddenFieldMode" => %{
+                 "org" => %{
+                   "__typename" => "ForbiddenField",
+                   "field" => "org",
+                   "message" => "forbidden field"
+                 }
+               }
+             }
+           } = forbidden_result
+
+    assert {:ok, authorized_result} =
+             Absinthe.run(doc, AshGraphql.Test.Schema,
+               context: %{actor: %{can_read_org: true}},
+               variables: %{"id" => record.id}
+             )
+
+    refute Map.has_key?(authorized_result, :errors)
+
+    assert %{
+             data: %{
+               "getForbiddenFieldMode" => %{
+                 "org" => %{
+                   "__typename" => "ForbiddenFieldModeOrg",
+                   "id" => _,
+                   "name" => "Org"
+                 }
+               }
+             }
+           } = authorized_result
+  end
+
+  test "forbidden field materialization does not expose Ash internal field type" do
+    doc = """
+    query {
+      __type(name: "ForbiddenField") {
+        fields {
+          name
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{data: data}} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+    field_names = Enum.map(data["__type"]["fields"], & &1["name"])
+
+    assert "field" in field_names
+    assert "message" in field_names
+    refute "type" in field_names
+  end
+
+  test "materialized field policy unions keep always-authorized field policies out of the type" do
+    doc = """
+    query {
+      __type(name: "ForbiddenFieldMode") {
+        fields {
+          name
+          type {
+            kind
+            name
+            ofType {
+              kind
+              name
+            }
+          }
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{data: data}} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+    fields = Map.new(data["__type"]["fields"], &{&1["name"], &1["type"]})
+
+    assert fields["visible"] == %{
+             "kind" => "NON_NULL",
+             "name" => nil,
+             "ofType" => %{"kind" => "SCALAR", "name" => "String"}
+           }
+
+    assert fields["secret"] == %{
+             "kind" => "NON_NULL",
+             "name" => nil,
+             "ofType" => %{"kind" => "UNION", "name" => "ForbiddenFieldModeSecretFieldPolicy"}
+           }
+
+    assert fields["org"] == %{
+             "kind" => "NON_NULL",
+             "name" => nil,
+             "ofType" => %{"kind" => "UNION", "name" => "ForbiddenFieldModeOrgRelationship"}
+           }
+  end
+
+  test "nullable forbidden field mode only overrides fields with non-trivial field policies" do
+    doc = """
+    query {
+      __type(name: "ForbiddenFieldNullableMode") {
+        fields {
+          name
+          type {
+            kind
+            name
+            ofType {
+              kind
+              name
+            }
+          }
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{data: data}} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+    fields = Map.new(data["__type"]["fields"], &{&1["name"], &1["type"]})
+
+    assert fields["visible"] == %{
+             "kind" => "NON_NULL",
+             "name" => nil,
+             "ofType" => %{"kind" => "SCALAR", "name" => "String"}
+           }
+
+    assert fields["secret"] == %{
+             "kind" => "SCALAR",
+             "name" => "String",
+             "ofType" => nil
+           }
+  end
+
   test "loading relationships with fragment works" do
     user =
       AshGraphql.Test.User

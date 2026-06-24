@@ -19,6 +19,7 @@ defmodule AshGraphql.Resource.Query do
     as_mutation?: false,
     group: nil,
     hide_inputs: [],
+    labels: [],
     metadata_names: [],
     metadata_types: [],
     paginate_with: :keyset,
@@ -81,6 +82,11 @@ defmodule AshGraphql.Resource.Query do
     hide_inputs: [
       type: {:list, :atom},
       doc: "A list of inputs to hide from the mutation.",
+      default: []
+    ],
+    labels: [
+      type: {:wrap_list, :atom},
+      doc: "Labels used to include or exclude this query from schemas with matching labels.",
       default: []
     ],
     complexity: [
