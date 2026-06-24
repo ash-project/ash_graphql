@@ -17,8 +17,7 @@ defmodule AshGraphql.Test.RelayIds.Schema do
 
   mutation do
   end
-  
+
   subscription do
   end
-  
 end
