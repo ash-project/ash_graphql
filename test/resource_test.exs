@@ -4,6 +4,7 @@
 
 defmodule AshGraphql.ResourceTest do
   use ExUnit.Case
+  import ExUnit.CaptureIO
 
   test "object generated according to generate_object?" do
     assert %Absinthe.Type.Object{
@@ -395,5 +396,27 @@ defmodule AshGraphql.ResourceTest do
     assert typed_struct_result["name"] == "John Doe"
     assert typed_struct_result["age"] == 30
     assert typed_struct_result["email"] == "john.doe@example.com"
+  end
+
+  test "warns when embedded type produces no GraphQL input fields" do
+    attribute =
+      Ash.Resource.Info.attribute(AshGraphql.Test.ResourceWithEmptyInputEmbed, :empty_value)
+
+    stderr =
+      capture_io(:stderr, fn ->
+        _ =
+          AshGraphql.Resource.field_type(
+            attribute.type,
+            attribute,
+            AshGraphql.Test.ResourceWithEmptyInputEmbed,
+            true
+          )
+      end)
+
+    assert stderr =~ "Embedded type"
+    assert stderr =~ "cannot define a GraphQL input type"
+    assert stderr =~ "no input fields were produced"
+    assert stderr =~ "accept lists"
+    assert stderr =~ "Application.get_env(:ash_graphql, :json_type)"
   end
 end
