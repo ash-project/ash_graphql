@@ -5671,7 +5671,7 @@ defmodule AshGraphql.Resource do
               nil ->
                 if Keyword.get(opts, :warn_unknown?, true) do
                   IO.warn(
-                    "Embedded type #{inspect(type)} does not have an input type defined, but is accepted as input in at least one location."
+                    "Embedded type #{inspect(type)} cannot define a GraphQL input type because no input fields were produced for its create/update actions (check accept lists, writable? and public? on attributes, and public action arguments). It is still referenced as GraphQL input somewhere; falling back to Application.get_env(:ash_graphql, :json_type) || :json_string."
                   )
                 end
 
