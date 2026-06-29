@@ -260,6 +260,33 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :filterable_fields, nil)
   end
 
+  @doc "Per-field filter handler configuration"
+  def filter_handlers(resource) do
+    Extension.get_opt(resource, [:graphql], :filter_handlers, nil)
+  end
+
+  @doc "Returns the filter handler config for a field, if configured"
+  def filter_handler(resource, field_name) do
+    case filter_handlers(resource) do
+      nil ->
+        nil
+
+      handlers ->
+        case Keyword.get(handlers, field_name) do
+          nil -> nil
+          config -> normalize_filter_handler_config(config)
+        end
+    end
+  end
+
+  defp normalize_filter_handler_config(config) when is_list(config) do
+    %{
+      type: Keyword.fetch!(config, :type),
+      handler: Keyword.fetch!(config, :handler),
+      description: Keyword.get(config, :description)
+    }
+  end
+
   @doc "May the specified field be filtered on?"
   def filterable_field?(resource, field_name) do
     filterable_fields = AshGraphql.Resource.Info.filterable_fields(resource)

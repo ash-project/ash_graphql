@@ -279,7 +279,7 @@ defmodule AshGraphql.ResourceTest do
              """
              |> Absinthe.run(AshGraphql.Test.Schema)
 
-    Enum.each(comments, fn %{"arg_returned" => arg_returned} ->
+    Enum.each(comments, fn %{"argReturned" => arg_returned} ->
       assert 10 = arg_returned
     end)
   end
