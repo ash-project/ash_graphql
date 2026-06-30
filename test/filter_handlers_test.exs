@@ -5,6 +5,7 @@
 defmodule AshGraphql.FilterHandlersTest do
   use ExUnit.Case, async: false
 
+  alias AshGraphql.Graphql.FilterHandlers
   alias AshGraphql.Test.PubSub
   alias AshGraphql.Test.RelayIds.{BaseImage, Schema}
 
@@ -47,6 +48,29 @@ defmodule AshGraphql.FilterHandlersTest do
     end
   end
 
+  describe "filter_handlers apply_filter" do
+    test "keeps non-empty ordinary field filters" do
+      assert {:ok, [name: %{eq: "hero"}], []} =
+               FilterHandlers.apply_filter(BaseImage, %{name: %{eq: "hero"}}, %{})
+    end
+
+    test "keeps ordinary field filters alongside handler expressions" do
+      image =
+        BaseImage
+        |> Ash.Changeset.for_create(:create, %{name: "hero"})
+        |> Ash.create!()
+
+      relay_id = AshGraphql.Resource.encode_relay_id(image)
+
+      assert {:ok, [name: %{eq: "missing"}], [_expr]} =
+               FilterHandlers.apply_filter(
+                 BaseImage,
+                 %{id: %{eq: relay_id}, name: %{eq: "missing"}},
+                 %{}
+               )
+    end
+  end
+
   describe "filter_handlers queries" do
     test "list query filters by relay global id with eq" do
       image =
@@ -81,6 +105,35 @@ defmodule AshGraphql.FilterHandlersTest do
              ]
 
       refute relay_id == AshGraphql.Resource.encode_relay_id(other)
+    end
+
+    test "list query applies ordinary field filters alongside relay global id filters" do
+      image =
+        BaseImage
+        |> Ash.Changeset.for_create(:create, %{name: "hero"})
+        |> Ash.create!()
+
+      relay_id = AshGraphql.Resource.encode_relay_id(image)
+
+      assert {:ok, result} =
+               """
+               query ListBaseImages($filter: BaseImageFilterInput) {
+                 listBaseImages(filter: $filter) {
+                   results {
+                     id
+                     name
+                   }
+                 }
+               }
+               """
+               |> Absinthe.run(Schema,
+                 variables: %{
+                   "filter" => %{"id" => %{"eq" => relay_id}, "name" => %{"eq" => "missing"}}
+                 }
+               )
+
+      refute Map.has_key?(result, :errors)
+      assert result.data["listBaseImages"]["results"] == []
     end
 
     test "list query filters by relay global id with in" do
@@ -151,6 +204,53 @@ defmodule AshGraphql.FilterHandlersTest do
   end
 
   describe "filter_handlers subscriptions" do
+    test "subscription applies ordinary field filters" do
+      blocked =
+        BaseImage
+        |> Ash.Changeset.for_create(:create, %{name: "blocked"})
+        |> Ash.create!()
+
+      allowed =
+        BaseImage
+        |> Ash.Changeset.for_create(:create, %{name: "pending"})
+        |> Ash.create!()
+
+      allowed_relay_id = AshGraphql.Resource.encode_relay_id(allowed)
+
+      assert {:ok, %{"subscribed" => topic}} =
+               """
+               subscription BaseImageEvents($filter: BaseImageFilterInput) {
+                 baseImageEvents(filter: $filter) {
+                   updated {
+                     id
+                     name
+                   }
+                 }
+               }
+               """
+               |> Absinthe.run(Schema,
+                 variables: %{"filter" => %{"name" => %{"eq" => "allowed"}}},
+                 context: %{pubsub: PubSub}
+               )
+
+      blocked
+      |> Ash.Changeset.for_update(:update, %{name: "blocked-updated"})
+      |> Ash.update!()
+
+      refute_receive {^topic, _}
+
+      allowed
+      |> Ash.Changeset.for_update(:update, %{name: "allowed"})
+      |> Ash.update!()
+
+      assert_receive {^topic, %{data: subscription_data}}
+
+      assert subscription_data["baseImageEvents"]["updated"] == %{
+               "id" => allowed_relay_id,
+               "name" => "allowed"
+             }
+    end
+
     test "subscription filter accepts relay global id" do
       image =
         BaseImage

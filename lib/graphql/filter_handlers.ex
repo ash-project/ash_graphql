@@ -25,7 +25,7 @@ defmodule AshGraphql.Graphql.FilterHandlers do
 
     filter_input =
       case remaining do
-        %{} -> nil
+        remaining when remaining == %{} -> nil
         rest -> Resolver.massage_filter(resource, rest)
       end
 
