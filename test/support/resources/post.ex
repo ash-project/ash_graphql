@@ -195,6 +195,7 @@ defmodule AshGraphql.Test.Post do
                    ]
 
     field_names text_1_and_2: :text1_and2
+    include_non_field_calculations([:included_non_field_calc])
     keyset_field :keyset
 
     paginate_relationship_with unpaginated_comments: :none
@@ -665,6 +666,11 @@ defmodule AshGraphql.Test.Post do
     )
 
     calculate :non_field_calc, :string, expr("non_field: " <> text1) do
+      public?(true)
+      field?(false)
+    end
+
+    calculate :included_non_field_calc, :string, expr("included_non_field: " <> text1) do
       public?(true)
       field?(false)
     end

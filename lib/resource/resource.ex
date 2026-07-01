@@ -474,6 +474,11 @@ defmodule AshGraphql.Resource do
         doc:
           "A list of attributes to show in the domain. If not specified includes all (excluding `hide_fiels`)."
       ],
+      include_non_field_calculations: [
+        type: {:list, :atom},
+        default: [],
+        doc: "A list of `field?: false` calculations to expose as GraphQL response fields."
+      ],
       argument_names: [
         type: :keyword_list,
         doc:
@@ -5193,7 +5198,8 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_calculations()
     |> Enum.filter(
-      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) and Map.get(&1, :field?, true))
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) and
+          AshGraphql.Resource.Info.graphql_calculation_field?(resource, &1))
     )
     |> Enum.map(fn calculation ->
       name = field_names[calculation.name] || calculation.name

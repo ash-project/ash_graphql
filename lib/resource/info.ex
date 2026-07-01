@@ -185,6 +185,17 @@ defmodule AshGraphql.Resource.Info do
     Extension.get_opt(resource, [:graphql], :show_fields, nil)
   end
 
+  @doc "`field?: false` calculations to expose as GraphQL response fields"
+  def include_non_field_calculations(resource) do
+    Extension.get_opt(resource, [:graphql], :include_non_field_calculations, [])
+  end
+
+  @doc "Whether a calculation should be exposed as a GraphQL response field"
+  def graphql_calculation_field?(resource, calculation) do
+    Map.get(calculation, :field?, true) or
+      calculation.name in include_non_field_calculations(resource)
+  end
+
   @doc "Wether or not a given field will be shown"
   def show_field?(resource, field) do
     hide_fields = hide_fields(resource)

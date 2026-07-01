@@ -540,7 +540,7 @@ defmodule AshGraphql.ReadTest do
              result
   end
 
-  test "field?: false calculations are not exposed as response fields" do
+  test "field?: false calculations are not exposed as response fields by default" do
     resp =
       """
       query {
@@ -555,6 +555,50 @@ defmodule AshGraphql.ReadTest do
 
     assert {:ok, %{data: %{"__type" => %{"fields" => fields}}}} = resp
     refute Enum.any?(fields, &(&1["name"] == "nonFieldCalc"))
+  end
+
+  test "include_non_field_calculations exposes listed field?: false calculations" do
+    resp =
+      """
+      query {
+        __type(name: "Post") {
+          fields {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"fields" => fields}}}} = resp
+    assert Enum.any?(fields, &(&1["name"] == "includedNonFieldCalc"))
+  end
+
+  test "included non-field calculations resolve from loaded calculations" do
+    AshGraphql.Test.Post
+    |> Ash.Changeset.for_create(:create, text: "bar", text1: "hello", published: true)
+    |> Ash.create!()
+
+    resp =
+      """
+      query PostLibrary($published: Boolean) {
+        postLibrary(published: $published) {
+          includedNonFieldCalc
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema,
+        variables: %{
+          "published" => true
+        }
+      )
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"postLibrary" => [%{"includedNonFieldCalc" => "included_non_field: hello"}]}} =
+             result
   end
 
   test "the same calculation can be loaded twice with different arguments via aliases" do
