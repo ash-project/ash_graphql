@@ -44,6 +44,7 @@ spark_locals_without_parens = [
   hide_inputs: 1,
   identity: 1,
   ignore?: 1,
+  include_non_field_calculations: 1,
   keyset_field: 1,
   list: 2,
   list: 3,
