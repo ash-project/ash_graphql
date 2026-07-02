@@ -10,8 +10,6 @@ defmodule AshGraphql.Test.Subscribable do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :subscribable
 

@@ -12,8 +12,6 @@ defmodule AshGraphql.Test.ResourceWithTypedStruct do
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :resource_with_typed_struct
 

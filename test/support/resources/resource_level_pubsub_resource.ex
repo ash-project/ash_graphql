@@ -10,8 +10,6 @@ defmodule AshGraphql.Test.ResourceLevelPubsubResource do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :resource_level_pubsub_resource
 

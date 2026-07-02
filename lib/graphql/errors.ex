@@ -174,7 +174,7 @@ defmodule AshGraphql.Errors do
           {nil, []}
 
         {arg_type, arg_constraints} when arg_type != nil ->
-          unwrap_type(arg_type, arg_constraints || [])
+          unwrap_type(arg_type, List.wrap(arg_constraints))
 
         _ ->
           {nil, []}

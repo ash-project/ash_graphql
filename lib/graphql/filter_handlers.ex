@@ -10,8 +10,6 @@ defmodule AshGraphql.Graphql.FilterHandlers do
 
   alias AshGraphql.Graphql.Resolver
 
-  require Ash.Query
-
   @boolean_keys [:and, :or, :not]
 
   @doc """

@@ -156,8 +156,6 @@ defmodule AshGraphql.Domain do
   The entrypoint for adding GraphQL behavior to an Ash domain
   """
 
-  require Ash.Domain.Info
-
   use Spark.Dsl.Extension,
     sections: @sections,
     transformers: [

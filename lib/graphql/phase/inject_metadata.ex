@@ -90,6 +90,9 @@ defmodule AshGraphql.Phase.InjectMetadata do
     end
   end
 
+  defp build_metadata(false, _info), do: {nil, nil}
+  defp build_metadata(nil, _info), do: {nil, nil}
+
   defp build_metadata(true, _info) do
     Logger.warning(
       "AshGraphql response_metadata is set to `true` but requires a key. " <>
@@ -147,9 +150,6 @@ defmodule AshGraphql.Phase.InjectMetadata do
 
       {key, nil}
   end
-
-  defp build_metadata(false, _info), do: {nil, nil}
-  defp build_metadata(nil, _info), do: {nil, nil}
 
   defp build_metadata(invalid_config, _info) do
     Logger.warning(
