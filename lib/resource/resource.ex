@@ -1560,7 +1560,7 @@ defmodule AshGraphql.Resource do
             | fields
           ]
         else
-          unless resource_type do
+          if !resource_type do
             raise """
             Resource #{inspect(resource)} is trying to define the mutation #{inspect(mutation.name)}
             which requires a GraphQL type to be defined.
@@ -1907,7 +1907,7 @@ defmodule AshGraphql.Resource do
       end)
       |> Enum.sort_by(& &1.name)
 
-    unless Enum.empty?(fields) do
+    if !Enum.empty?(fields) do
       name = "#{AshGraphql.Resource.Info.type(source_resource)}_#{attribute.name}_input"
 
       %Absinthe.Blueprint.Schema.InputObjectTypeDefinition{
@@ -2877,7 +2877,7 @@ defmodule AshGraphql.Resource do
       |> Enum.reject(&is_nil/1)
       |> Enum.split_with(&match?({:ok, _}, &1))
 
-    unless Enum.empty?(errors) do
+    if !Enum.empty?(errors) do
       raise_conflicts!(Enum.map(errors, &elem(&1, 1)), managed_relationship, resource)
     end
 

@@ -19,10 +19,10 @@ defmodule AshGraphql.Resource.Verifiers.VerifySubscriptionActions do
   end
 
   defp verify_actions(dsl, subscription) do
-    unless MapSet.subset?(
-             MapSet.new(List.wrap(subscription.action_types)),
-             MapSet.new([:create, :update, :destroy])
-           ) do
+    if !MapSet.subset?(
+         MapSet.new(List.wrap(subscription.action_types)),
+         MapSet.new([:create, :update, :destroy])
+       ) do
       raise Spark.Error.DslError,
         module: Transformer.get_persisted(dsl, :module),
         message: "`action_types` values must be on of `[:create, :update, :destroy]`.",
@@ -39,7 +39,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifySubscriptionActions do
         )
       )
 
-    unless Enum.empty?(missing_write_actions) do
+    if !Enum.empty?(missing_write_actions) do
       raise Spark.Error.DslError,
         module: Transformer.get_persisted(dsl, :module),
         message:
@@ -47,10 +47,10 @@ defmodule AshGraphql.Resource.Verifiers.VerifySubscriptionActions do
         path: [:graphql, :subscriptions, subscription.name, :actions]
     end
 
-    unless is_nil(subscription.read_action) or
-             subscription.read_action in (Ash.Resource.Info.actions(dsl)
-                                          |> Stream.filter(&(&1.type == :read))
-                                          |> Enum.map(& &1.name)) do
+    if !(is_nil(subscription.read_action) or
+           subscription.read_action in (Ash.Resource.Info.actions(dsl)
+                                        |> Stream.filter(&(&1.type == :read))
+                                        |> Enum.map(& &1.name))) do
       raise Spark.Error.DslError,
         module: Transformer.get_persisted(dsl, :module),
         message: "The read action #{subscription.read_action} does not exist on the resource.",

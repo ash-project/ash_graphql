@@ -18,7 +18,7 @@ defmodule AshGraphql.Resource.Transformers.RequireKeysetForRelayQueries do
       if Map.get(query, :relay?) do
         action = Ash.Resource.Info.action(dsl, query.action)
 
-        unless action.pagination && action.pagination.keyset? do
+        if !(action.pagination && action.pagination.keyset?) do
           raise Spark.Error.DslError,
             module: Transformer.get_persisted(dsl, :module),
             message: "Relay queries must support keyset pagination",

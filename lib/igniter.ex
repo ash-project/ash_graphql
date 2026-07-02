@@ -105,7 +105,7 @@ if Code.ensure_loaded?(Igniter) do
         )
 
       placeholder_query =
-        unless any_queries? do
+        if !any_queries? do
           ~S'''
           @desc """
           Hello! This is a sample query to verify that AshGraphql has been set up correctly.

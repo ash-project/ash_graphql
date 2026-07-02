@@ -28,7 +28,7 @@ defmodule AshGraphql.Domain.Verifiers.VerifySubscriptionPubsub do
 
             resource_pubsub = AshGraphql.Resource.Info.subscription_pubsub(resource)
 
-            unless resource_pubsub do
+            if !resource_pubsub do
               raise Spark.Error.DslError,
                 module: Spark.Dsl.Transformer.get_persisted(resource.spark_dsl_config(), :module),
                 message:
@@ -53,7 +53,7 @@ defmodule AshGraphql.Domain.Verifiers.VerifySubscriptionPubsub do
         if resource_subscriptions != [] do
           resource_pubsub = AshGraphql.Resource.Info.subscription_pubsub(resource)
 
-          unless resource_pubsub do
+          if !resource_pubsub do
             raise Spark.Error.DslError,
               module: Spark.Dsl.Transformer.get_persisted(resource.spark_dsl_config(), :module),
               message:

@@ -44,7 +44,7 @@ defmodule AshGraphql.Resource.Transformers.ValidateActions do
           action.name == query_or_mutation.action
         end)
 
-      unless action do
+      if !action do
         resource = Transformer.get_persisted(dsl, :module)
 
         raise Spark.Error.DslError,

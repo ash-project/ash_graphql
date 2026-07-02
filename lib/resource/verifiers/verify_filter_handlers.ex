@@ -52,7 +52,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
   end
 
   defp validate_handler_config(resource, field, config) do
-    unless Ash.Resource.Info.attribute(resource, field) do
+    if !Ash.Resource.Info.attribute(resource, field) do
       raise Spark.Error.DslError,
         module: resource,
         path: [:graphql, :filter_handlers],
@@ -61,7 +61,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
         """
     end
 
-    unless AshGraphql.Resource.Info.filterable_field?(resource, field) do
+    if !AshGraphql.Resource.Info.filterable_field?(resource, field) do
       raise Spark.Error.DslError,
         module: resource,
         path: [:graphql, :filter_handlers],

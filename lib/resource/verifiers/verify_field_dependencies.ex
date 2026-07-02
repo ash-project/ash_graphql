@@ -89,7 +89,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFieldDependencies do
       |> MapSet.to_list()
       |> Enum.sort()
 
-    unless Enum.empty?(overlap) do
+    if !Enum.empty?(overlap) do
       raise Spark.Error.DslError,
         module: resource,
         path: [:graphql],

@@ -18,7 +18,7 @@ defmodule AshGraphql.Subscription.Config do
         Config
       ])
 
-    unless Code.ensure_loaded?(config_module) and function_exported?(config_module, :config, 2) do
+    if !(Code.ensure_loaded?(config_module) and function_exported?(config_module, :config, 2)) do
       create_config_module(config_module, subscription, resource, relay_ids?)
     end
 
