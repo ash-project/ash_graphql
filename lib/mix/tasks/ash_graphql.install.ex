@@ -6,7 +6,6 @@ if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshGraphql.Install do
     @moduledoc "Installs AshGraphql. Should be run with `mix igniter.install ash_graphql`"
     @shortdoc @moduledoc
-    require Igniter.Code.Common
     use Igniter.Mix.Task
 
     @impl true

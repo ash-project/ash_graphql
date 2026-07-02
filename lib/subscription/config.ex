@@ -10,10 +10,22 @@ defmodule AshGraphql.Subscription.Config do
   """
   alias AshGraphql.Resource.Subscription
 
-  # sobelow_skip ["DOS.StringToAtom"]
   def create_config(%Subscription{} = subscription, _domain, resource, relay_ids?) do
-    config_module = String.to_atom(Macro.camelize(Atom.to_string(subscription.name)) <> ".Config")
+    config_module =
+      Module.concat([
+        resource,
+        Macro.camelize(Atom.to_string(subscription.name)),
+        Config
+      ])
 
+    unless Code.ensure_loaded?(config_module) and function_exported?(config_module, :config, 2) do
+      create_config_module(config_module, subscription, resource, relay_ids?)
+    end
+
+    &config_module.config/2
+  end
+
+  defp create_config_module(config_module, subscription, resource, relay_ids?) do
     Module.create(
       config_module,
       quote generated: true,
@@ -82,7 +94,5 @@ defmodule AshGraphql.Subscription.Config do
       end,
       Macro.Env.location(__ENV__)
     )
-
-    &config_module.config/2
   end
 end

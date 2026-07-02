@@ -12,8 +12,6 @@ defmodule GF.Event do
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
-  require Ash.Query
-
   alias GF.Attendee
 
   attributes do

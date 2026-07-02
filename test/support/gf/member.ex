@@ -4,14 +4,13 @@
 
 defmodule GF.Member do
   @moduledoc false
+  require Logger
+
   use Ash.Resource,
     domain: GF.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource],
     authorizers: [Ash.Policy.Authorizer]
-
-  require Ash.Query
-  require Logger
 
   alias GF.ActiveMemberPolicy
   alias GF.Group

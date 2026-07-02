@@ -9,6 +9,10 @@ defmodule AshGraphql.Test.NoGraphql do
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets
 
+  actions do
+    defaults([:read])
+  end
+
   attributes do
     uuid_primary_key(:id)
 

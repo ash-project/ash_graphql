@@ -5,7 +5,6 @@
 defmodule AshGraphql.PlugTest do
   @moduledoc false
   use ExUnit.Case, async: false
-  require Ash.Query
   import Plug.Conn
 
   @moduletag capture_log: true

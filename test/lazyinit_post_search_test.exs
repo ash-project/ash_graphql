@@ -5,8 +5,6 @@
 defmodule AshGraphql.LazyInitTestPostSearchTest do
   use ExUnit.Case, async: false
 
-  require Ash.Query
-
   setup do
     on_exit(fn ->
       AshGraphql.TestHelpers.stop_ets()

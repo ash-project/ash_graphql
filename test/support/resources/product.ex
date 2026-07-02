@@ -9,8 +9,6 @@ defmodule AshGraphql.Test.Product do
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :product
 

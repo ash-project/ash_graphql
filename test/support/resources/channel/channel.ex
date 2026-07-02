@@ -10,8 +10,6 @@ defmodule AshGraphql.Test.Channel do
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :channel
 

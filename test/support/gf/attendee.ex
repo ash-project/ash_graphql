@@ -13,9 +13,6 @@ defmodule GF.Attendee do
     extensions: [AshGraphql.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
-  require Ash.Query
-  require Ash.Sort
-
   alias GF.Member
 
   actions do
