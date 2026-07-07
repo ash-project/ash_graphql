@@ -83,6 +83,8 @@ defmodule AshGraphql do
             define_relay_types?: Keyword.get(opts, :define_relay_types?, true),
             relay_ids?: Keyword.get(opts, :relay_ids?, false),
             response_metadata: opts[:response_metadata],
+            default_types: opts[:default_types] || [],
+            default_input_types: opts[:default_input_types] || [],
             labels: opts[:labels],
             labels_specified?: Keyword.has_key?(opts, :labels),
             auto_import_types: Macro.escape(auto_import_types)
@@ -97,6 +99,8 @@ defmodule AshGraphql do
         end
 
       AshGraphql.validate_response_metadata!(response_metadata)
+      AshGraphql.validate_default_types!(default_types, :default_types)
+      AshGraphql.validate_default_types!(default_input_types, :default_input_types)
 
       import Absinthe.Schema,
         except: [
@@ -162,6 +166,8 @@ defmodule AshGraphql do
 
       @response_metadata response_metadata
       @ash_graphql_labels labels
+      @default_types default_types
+      @default_input_types default_input_types
 
       @doc false
       def response_metadata do
@@ -172,6 +178,12 @@ defmodule AshGraphql do
       def ash_graphql_labels do
         @ash_graphql_labels
       end
+
+      @doc false
+      def default_types, do: @default_types
+
+      @doc false
+      def default_input_types, do: @default_input_types
 
       @doc false
       def ash_graphql_schema?, do: true
@@ -1342,6 +1354,57 @@ defmodule AshGraphql do
       use AshGraphql,
         domains: [...],
         response_metadata: {:my_extension_key, {MyApp.MetadataHandler, :build, []}}
+    """
+  end
+
+  @doc false
+  def validate_default_types!(nil, _option), do: :ok
+  def validate_default_types!([], _option), do: :ok
+
+  def validate_default_types!(types, option) when is_list(types) do
+    unless Keyword.keyword?(types) do
+      raise ArgumentError, """
+      Invalid `#{option}` configuration: #{inspect(types)}
+
+      Expected a keyword list of {Ash.Type module, graphql_type} pairs.
+
+      Example:
+        use AshGraphql,
+          domains: [...],
+          #{option}: [{MyApp.OpaqueId, :string}]
+      """
+    end
+
+    Enum.each(types, fn
+      {type, _graphql_type} when is_atom(type) ->
+        :ok
+
+      other ->
+        raise ArgumentError, """
+        Invalid `#{option}` entry: #{inspect(other)}
+
+        Expected {Ash.Type module, graphql_type}.
+
+        Example:
+          use AshGraphql,
+            domains: [...],
+            #{option}: [{MyApp.OpaqueId, :string}]
+        """
+    end)
+
+    :ok
+  end
+
+  def validate_default_types!(invalid, option) do
+    raise ArgumentError, """
+    Invalid `#{option}` configuration: #{inspect(invalid)}
+
+    Expected a keyword list of {Ash.Type module, graphql_type} pairs.
+
+    Example:
+      use AshGraphql,
+        domains: [...],
+        #{option}: [{MyApp.OpaqueId, :string}]
     """
   end
 

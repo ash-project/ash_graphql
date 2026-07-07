@@ -829,7 +829,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(name),
           description: query.description || query_action.description,
-          type: generic_action_type(query_action, resource, domain, query),
+          type: generic_action_type(query_action, resource, domain, query, schema),
           __reference__: ref(__ENV__)
         }
 
@@ -908,7 +908,7 @@ defmodule AshGraphql.Resource do
         module: schema,
         name: to_string(mutation.name),
         description: mutation.description || action.description,
-        type: generic_action_type(action, resource, domain, mutation),
+        type: generic_action_type(action, resource, domain, mutation, schema),
         __reference__: ref(__ENV__)
       }
     else
@@ -1403,7 +1403,7 @@ defmodule AshGraphql.Resource do
         name: to_string(key),
         description: attribute.description || "",
         type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: field_type(attribute.type, attribute, resource)
+          of_type: field_type(attribute.type, attribute, resource, false, schema)
         },
         __reference__: ref(__ENV__)
       }
@@ -1432,7 +1432,7 @@ defmodule AshGraphql.Resource do
 
       type =
         argument.type
-        |> field_type(argument, resource, true)
+        |> field_type(argument, resource, true, schema)
         |> maybe_wrap_non_null(argument_required?(argument))
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -1555,7 +1555,7 @@ defmodule AshGraphql.Resource do
                 generic_action_type(%{mutation.action | allow_nil?: true}, resource, domain, %{
                   mutation
                   | error_location: :top_level
-                }),
+                }, schema),
               __reference__: ref(__ENV__)
             }
             | fields
@@ -1668,7 +1668,7 @@ defmodule AshGraphql.Resource do
               generic_action_type(%{mutation.action | allow_nil?: true}, resource, domain, %{
                 mutation
                 | error_location: :top_level
-              }),
+              }, schema),
             __reference__: ref(__ENV__)
           },
           %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -1784,7 +1784,7 @@ defmodule AshGraphql.Resource do
       |> Enum.map(fn metadata ->
         field_type =
           metadata.type
-          |> field_type(metadata, resource)
+          |> field_type(metadata, resource, false, schema)
           |> maybe_wrap_non_null(not metadata.allow_nil?)
 
         %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -1952,7 +1952,7 @@ defmodule AshGraphql.Resource do
 
             field_type =
               attribute.type
-              |> field_type(attribute, resource, true)
+              |> field_type(attribute, resource, true, schema)
               |> maybe_wrap_non_null(explicitly_required || not allow_nil?)
 
             name = field_names[attribute.name] || attribute.name
@@ -1978,7 +1978,7 @@ defmodule AshGraphql.Resource do
               case argument_input_types[argument.name] do
                 nil ->
                   argument.type
-                  |> field_type(argument, resource, true)
+                  |> field_type(argument, resource, true, schema)
                   |> maybe_wrap_non_null(argument_required?(argument))
 
                 override ->
@@ -2161,7 +2161,7 @@ defmodule AshGraphql.Resource do
 
   defp maybe_wrap_non_null(type, _), do: type
 
-  defp get_fields(resource) do
+  defp get_fields(resource, schema) do
     if AshGraphql.Resource.Info.encode_primary_key?(resource) do
       [
         %Absinthe.Blueprint.Schema.InputValueDefinition{
@@ -2182,7 +2182,7 @@ defmodule AshGraphql.Resource do
           name: to_string(key),
           identifier: key,
           type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(attribute.type, attribute, resource, true)
+            of_type: field_type(attribute.type, attribute, resource, true, schema)
           },
           description: attribute.description || "",
           __reference__: ref(__ENV__)
@@ -2192,14 +2192,14 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp generic_action_type(_action, _resource, domain, %{name: name, error_location: :in_result}) do
+  defp generic_action_type(_action, _resource, domain, %{name: name, error_location: :in_result}, _schema) do
     type = String.to_atom("#{name}_result")
     root_level_errors? = AshGraphql.Domain.Info.root_level_errors?(domain)
 
     maybe_wrap_non_null(type, not root_level_errors?)
   end
 
-  defp generic_action_type(action, resource, _domain, _gql_action) do
+  defp generic_action_type(action, resource, _domain, _gql_action, schema) do
     fake_attribute = %{
       type: action.returns || Ash.Type.Boolean,
       constraints: action.constraints,
@@ -2208,7 +2208,7 @@ defmodule AshGraphql.Resource do
     }
 
     fake_attribute.type
-    |> field_type(fake_attribute, resource, false)
+    |> field_type(fake_attribute, resource, false, schema)
     |> maybe_wrap_non_null(argument_required?(fake_attribute))
   end
 
@@ -2220,7 +2220,7 @@ defmodule AshGraphql.Resource do
     |> Enum.map(fn argument ->
       type =
         argument.type
-        |> field_type(argument, resource, true)
+        |> field_type(argument, resource, true, schema)
         |> maybe_wrap_non_null(argument_required?(argument))
 
       name = argument_names[action.name][argument.name] || argument.name
@@ -2247,7 +2247,7 @@ defmodule AshGraphql.Resource do
        )
 
   defp args(:get, resource, action, schema, nil, hide_inputs, _query) do
-    get_fields(resource) ++
+    get_fields(resource, schema) ++
       read_args(resource, action, schema, hide_inputs)
   end
 
@@ -2264,7 +2264,7 @@ defmodule AshGraphql.Resource do
           name: to_string(key),
           identifier: key,
           type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(attribute.type, attribute, resource, true)
+            of_type: field_type(attribute.type, attribute, resource, true, schema)
           },
           description: attribute.description || "",
           __reference__: ref(__ENV__)
@@ -2394,7 +2394,7 @@ defmodule AshGraphql.Resource do
 
       type =
         argument.type
-        |> field_type(argument, resource, true)
+        |> field_type(argument, resource, true, schema)
         |> maybe_wrap_non_null(argument_required?(argument))
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2591,7 +2591,7 @@ defmodule AshGraphql.Resource do
   def field_policy_type_definitions(resource, schema) do
     if AshGraphql.Resource.Info.forbidden_field_mode(resource) == :materialized &&
          AshGraphql.Resource.Info.type(resource) do
-      value_fields = materialized_field_policy_value_fields(resource)
+      value_fields = materialized_field_policy_value_fields(resource, schema)
       singular_relationships = materialized_singular_relationships(resource)
 
       if Enum.empty?(value_fields) && Enum.empty?(singular_relationships) do
@@ -2697,37 +2697,37 @@ defmodule AshGraphql.Resource do
     }
   end
 
-  defp materialized_field_policy_value_fields(resource) do
-    attribute_field_policy_value_fields(resource) ++
-      aggregate_field_policy_value_fields(resource) ++
-      calculation_field_policy_value_fields(resource)
+  defp materialized_field_policy_value_fields(resource, schema) do
+    attribute_field_policy_value_fields(resource, schema) ++
+      aggregate_field_policy_value_fields(resource, schema) ++
+      calculation_field_policy_value_fields(resource, schema)
   end
 
-  defp attribute_field_policy_value_fields(resource) do
+  defp attribute_field_policy_value_fields(resource, schema) do
     resource
     |> public_attributes_for_graphql()
     |> Enum.filter(&materialized_field_policy_field?(resource, &1.name))
-    |> Enum.map(&{&1.name, attribute_output_type(resource, &1)})
+    |> Enum.map(&{&1.name, attribute_output_type(resource, &1, schema)})
   end
 
-  defp aggregate_field_policy_value_fields(resource) do
+  defp aggregate_field_policy_value_fields(resource, schema) do
     resource
     |> Ash.Resource.Info.public_aggregates()
     |> Enum.filter(
       &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
           materialized_field_policy_field?(resource, &1.name))
     )
-    |> Enum.map(&{&1.name, aggregate_output_type(resource, &1)})
+    |> Enum.map(&{&1.name, aggregate_output_type(resource, &1, schema)})
   end
 
-  defp calculation_field_policy_value_fields(resource) do
+  defp calculation_field_policy_value_fields(resource, schema) do
     resource
     |> Ash.Resource.Info.public_calculations()
     |> Enum.filter(
       &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
           materialized_field_policy_field?(resource, &1.name))
     )
-    |> Enum.map(&{&1.name, calculation_value_type(&1, resource)})
+    |> Enum.map(&{&1.name, calculation_value_type(&1, resource, schema)})
   end
 
   defp materialized_singular_relationships(resource) do
@@ -3233,7 +3233,7 @@ defmodule AshGraphql.Resource do
         field = %Absinthe.Blueprint.Schema.InputValueDefinition{
           name: to_string(key),
           identifier: key,
-          type: field_type(attribute.type, attribute, resource),
+          type: field_type(attribute.type, attribute, resource, false, schema),
           description: attribute.description || "",
           __reference__: ref(__ENV__)
         }
@@ -3401,7 +3401,7 @@ defmodule AshGraphql.Resource do
               operator,
               type,
               array_type?
-            ) || field_type(type, attribute_or_aggregate, resource, true),
+            ) || field_type(type, attribute_or_aggregate, resource, true, schema),
           __reference__: ref(__ENV__)
         }
       ]
@@ -3458,7 +3458,7 @@ defmodule AshGraphql.Resource do
                   operator,
                   type,
                   array_type?
-                ) || field_type(type, attribute_or_aggregate, resource, true),
+                ) || field_type(type, attribute_or_aggregate, resource, true, schema),
               __reference__: ref(__ENV__)
             }
           ]
@@ -3662,7 +3662,7 @@ defmodule AshGraphql.Resource do
     |> Enum.flat_map(fn %{calculation: {module, _}} = calculation ->
       Code.ensure_compiled(module)
       filterable? = filterable?(calculation, resource)
-      field_type = calculation_type(calculation, resource)
+      field_type = calculation_type(calculation, resource, schema)
 
       arguments = calculation_args(calculation, resource, schema)
 
@@ -4457,7 +4457,8 @@ defmodule AshGraphql.Resource do
                description: config[:description]
            },
            resource,
-           false
+           false,
+           schema
          )}
       end)
 
@@ -4497,6 +4498,7 @@ defmodule AshGraphql.Resource do
                   %{attribute | name: String.to_atom("#{attribute.name}_#{name}")},
                   resource,
                   true,
+                  schema,
                   warn_unknown?: false
                 )
             }
@@ -5024,7 +5026,7 @@ defmodule AshGraphql.Resource do
         case query.metadata_types[metadata.name] do
           nil ->
             metadata.type
-            |> field_type(metadata, resource)
+            |> field_type(metadata, resource, false, schema)
             |> maybe_wrap_non_null(not metadata.allow_nil?)
 
           type ->
@@ -5074,7 +5076,7 @@ defmodule AshGraphql.Resource do
       |> Enum.map(fn attribute ->
         field_type =
           resource
-          |> attribute_output_type(attribute)
+          |> attribute_output_type(attribute, schema)
           |> maybe_materialize_field_policy_type(resource, attribute.name)
 
         name = attribute_names[attribute.name] || attribute.name
@@ -5116,9 +5118,9 @@ defmodule AshGraphql.Resource do
     end
   end
 
-  defp attribute_output_type(resource, attribute) do
+  defp attribute_output_type(resource, attribute, schema) do
     attribute.type
-    |> field_type(attribute, resource)
+    |> field_type(attribute, resource, false, schema)
     |> maybe_wrap_non_null(
       not (nullable_field?(resource, attribute.name) or attribute.allow_nil?)
     )
@@ -5193,7 +5195,7 @@ defmodule AshGraphql.Resource do
 
           field_type =
             attribute.type
-            |> field_type(attribute, resource)
+            |> field_type(attribute, resource, false, schema)
             |> maybe_wrap_non_null(require?)
 
           %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -5451,7 +5453,7 @@ defmodule AshGraphql.Resource do
 
       type =
         resource
-        |> aggregate_output_type(aggregate)
+        |> aggregate_output_type(aggregate, schema)
         |> maybe_materialize_field_policy_type(resource, aggregate.name)
 
       {agg_type, constraints} = aggregate_type_and_constraints(resource, aggregate)
@@ -5469,7 +5471,7 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp aggregate_output_type(resource, aggregate) do
+  defp aggregate_output_type(resource, aggregate, schema) do
     {field, agg_type, constraints} = aggregate_field_type_and_constraints(resource, aggregate)
     attribute = field || Map.put(aggregate, :constraints, constraints)
 
@@ -5493,7 +5495,7 @@ defmodule AshGraphql.Resource do
       end
 
     agg_type
-    |> field_type(attribute, type_resource)
+    |> field_type(attribute, type_resource, false, schema)
     |> maybe_wrap_non_null(not nullable?)
   end
 
@@ -5564,7 +5566,7 @@ defmodule AshGraphql.Resource do
     |> Enum.filter(&AshGraphql.Resource.Info.show_field?(resource, &1.name))
     |> Enum.map(fn calculation ->
       name = field_names[calculation.name] || calculation.name
-      field_type = calculation_type(calculation, resource)
+      field_type = calculation_type(calculation, resource, schema)
 
       arguments = calculation_args(calculation, resource, schema)
 
@@ -5590,16 +5592,16 @@ defmodule AshGraphql.Resource do
     end)
   end
 
-  defp calculation_type(calculation, resource) do
+  defp calculation_type(calculation, resource, schema) do
     calculation
-    |> calculation_value_type(resource)
+    |> calculation_value_type(resource, schema)
     |> maybe_materialize_field_policy_type(resource, calculation.name)
   end
 
-  defp calculation_value_type(calculation, resource) do
+  defp calculation_value_type(calculation, resource, schema) do
     calculation.type
     |> Ash.Type.get_type()
-    |> field_type(calculation, resource)
+    |> field_type(calculation, resource, false, schema)
     |> maybe_wrap_non_null(
       not (nullable_field?(resource, calculation.name) or calculation.allow_nil?)
     )
@@ -5609,7 +5611,7 @@ defmodule AshGraphql.Resource do
     Enum.map(calculation.arguments, fn argument ->
       type =
         argument.type
-        |> field_type(argument, resource, true)
+        |> field_type(argument, resource, true, schema)
         |> maybe_wrap_non_null(argument_required?(argument))
 
       %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -5624,8 +5626,21 @@ defmodule AshGraphql.Resource do
     end)
   end
 
+  defp get_schema_default_type(_type, _input?, nil), do: nil
+
+  defp get_schema_default_type(type, input?, schema) do
+    if function_exported?(schema, :default_types, 0) do
+      defaults = if input?, do: schema.default_input_types(), else: schema.default_types()
+
+      case Ash.Type.get_type(type) do
+        type when is_atom(type) -> Keyword.get(defaults, type)
+        _ -> nil
+      end
+    end
+  end
+
   @doc false
-  def field_type(type, field, resource, input? \\ false, opts \\ []) do
+  def field_type(type, field, resource, input? \\ false, schema \\ nil, opts \\ []) do
     case field do
       %Ash.Resource.Attribute{name: name} ->
         override =
@@ -5635,14 +5650,22 @@ defmodule AshGraphql.Resource do
             AshGraphql.Resource.Info.attribute_types(resource)[name]
           end
 
-        if override do
-          unwrap_literal_type(override)
-        else
-          do_field_type(type, field, resource, input?, nil, opts)
+        cond do
+          override ->
+            unwrap_literal_type(override)
+
+          schema_default = get_schema_default_type(type, input?, schema) ->
+            unwrap_literal_type(schema_default)
+
+          true ->
+            do_field_type(type, field, resource, input?, nil, opts)
         end
 
       _ ->
-        do_field_type(type, field, resource, input?, nil, opts)
+        case get_schema_default_type(type, input?, schema) do
+          nil -> do_field_type(type, field, resource, input?, nil, opts)
+          override -> unwrap_literal_type(override)
+        end
     end
   end
 
