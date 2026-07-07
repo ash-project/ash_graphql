@@ -605,6 +605,7 @@ defmodule AshGraphql.Resource do
 
   @verifiers [
     AshGraphql.Resource.Verifiers.VerifyQueryMetadata,
+    AshGraphql.Resource.Verifiers.VerifyReservedTypeName,
     AshGraphql.Resource.Verifiers.RequirePkeyDelimiter,
     AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith,
     AshGraphql.Resource.Verifiers.VerifyArgumentInputTypes,
