@@ -908,7 +908,7 @@ defmodule AshGraphql do
   """
   @spec load_fields(input, Ash.Resource.t(), Absinthe.Resolution.t(), opts :: Keyword.t()) ::
           {:ok, input} | {:error, term()}
-        when input: Ash.Resource.record() | list(Ash.Resource.record()) | Ash.Page.page()
+        when input: Ash.Resource.Record.t() | list(Ash.Resource.Record.t()) | Ash.Page.page()
   def load_fields(data, resource, resolution, opts \\ []) do
     Ash.load(data, load_fields_on_query(resource, resolution, opts), resource: resource)
   end
