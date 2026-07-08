@@ -1552,10 +1552,16 @@ defmodule AshGraphql.Resource do
               module: schema,
               name: "result",
               type:
-                generic_action_type(%{mutation.action | allow_nil?: true}, resource, domain, %{
-                  mutation
-                  | error_location: :top_level
-                }, schema),
+                generic_action_type(
+                  %{mutation.action | allow_nil?: true},
+                  resource,
+                  domain,
+                  %{
+                    mutation
+                    | error_location: :top_level
+                  },
+                  schema
+                ),
               __reference__: ref(__ENV__)
             }
             | fields
@@ -1665,10 +1671,16 @@ defmodule AshGraphql.Resource do
             module: schema,
             name: "result",
             type:
-              generic_action_type(%{mutation.action | allow_nil?: true}, resource, domain, %{
-                mutation
-                | error_location: :top_level
-              }, schema),
+              generic_action_type(
+                %{mutation.action | allow_nil?: true},
+                resource,
+                domain,
+                %{
+                  mutation
+                  | error_location: :top_level
+                },
+                schema
+              ),
             __reference__: ref(__ENV__)
           },
           %Absinthe.Blueprint.Schema.FieldDefinition{
@@ -2192,7 +2204,13 @@ defmodule AshGraphql.Resource do
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
-  defp generic_action_type(_action, _resource, domain, %{name: name, error_location: :in_result}, _schema) do
+  defp generic_action_type(
+         _action,
+         _resource,
+         domain,
+         %{name: name, error_location: :in_result},
+         _schema
+       ) do
     type = String.to_atom("#{name}_result")
     root_level_errors? = AshGraphql.Domain.Info.root_level_errors?(domain)
 
