@@ -71,6 +71,7 @@ spark_locals_without_parens = [
   relationships: 1,
   relay?: 1,
   relay_id_translations: 1,
+  result_name: 1,
   root_level_errors?: 1,
   show_fields: 1,
   show_metadata: 1,

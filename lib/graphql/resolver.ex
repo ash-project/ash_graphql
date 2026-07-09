@@ -2219,7 +2219,7 @@ defmodule AshGraphql.Graphql.Resolver do
           fields
       end
 
-    selection = Enum.find(selections, &(&1.name == nested))
+    selection = Enum.find(selections, &field_matches_path?(&1, nested))
 
     if selection do
       nested_fields_and_path(resolution, [selection | path], rest)
@@ -2809,7 +2809,7 @@ defmodule AshGraphql.Graphql.Resolver do
     cache = resolution.fields_cache
 
     Enum.reduce(names, {project, cache}, fn name, {fields, cache} ->
-      case fields |> Enum.find(&(&1.name == name)) do
+      case fields |> Enum.find(&field_matches_path?(&1, name)) do
         nil ->
           {fields, cache}
 
@@ -2827,6 +2827,11 @@ defmodule AshGraphql.Graphql.Resolver do
       end
     end)
     |> elem(0)
+  end
+
+  defp field_matches_path?(field, name) do
+    field.name == name or
+      (name == "result" and field.schema_node.identifier == :result)
   end
 
   defp names_only(fields) do

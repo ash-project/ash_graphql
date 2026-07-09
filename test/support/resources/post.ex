@@ -235,6 +235,7 @@ defmodule AshGraphql.Test.Post do
 
     mutations do
       create :simple_create_post, :create, labels: [:public]
+      create :create_post_with_result_name, :create, result_name: :post
       create :create_post_with_arg, :create, args: [:text]
       create :create_post_with_argument_types, :create_with_argument_types
       create :create_post_with_error, :create_with_error

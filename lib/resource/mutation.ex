@@ -16,6 +16,7 @@ defmodule AshGraphql.Resource.Mutation do
     :modify_resolution,
     :relay_id_translations,
     :description,
+    :result_name,
     :__spark_metadata__,
     args: [],
     hide_inputs: [],
@@ -76,6 +77,10 @@ defmodule AshGraphql.Resource.Mutation do
     group: [
       type: :atom,
       doc: "An optional grouping key used to nest this mutation under a group wrapper."
+    ],
+    result_name: [
+      type: :atom,
+      doc: "The GraphQL field name for the mutation result. Defaults to `result`."
     ]
   ]
 
