@@ -706,14 +706,14 @@ defmodule AshGraphql.Test.Post do
       read_action(:with_default_argument)
     end
 
-    has_many :comments_with_default_argument, AshGraphql.Test.Comment do
+    has_many :comments_with_relationship_arguments, AshGraphql.Test.Comment do
       public?(true)
       read_action(:with_default_argument)
 
-      read_action_argument_defaults(%{
+      read_action_arguments(%{
         prefix: "default",
         optional_prefix: "optional default",
-        action_default_prefix: "relationship default"
+        action_default_prefix: "relationship argument"
       })
     end
 

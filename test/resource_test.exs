@@ -14,7 +14,7 @@ defmodule AshGraphql.ResourceTest do
     assert nil == Absinthe.Schema.lookup_type(AshGraphql.Test.Schema, :no_object)
   end
 
-  test "relationship read action arguments with defaults are optional" do
+  test "relationship read action arguments are exposed as GraphQL defaults" do
     {:ok, %{data: %{"__type" => %{"fields" => fields}}}} =
       """
       query {
@@ -37,21 +37,21 @@ defmodule AshGraphql.ResourceTest do
     required_relationship =
       Enum.find(fields, &(&1["name"] == "commentsWithRequiredArgument"))
 
-    relationship_with_defaults =
-      Enum.find(fields, &(&1["name"] == "commentsWithDefaultArgument"))
+    relationship_with_arguments =
+      Enum.find(fields, &(&1["name"] == "commentsWithRelationshipArguments"))
 
     required_argument =
       Enum.find(required_relationship["args"], &(&1["name"] == "prefix"))
 
     argument_with_default =
-      Enum.find(relationship_with_defaults["args"], &(&1["name"] == "prefix"))
+      Enum.find(relationship_with_arguments["args"], &(&1["name"] == "prefix"))
 
     nullable_argument_with_default =
-      Enum.find(relationship_with_defaults["args"], &(&1["name"] == "optionalPrefix"))
+      Enum.find(relationship_with_arguments["args"], &(&1["name"] == "optionalPrefix"))
 
-    argument_with_action_and_relationship_defaults =
+    argument_with_action_default_and_relationship_argument =
       Enum.find(
-        relationship_with_defaults["args"],
+        relationship_with_arguments["args"],
         &(&1["name"] == "actionDefaultPrefix")
       )
 
@@ -64,8 +64,8 @@ defmodule AshGraphql.ResourceTest do
     refute nullable_argument_with_default["type"]["kind"] == "NON_NULL"
     assert nullable_argument_with_default["defaultValue"] == ~s("optional default")
 
-    assert argument_with_action_and_relationship_defaults["defaultValue"] ==
-             ~s("relationship default")
+    assert argument_with_action_default_and_relationship_argument["defaultValue"] ==
+             ~s("relationship argument")
 
     post =
       AshGraphql.Test.Post
@@ -77,13 +77,13 @@ defmodule AshGraphql.ResourceTest do
     assert {:ok,
             %{
               data: %{
-                "getPost" => %{"commentsWithDefaultArgument" => []}
+                "getPost" => %{"commentsWithRelationshipArguments" => []}
               }
             }} =
              """
              query {
                getPost(id: "#{post.id}") {
-                 commentsWithDefaultArgument(optionalPrefix: null) {
+                 commentsWithRelationshipArguments(optionalPrefix: null) {
                    id
                  }
                }

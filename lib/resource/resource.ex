@@ -5233,10 +5233,10 @@ defmodule AshGraphql.Resource do
   defp argument_required?(_), do: true
 
   defp apply_relationship_argument_defaults(arguments, relationship) do
-    default_arguments = Map.get(relationship, :read_action_argument_defaults, %{})
+    relationship_arguments = Map.get(relationship, :read_action_arguments, %{})
 
     Enum.map(arguments, fn argument ->
-      case Map.fetch(default_arguments, argument.identifier) do
+      case Map.fetch(relationship_arguments, argument.identifier) do
         {:ok, default_value} ->
           %{argument | default_value: default_value}
 
