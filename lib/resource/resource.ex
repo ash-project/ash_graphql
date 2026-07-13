@@ -5232,7 +5232,7 @@ defmodule AshGraphql.Resource do
   defp argument_required?(%{default: default}) when not is_nil(default), do: false
   defp argument_required?(_), do: true
 
-  defp optionalize_relationship_argument_defaults(arguments, relationship) do
+  defp optionalize_arguments_with_relationship_defaults(arguments, relationship) do
     default_arguments = Map.get(relationship, :read_action_argument_defaults, %{})
 
     Enum.map(arguments, fn
@@ -5278,7 +5278,7 @@ defmodule AshGraphql.Resource do
           arguments:
             :one_related
             |> args(relationship.destination, read_action, schema)
-            |> optionalize_relationship_argument_defaults(relationship),
+            |> optionalize_arguments_with_relationship_defaults(relationship),
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc_one},
              {domain, relationship, materialized_singular_relationship?(resource, relationship)}}
@@ -5323,7 +5323,7 @@ defmodule AshGraphql.Resource do
               read_action,
               schema
             )
-            |> optionalize_relationship_argument_defaults(relationship),
+            |> optionalize_arguments_with_relationship_defaults(relationship),
           type: query_type,
           __reference__: ref(__ENV__)
         }
