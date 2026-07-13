@@ -701,6 +701,11 @@ defmodule AshGraphql.Test.Post do
 
     has_many(:comments, AshGraphql.Test.Comment, public?: true)
 
+    has_many :comments_with_required_argument, AshGraphql.Test.Comment do
+      public?(true)
+      read_action(:with_default_argument)
+    end
+
     has_many :comments_with_default_argument, AshGraphql.Test.Comment do
       public?(true)
       read_action(:with_default_argument)

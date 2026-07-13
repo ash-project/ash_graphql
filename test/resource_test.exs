@@ -33,13 +33,20 @@ defmodule AshGraphql.ResourceTest do
       """
       |> Absinthe.run(AshGraphql.Test.Schema)
 
-    relationship =
+    required_relationship =
+      Enum.find(fields, &(&1["name"] == "commentsWithRequiredArgument"))
+
+    defaulted_relationship =
       Enum.find(fields, &(&1["name"] == "commentsWithDefaultArgument"))
 
-    argument =
-      Enum.find(relationship["args"], &(&1["name"] == "prefix"))
+    required_argument =
+      Enum.find(required_relationship["args"], &(&1["name"] == "prefix"))
 
-    refute argument["type"]["kind"] == "NON_NULL"
+    defaulted_argument =
+      Enum.find(defaulted_relationship["args"], &(&1["name"] == "prefix"))
+
+    assert required_argument["type"]["kind"] == "NON_NULL"
+    refute defaulted_argument["type"]["kind"] == "NON_NULL"
   end
 
   test "resource with no type can execute generic queries" do
