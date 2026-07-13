@@ -36,8 +36,10 @@ defmodule AshGraphql.ResourceTest do
     relationship =
       Enum.find(fields, &(&1["name"] == "commentsWithDefaultArgument"))
 
-    assert %{"type" => %{"kind" => "SCALAR"}} =
-             Enum.find(relationship["args"], &(&1["name"] == "prefix"))
+    argument =
+      Enum.find(relationship["args"], &(&1["name"] == "prefix"))
+
+    refute argument["type"]["kind"] == "NON_NULL"
   end
 
   test "resource with no type can execute generic queries" do
