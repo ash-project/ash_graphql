@@ -23,6 +23,7 @@ defmodule AshGraphql.ResourceTest do
             name
             args {
               name
+              defaultValue
               type {
                 kind
               }
@@ -36,17 +37,20 @@ defmodule AshGraphql.ResourceTest do
     required_relationship =
       Enum.find(fields, &(&1["name"] == "commentsWithRequiredArgument"))
 
-    defaulted_relationship =
+    relationship_with_defaults =
       Enum.find(fields, &(&1["name"] == "commentsWithDefaultArgument"))
 
     required_argument =
       Enum.find(required_relationship["args"], &(&1["name"] == "prefix"))
 
-    defaulted_argument =
-      Enum.find(defaulted_relationship["args"], &(&1["name"] == "prefix"))
+    argument_with_default =
+      Enum.find(relationship_with_defaults["args"], &(&1["name"] == "prefix"))
 
     assert required_argument["type"]["kind"] == "NON_NULL"
-    refute defaulted_argument["type"]["kind"] == "NON_NULL"
+    assert is_nil(required_argument["defaultValue"])
+
+    refute argument_with_default["type"]["kind"] == "NON_NULL"
+    assert argument_with_default["defaultValue"] == ~s("default")
   end
 
   test "resource with no type can execute generic queries" do

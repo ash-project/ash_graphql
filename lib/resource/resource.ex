@@ -5232,22 +5232,23 @@ defmodule AshGraphql.Resource do
   defp argument_required?(%{default: default}) when not is_nil(default), do: false
   defp argument_required?(_), do: true
 
-  defp optionalize_arguments_with_relationship_defaults(arguments, relationship) do
+  defp apply_relationship_argument_defaults(arguments, relationship) do
     default_arguments = Map.get(relationship, :read_action_argument_defaults, %{})
 
-    Enum.map(arguments, fn
-      %{
-        identifier: identifier,
-        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: type}
-      } = argument ->
-        if Map.has_key?(default_arguments, identifier) do
-          %{argument | type: type}
-        else
-          argument
-        end
+    Enum.map(arguments, fn argument ->
+      case Map.fetch(default_arguments, argument.identifier) do
+        {:ok, default_value} ->
+          type =
+            case argument.type do
+              %Absinthe.Blueprint.TypeReference.NonNull{of_type: type} -> type
+              type -> type
+            end
 
-      argument ->
-        argument
+          %{argument | type: type, default_value: default_value}
+
+        :error ->
+          argument
+      end
     end)
   end
 
@@ -5278,7 +5279,7 @@ defmodule AshGraphql.Resource do
           arguments:
             :one_related
             |> args(relationship.destination, read_action, schema)
-            |> optionalize_arguments_with_relationship_defaults(relationship),
+            |> apply_relationship_argument_defaults(relationship),
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc_one},
              {domain, relationship, materialized_singular_relationship?(resource, relationship)}}
@@ -5323,7 +5324,7 @@ defmodule AshGraphql.Resource do
               read_action,
               schema
             )
-            |> optionalize_arguments_with_relationship_defaults(relationship),
+            |> apply_relationship_argument_defaults(relationship),
           type: query_type,
           __reference__: ref(__ENV__)
         }
