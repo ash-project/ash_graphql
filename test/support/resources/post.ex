@@ -709,7 +709,11 @@ defmodule AshGraphql.Test.Post do
     has_many :comments_with_default_argument, AshGraphql.Test.Comment do
       public?(true)
       read_action(:with_default_argument)
-      read_action_argument_defaults(%{prefix: "default"})
+
+      read_action_argument_defaults(%{
+        prefix: "default",
+        optional_prefix: "optional default"
+      })
     end
 
     has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment, public?: true)

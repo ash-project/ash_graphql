@@ -5238,13 +5238,7 @@ defmodule AshGraphql.Resource do
     Enum.map(arguments, fn argument ->
       case Map.fetch(default_arguments, argument.identifier) do
         {:ok, default_value} ->
-          type =
-            case argument.type do
-              %Absinthe.Blueprint.TypeReference.NonNull{of_type: type} -> type
-              type -> type
-            end
-
-          %{argument | type: type, default_value: default_value}
+          %{argument | default_value: default_value}
 
         :error ->
           argument

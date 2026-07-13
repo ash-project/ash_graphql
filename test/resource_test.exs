@@ -46,11 +46,55 @@ defmodule AshGraphql.ResourceTest do
     argument_with_default =
       Enum.find(relationship_with_defaults["args"], &(&1["name"] == "prefix"))
 
+    nullable_argument_with_default =
+      Enum.find(relationship_with_defaults["args"], &(&1["name"] == "optionalPrefix"))
+
     assert required_argument["type"]["kind"] == "NON_NULL"
     assert is_nil(required_argument["defaultValue"])
 
-    refute argument_with_default["type"]["kind"] == "NON_NULL"
+    assert argument_with_default["type"]["kind"] == "NON_NULL"
     assert argument_with_default["defaultValue"] == ~s("default")
+
+    refute nullable_argument_with_default["type"]["kind"] == "NON_NULL"
+    assert nullable_argument_with_default["defaultValue"] == ~s("optional default")
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "post", published: true, score: 1.0)
+      |> Ash.create!()
+
+    on_exit(fn -> AshGraphql.TestHelpers.stop_ets() end)
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{"commentsWithDefaultArgument" => []}
+              }
+            }} =
+             """
+             query {
+               getPost(id: "#{post.id}") {
+                 commentsWithDefaultArgument(optionalPrefix: null) {
+                   id
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{errors: errors}} =
+             """
+             query {
+               getPost(id: "#{post.id}") {
+                 commentsWithRequiredArgument {
+                   id
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert Enum.any?(errors, &String.contains?(&1.message, "prefix"))
   end
 
   test "resource with no type can execute generic queries" do
