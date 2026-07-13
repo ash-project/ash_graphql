@@ -14,6 +14,98 @@ defmodule AshGraphql.ResourceTest do
     assert nil == Absinthe.Schema.lookup_type(AshGraphql.Test.Schema, :no_object)
   end
 
+  test "relationship read action arguments are exposed as GraphQL defaults" do
+    {:ok, %{data: %{"__type" => %{"fields" => fields}}}} =
+      """
+      query {
+        __type(name: "Post") {
+          fields {
+            name
+            args {
+              name
+              defaultValue
+              type {
+                kind
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    required_relationship =
+      Enum.find(fields, &(&1["name"] == "commentsWithRequiredArgument"))
+
+    relationship_with_arguments =
+      Enum.find(fields, &(&1["name"] == "commentsWithRelationshipArguments"))
+
+    required_argument =
+      Enum.find(required_relationship["args"], &(&1["name"] == "prefix"))
+
+    argument_with_default =
+      Enum.find(relationship_with_arguments["args"], &(&1["name"] == "prefix"))
+
+    nullable_argument_with_default =
+      Enum.find(relationship_with_arguments["args"], &(&1["name"] == "optionalPrefix"))
+
+    argument_with_action_default_and_relationship_argument =
+      Enum.find(
+        relationship_with_arguments["args"],
+        &(&1["name"] == "actionDefaultPrefix")
+      )
+
+    assert required_argument["type"]["kind"] == "NON_NULL"
+    assert is_nil(required_argument["defaultValue"])
+
+    assert argument_with_default["type"]["kind"] == "NON_NULL"
+    assert argument_with_default["defaultValue"] == ~s("default")
+
+    refute nullable_argument_with_default["type"]["kind"] == "NON_NULL"
+    assert nullable_argument_with_default["defaultValue"] == ~s("optional default")
+
+    assert argument_with_action_default_and_relationship_argument["defaultValue"] ==
+             ~s("relationship argument")
+
+    post =
+      AshGraphql.Test.Post
+      |> Ash.Changeset.for_create(:create, text: "post", published: true, score: 1.0)
+      |> Ash.create!()
+
+    on_exit(fn -> AshGraphql.TestHelpers.stop_ets() end)
+
+    assert {:ok,
+            %{
+              data: %{
+                "getPost" => %{"commentsWithRelationshipArguments" => []}
+              }
+            }} =
+             """
+             query {
+               getPost(id: "#{post.id}") {
+                 commentsWithRelationshipArguments(optionalPrefix: null) {
+                   id
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{errors: errors}} =
+             """
+             query {
+               getPost(id: "#{post.id}") {
+                 commentsWithRequiredArgument {
+                   id
+                 }
+               }
+             }
+             """
+             |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert Enum.any?(errors, &String.contains?(&1.message, "prefix"))
+  end
+
   test "resource with no type can execute generic queries" do
     resp =
       """
