@@ -700,6 +700,13 @@ defmodule AshGraphql.Test.Post do
     end
 
     has_many(:comments, AshGraphql.Test.Comment, public?: true)
+
+    has_many :comments_with_default_argument, AshGraphql.Test.Comment do
+      public?(true)
+      read_action(:with_default_argument)
+      read_action_argument_defaults(%{prefix: "default"})
+    end
+
     has_many(:sponsored_comments, AshGraphql.Test.SponsoredComment, public?: true)
     has_many(:paginated_comments, AshGraphql.Test.Comment, read_action: :paginated, public?: true)
 

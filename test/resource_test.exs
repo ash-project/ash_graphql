@@ -14,6 +14,32 @@ defmodule AshGraphql.ResourceTest do
     assert nil == Absinthe.Schema.lookup_type(AshGraphql.Test.Schema, :no_object)
   end
 
+  test "relationship read action arguments with defaults are optional" do
+    {:ok, %{data: %{"__type" => %{"fields" => fields}}}} =
+      """
+      query {
+        __type(name: "Post") {
+          fields {
+            name
+            args {
+              name
+              type {
+                kind
+              }
+            }
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    relationship =
+      Enum.find(fields, &(&1["name"] == "commentsWithDefaultArgument"))
+
+    assert %{"type" => %{"kind" => "SCALAR"}} =
+             Enum.find(relationship["args"], &(&1["name"] == "prefix"))
+  end
+
   test "resource with no type can execute generic queries" do
     resp =
       """

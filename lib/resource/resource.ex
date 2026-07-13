@@ -5232,6 +5232,25 @@ defmodule AshGraphql.Resource do
   defp argument_required?(%{default: default}) when not is_nil(default), do: false
   defp argument_required?(_), do: true
 
+  defp optionalize_relationship_default_arguments(arguments, relationship) do
+    default_arguments = Map.get(relationship, :read_action_argument_defaults, %{})
+
+    Enum.map(arguments, fn
+      %{
+        identifier: identifier,
+        type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: type}
+      } = argument ->
+        if Map.has_key?(default_arguments, identifier) do
+          %{argument | type: type}
+        else
+          argument
+        end
+
+      argument ->
+        argument
+    end)
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
   defp relationships(resource, domain, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
@@ -5256,7 +5275,10 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(name),
           description: relationship.description,
-          arguments: args(:one_related, relationship.destination, read_action, schema),
+          arguments:
+            :one_related
+            |> args(relationship.destination, read_action, schema)
+            |> optionalize_relationship_default_arguments(relationship),
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc_one},
              {domain, relationship, materialized_singular_relationship?(resource, relationship)}}
@@ -5300,7 +5322,8 @@ defmodule AshGraphql.Resource do
               relationship.name,
               read_action,
               schema
-            ),
+            )
+            |> optionalize_relationship_default_arguments(relationship),
           type: query_type,
           __reference__: ref(__ENV__)
         }

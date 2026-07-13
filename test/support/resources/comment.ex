@@ -41,6 +41,10 @@ defmodule AshGraphql.Test.Comment do
       pagination(required?: true, offset?: true, countable: true)
     end
 
+    read :with_default_argument do
+      argument(:prefix, :string, allow_nil?: false)
+    end
+
     action :ranked_comments, {:array, RankedComment} do
       run(fn _input, _ctx ->
         res =
