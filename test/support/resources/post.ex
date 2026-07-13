@@ -712,7 +712,7 @@ defmodule AshGraphql.Test.Post do
 
       read_action_argument_defaults(%{
         prefix: "default",
-        optional_prefix: "optional default"
+        optional_limit: 30
       })
     end
 

@@ -47,7 +47,7 @@ defmodule AshGraphql.ResourceTest do
       Enum.find(relationship_with_defaults["args"], &(&1["name"] == "prefix"))
 
     nullable_argument_with_default =
-      Enum.find(relationship_with_defaults["args"], &(&1["name"] == "optionalPrefix"))
+      Enum.find(relationship_with_defaults["args"], &(&1["name"] == "optionalLimit"))
 
     assert required_argument["type"]["kind"] == "NON_NULL"
     assert is_nil(required_argument["defaultValue"])
@@ -56,7 +56,7 @@ defmodule AshGraphql.ResourceTest do
     assert argument_with_default["defaultValue"] == ~s("default")
 
     refute nullable_argument_with_default["type"]["kind"] == "NON_NULL"
-    assert nullable_argument_with_default["defaultValue"] == ~s("optional default")
+    assert nullable_argument_with_default["defaultValue"] == "30"
 
     post =
       AshGraphql.Test.Post
@@ -74,7 +74,7 @@ defmodule AshGraphql.ResourceTest do
              """
              query {
                getPost(id: "#{post.id}") {
-                 commentsWithDefaultArgument(optionalPrefix: null) {
+                 commentsWithDefaultArgument(optionalLimit: null) {
                    id
                  }
                }
