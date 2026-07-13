@@ -44,6 +44,7 @@ defmodule AshGraphql.Test.Comment do
     read :with_default_argument do
       argument(:prefix, :string, allow_nil?: false)
       argument(:optional_prefix, :string)
+      argument(:action_default_prefix, :string, default: "action default")
     end
 
     action :ranked_comments, {:array, RankedComment} do

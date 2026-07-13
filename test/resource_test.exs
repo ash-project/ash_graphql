@@ -49,6 +49,12 @@ defmodule AshGraphql.ResourceTest do
     nullable_argument_with_default =
       Enum.find(relationship_with_defaults["args"], &(&1["name"] == "optionalPrefix"))
 
+    argument_with_action_and_relationship_defaults =
+      Enum.find(
+        relationship_with_defaults["args"],
+        &(&1["name"] == "actionDefaultPrefix")
+      )
+
     assert required_argument["type"]["kind"] == "NON_NULL"
     assert is_nil(required_argument["defaultValue"])
 
@@ -57,6 +63,9 @@ defmodule AshGraphql.ResourceTest do
 
     refute nullable_argument_with_default["type"]["kind"] == "NON_NULL"
     assert nullable_argument_with_default["defaultValue"] == ~s("optional default")
+
+    assert argument_with_action_and_relationship_defaults["defaultValue"] ==
+             ~s("relationship default")
 
     post =
       AshGraphql.Test.Post

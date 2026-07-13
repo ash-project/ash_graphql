@@ -712,7 +712,8 @@ defmodule AshGraphql.Test.Post do
 
       read_action_argument_defaults(%{
         prefix: "default",
-        optional_prefix: "optional default"
+        optional_prefix: "optional default",
+        action_default_prefix: "relationship default"
       })
     end
 
