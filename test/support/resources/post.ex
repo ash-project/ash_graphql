@@ -559,6 +559,7 @@ defmodule AshGraphql.Test.Post do
     uuid_primary_key(:id)
 
     attribute(:text, :string, public?: true)
+    attribute(:result, :string, public?: true)
     attribute(:published, :boolean, default: false, public?: true)
     attribute(:foo, AshGraphql.Test.Foo, public?: true)
     attribute(:status, AshGraphql.Test.Status, public?: true)

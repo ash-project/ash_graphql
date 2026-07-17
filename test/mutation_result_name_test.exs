@@ -77,5 +77,37 @@ defmodule AshGraphql.MutationResultNameTest do
                }
              } = result
     end
+
+    test "configured result_name resolves payload when resource has a public result attribute" do
+      resp =
+        """
+        mutation CreatePostWithResultName($input: CreatePostWithResultNameInput) {
+          createPostWithResultName(input: $input) {
+            post {
+              text
+              result
+            }
+            errors { message }
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema,
+          variables: %{"input" => %{"text" => "body", "result" => "resource-result"}}
+        )
+
+      assert {:ok, result} = resp
+      refute Map.has_key?(result, :errors)
+
+      assert %{
+               data: %{
+                 "createPostWithResultName" => %{
+                   "post" => %{
+                     "text" => "body",
+                     "result" => "resource-result"
+                   }
+                 }
+               }
+             } = result
+    end
   end
 end
