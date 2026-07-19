@@ -235,6 +235,7 @@ defmodule AshGraphql.Test.Post do
 
     mutations do
       create :simple_create_post, :create, labels: [:public]
+      create :create_post_with_result_name, :create, result_name: :post
       create :create_post_with_arg, :create, args: [:text]
       create :create_post_with_argument_types, :create_with_argument_types
       create :create_post_with_error, :create_with_error
@@ -558,6 +559,7 @@ defmodule AshGraphql.Test.Post do
     uuid_primary_key(:id)
 
     attribute(:text, :string, public?: true)
+    attribute(:result, :string, public?: true)
     attribute(:published, :boolean, default: false, public?: true)
     attribute(:foo, AshGraphql.Test.Foo, public?: true)
     attribute(:status, AshGraphql.Test.Status, public?: true)

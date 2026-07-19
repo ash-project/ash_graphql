@@ -1524,7 +1524,7 @@ defmodule AshGraphql.Graphql.Resolver do
            upsert_identity: upsert_identity,
            args: args,
            modify_resolution: modify
-         }, _relay_ids?}
+         } = mutation, _relay_ids?}
       ) do
     case handle_mutation_arguments(resource, action, nil, arguments, args) do
       {:ok, input} ->
@@ -1561,6 +1561,7 @@ defmodule AshGraphql.Graphql.Resolver do
             end
 
           type_name = mutation_result_type(mutation_name)
+          result_field_name = mutation_result_field_name(mutation)
 
           changeset =
             resource
@@ -1571,7 +1572,7 @@ defmodule AshGraphql.Graphql.Resolver do
               actor: Map.get(context, :actor),
               authorize?: AshGraphql.Domain.Info.authorize?(domain)
             )
-            |> select_fields(resource, resolution, type_name, ["result"])
+            |> select_fields(resource, resolution, type_name, [result_field_name])
             |> load_fields(
               [
                 domain: domain,
@@ -1585,7 +1586,7 @@ defmodule AshGraphql.Graphql.Resolver do
               resolution.path,
               context,
               type_name,
-              ["result"]
+              [result_field_name]
             )
 
           {result, modify_args} =
@@ -1654,7 +1655,7 @@ defmodule AshGraphql.Graphql.Resolver do
            read_action: read_action,
            args: args,
            modify_resolution: modify
-         }, relay_ids?}
+         } = mutation, relay_ids?}
       ) do
     read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
 
@@ -1689,6 +1690,8 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> set_query_arguments(read_action, read_action_input)
                 |> Ash.Query.limit(1)
 
+              result_field_name = mutation_result_field_name(mutation)
+
               {result, modify_args} =
                 query
                 |> Ash.bulk_update(action, input,
@@ -1706,7 +1709,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   actor: Map.get(context, :actor),
                   select:
                     get_select(resource, resolution, mutation_result_type(mutation_name), [
-                      "result"
+                      result_field_name
                     ]),
                   load:
                     get_loads(
@@ -1722,7 +1725,7 @@ defmodule AshGraphql.Graphql.Resolver do
                       resolution.path,
                       context,
                       mutation_result_type(mutation_name),
-                      ["result"]
+                      [result_field_name]
                     )
                 )
                 |> case do
@@ -1824,7 +1827,7 @@ defmodule AshGraphql.Graphql.Resolver do
            read_action: read_action,
            args: args,
            modify_resolution: modify
-         }, relay_ids?}
+         } = mutation, relay_ids?}
       ) do
     read_action = read_action || Ash.Resource.Info.primary_action!(resource, :read).name
 
@@ -1851,6 +1854,8 @@ defmodule AshGraphql.Graphql.Resolver do
 
           case filter do
             {:ok, filter} ->
+              result_field_name = mutation_result_field_name(mutation)
+
               query =
                 resource
                 |> Ash.Query.do_filter(filter)
@@ -1858,7 +1863,14 @@ defmodule AshGraphql.Graphql.Resolver do
                 |> Ash.Query.set_context(get_context(context))
                 |> set_query_arguments(read_action, read_action_input)
                 |> Ash.Query.limit(1)
-                |> pre_load_for_mutation(domain, resource, resolution, context, mutation_name)
+                |> pre_load_for_mutation(
+                  domain,
+                  resource,
+                  resolution,
+                  context,
+                  mutation_name,
+                  result_field_name
+                )
 
               {result, modify_args} =
                 query
@@ -1877,7 +1889,7 @@ defmodule AshGraphql.Graphql.Resolver do
                   domain: domain,
                   select:
                     get_select(resource, resolution, mutation_result_type(mutation_name), [
-                      "result"
+                      result_field_name
                     ])
                 )
                 |> case do
@@ -2128,7 +2140,15 @@ defmodule AshGraphql.Graphql.Resolver do
 
   # Pre-load aggregates and calculations on the query before destruction
   # to ensure they are available in the returned record for GraphQL serialization
-  defp pre_load_for_mutation(query, domain, resource, resolution, context, mutation_name) do
+  defp pre_load_for_mutation(
+         query,
+         domain,
+         resource,
+         resolution,
+         context,
+         mutation_name,
+         result_field_name
+       ) do
     load_opts = [
       domain: domain,
       tenant: Map.get(context, :tenant),
@@ -2145,7 +2165,7 @@ defmodule AshGraphql.Graphql.Resolver do
       resolution.path,
       context,
       mutation_result_type(mutation_name),
-      ["result"]
+      [result_field_name]
     )
   end
 
@@ -2219,7 +2239,7 @@ defmodule AshGraphql.Graphql.Resolver do
           fields
       end
 
-    selection = Enum.find(selections, &(&1.name == nested))
+    selection = Enum.find(selections, &field_matches_path?(&1, nested))
 
     if selection do
       nested_fields_and_path(resolution, [selection | path], rest)
@@ -2726,6 +2746,13 @@ defmodule AshGraphql.Graphql.Resolver do
     String.to_atom("#{mutation_name}_result")
   end
 
+  defp mutation_result_field_name(mutation) do
+    case Map.get(mutation, :result_name) do
+      nil -> "result"
+      name when is_atom(name) -> Atom.to_string(name)
+    end
+  end
+
   # sobelow_skip ["DOS.StringToAtom"]
   defp subscription_result_type(subscription_name) do
     String.to_atom("#{subscription_name}_result")
@@ -2809,7 +2836,7 @@ defmodule AshGraphql.Graphql.Resolver do
     cache = resolution.fields_cache
 
     Enum.reduce(names, {project, cache}, fn name, {fields, cache} ->
-      case fields |> Enum.find(&(&1.name == name)) do
+      case fields |> Enum.find(&field_matches_path?(&1, name)) do
         nil ->
           {fields, cache}
 
@@ -2827,6 +2854,10 @@ defmodule AshGraphql.Graphql.Resolver do
       end
     end)
     |> elem(0)
+  end
+
+  defp field_matches_path?(field, name) do
+    field.name == name
   end
 
   defp names_only(fields) do

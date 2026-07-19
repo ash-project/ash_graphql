@@ -613,6 +613,7 @@ create :create_post, :create
 | [`modify_resolution`](#graphql-mutations-create-modify_resolution){: #graphql-mutations-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-create-meta){: #graphql-mutations-create-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 | [`group`](#graphql-mutations-create-group){: #graphql-mutations-create-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+| [`result_name`](#graphql-mutations-create-result_name){: #graphql-mutations-create-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -659,6 +660,7 @@ update :update_post, :update
 | [`modify_resolution`](#graphql-mutations-update-modify_resolution){: #graphql-mutations-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-update-meta){: #graphql-mutations-update-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 | [`group`](#graphql-mutations-update-group){: #graphql-mutations-update-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+| [`result_name`](#graphql-mutations-update-result_name){: #graphql-mutations-update-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -705,6 +707,7 @@ destroy :destroy_post, :destroy
 | [`modify_resolution`](#graphql-mutations-destroy-modify_resolution){: #graphql-mutations-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-destroy-meta){: #graphql-mutations-destroy-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 | [`group`](#graphql-mutations-destroy-group){: #graphql-mutations-destroy-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+| [`result_name`](#graphql-mutations-destroy-result_name){: #graphql-mutations-destroy-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -749,6 +752,7 @@ action :check_status, :check_status
 | [`labels`](#graphql-mutations-action-labels){: #graphql-mutations-action-labels } | `atom \| list(atom)` | `[]` | Labels used to include or exclude this action from schemas with matching labels. |
 | [`meta`](#graphql-mutations-action-meta){: #graphql-mutations-action-meta } | `keyword` | `[]` | A keyword list of metadata for the action. |
 | [`args`](#graphql-mutations-action-args){: #graphql-mutations-action-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
+| [`result_name`](#graphql-mutations-action-result_name){: #graphql-mutations-action-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -821,6 +825,7 @@ create :create_post, :create
 | [`modify_resolution`](#graphql-mutations-group-create-modify_resolution){: #graphql-mutations-group-create-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-group-create-meta){: #graphql-mutations-group-create-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 | [`group`](#graphql-mutations-group-create-group){: #graphql-mutations-group-create-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+| [`result_name`](#graphql-mutations-group-create-result_name){: #graphql-mutations-group-create-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -867,6 +872,7 @@ update :update_post, :update
 | [`modify_resolution`](#graphql-mutations-group-update-modify_resolution){: #graphql-mutations-group-update-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-group-update-meta){: #graphql-mutations-group-update-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 | [`group`](#graphql-mutations-group-update-group){: #graphql-mutations-group-update-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+| [`result_name`](#graphql-mutations-group-update-result_name){: #graphql-mutations-group-update-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -913,6 +919,7 @@ destroy :destroy_post, :destroy
 | [`modify_resolution`](#graphql-mutations-group-destroy-modify_resolution){: #graphql-mutations-group-destroy-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
 | [`meta`](#graphql-mutations-group-destroy-meta){: #graphql-mutations-group-destroy-meta } | `keyword` | `[]` | A keyword list of metadata for the mutation. |
 | [`group`](#graphql-mutations-group-destroy-group){: #graphql-mutations-group-destroy-group } | `atom` |  | An optional grouping key used to nest this mutation under a group wrapper. |
+| [`result_name`](#graphql-mutations-group-destroy-result_name){: #graphql-mutations-group-destroy-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 
@@ -957,6 +964,7 @@ action :check_status, :check_status
 | [`labels`](#graphql-mutations-group-action-labels){: #graphql-mutations-group-action-labels } | `atom \| list(atom)` | `[]` | Labels used to include or exclude this action from schemas with matching labels. |
 | [`meta`](#graphql-mutations-group-action-meta){: #graphql-mutations-group-action-meta } | `keyword` | `[]` | A keyword list of metadata for the action. |
 | [`args`](#graphql-mutations-group-action-args){: #graphql-mutations-group-action-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
+| [`result_name`](#graphql-mutations-group-action-result_name){: #graphql-mutations-group-action-result_name } | `atom` |  | The GraphQL field name for the mutation result. Defaults to `result`. |
 
 
 

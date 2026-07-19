@@ -122,6 +122,7 @@ defmodule AshGraphql.Resource do
       :relay_id_translations,
       :error_location,
       :modify_resolution,
+      :result_name,
       :__spark_metadata__,
       args: [],
       hide_inputs: [],
@@ -150,7 +151,7 @@ defmodule AshGraphql.Resource do
     schema:
       @action_schema
       |> Spark.Options.merge(
-        Mutation.create_schema() |> Keyword.take([:args]),
+        Mutation.create_schema() |> Keyword.take([:args, :result_name]),
         "Shared Mutation Options"
       ),
     args: [:name, :action],
@@ -1543,6 +1544,8 @@ defmodule AshGraphql.Resource do
           }
         ]
 
+      result_field_name = mutation_result_field_name(mutation)
+
       fields =
         if mutation.type == :action do
           [
@@ -1550,7 +1553,7 @@ defmodule AshGraphql.Resource do
               description: description,
               identifier: :result,
               module: schema,
-              name: "result",
+              name: result_field_name,
               type:
                 generic_action_type(
                   %{mutation.action | allow_nil?: true},
@@ -1581,7 +1584,7 @@ defmodule AshGraphql.Resource do
               description: description,
               identifier: :result,
               module: schema,
-              name: "result",
+              name: result_field_name,
               type: resource_type,
               __reference__: ref(__ENV__)
             }
@@ -1646,6 +1649,13 @@ defmodule AshGraphql.Resource do
           [input | result] ++ List.wrap(metadata_object_type)
       end
     end)
+  end
+
+  defp mutation_result_field_name(mutation) do
+    case Map.get(mutation, :result_name) do
+      nil -> "result"
+      name when is_atom(name) -> Atom.to_string(name)
+    end
   end
 
   @doc false
