@@ -11,6 +11,43 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.10.0](https://github.com/ash-project/ash_graphql/compare/v1.9.4...v1.10.0) (2026-07-21)
+
+
+
+
+### Features:
+
+* Add custom mutation result names (#456) by jaylynntautu [(#456)](https://github.com/ash-project/ash_graphql/pull/456)
+
+* Add filter handlers, primarily for relay id filtering (#448) by ESmithByui [(#448)](https://github.com/ash-project/ash_graphql/pull/448)
+
+### Bug Fixes:
+
+* fix loads on unnested unions on generic actions by [@zachdaniel](https://github.com/zachdaniel)
+
+* preserve remaining GraphQL filters (#449) by Alan Heywood [(#449)](https://github.com/ash-project/ash_graphql/pull/449)
+
+* traverse struct NewType fields so nested enums get registered in the schema (#444) by skanderm [(#444)](https://github.com/ash-project/ash_graphql/pull/444)
+
+* Surface aggregate field DSL errors instead of crashing (#433) by jaylynntautu [(#433)](https://github.com/ash-project/ash_graphql/pull/433)
+
+* use pattern matching in resolve_array_element_segment #431 by Daniel Gollings [(#431)](https://github.com/ash-project/ash_graphql/pull/431)
+
+* handle trailing question marks in predicate names by [@zachdaniel](https://github.com/zachdaniel)
+
+### Improvements:
+
+* Expose relationship read action arguments as GraphQL defaults (#455) by [@jechol](https://github.com/jechol) [(#455)](https://github.com/ash-project/ash_graphql/pull/455)
+
+* add default_types and default_input_types to schema (#454) by CaydenLords [(#454)](https://github.com/ash-project/ash_graphql/pull/454)
+
+* raise when using reserved type name (#453) by colenelson0 [(#453)](https://github.com/ash-project/ash_graphql/pull/453)
+
+* Improve warning when embedded GraphQL input has no fields (#437) by RhettPoole [(#437)](https://github.com/ash-project/ash_graphql/pull/437)
+
+* support query/mutation grouping by [@zachdaniel](https://github.com/zachdaniel) [(#423)](https://github.com/ash-project/ash_graphql/pull/423)
+
 ## [v1.9.4](https://github.com/ash-project/ash_graphql/compare/v1.9.3...v1.9.4) (2026-04-12)
 
 
