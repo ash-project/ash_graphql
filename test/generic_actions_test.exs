@@ -218,6 +218,46 @@ defmodule AshGraphql.GenericActionsTest do
     assert %{data: %{"searchUnions" => []}} = result
   end
 
+  test "generic action returning an unnested union resolves the union member's fields" do
+    resp =
+      """
+      query {
+        unnestedUnion {
+          ... on PersonType {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+    refute Map.has_key?(result, :errors)
+    assert %{data: %{"unnestedUnion" => %{"name" => "Alice"}}} = result
+  end
+
+  test "generic action returning an array of unnested unions resolves each member's fields" do
+    resp =
+      """
+      query {
+        unnestedUnions {
+          ... on FooEmbed {
+            foo
+          }
+          ... on PersonType {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, result} = resp
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"unnestedUnions" => [%{"foo" => "foo"}, %{"name" => "Alice"}]}} = result
+  end
+
   describe "generic action with require_actor? domain" do
     test "succeeds when actor is provided via GraphQL context" do
       resp =

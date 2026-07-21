@@ -81,39 +81,59 @@ defmodule AshGraphql.Graphql.Resolver do
                     tenant: Map.get(context, :tenant)
                   ]
 
-                if action.returns && Ash.Type.can_load?(action.returns, action.constraints) do
-                  {fields, path} = nested_fields_and_path(resolution, [], [])
+                result =
+                  if action.returns && Ash.Type.can_load?(action.returns, action.constraints) do
+                    {fields, path} = nested_fields_and_path(resolution, [], [])
 
-                  loads =
-                    type_loads(
-                      fields,
-                      context,
-                      action.returns,
-                      action.constraints,
-                      load_opts,
-                      resource,
-                      action.name,
-                      resolution,
-                      path,
-                      hd(resolution.path),
-                      nil
-                    )
-
-                  case loads do
-                    [] ->
-                      {:ok, result}
-
-                    loads ->
-                      Ash.Type.load(
+                    loads =
+                      type_loads(
+                        fields,
+                        context,
                         action.returns,
-                        result,
-                        loads,
                         action.constraints,
-                        Map.new(load_opts)
+                        load_opts,
+                        resource,
+                        action.name,
+                        resolution,
+                        path,
+                        hd(resolution.path),
+                        nil
                       )
+
+                    case loads do
+                      [] ->
+                        {:ok, result}
+
+                      loads ->
+                        case action.returns do
+                          {:array, _} ->
+                            Ash.Type.load(
+                              action.returns,
+                              result,
+                              loads,
+                              action.constraints,
+                              Map.new(load_opts)
+                            )
+
+                          _ ->
+                            case Ash.Type.load(
+                                   action.returns,
+                                   [result],
+                                   loads,
+                                   action.constraints,
+                                   Map.new(load_opts)
+                                 ) do
+                              {:ok, [result]} -> {:ok, result}
+                              {:error, error} -> {:error, error}
+                            end
+                        end
+                    end
+                  else
+                    {:ok, result}
                   end
-                else
-                  {:ok, result}
+
+                with {:ok, result} <- result do
+                  {:ok, resolve_generic_action_unions(result, action, resource, domain)}
                 end
 
               {:error, error} ->
@@ -3329,6 +3349,35 @@ defmodule AshGraphql.Graphql.Resolver do
         _
       ) do
     raise "unknown source #{inspect(source)}"
+  end
+
+  defp resolve_generic_action_unions(result, action, resource, domain) do
+    unwrapped_type = unwrap_type(action.returns)
+
+    if Ash.Type.NewType.new_type?(unwrapped_type) &&
+         Ash.Type.NewType.subtype_of(unwrapped_type) == Ash.Type.Union &&
+         function_exported?(unwrapped_type, :graphql_unnested_unions, 1) do
+      constraints =
+        case action.returns do
+          {:array, _} -> action.constraints[:items] || []
+          _ -> action.constraints
+        end
+
+      unnested_types = unwrapped_type.graphql_unnested_unions(constraints)
+
+      attribute = %Ash.Resource.Attribute{
+        name: action.name,
+        type: action.returns,
+        constraints: action.constraints
+      }
+
+      resolve_union_result(
+        result,
+        {action.name, action.returns, attribute, resource, unnested_types, domain}
+      )
+    else
+      result
+    end
   end
 
   defp resolve_union_result(

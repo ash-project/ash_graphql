@@ -77,6 +77,33 @@ defmodule AshGraphql.Test.ResourceWithUnion do
     def graphql_input_type(_), do: :generic_action_union_input
   end
 
+  defmodule GenericActionUnnestedUnion do
+    @moduledoc false
+
+    use Ash.Type.NewType,
+      subtype_of: :union,
+      constraints: [
+        types: [
+          foo: [
+            type: Foo,
+            tag: :type,
+            tag_value: :foo
+          ],
+          typed_struct: [
+            type: AshGraphql.Test.PersonTypedStructData
+          ]
+        ]
+      ]
+
+    use AshGraphql.Type
+
+    @impl true
+    def graphql_type(_), do: :generic_action_unnested_union
+
+    @impl true
+    def graphql_unnested_unions(_), do: [:foo, :typed_struct]
+  end
+
   use Ash.Resource,
     domain: AshGraphql.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
@@ -87,6 +114,8 @@ defmodule AshGraphql.Test.ResourceWithUnion do
 
     queries do
       action(:search_unions, :search_unions)
+      action(:unnested_union, :unnested_union)
+      action(:unnested_unions, :unnested_unions)
     end
 
     mutations do
@@ -100,6 +129,29 @@ defmodule AshGraphql.Test.ResourceWithUnion do
     action :search_unions, {:array, GenericActionUnion} do
       run(fn _input, _ctx ->
         {:ok, []}
+      end)
+    end
+
+    action :unnested_union, GenericActionUnnestedUnion do
+      run(fn _input, _ctx ->
+        {:ok,
+         %Ash.Union{
+           type: :typed_struct,
+           value: %PersonTypedStructData{name: "Alice"}
+         }}
+      end)
+    end
+
+    action :unnested_unions, {:array, GenericActionUnnestedUnion} do
+      run(fn _input, _ctx ->
+        {:ok,
+         [
+           %Ash.Union{type: :foo, value: %Foo{type: :foo, foo: "foo"}},
+           %Ash.Union{
+             type: :typed_struct,
+             value: %PersonTypedStructData{name: "Alice"}
+           }
+         ]}
       end)
     end
 
