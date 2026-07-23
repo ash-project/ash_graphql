@@ -4034,52 +4034,48 @@ defmodule AshGraphql.Resource do
   end
 
   def map_definitions(resource, all_domains, schema, env, labels \\ nil) do
-    if AshGraphql.Resource.Info.type(resource) do
-      resource
-      |> global_maps(all_domains, labels)
-      |> Enum.flat_map(fn attribute ->
-        type_name =
-          if function_exported?(attribute.type, :graphql_type, 1) do
-            attribute.type.graphql_type(attribute.constraints)
-          end
+    resource
+    |> global_maps(all_domains, labels)
+    |> Enum.flat_map(fn attribute ->
+      type_name =
+        if function_exported?(attribute.type, :graphql_type, 1) do
+          attribute.type.graphql_type(attribute.constraints)
+        end
 
-        input_type_name =
-          if function_exported?(attribute.type, :graphql_input_type, 1) do
-            attribute.type.graphql_input_type(attribute.constraints)
-          end
+      input_type_name =
+        if function_exported?(attribute.type, :graphql_input_type, 1) do
+          attribute.type.graphql_input_type(attribute.constraints)
+        end
 
-        description = AshGraphql.Type.description(attribute.type, attribute.constraints)
+      description = AshGraphql.Type.description(attribute.type, attribute.constraints)
 
-        constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
+      constraints = Ash.Type.NewType.constraints(attribute.type, attribute.constraints)
 
-        already_checked =
-          if Ash.Type.NewType.new_type?(attribute.type) do
-            [attribute.type]
-          else
-            []
-          end
+      already_checked =
+        if Ash.Type.NewType.new_type?(attribute.type) do
+          [attribute.type]
+        else
+          []
+        end
 
+      [
+        type_name
+      ]
+      |> define_map_types(description, constraints, schema, resource, env, already_checked)
+      |> Enum.concat(
         [
-          type_name
+          input_type_name
         ]
-        |> define_map_types(description, constraints, schema, resource, env, already_checked)
-        |> Enum.concat(
-          [
-            input_type_name
-          ]
-          |> define_input_map_types(
-            description,
-            constraints,
-            schema,
-            resource,
-            env,
-            already_checked
-          )
+        |> define_input_map_types(
+          description,
+          constraints,
+          schema,
+          resource,
+          env,
+          already_checked
         )
-      end)
-    else
-      []
-    end
+      )
+    end)
   end
 
   # sobelow_skip ["DOS.StringToAtom"]
