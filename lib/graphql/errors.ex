@@ -185,7 +185,7 @@ defmodule AshGraphql.Errors do
   end
 
   defp resolve_union_segment(segment, context) do
-    types = context.constraints[:types] || context.constraints["types"] || %{}
+    types = Keyword.get(context.constraints, :types, %{})
     segment_atom = segment_to_atom(segment)
 
     config =
@@ -219,7 +219,7 @@ defmodule AshGraphql.Errors do
   end
 
   defp resolve_map_struct_segment(segment, context) do
-    fields = context.constraints[:fields] || context.constraints["fields"] || []
+    fields = Keyword.get(context.constraints, :fields, [])
     segment_atom = segment_to_atom(segment)
 
     field_config =
@@ -259,7 +259,7 @@ defmodule AshGraphql.Errors do
         _ -> nil
       end
 
-    elem_constraints = context.constraints[:items] || context.constraints["items"] || []
+    elem_constraints = Keyword.get(context.constraints, :items, [])
     {elem_type, elem_constraints} = unwrap_type(elem_type, elem_constraints)
     inner_context = %{context | type: elem_type, constraints: elem_constraints}
     resolve_segment_with_context(segment, inner_context)
@@ -320,7 +320,7 @@ defmodule AshGraphql.Errors do
         :array
 
       type in [:map, Ash.Type.Map, :struct, Ash.Type.Struct] ->
-        if (constraints[:fields] || constraints["fields"] || []) != [], do: :map_struct, else: nil
+        if Keyword.get(constraints, :fields, []) != [], do: :map_struct, else: nil
 
       true ->
         if new_type?(type) do
