@@ -1287,5 +1287,26 @@ defmodule AshGraphql.ErrorsTest do
                }
              ] = errors
     end
+
+    test "path resolves a segment nested under a :map attribute with no :fields constraint" do
+      # A plain :map has constraints [preserve_nil_values?: false] — a keyword
+      # list with no :fields key — which is what makes the string-key lookup
+      # raise.
+      error =
+        Ash.Error.Forbidden.Policy.exception(vars: %{})
+        |> Ash.Error.set_path([:json_map, :some_key])
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [error],
+          %{},
+          AshGraphql.Test.Domain,
+          AshGraphql.Test.MapTypes,
+          Ash.Resource.Info.action(AshGraphql.Test.MapTypes, :update),
+          ["input"]
+        )
+
+      assert [%{code: "forbidden", path: ["input", "jsonMap", "someKey"]}] = errors
+    end
   end
 end
