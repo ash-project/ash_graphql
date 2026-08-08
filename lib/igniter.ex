@@ -267,7 +267,7 @@ if Code.ensure_loaded?(Igniter) do
           igniter
           |> Igniter.Project.Module.find_and_update_module!(endpoint, fn zipper ->
             with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Phoenix.Endpoint) do
-              {:ok, Igniter.Code.Common.add_code(zipper, "use Absinthe.Phoenix.Endpoint")}
+              {:ok, Igniter.Code.Common.add_code(zipper, "use AshGraphql.Subscription.Endpoint")}
             end
           end)
           |> Igniter.Project.Module.find_and_update_module!(endpoint, fn zipper ->
