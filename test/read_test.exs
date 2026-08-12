@@ -1886,6 +1886,32 @@ defmodule AshGraphql.ReadTest do
     end
   end
 
+  test "a get query with an identity made up of a calculation works" do
+    tag =
+      AshGraphql.Test.Tag
+      |> Ash.Changeset.for_create(:create, %{name: "foo", popularity: 1})
+      |> Ash.create!()
+
+    tag_id = tag.id
+
+    resp =
+      """
+      query GetTagByOtherId($otherId: ID!) {
+        getTagByOtherId(otherId: $otherId) {
+          id
+          name
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema, variables: %{"otherId" => tag_id})
+
+    assert {:ok, result} = resp
+
+    refute Map.has_key?(result, :errors)
+
+    assert %{data: %{"getTagByOtherId" => %{"id" => ^tag_id, "name" => "foo"}}} = result
+  end
+
   test "domain tracer configuration is correctly retrieved" do
     # Create a test domain with tracer configuration
     defmodule TestDomainWithTracer do

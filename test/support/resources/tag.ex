@@ -18,6 +18,7 @@ defmodule AshGraphql.Test.Tag do
 
     queries do
       get :get_tag, :read, labels: [:public, :backoffice]
+      get :get_tag_by_other_id, :read, identity: :other_id
       list :get_tags, :read, labels: [:admin]
     end
 
@@ -45,11 +46,18 @@ defmodule AshGraphql.Test.Tag do
 
   calculations do
     calculate(:double_popularity, :integer, expr(popularity * 2), public?: true)
+    calculate(:other_id, :uuid, expr(id), public?: true)
   end
 
   identities do
     identity(:name, [:name], pre_check_with: AshGraphql.Test.Domain)
+    identity(:other_id, [:other_id])
   end
+
+  # `:other_id` is a calculation, and Ash refuses to pre/eager check identities
+  # built on calculated fields. Defining `testing_identities/0` opts this
+  # resource out of the ETS data layer's `pre_check_with` requirement.
+  def testing_identities, do: true
 
   relationships do
     many_to_many(:posts, AshGraphql.Test.Post,
