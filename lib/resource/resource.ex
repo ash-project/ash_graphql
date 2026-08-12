@@ -1396,15 +1396,15 @@ defmodule AshGraphql.Resource do
     |> Enum.find(&(&1.name == identity))
     |> Map.get(:keys)
     |> Enum.map(fn key ->
-      attribute = Ash.Resource.Info.attribute(resource, key)
+      field = Ash.Resource.Info.field(resource, key)
 
       %Absinthe.Blueprint.Schema.InputValueDefinition{
         identifier: key,
         module: schema,
         name: to_string(key),
-        description: attribute.description || "",
+        description: field.description || "",
         type: %Absinthe.Blueprint.TypeReference.NonNull{
-          of_type: field_type(attribute.type, attribute, resource, false, schema)
+          of_type: field_type(field.type, field, resource, false, schema)
         },
         __reference__: ref(__ENV__)
       }
@@ -2286,15 +2286,15 @@ defmodule AshGraphql.Resource do
       |> Enum.find(&(&1.name == identity))
       |> Map.get(:keys)
       |> Enum.map(fn key ->
-        attribute = Ash.Resource.Info.attribute(resource, key)
+        field = Ash.Resource.Info.field(resource, key)
 
         %Absinthe.Blueprint.Schema.InputValueDefinition{
           name: to_string(key),
           identifier: key,
           type: %Absinthe.Blueprint.TypeReference.NonNull{
-            of_type: field_type(attribute.type, attribute, resource, true, schema)
+            of_type: field_type(field.type, field, resource, true, schema)
           },
-          description: attribute.description || "",
+          description: field.description || "",
           __reference__: ref(__ENV__)
         }
       end)
