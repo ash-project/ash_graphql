@@ -11,6 +11,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.10.1](https://github.com/ash-project/ash_graphql/compare/v1.10.0...v1.10.1) (2026-08-17)
+
+
+
+
+### Bug Fixes:
+
+* handle empty domains list by [@zachdaniel](https://github.com/zachdaniel)
+
+* support calculations in identities used by graphql queries (#461) by [@maennchen](https://github.com/maennchen) [(#461)](https://github.com/ash-project/ash_graphql/pull/461)
+
+* don't raise building error paths for maps without field constraints (#460) by puyo [(#460)](https://github.com/ash-project/ash_graphql/pull/460)
+
+* discover map types in non-resources by [@zachdaniel](https://github.com/zachdaniel)
+
 ## [v1.10.0](https://github.com/ash-project/ash_graphql/compare/v1.9.4...v1.10.0) (2026-07-21)
 
 
