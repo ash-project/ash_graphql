@@ -207,7 +207,11 @@ defmodule AshGraphql do
 
       schema = __MODULE__
       schema_env = __ENV__
-      last_domain = domains |> List.last() |> elem(0)
+      last_domain =
+        case List.last(domains) do
+          nil -> nil
+          last -> elem(last, 0)
+        end
 
       for resource <- ash_resources do
         resource
