@@ -207,6 +207,7 @@ defmodule AshGraphql do
 
       schema = __MODULE__
       schema_env = __ENV__
+
       last_domain =
         case List.last(domains) do
           nil -> nil
