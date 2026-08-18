@@ -13,6 +13,7 @@ defmodule AshGraphql.Resource.Subscription do
     :actor,
     :hide_inputs,
     :relay_id_translations,
+    :deprecate,
     :meta,
     :__spark_metadata__
   ]
@@ -39,6 +40,11 @@ defmodule AshGraphql.Resource.Subscription do
     read_action: [
       type: :atom,
       doc: "The read action to use for reading data"
+    ],
+    deprecate: [
+      type: {:or, [:boolean, :string]},
+      doc:
+        "Marks the subscription as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason."
     ],
     hide_inputs: [
       type: {:list, :atom},

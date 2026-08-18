@@ -200,7 +200,8 @@ defmodule AshGraphql.Test.Post do
     paginate_relationship_with unpaginated_comments: :none
 
     queries do
-      get :get_post, :read
+      get :get_post, :read, deprecate: false
+      get :deprecated_get_post, :read, deprecate: true
       get :get_post_with_custom_description, :read, description: "A custom description"
       list :post_library, :library
       list :paginated_posts, :paginated
@@ -212,6 +213,8 @@ defmodule AshGraphql.Test.Post do
       list :read_post_with_invalid_arguments_names, :read_with_invalid_arguments_names
       list :lazyinit_search, :search
       action(:post_count, :count, labels: [:admin])
+      action(:deprecated_post_count, :count, deprecate: "Use `postCount` instead.")
+
       action(:post_count_with_errors, :count, error_location: :in_result)
 
       action(
@@ -256,6 +259,8 @@ defmodule AshGraphql.Test.Post do
       create :create_post_with_custom_description, :create,
         description: "Another custom description"
 
+      create :deprecated_create_post, :create, deprecate: "Use `createPost` instead."
+
       create :create_post_with_invalid_arguments_names, :create_with_invalid_arguments_names
 
       update :update_post, :update, labels: [:admin]
@@ -283,6 +288,7 @@ defmodule AshGraphql.Test.Post do
 
       # this is a mutation just for testing
       action(:random_post, :random)
+      action(:deprecated_random_post, :random, deprecate: true)
       action(:random_post_with_arg, :random, args: [:published])
     end
   end

@@ -18,6 +18,7 @@ defmodule AshGraphql.Test.GroupedQueriesResource do
         list(:gq_unique_items, :read, labels: [:public])
 
         action(:gq_unique_stats, :stats, labels: [:admin])
+        action(:gq_deprecated_stats, :stats, deprecate: true)
       end
     end
   end

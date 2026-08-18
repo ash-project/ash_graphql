@@ -16,6 +16,7 @@ defmodule AshGraphql.Resource.Mutation do
     :modify_resolution,
     :relay_id_translations,
     :description,
+    :deprecate,
     :result_name,
     :__spark_metadata__,
     args: [],
@@ -40,6 +41,11 @@ defmodule AshGraphql.Resource.Mutation do
       type: :string,
       doc:
         "The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
+    deprecate: [
+      type: {:or, [:boolean, :string]},
+      doc:
+        "Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason."
     ],
     relay_id_translations: [
       type: :keyword_list,

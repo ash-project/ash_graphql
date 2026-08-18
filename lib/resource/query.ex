@@ -14,6 +14,7 @@ defmodule AshGraphql.Resource.Query do
     :modify_resolution,
     :relay_id_translations,
     :description,
+    :deprecate,
     :complexity,
     :__spark_metadata__,
     as_mutation?: false,
@@ -50,6 +51,11 @@ defmodule AshGraphql.Resource.Query do
       type: :string,
       doc:
         "The query description that gets shown in the Graphql schema. If not provided, the action description will be used."
+    ],
+    deprecate: [
+      type: {:or, [:boolean, :string]},
+      doc:
+        "Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason."
     ],
     metadata_names: [
       type: :keyword_list,
