@@ -149,6 +149,7 @@ get :get_post, :read
 | [`allow_nil?`](#graphql-queries-get-allow_nil?){: #graphql-queries-get-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
 | [`type_name`](#graphql-queries-get-type_name){: #graphql-queries-get-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-get-description){: #graphql-queries-get-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-get-deprecate){: #graphql-queries-get-deprecate } | `boolean \| String.t` |  | Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`metadata_names`](#graphql-queries-get-metadata_names){: #graphql-queries-get-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-get-metadata_types){: #graphql-queries-get-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-get-show_metadata){: #graphql-queries-get-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -199,6 +200,7 @@ read_one :current_user, :current_user
 | [`allow_nil?`](#graphql-queries-read_one-allow_nil?){: #graphql-queries-read_one-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
 | [`type_name`](#graphql-queries-read_one-type_name){: #graphql-queries-read_one-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-read_one-description){: #graphql-queries-read_one-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-read_one-deprecate){: #graphql-queries-read_one-deprecate } | `boolean \| String.t` |  | Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`metadata_names`](#graphql-queries-read_one-metadata_names){: #graphql-queries-read_one-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-read_one-metadata_types){: #graphql-queries-read_one-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-read_one-show_metadata){: #graphql-queries-read_one-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -254,6 +256,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`paginate_with`](#graphql-queries-list-paginate_with){: #graphql-queries-list-paginate_with } | `:keyset \| :offset \| nil` | `:keyset` | Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used. |
 | [`type_name`](#graphql-queries-list-type_name){: #graphql-queries-list-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-list-description){: #graphql-queries-list-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-list-deprecate){: #graphql-queries-list-deprecate } | `boolean \| String.t` |  | Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`metadata_names`](#graphql-queries-list-metadata_names){: #graphql-queries-list-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-list-metadata_types){: #graphql-queries-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-list-show_metadata){: #graphql-queries-list-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -302,6 +305,7 @@ action :check_status, :check_status
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`description`](#graphql-queries-action-description){: #graphql-queries-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-action-deprecate){: #graphql-queries-action-deprecate } | `boolean \| String.t` |  | Marks the action as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`hide_inputs`](#graphql-queries-action-hide_inputs){: #graphql-queries-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`error_location`](#graphql-queries-action-error_location){: #graphql-queries-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-queries-action-modify_resolution){: #graphql-queries-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
@@ -374,6 +378,7 @@ get :get_post, :read
 | [`allow_nil?`](#graphql-queries-group-get-allow_nil?){: #graphql-queries-group-get-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
 | [`type_name`](#graphql-queries-group-get-type_name){: #graphql-queries-group-get-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-group-get-description){: #graphql-queries-group-get-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-group-get-deprecate){: #graphql-queries-group-get-deprecate } | `boolean \| String.t` |  | Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`metadata_names`](#graphql-queries-group-get-metadata_names){: #graphql-queries-group-get-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-group-get-metadata_types){: #graphql-queries-group-get-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-group-get-show_metadata){: #graphql-queries-group-get-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -424,6 +429,7 @@ read_one :current_user, :current_user
 | [`allow_nil?`](#graphql-queries-group-read_one-allow_nil?){: #graphql-queries-group-read_one-allow_nil? } | `boolean` | `true` | Whether or not the action can return nil. |
 | [`type_name`](#graphql-queries-group-read_one-type_name){: #graphql-queries-group-read_one-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-group-read_one-description){: #graphql-queries-group-read_one-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-group-read_one-deprecate){: #graphql-queries-group-read_one-deprecate } | `boolean \| String.t` |  | Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`metadata_names`](#graphql-queries-group-read_one-metadata_names){: #graphql-queries-group-read_one-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-group-read_one-metadata_types){: #graphql-queries-group-read_one-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-group-read_one-show_metadata){: #graphql-queries-group-read_one-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -479,6 +485,7 @@ list :list_posts_paginated, :read, relay?: true
 | [`paginate_with`](#graphql-queries-group-list-paginate_with){: #graphql-queries-group-list-paginate_with } | `:keyset \| :offset \| nil` | `:keyset` | Determine the pagination strategy to use, if multiple are available. If `nil`, no pagination is applied, otherwise the given strategy is used. |
 | [`type_name`](#graphql-queries-group-list-type_name){: #graphql-queries-group-list-type_name } | `atom` |  | Override the type name returned by this query. Must be set if the read action has `metadata` that is not hidden via the `show_metadata` key. |
 | [`description`](#graphql-queries-group-list-description){: #graphql-queries-group-list-description } | `String.t` |  | The query description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-group-list-deprecate){: #graphql-queries-group-list-deprecate } | `boolean \| String.t` |  | Marks the query as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`metadata_names`](#graphql-queries-group-list-metadata_names){: #graphql-queries-group-list-metadata_names } | `keyword` | `[]` | Name overrides for metadata fields on the read action. |
 | [`metadata_types`](#graphql-queries-group-list-metadata_types){: #graphql-queries-group-list-metadata_types } | `keyword` | `[]` | Type overrides for metadata fields on the read action. |
 | [`show_metadata`](#graphql-queries-group-list-show_metadata){: #graphql-queries-group-list-show_metadata } | `list(atom)` |  | The metadata attributes to show. Defaults to all. |
@@ -527,6 +534,7 @@ action :check_status, :check_status
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`description`](#graphql-queries-group-action-description){: #graphql-queries-group-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-queries-group-action-deprecate){: #graphql-queries-group-action-deprecate } | `boolean \| String.t` |  | Marks the action as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`hide_inputs`](#graphql-queries-group-action-hide_inputs){: #graphql-queries-group-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`error_location`](#graphql-queries-group-action-error_location){: #graphql-queries-group-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-queries-group-action-modify_resolution){: #graphql-queries-group-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
@@ -606,6 +614,7 @@ create :create_post, :create
 | [`upsert?`](#graphql-mutations-create-upsert?){: #graphql-mutations-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
 | [`upsert_identity`](#graphql-mutations-create-upsert_identity){: #graphql-mutations-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
 | [`description`](#graphql-mutations-create-description){: #graphql-mutations-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-create-deprecate){: #graphql-mutations-create-deprecate } | `boolean \| String.t` |  | Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`relay_id_translations`](#graphql-mutations-create-relay_id_translations){: #graphql-mutations-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`args`](#graphql-mutations-create-args){: #graphql-mutations-create-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-create-hide_inputs){: #graphql-mutations-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -653,6 +662,7 @@ update :update_post, :update
 | [`identity`](#graphql-mutations-update-identity){: #graphql-mutations-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-update-read_action){: #graphql-mutations-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
 | [`description`](#graphql-mutations-update-description){: #graphql-mutations-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-update-deprecate){: #graphql-mutations-update-deprecate } | `boolean \| String.t` |  | Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`relay_id_translations`](#graphql-mutations-update-relay_id_translations){: #graphql-mutations-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`args`](#graphql-mutations-update-args){: #graphql-mutations-update-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-update-hide_inputs){: #graphql-mutations-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -700,6 +710,7 @@ destroy :destroy_post, :destroy
 | [`identity`](#graphql-mutations-destroy-identity){: #graphql-mutations-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-destroy-read_action){: #graphql-mutations-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
 | [`description`](#graphql-mutations-destroy-description){: #graphql-mutations-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-destroy-deprecate){: #graphql-mutations-destroy-deprecate } | `boolean \| String.t` |  | Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`relay_id_translations`](#graphql-mutations-destroy-relay_id_translations){: #graphql-mutations-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`args`](#graphql-mutations-destroy-args){: #graphql-mutations-destroy-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-destroy-hide_inputs){: #graphql-mutations-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -745,6 +756,7 @@ action :check_status, :check_status
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`description`](#graphql-mutations-action-description){: #graphql-mutations-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-action-deprecate){: #graphql-mutations-action-deprecate } | `boolean \| String.t` |  | Marks the action as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`hide_inputs`](#graphql-mutations-action-hide_inputs){: #graphql-mutations-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`error_location`](#graphql-mutations-action-error_location){: #graphql-mutations-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-mutations-action-modify_resolution){: #graphql-mutations-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
@@ -818,6 +830,7 @@ create :create_post, :create
 | [`upsert?`](#graphql-mutations-group-create-upsert?){: #graphql-mutations-group-create-upsert? } | `boolean` | `false` | Whether or not to use the `upsert?: true` option when calling `YourDomain.create/2`. |
 | [`upsert_identity`](#graphql-mutations-group-create-upsert_identity){: #graphql-mutations-group-create-upsert_identity } | `atom` | `false` | Which identity to use for the upsert |
 | [`description`](#graphql-mutations-group-create-description){: #graphql-mutations-group-create-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-group-create-deprecate){: #graphql-mutations-group-create-deprecate } | `boolean \| String.t` |  | Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`relay_id_translations`](#graphql-mutations-group-create-relay_id_translations){: #graphql-mutations-group-create-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`args`](#graphql-mutations-group-create-args){: #graphql-mutations-group-create-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-group-create-hide_inputs){: #graphql-mutations-group-create-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -865,6 +878,7 @@ update :update_post, :update
 | [`identity`](#graphql-mutations-group-update-identity){: #graphql-mutations-group-update-identity } | `atom` |  | The identity to use to fetch the record to be updated. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-group-update-read_action){: #graphql-mutations-group-update-read_action } | `atom` |  | The read action to use to fetch the record to be updated. Defaults to the primary read action. |
 | [`description`](#graphql-mutations-group-update-description){: #graphql-mutations-group-update-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-group-update-deprecate){: #graphql-mutations-group-update-deprecate } | `boolean \| String.t` |  | Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`relay_id_translations`](#graphql-mutations-group-update-relay_id_translations){: #graphql-mutations-group-update-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`args`](#graphql-mutations-group-update-args){: #graphql-mutations-group-update-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-group-update-hide_inputs){: #graphql-mutations-group-update-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -912,6 +926,7 @@ destroy :destroy_post, :destroy
 | [`identity`](#graphql-mutations-group-destroy-identity){: #graphql-mutations-group-destroy-identity } | `atom` |  | The identity to use to fetch the record to be destroyed. Use `false` if no identity is required. |
 | [`read_action`](#graphql-mutations-group-destroy-read_action){: #graphql-mutations-group-destroy-read_action } | `atom` |  | The read action to use to fetch the record to be destroyed. Defaults to the primary read action. |
 | [`description`](#graphql-mutations-group-destroy-description){: #graphql-mutations-group-destroy-description } | `String.t` |  | The mutation description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-group-destroy-deprecate){: #graphql-mutations-group-destroy-deprecate } | `boolean \| String.t` |  | Marks the mutation as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`relay_id_translations`](#graphql-mutations-group-destroy-relay_id_translations){: #graphql-mutations-group-destroy-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`args`](#graphql-mutations-group-destroy-args){: #graphql-mutations-group-destroy-args } | `list(atom)` |  | A list of action attributes or arguments that should get their own arguments in the mutation instead of being passed in an input object. |
 | [`hide_inputs`](#graphql-mutations-group-destroy-hide_inputs){: #graphql-mutations-group-destroy-hide_inputs } | `list(atom)` |  | A list of inputs to hide from the mutation. |
@@ -957,6 +972,7 @@ action :check_status, :check_status
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`description`](#graphql-mutations-group-action-description){: #graphql-mutations-group-action-description } | `String.t` |  | The description that gets shown in the Graphql schema. If not provided, the action description will be used. |
+| [`deprecate`](#graphql-mutations-group-action-deprecate){: #graphql-mutations-group-action-deprecate } | `boolean \| String.t` |  | Marks the action as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`hide_inputs`](#graphql-mutations-group-action-hide_inputs){: #graphql-mutations-group-action-hide_inputs } | `list(atom)` | `[]` | Inputs to hide in the mutation/query |
 | [`error_location`](#graphql-mutations-group-action-error_location){: #graphql-mutations-group-action-error_location } | `:in_result \| :top_level` | `:top_level` | If the result should have an `errors` and a `result` key (like create/update/destroy mutations), or if errors should be shown in the top level errors key |
 | [`modify_resolution`](#graphql-mutations-group-action-modify_resolution){: #graphql-mutations-group-action-modify_resolution } | `mfa` |  | An MFA that will be called with the resolution, the query, and the result of the action as the first three arguments. See the [the guide](/documentation/topics/modifying-the-resolution.html) for more. |
@@ -1042,6 +1058,7 @@ end
 | [`actions`](#graphql-subscriptions-subscribe-actions){: #graphql-subscriptions-subscribe-actions } | `list(atom) \| atom` |  | The create/update/destroy actions the subsciption should listen to. |
 | [`action_types`](#graphql-subscriptions-subscribe-action_types){: #graphql-subscriptions-subscribe-action_types } | `list(atom) \| atom` |  | The type of actions the subsciption should listen to. |
 | [`read_action`](#graphql-subscriptions-subscribe-read_action){: #graphql-subscriptions-subscribe-read_action } | `atom` |  | The read action to use for reading data |
+| [`deprecate`](#graphql-subscriptions-subscribe-deprecate){: #graphql-subscriptions-subscribe-deprecate } | `boolean \| String.t` |  | Marks the subscription as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason. |
 | [`hide_inputs`](#graphql-subscriptions-subscribe-hide_inputs){: #graphql-subscriptions-subscribe-hide_inputs } | `list(atom)` | `[]` | A list of inputs to hide from the subscription, usable if the read action has arguments. |
 | [`relay_id_translations`](#graphql-subscriptions-subscribe-relay_id_translations){: #graphql-subscriptions-subscribe-relay_id_translations } | `keyword` | `[]` | A keyword list indicating arguments or attributes that have to be translated from global Relay IDs to internal IDs. See the [Relay guide](/documentation/topics/relay.md#translating-relay-global-ids-passed-as-arguments) for more. |
 | [`meta`](#graphql-subscriptions-subscribe-meta){: #graphql-subscriptions-subscribe-meta } | `keyword` |  | A keyword list of metadata to include in the subscription. |

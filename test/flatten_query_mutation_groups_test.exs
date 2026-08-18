@@ -12,12 +12,13 @@ defmodule AshGraphql.FlattenQueryMutationGroupsTest do
     entities =
       Extension.get_entities(AshGraphql.Test.GroupedQueriesResource, [:graphql, :queries])
 
-    assert length(entities) == 2
+    assert length(entities) == 3
 
     assert Enum.all?(entities, &(&1.group == :content))
 
     assert Enum.any?(entities, &match?(%Resource.Query{}, &1))
     assert Enum.any?(entities, &match?(%Resource.Action{}, &1))
+    assert Enum.any?(entities, &(&1.name == :gq_deprecated_stats && &1.deprecate == true))
   end
 
   test "duplicate graphql query names inside one group fail compilation" do

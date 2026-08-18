@@ -75,6 +75,11 @@ defmodule AshGraphql.Resource do
       doc:
         "The description that gets shown in the Graphql schema. If not provided, the action description will be used."
     ],
+    deprecate: [
+      type: {:or, [:boolean, :string]},
+      doc:
+        "Marks the action as deprecated. Pass `true` to omit the reason, or a string to provide a deprecation reason."
+    ],
     hide_inputs: [
       type: {:list, :atom},
       doc: "Inputs to hide in the mutation/query",
@@ -119,6 +124,7 @@ defmodule AshGraphql.Resource do
       :action,
       :resource,
       :description,
+      :deprecate,
       :relay_id_translations,
       :error_location,
       :modify_resolution,
@@ -830,6 +836,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(name),
           description: query.description || query_action.description,
+          directives: graphql_deprecation_directives(query.deprecate),
           type: generic_action_type(query_action, resource, domain, query, schema),
           __reference__: ref(__ENV__)
         }
@@ -872,6 +879,7 @@ defmodule AshGraphql.Resource do
           module: schema,
           name: to_string(query.name),
           description: query.description || query_action.description,
+          directives: graphql_deprecation_directives(query.deprecate),
           type: query_type(query, resource, query_action, type),
           __reference__: ref(__ENV__)
         }
@@ -909,6 +917,7 @@ defmodule AshGraphql.Resource do
         module: schema,
         name: to_string(mutation.name),
         description: mutation.description || action.description,
+        directives: graphql_deprecation_directives(mutation.deprecate),
         type: generic_action_type(action, resource, domain, mutation, schema),
         __reference__: ref(__ENV__)
       }
@@ -925,6 +934,7 @@ defmodule AshGraphql.Resource do
         module: schema,
         name: to_string(mutation.name),
         description: mutation.description || action.description,
+        directives: graphql_deprecation_directives(mutation.deprecate),
         type: mutation_result_type(mutation.name, domain),
         __reference__: ref(__ENV__)
       }
@@ -1790,6 +1800,22 @@ defmodule AshGraphql.Resource do
     []
   end
 
+  defp graphql_deprecation_directives(value) when value in [nil, false], do: []
+
+  defp graphql_deprecation_directives(true) do
+    [%Absinthe.Blueprint.Directive{name: "deprecated"}]
+  end
+
+  defp graphql_deprecation_directives(reason) when is_binary(reason) do
+    argument = %Absinthe.Blueprint.Input.Argument{
+      name: "reason",
+      input_value: Absinthe.Blueprint.Input.Value.build(reason),
+      source_location: nil
+    }
+
+    [%Absinthe.Blueprint.Directive{name: "deprecated", arguments: [argument]}]
+  end
+
   defp domain_middleware(domain) do
     [{{AshGraphql.Graphql.DomainMiddleware, :set_domain}, domain}]
   end
@@ -1849,6 +1875,7 @@ defmodule AshGraphql.Resource do
         arguments: args(:subscription, resource, action, schema, nil, hide_inputs),
         identifier: name,
         name: to_string(name),
+        directives: graphql_deprecation_directives(subscription.deprecate),
         config:
           AshGraphql.Subscription.Config.create_config(
             subscription,

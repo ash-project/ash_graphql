@@ -31,6 +31,7 @@ defmodule AshGraphql.Test.Subscribable do
 
       subscribe(:subscribable_events) do
         action_types([:create, :update, :destroy])
+        deprecate("Use `subscribedOnDomain` instead.")
       end
 
       subscribe(:deduped_subscribable_events) do

@@ -14,6 +14,10 @@ defmodule AshGraphql.Test.Domain do
   graphql do
     queries do
       get AshGraphql.Test.Comment, :get_comment, :read
+
+      get AshGraphql.Test.Comment, :deprecated_domain_get_comment, :read,
+        deprecate: "Use `getComment` instead."
+
       list AshGraphql.Test.Post, :post_score, :score
     end
 
@@ -22,6 +26,7 @@ defmodule AshGraphql.Test.Domain do
 
       subscribe AshGraphql.Test.Subscribable, :subscribed_on_domain do
         action_types(:create)
+        deprecate(true)
       end
 
       subscribe AshGraphql.Test.DomainLevelPubsubResource, :domain_pubsub_subscription do
