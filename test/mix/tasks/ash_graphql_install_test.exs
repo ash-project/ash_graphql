@@ -113,7 +113,7 @@ defmodule Mix.Tasks.AshGraphqlInstallTest do
     + |  socket("/ws/gql", TestWeb.GraphqlSocket, websocket: true, longpoll: true)
     ''')
     |> assert_has_patch("lib/test_web/endpoint.ex", ~S'''
-    + |  use Absinthe.Phoenix.Endpoint
+    + |  use AshGraphql.Subscription.Endpoint
     ''')
   end
 
