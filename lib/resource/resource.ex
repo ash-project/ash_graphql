@@ -552,6 +552,12 @@ defmodule AshGraphql.Resource do
         Each entry maps a filterable field to a handler MFA and GraphQL input type. The handler
         receives the filter operand and a context map, and returns an Ash expression used in the filter.
 
+        Attributes and public calculations may be handled. A handler takes precedence over the
+        field's normal filtering, so a calculation that is not filterable on its own (for example a
+        non-expression calculation, or one marked `filterable? false`) still gets a filter input
+        field when a handler is configured. This makes it possible to expose a logical field in
+        GraphQL while filtering it through a different, private representation.
+
         Example:
 
             filter_handlers [
@@ -559,6 +565,10 @@ defmodule AshGraphql.Resource do
                 type: :id,
                 handler: {AshGraphql.Graphql.FilterHandlers, :relay_id, [:my_type]},
                 description: "Filter by Relay global ID"
+              ],
+              card_number: [
+                type: :string,
+                handler: {MyApp.FilterHandlers, :blind_index, [:card_number_hash]}
               ]
             ]
         """
@@ -3716,7 +3726,10 @@ defmodule AshGraphql.Resource do
     |> Ash.Resource.Info.public_calculations()
     |> Enum.flat_map(fn %{calculation: {module, _}} = calculation ->
       Code.ensure_compiled(module)
-      filterable? = filterable?(calculation, resource)
+
+      filterable? =
+        filterable?(calculation, resource) or filter_handled?(resource, calculation)
+
       field_type = calculation_type(calculation, resource, schema)
 
       arguments = calculation_args(calculation, resource, schema)
@@ -3855,23 +3868,32 @@ defmodule AshGraphql.Resource do
   defp calculation_filter_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
-    if Ash.DataLayer.data_layer_can?(resource, :expression_calculation) do
-      resource
-      |> Ash.Resource.Info.public_calculations()
-      |> Enum.filter(&(filterable_and_shown_field?(resource, &1) && filterable?(&1, resource)))
-      |> Enum.map(fn calculation ->
-        %Absinthe.Blueprint.Schema.FieldDefinition{
-          identifier: calculation.name,
-          module: schema,
-          name: to_string(field_names[calculation.name] || calculation.name),
-          description: calculation.description,
-          type: calculation_filter_field_type(resource, calculation),
-          __reference__: ref(__ENV__)
-        }
-      end)
-    else
-      []
-    end
+    expression_calculations? = Ash.DataLayer.data_layer_can?(resource, :expression_calculation)
+
+    resource
+    |> Ash.Resource.Info.public_calculations()
+    # A handler filters against something else entirely, so it requires neither
+    # the data layer's expression calculation support nor the calculation being
+    # filterable on its own.
+    |> Enum.filter(fn calculation ->
+      filterable_and_shown_field?(resource, calculation) &&
+        (filter_handled?(resource, calculation) ||
+           (expression_calculations? && filterable?(calculation, resource)))
+    end)
+    |> Enum.map(fn calculation ->
+      %Absinthe.Blueprint.Schema.FieldDefinition{
+        identifier: calculation.name,
+        module: schema,
+        name: to_string(field_names[calculation.name] || calculation.name),
+        description: calculation.description,
+        type: calculation_filter_field_type(resource, calculation),
+        __reference__: ref(__ENV__)
+      }
+    end)
+  end
+
+  defp filter_handled?(resource, %{name: name}) do
+    not is_nil(AshGraphql.Resource.Info.filter_handler(resource, name))
   end
 
   defp filterable?(%Ash.Resource.Aggregate{} = aggregate, resource) do

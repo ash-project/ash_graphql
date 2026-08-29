@@ -52,12 +52,12 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
   end
 
   defp validate_handler_config(resource, field, config) do
-    if !Ash.Resource.Info.attribute(resource, field) do
+    if !handleable_field?(resource, field) do
       raise Spark.Error.DslError,
         module: resource,
         path: [:graphql, :filter_handlers],
         message: """
-        Unknown attribute `#{inspect(field)}` in `filter_handlers`.
+        Unknown attribute or public calculation `#{inspect(field)}` in `filter_handlers`.
         """
     end
 
@@ -98,5 +98,10 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
           Handlers must be MFA tuples, for example `{MyMod, :my_fun, [:extra_arg]}`.
           """
     end
+  end
+
+  defp handleable_field?(resource, field) do
+    not is_nil(Ash.Resource.Info.attribute(resource, field)) or
+      match?(%{public?: true}, Ash.Resource.Info.calculation(resource, field))
   end
 end
