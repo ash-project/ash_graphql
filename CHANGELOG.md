@@ -32,7 +32,7 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 * apply query complexity limit to first/last pagination arguments (CVE-2026-81636) by [@zachdaniel](https://github.com/zachdaniel)
 
-* don't crash complexity analysis on a null limit argument (CVE-2026-80228) by [@zachdaniel](https://github.com/zachdaniel)
+* don't crash complexity analysis on a null limit argument by [@zachdaniel](https://github.com/zachdaniel)
 
 * don't re-attach a redacted error path after the error handler runs (CVE-2026-78693) by [@zachdaniel](https://github.com/zachdaniel)
 
