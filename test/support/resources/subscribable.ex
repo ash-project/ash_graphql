@@ -104,7 +104,24 @@ defmodule AshGraphql.Test.Subscribable do
     update_timestamp(:updated_at)
   end
 
+  calculations do
+    # Non-null in the schema but always resolves to nil, so selecting it produces a
+    # "cannot return null" error with no code — the case should_send?/1 suppresses.
+    calculate :always_nil, :string, AshGraphql.Test.Subscribable.AlwaysNil do
+      public?(true)
+      allow_nil?(false)
+    end
+  end
+
   relationships do
     belongs_to(:actor, AshGraphql.Test.Actor, public?: true)
   end
+end
+
+defmodule AshGraphql.Test.Subscribable.AlwaysNil do
+  @moduledoc false
+  use Ash.Resource.Calculation
+
+  @impl true
+  def calculate(records, _opts, _context), do: Enum.map(records, fn _ -> nil end)
 end

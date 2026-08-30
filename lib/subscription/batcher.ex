@@ -268,7 +268,8 @@ defmodule AshGraphql.Subscription.Batcher do
 
         batch ->
           batch =
-            Enum.map(batch, fn item ->
+            batch
+            |> Enum.map(fn item ->
               pipeline =
                 Absinthe.Subscription.Local.pipeline(doc, {:pre_resolved, item})
 
@@ -276,6 +277,9 @@ defmodule AshGraphql.Subscription.Batcher do
 
               data
             end)
+            # Apply the same authorization-suppression filter as first_results, or
+            # forbidden/not_found results in the batch leak to the subscriber.
+            |> Enum.filter(&should_send?/1)
 
           [batch] ++ first_results
       end

@@ -612,6 +612,42 @@ defmodule AshGraphql.SubscriptionTest do
              subscription_data2["subscribableEvents"]["created"]["id"]
   end
 
+  test "authorization suppression applies to every notification in a batch, not just the first" do
+    stop_supervised(AshGraphql.Subscription.Batcher)
+    start_supervised({AshGraphql.Subscription.Batcher, [send_immediately_threshold: 0]})
+
+    Application.put_env(:ash_graphql, :simulate_subscription_processing_time, 1000)
+
+    assert {:ok, %{"subscribed" => topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEvents {
+                   created {
+                     id
+                     text
+                     alwaysNil
+                   }
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    # `alwaysNil` is non-null but resolves to nil, so every notification is a
+    # suppressible result (a nil-code error). Two records created within one batch
+    # interval: the first is filtered by should_send?/1, and before the fix the
+    # second (batch-resolved) was published unfiltered, leaking to the subscriber.
+    for _ <- 1..2 do
+      Subscribable
+      |> Ash.Changeset.for_create(:create, %{text: "foo"}, actor: @admin)
+      |> Ash.create!()
+    end
+
+    refute_receive({^topic, _}, 3000)
+  end
+
   test "subscription is resolved synchronously" do
     stop_supervised(AshGraphql.Subscription.Batcher)
 
