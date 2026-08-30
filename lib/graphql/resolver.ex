@@ -637,6 +637,9 @@ defmodule AshGraphql.Graphql.Resolver do
 
           subscription_events =
             notifications
+            # Only the list head was tenant-checked (see the guard clause above);
+            # drop any other-tenant notifications here so the batch can't leak them.
+            |> reject_other_tenant_notifications(context)
             |> Enum.group_by(& &1.action_type)
             |> Enum.map(fn {type, notifications} ->
               subscription_field = subcription_field_from_action_type(type)
@@ -764,6 +767,30 @@ defmodule AshGraphql.Graphql.Resolver do
       {:error, error} ->
         {:error, error}
     end
+  end
+
+  def resolve(
+        %{
+          context: %{tenant: resolution_tenant} = context,
+          root_value: %{tenant: notifcation_tenant}
+        } = resolution,
+        {domain, resource, %AshGraphql.Resource.Subscription{read_action: read_action}, _}
+      )
+      when resolution_tenant != notifcation_tenant do
+    # A single notification from another tenant must not be resolved in-memory:
+    # the policy filter carries no tenant condition, so the fast path would leak it.
+    Absinthe.Resolution.put_result(
+      resolution,
+      {:error,
+       to_errors(
+         [Ash.Error.Query.NotFound.exception()],
+         context,
+         domain,
+         resource,
+         read_action,
+         resolution
+       )}
+    )
   end
 
   def resolve(
@@ -910,6 +937,22 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp do_refetch(query, primary_key_matches) do
     Ash.read(Ash.Query.do_filter(query, or: primary_key_matches))
+  end
+
+  # Mirror the list-head tenant guard for every notification: when the subscription
+  # is scoped to a tenant, drop notifications from any other tenant. Ash applies
+  # multitenancy at query/prefix time, so the in-memory policy-filter eval would not
+  # otherwise reject a cross-tenant notification.
+  defp reject_other_tenant_notifications(notifications, context) do
+    case Map.get(context, :tenant) do
+      nil ->
+        notifications
+
+      tenant ->
+        Enum.filter(notifications, fn notification ->
+          Map.get(notification, :tenant) == tenant
+        end)
+    end
   end
 
   defp subcription_field_from_action_type(:create), do: "created"
