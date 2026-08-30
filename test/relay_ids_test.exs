@@ -193,6 +193,28 @@ defmodule AshGraphql.RelayIdsTest do
              } = result
     end
 
+    test "returns a GraphQL error (not a 500) for an unknown node type" do
+      # An existing atom that is not a registered node type; ensure it exists so
+      # decode_relay_id's String.to_existing_atom succeeds and reaches the lookup.
+      _ = :not_a_real_node_type
+      bogus_id = Base.encode64("not_a_real_node_type:1")
+
+      document = """
+        query Node($id: ID!) {
+        node(id: $id) {
+          __typename
+        }
+      }
+      """
+
+      # Before the fix, an unknown type raised a KeyError (Map.fetch!) that escaped
+      # Absinthe as a 500 rather than becoming a GraphQL error.
+      resp = Absinthe.run(document, Schema, variables: %{"id" => bogus_id})
+
+      assert {:ok, result} = resp
+      assert %{errors: [%{message: "Invalid node id"}]} = result
+    end
+
     test "allow loading nested relationships and calculations" do
       user =
         User
