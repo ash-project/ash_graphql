@@ -3456,7 +3456,8 @@ defmodule AshGraphql.Graphql.Resolver do
         %{limit: limit},
         child_complexity,
         _
-      ) do
+      )
+      when is_integer(limit) do
     if child_complexity == 0 do
       1
     else

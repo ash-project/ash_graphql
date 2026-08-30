@@ -678,6 +678,26 @@ defmodule AshGraphql.ReadTest do
            ]
   end
 
+  test "complexity analysis does not crash on an explicit null limit" do
+    query = """
+    query {
+      paginatedPosts(limit: null) {
+        results {
+          text
+        }
+      }
+    }
+    """
+
+    # Before the fix this raised an ArithmeticError (nil * child_complexity) during
+    # complexity analysis, escaping Absinthe.run as a 500.
+    assert {:ok, _} =
+             Absinthe.run(query, AshGraphql.Test.Schema,
+               analyze_complexity: true,
+               max_complexity: 1000
+             )
+  end
+
   test "custom complexity calculation" do
     query = """
     query PostLibrary {
