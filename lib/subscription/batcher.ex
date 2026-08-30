@@ -240,65 +240,79 @@ defmodule AshGraphql.Subscription.Batcher do
     # as-is. Its gross, and I hate it, but it is better than forcing
     # individual resolution :)
 
-    simulate_slowness()
-
-    pipeline =
-      Absinthe.Subscription.Local.pipeline(doc, notifications)
-
-    first_results =
-      case Absinthe.Pipeline.run(doc.source, pipeline) do
-        {:ok, %{result: data}, _} ->
-          if should_send?(data) do
-            [List.wrap(data)]
-          else
-            []
-          end
-
-        {:error, {_method, error}, _phase} ->
-          raise Ash.Error.to_error_class(error)
-
-        {:error, error, _phase} ->
-          raise Ash.Error.to_error_class(error)
-      end
-
-    result =
-      case List.wrap(Process.get(:batch_resolved)) do
-        [] ->
-          first_results
-
-        batch ->
-          batch =
-            batch
-            |> Enum.map(fn item ->
-              pipeline =
-                Absinthe.Subscription.Local.pipeline(doc, {:pre_resolved, item})
-
-              {:ok, %{result: data}, _} = Absinthe.Pipeline.run(doc.source, pipeline)
-
-              data
-            end)
-            # Apply the same authorization-suppression filter as first_results, or
-            # forbidden/not_found results in the batch leak to the subscriber.
-            |> Enum.filter(&should_send?/1)
-
-          [batch] ++ first_results
-      end
-
-    Logger.debug("""
-    Absinthe Subscription Publication
-    Field Topic: #{inspect(key_strategy)}
-    Subscription id: #{inspect(topic)}
-    Notification Count: #{Enum.count(notifications)}
-    """)
-
-    for batch <- result, record <- batch, not is_nil(record) do
-      :ok = pubsub.publish_subscription(topic, record)
-    end
-  rescue
-    e ->
-      BatchResolver.pipeline_error(e, __STACKTRACE__)
-  after
+    # On the :backpressure_sync and :noproc paths this runs inline in the
+    # publishing caller's process, so a re-entrant publish (a resolver here
+    # emitting another synchronous Ash notification) would otherwise adopt the
+    # outer run's :batch_resolved and push it to the wrong topic. Save and clear
+    # any ambient value on entry and restore it on exit so each run only consumes
+    # what its own resolver stashed.
+    outer_batch_resolved = Process.get(:batch_resolved)
     Process.delete(:batch_resolved)
+
+    try do
+      simulate_slowness()
+
+      pipeline =
+        Absinthe.Subscription.Local.pipeline(doc, notifications)
+
+      first_results =
+        case Absinthe.Pipeline.run(doc.source, pipeline) do
+          {:ok, %{result: data}, _} ->
+            if should_send?(data) do
+              [List.wrap(data)]
+            else
+              []
+            end
+
+          {:error, {_method, error}, _phase} ->
+            raise Ash.Error.to_error_class(error)
+
+          {:error, error, _phase} ->
+            raise Ash.Error.to_error_class(error)
+        end
+
+      result =
+        case List.wrap(Process.get(:batch_resolved)) do
+          [] ->
+            first_results
+
+          batch ->
+            batch =
+              batch
+              |> Enum.map(fn item ->
+                pipeline =
+                  Absinthe.Subscription.Local.pipeline(doc, {:pre_resolved, item})
+
+                {:ok, %{result: data}, _} = Absinthe.Pipeline.run(doc.source, pipeline)
+
+                data
+              end)
+              # Apply the same authorization-suppression filter as first_results, or
+              # forbidden/not_found results in the batch leak to the subscriber.
+              |> Enum.filter(&should_send?/1)
+
+            [batch] ++ first_results
+        end
+
+      Logger.debug("""
+      Absinthe Subscription Publication
+      Field Topic: #{inspect(key_strategy)}
+      Subscription id: #{inspect(topic)}
+      Notification Count: #{Enum.count(notifications)}
+      """)
+
+      for batch <- result, record <- batch, not is_nil(record) do
+        :ok = pubsub.publish_subscription(topic, record)
+      end
+    rescue
+      e ->
+        BatchResolver.pipeline_error(e, __STACKTRACE__)
+    after
+      case outer_batch_resolved do
+        nil -> Process.delete(:batch_resolved)
+        outer -> Process.put(:batch_resolved, outer)
+      end
+    end
   end
 
   defp put_notification(state, topic, pubsub, key_strategy, doc, notification) do

@@ -703,6 +703,53 @@ defmodule AshGraphql.SubscriptionTest do
              subscription_data["subscribableEvents"]["created"]["id"]
   end
 
+  test "an inline publish preserves an ambient :batch_resolved (re-entrancy isolation)" do
+    stop_supervised(AshGraphql.Subscription.Batcher)
+    assert is_nil(Process.whereis(AshGraphql.Subscription.Batcher))
+
+    assert {:ok, %{"subscribed" => _topic}} =
+             Absinthe.run(
+               """
+               subscription {
+                 subscribableEvents {
+                   created {
+                     id
+                     text
+                   }
+                 }
+               }
+               """,
+               Schema,
+               context: %{actor: @admin, pubsub: PubSub}
+             )
+
+    create_mutation = """
+    mutation CreateSubscribable($input: CreateSubscribableInput) {
+      createSubscribable(input: $input) {
+        result { id }
+        errors { message }
+      }
+    }
+    """
+
+    # Stand in for an outer publication run's process-dictionary state. Creating a
+    # record publishes inline (batcher stopped), running do_send in this process.
+    # It must not destroy this value; before the fix it deleted it, which is how a
+    # re-entrant run adopts/loses another run's batch.
+    sentinel = [%{outer: :run}]
+    Process.put(:batch_resolved, sentinel)
+
+    assert {:ok, %{data: _}} =
+             Absinthe.run(create_mutation, Schema,
+               variables: %{"input" => %{"text" => "foo"}},
+               context: %{actor: @admin}
+             )
+
+    assert Process.get(:batch_resolved) == sentinel
+
+    Process.delete(:batch_resolved)
+  end
+
   test "can subscribe to resource with domain-level pubsub" do
     assert {:ok, %{"subscribed" => topic}} =
              Absinthe.run(
