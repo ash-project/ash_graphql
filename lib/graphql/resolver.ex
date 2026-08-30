@@ -3465,6 +3465,35 @@ defmodule AshGraphql.Graphql.Resolver do
     end
   end
 
+  # Relay connections and keyset pagination use `first`/`last` rather than `limit`;
+  # multiply by the page size here too, or the fan-out is under-counted and the
+  # complexity limit is bypassed.
+  def query_complexity(
+        %{first: first},
+        child_complexity,
+        _
+      )
+      when is_integer(first) do
+    if child_complexity == 0 do
+      1
+    else
+      first * child_complexity
+    end
+  end
+
+  def query_complexity(
+        %{last: last},
+        child_complexity,
+        _
+      )
+      when is_integer(last) do
+    if child_complexity == 0 do
+      1
+    else
+      last * child_complexity
+    end
+  end
+
   def query_complexity(
         _,
         child_complexity,

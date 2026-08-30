@@ -698,6 +698,29 @@ defmodule AshGraphql.ReadTest do
              )
   end
 
+  test "complexity limit applies to first-based (keyset/relay) pagination" do
+    query = """
+    query {
+      keysetPaginatedPosts(first: 500) {
+        results {
+          text
+        }
+      }
+    }
+    """
+
+    # Before the fix, `first` was not multiplied into the score (it fell through to
+    # child_complexity + 1), so this bypassed the complexity limit entirely.
+    resp =
+      Absinthe.run(query, AshGraphql.Test.Schema,
+        analyze_complexity: true,
+        max_complexity: 100
+      )
+
+    assert {:ok, %{errors: errors}} = resp
+    assert Enum.any?(errors, &(&1.message =~ "is too complex"))
+  end
+
   test "custom complexity calculation" do
     query = """
     query PostLibrary {
