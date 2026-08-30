@@ -591,6 +591,37 @@ defmodule AshGraphql.ErrorsTest do
     assert message == "must have length of no more than %{max}"
   end
 
+  defmodule PathDroppingErrorHandler do
+    # A sanitizing handler that returns a minimal map without :path.
+    def handle_error(_error, _context), do: %{message: "Something went wrong"}
+  end
+
+  test "an error handler that drops :path is honored (internal path not re-injected)" do
+    Application.put_env(:ash_graphql, AshGraphql.Test.Domain,
+      graphql: [error_handler: {PathDroppingErrorHandler, :handle_error, []}]
+    )
+
+    errors =
+      AshGraphql.Errors.to_errors(
+        [
+          Ash.Error.Changes.InvalidArgument.exception(
+            field: :secret_internal_field,
+            message: "invalid value"
+          )
+        ],
+        %{},
+        AshGraphql.Test.Domain,
+        nil,
+        nil,
+        ["input"]
+      )
+
+    # The handler dropped :path; it must not be re-attached (which would leak the
+    # internal field name).
+    assert errors == [%{message: "Something went wrong"}]
+    refute match?([%{path: _}], errors)
+  end
+
   test "errors can be intercepted at resource level" do
     variables = %{
       "input" => %{

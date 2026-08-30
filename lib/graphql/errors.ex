@@ -40,9 +40,9 @@ defmodule AshGraphql.Errors do
               error_with_path
 
             {m, f, a} ->
-              handled = apply(m, f, [error_with_path, context | a])
-              # Ensure path is preserved after resource handler
-              Map.put_new(handled, :path, path)
+              # The path is already set on the error before the handler runs, so
+              # honor the handler's return verbatim (it may redact or drop :path).
+              apply(m, f, [error_with_path, context | a])
           end
 
         case AshGraphql.Domain.Info.error_handler(domain) do
@@ -50,9 +50,8 @@ defmodule AshGraphql.Errors do
             resource_handled_error
 
           {m, f, a} ->
-            handled = apply(m, f, [resource_handled_error, context | a])
-            # Ensure path is preserved after domain handler
-            Map.put_new(handled, :path, path)
+            # Honor the handler's return verbatim; do not re-attach the path it removed.
+            apply(m, f, [resource_handled_error, context | a])
         end
       else
         uuid = Ash.UUID.generate()
