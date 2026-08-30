@@ -11,6 +11,31 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.11.0](https://github.com/ash-project/ash_graphql/compare/v1.10.1...v1.11.0) (2026-08-30)
+
+
+
+
+### Features:
+
+* add deprecation support for GraphQL queries, mutations, and subscriptions (#463) by charlieaten [(#463)](https://github.com/ash-project/ash_graphql/pull/463)
+
+### Bug Fixes:
+
+* enforce tenant on every subscription notification, not just the batch head (CVE-2026-80223) by [@zachdaniel](https://github.com/zachdaniel)
+
+* isolate the batch_resolved process key so re-entrant publishes don't cross topics (CVE-2026-82367) by [@zachdaniel](https://github.com/zachdaniel)
+
+* apply the subscription authorization filter to the whole batch, not just the first notification (CVE-2026-81643) by [@zachdaniel](https://github.com/zachdaniel)
+
+* return a graphql error for unknown relay node types instead of raising (CVE-2026-81633) by [@zachdaniel](https://github.com/zachdaniel)
+
+* apply query complexity limit to first/last pagination arguments (CVE-2026-81636) by [@zachdaniel](https://github.com/zachdaniel)
+
+* don't crash complexity analysis on a null limit argument (CVE-2026-80228) by [@zachdaniel](https://github.com/zachdaniel)
+
+* don't re-attach a redacted error path after the error handler runs (CVE-2026-78693) by [@zachdaniel](https://github.com/zachdaniel)
+
 ## [v1.10.1](https://github.com/ash-project/ash_graphql/compare/v1.10.0...v1.10.1) (2026-08-17)
 
 
