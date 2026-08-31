@@ -7,7 +7,7 @@ defmodule AshGraphql.FilterHandlersTest do
 
   alias AshGraphql.Graphql.FilterHandlers
   alias AshGraphql.Test.PubSub
-  alias AshGraphql.Test.RelayIds.{BaseImage, Payment, Schema}
+  alias AshGraphql.Test.RelayIds.{BaseImage, Customer, Payment, Schema}
 
   defp assert_down(pid) do
     ref = Process.monitor(pid)
@@ -24,7 +24,7 @@ defmodule AshGraphql.FilterHandlersTest do
     on_exit(fn ->
       AshGraphql.TestHelpers.stop_ets()
 
-      for resource <- [BaseImage, Payment] do
+      for resource <- [BaseImage, Customer, Payment] do
         try do
           Ash.DataLayer.Ets.stop(resource)
         rescue
@@ -117,6 +117,61 @@ defmodule AshGraphql.FilterHandlersTest do
 
       assert result.data["listPayments"]["results"] == [
                %{"description" => "groceries", "cardNumber" => "1234567890"}
+             ]
+    end
+  end
+
+  describe "filter_handlers for aggregates" do
+    test "generates a filter input field for a non-filterable aggregate with a handler" do
+      sdl = File.read!("priv/relay_ids.graphql")
+      assert sdl =~ "cardNumber: CustomerFilterCardNumber"
+      assert sdl =~ "input CustomerFilterCardNumber"
+    end
+
+    test "apply_filter uses the handler instead of filtering the aggregate" do
+      assert {:ok, nil, [_expr]} =
+               FilterHandlers.apply_filter(
+                 Customer,
+                 %{card_number: %{eq: "1234567890"}},
+                 %{}
+               )
+    end
+
+    test "list query filters an aggregate through its blind index" do
+      for {name, card_number} <- [{"matching", "1234567890"}, {"other", "9999999999"}] do
+        customer =
+          Customer
+          |> Ash.Changeset.for_create(:create, %{name: name})
+          |> Ash.create!()
+
+        Payment
+        |> Ash.Changeset.for_create(:create, %{
+          description: "payment",
+          card_number: card_number,
+          customer_id: customer.id
+        })
+        |> Ash.create!()
+      end
+
+      assert {:ok, result} =
+               """
+               query ListCustomers($filter: CustomerFilterInput) {
+                 listCustomers(filter: $filter) {
+                   results {
+                     name
+                     cardNumber
+                   }
+                 }
+               }
+               """
+               |> Absinthe.run(Schema,
+                 variables: %{"filter" => %{"cardNumber" => %{"eq" => "1234567890"}}}
+               )
+
+      refute Map.has_key?(result, :errors)
+
+      assert result.data["listCustomers"]["results"] == [
+               %{"name" => "matching", "cardNumber" => "1234567890"}
              ]
     end
   end

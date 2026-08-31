@@ -289,6 +289,7 @@ type Post implements Node {
 enum PaymentSortField {
   ID
   DESCRIPTION
+  CUSTOMER_ID
 }
 
 "A keyset page of :payment"
@@ -320,6 +321,19 @@ input PaymentFilterCardNumber {
   isNotDistinctFrom: String
   stringEndsWith: String
   stringStartsWith: String
+}
+
+input PaymentFilterCustomerId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
 }
 
 input PaymentFilterDescription {
@@ -357,6 +371,8 @@ input PaymentFilterInput {
   not: [PaymentFilterInput!]
   id: PaymentFilterId
   description: PaymentFilterDescription
+  customerId: PaymentFilterCustomerId
+  customer: CustomerFilterInput
   cardNumber: PaymentFilterCardNumber
 }
 
@@ -368,6 +384,108 @@ input PaymentSortInput {
 type Payment {
   id: ID!
   description: String
+  customerId: ID
+  customer: Customer
+  cardNumber: String
+}
+
+enum CustomerSortField {
+  ID
+  NAME
+  CARD_NUMBER
+}
+
+"A keyset page of :customer"
+type KeysetPageOfCustomer {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Customer!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input CustomerFilterCardNumber {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
+}
+
+input CustomerFilterName {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
+}
+
+input CustomerFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
+}
+
+input CustomerFilterInput {
+  and: [CustomerFilterInput!]
+  or: [CustomerFilterInput!]
+  not: [CustomerFilterInput!]
+  id: CustomerFilterId
+  name: CustomerFilterName
+  payments: PaymentFilterInput
+  cardNumber: CustomerFilterCardNumber
+}
+
+input CustomerSortInput {
+  order: SortOrder
+  field: CustomerSortField!
+}
+
+type Customer {
+  id: ID!
+  name: String
+  payments(
+    "How to sort the records in the response"
+    sort: [PaymentSortInput]
+
+    "A filter to limit the results"
+    filter: PaymentFilterInput
+
+    "The number of records to return."
+    limit: Int
+
+    "The number of records to skip."
+    offset: Int
+  ): [Payment!]!
   cardNumber: String
 }
 
@@ -684,6 +802,26 @@ type RootQueryType {
     "A filter to limit the results"
     filter: CommentFilterInput
   ): [Comment!]!
+
+  listCustomers(
+    "How to sort the records in the response"
+    sort: [CustomerSortInput]
+
+    "A filter to limit the results"
+    filter: CustomerFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfCustomer
 
   listPayments(
     "How to sort the records in the response"

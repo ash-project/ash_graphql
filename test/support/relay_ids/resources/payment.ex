@@ -57,6 +57,10 @@ defmodule AshGraphql.Test.RelayIds.Payment do
     attribute(:card_number_hash, :string, public?: false)
   end
 
+  relationships do
+    belongs_to(:customer, AshGraphql.Test.RelayIds.Customer, public?: true)
+  end
+
   calculations do
     calculate(:card_number, :string, AshGraphql.Test.RelayIds.BlindIndex) do
       public?(true)
