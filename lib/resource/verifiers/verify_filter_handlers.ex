@@ -57,7 +57,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
         module: resource,
         path: [:graphql, :filter_handlers],
         message: """
-        Unknown attribute or public calculation `#{inspect(field)}` in `filter_handlers`.
+        Unknown attribute, public calculation or public aggregate `#{inspect(field)}` in `filter_handlers`.
         """
     end
 
@@ -102,6 +102,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
 
   defp handleable_field?(resource, field) do
     not is_nil(Ash.Resource.Info.attribute(resource, field)) or
-      match?(%{public?: true}, Ash.Resource.Info.calculation(resource, field))
+      match?(%{public?: true}, Ash.Resource.Info.calculation(resource, field)) or
+      match?(%{public?: true}, Ash.Resource.Info.aggregate(resource, field))
   end
 end

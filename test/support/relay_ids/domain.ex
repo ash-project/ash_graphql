@@ -14,6 +14,7 @@ defmodule AshGraphql.Test.RelayIds.Domain do
   resources do
     resource(AshGraphql.Test.RelayIds.BaseImage)
     resource(AshGraphql.Test.RelayIds.Comment)
+    resource(AshGraphql.Test.RelayIds.Customer)
     resource(AshGraphql.Test.RelayIds.Payment)
     resource(AshGraphql.Test.RelayIds.Post)
     resource(AshGraphql.Test.RelayIds.ResourceWithNoPrimaryKeyGet)

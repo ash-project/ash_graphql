@@ -552,11 +552,12 @@ defmodule AshGraphql.Resource do
         Each entry maps a filterable field to a handler MFA and GraphQL input type. The handler
         receives the filter operand and a context map, and returns an Ash expression used in the filter.
 
-        Attributes and public calculations may be handled. A handler takes precedence over the
-        field's normal filtering, so a calculation that is not filterable on its own (for example a
-        non-expression calculation, or one marked `filterable? false`) still gets a filter input
-        field when a handler is configured. This makes it possible to expose a logical field in
-        GraphQL while filtering it through a different, private representation.
+        Attributes, public calculations and public aggregates may be handled. A handler takes
+        precedence over the field's normal filtering, so a calculation or aggregate that is not
+        filterable on its own (for example a non-expression calculation, or one marked
+        `filterable? false`) still gets a filter input field when a handler is configured. This
+        makes it possible to expose a logical field in GraphQL while filtering it through a
+        different, private representation.
 
         Example:
 
@@ -3330,7 +3331,8 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_aggregates()
     |> Enum.filter(
-      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
+          (filterable?(&1, resource) || filter_handled?(resource, &1)))
     )
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
@@ -3844,25 +3846,27 @@ defmodule AshGraphql.Resource do
   defp aggregate_filter_fields(resource, schema) do
     field_names = AshGraphql.Resource.Info.field_names(resource)
 
-    if Ash.DataLayer.data_layer_can?(resource, :aggregate_filter) do
-      resource
-      |> Ash.Resource.Info.public_aggregates()
-      |> Enum.filter(&(filterable_and_shown_field?(resource, &1) && filterable?(&1, resource)))
-      |> Enum.flat_map(fn aggregate ->
-        [
-          %Absinthe.Blueprint.Schema.FieldDefinition{
-            identifier: aggregate.name,
-            module: schema,
-            name: to_string(field_names[aggregate.name] || aggregate.name),
-            description: aggregate.description,
-            type: attribute_filter_field_type(resource, aggregate),
-            __reference__: ref(__ENV__)
-          }
-        ]
-      end)
-    else
-      []
-    end
+    aggregate_filters? = Ash.DataLayer.data_layer_can?(resource, :aggregate_filter)
+
+    resource
+    |> Ash.Resource.Info.public_aggregates()
+    |> Enum.filter(fn aggregate ->
+      filterable_and_shown_field?(resource, aggregate) &&
+        (filter_handled?(resource, aggregate) ||
+           (aggregate_filters? && filterable?(aggregate, resource)))
+    end)
+    |> Enum.flat_map(fn aggregate ->
+      [
+        %Absinthe.Blueprint.Schema.FieldDefinition{
+          identifier: aggregate.name,
+          module: schema,
+          name: to_string(field_names[aggregate.name] || aggregate.name),
+          description: aggregate.description,
+          type: attribute_filter_field_type(resource, aggregate),
+          __reference__: ref(__ENV__)
+        }
+      ]
+    end)
   end
 
   defp calculation_filter_fields(resource, schema) do

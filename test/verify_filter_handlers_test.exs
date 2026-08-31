@@ -26,6 +26,7 @@ defmodule AshGraphql.VerifyFilterHandlersTest do
   defmodule BaseResource do
     use Ash.Resource,
       domain: TestDomain,
+      data_layer: Ash.DataLayer.Ets,
       extensions: [AshGraphql.Resource]
 
     graphql do
@@ -40,6 +41,16 @@ defmodule AshGraphql.VerifyFilterHandlersTest do
     attributes do
       uuid_primary_key(:id)
       attribute(:name, :string, public?: true)
+      attribute(:parent_id, :uuid, public?: true)
+    end
+
+    relationships do
+      has_many(:children, __MODULE__, destination_attribute: :parent_id)
+    end
+
+    aggregates do
+      count(:public_agg, :children, public?: true)
+      count(:private_agg, :children)
     end
 
     calculations do
@@ -71,6 +82,20 @@ defmodule AshGraphql.VerifyFilterHandlersTest do
     dsl = set_filter_handlers(dsl_state(), public_calc: handler_config())
 
     assert :ok = VerifyFilterHandlers.verify(dsl)
+  end
+
+  test "accepts a public aggregate" do
+    dsl = set_filter_handlers(dsl_state(), public_agg: handler_config(type: :integer))
+
+    assert :ok = VerifyFilterHandlers.verify(dsl)
+  end
+
+  test "raises for a private aggregate" do
+    dsl = set_filter_handlers(dsl_state(), private_agg: handler_config(type: :integer))
+
+    assert_raise Spark.Error.DslError, ~r/`:private_agg`.*filter_handlers/s, fn ->
+      VerifyFilterHandlers.verify(dsl)
+    end
   end
 
   test "raises for a private calculation" do
