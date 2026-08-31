@@ -7,7 +7,7 @@ defmodule AshGraphql.FilterHandlersTest do
 
   alias AshGraphql.Graphql.FilterHandlers
   alias AshGraphql.Test.PubSub
-  alias AshGraphql.Test.RelayIds.{BaseImage, Schema}
+  alias AshGraphql.Test.RelayIds.{BaseImage, Payment, Schema}
 
   defp assert_down(pid) do
     ref = Process.monitor(pid)
@@ -24,10 +24,12 @@ defmodule AshGraphql.FilterHandlersTest do
     on_exit(fn ->
       AshGraphql.TestHelpers.stop_ets()
 
-      try do
-        Ash.DataLayer.Ets.stop(BaseImage)
-      rescue
-        _ -> :ok
+      for resource <- [BaseImage, Payment] do
+        try do
+          Ash.DataLayer.Ets.stop(resource)
+        rescue
+          _ -> :ok
+        end
       end
 
       Process.exit(pubsub, :normal)
@@ -68,6 +70,54 @@ defmodule AshGraphql.FilterHandlersTest do
                  %{id: %{eq: relay_id}, name: %{eq: "missing"}},
                  %{}
                )
+    end
+  end
+
+  describe "filter_handlers for calculations" do
+    test "generates a filter input field for a non-expression calculation with a handler" do
+      sdl = File.read!("priv/relay_ids.graphql")
+      assert sdl =~ "cardNumber: PaymentFilterCardNumber"
+      assert sdl =~ "input PaymentFilterCardNumber"
+    end
+
+    test "apply_filter uses the handler instead of filtering the calculation" do
+      assert {:ok, nil, [_expr]} =
+               FilterHandlers.apply_filter(
+                 Payment,
+                 %{card_number: %{eq: "1234567890"}},
+                 %{}
+               )
+    end
+
+    test "list query filters a calculation through its blind index attribute" do
+      Payment
+      |> Ash.Changeset.for_create(:create, %{description: "groceries", card_number: "1234567890"})
+      |> Ash.create!()
+
+      Payment
+      |> Ash.Changeset.for_create(:create, %{description: "rent", card_number: "9999999999"})
+      |> Ash.create!()
+
+      assert {:ok, result} =
+               """
+               query ListPayments($filter: PaymentFilterInput) {
+                 listPayments(filter: $filter) {
+                   results {
+                     description
+                     cardNumber
+                   }
+                 }
+               }
+               """
+               |> Absinthe.run(Schema,
+                 variables: %{"filter" => %{"cardNumber" => %{"eq" => "1234567890"}}}
+               )
+
+      refute Map.has_key?(result, :errors)
+
+      assert result.data["listPayments"]["results"] == [
+               %{"description" => "groceries", "cardNumber" => "1234567890"}
+             ]
     end
   end
 

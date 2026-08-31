@@ -286,6 +286,91 @@ type Post implements Node {
   ): [Comment!]!
 }
 
+enum PaymentSortField {
+  ID
+  DESCRIPTION
+}
+
+"A keyset page of :payment"
+type KeysetPageOfPayment {
+  "Total count on all pages"
+  count: Int
+
+  "The records contained in the page"
+  results: [Payment!]
+
+  "The first keyset in the results"
+  startKeyset: String
+
+  "The last keyset in the results"
+  endKeyset: String
+}
+
+input PaymentFilterCardNumber {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
+}
+
+input PaymentFilterDescription {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
+}
+
+input PaymentFilterId {
+  isNil: Boolean
+  eq: ID
+  notEq: ID
+  in: [ID!]
+  lessThan: ID
+  greaterThan: ID
+  lessThanOrEqual: ID
+  greaterThanOrEqual: ID
+  isDistinctFrom: ID
+  isNotDistinctFrom: ID
+}
+
+input PaymentFilterInput {
+  and: [PaymentFilterInput!]
+  or: [PaymentFilterInput!]
+  not: [PaymentFilterInput!]
+  id: PaymentFilterId
+  description: PaymentFilterDescription
+  cardNumber: PaymentFilterCardNumber
+}
+
+input PaymentSortInput {
+  order: SortOrder
+  field: PaymentSortField!
+}
+
+type Payment {
+  id: ID!
+  description: String
+  cardNumber: String
+}
+
 "The result of the :create_comment mutation"
 type CreateCommentResult {
   "The successful result of the mutation"
@@ -599,6 +684,26 @@ type RootQueryType {
     "A filter to limit the results"
     filter: CommentFilterInput
   ): [Comment!]!
+
+  listPayments(
+    "How to sort the records in the response"
+    sort: [PaymentSortInput]
+
+    "A filter to limit the results"
+    filter: PaymentFilterInput
+
+    "The number of records to return from the beginning. Maximum 250"
+    first: Int
+
+    "Show records before the specified keyset."
+    before: String
+
+    "Show records after the specified keyset."
+    after: String
+
+    "The number of records to return to the end. Maximum 250"
+    last: Int
+  ): KeysetPageOfPayment
 
   getPost(
     "The id of the record"

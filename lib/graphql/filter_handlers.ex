@@ -156,9 +156,6 @@ defmodule AshGraphql.Graphql.FilterHandlers do
 
         {exprs ++ sub_exprs, Map.put(rest, key, sub_rest)}
 
-      not is_nil(Ash.Resource.Info.calculation(resource, key)) ->
-        {exprs, Map.put(rest, key, value)}
-
       not is_nil(AshGraphql.Resource.Info.filter_handler(resource, key)) ->
         handler = AshGraphql.Resource.Info.filter_handler(resource, key)
         {handler_exprs, _} = apply_handler(resource, key, value, handler, context)
