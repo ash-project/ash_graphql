@@ -57,7 +57,9 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
         module: resource,
         path: [:graphql, :filter_handlers],
         message: """
-        Unknown attribute, public calculation or public aggregate `#{inspect(field)}` in `filter_handlers`.
+        Unknown or private field `#{inspect(field)}` in `filter_handlers`.
+
+        Handlers may only be configured for public attributes, calculations and aggregates.
         """
     end
 
@@ -101,7 +103,7 @@ defmodule AshGraphql.Resource.Verifiers.VerifyFilterHandlers do
   end
 
   defp handleable_field?(resource, field) do
-    not is_nil(Ash.Resource.Info.attribute(resource, field)) or
+    match?(%{public?: true}, Ash.Resource.Info.attribute(resource, field)) or
       match?(%{public?: true}, Ash.Resource.Info.calculation(resource, field)) or
       match?(%{public?: true}, Ash.Resource.Info.aggregate(resource, field))
   end
