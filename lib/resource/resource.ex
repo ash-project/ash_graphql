@@ -552,12 +552,11 @@ defmodule AshGraphql.Resource do
         Each entry maps a filterable field to a handler MFA and GraphQL input type. The handler
         receives the filter operand and a context map, and returns an Ash expression used in the filter.
 
-        Attributes, public calculations and public aggregates may be handled. A handler takes
-        precedence over the field's normal filtering, so a calculation or aggregate that is not
-        filterable on its own (for example a non-expression calculation, or one marked
-        `filterable? false`) still gets a filter input field when a handler is configured. This
-        makes it possible to expose a logical field in GraphQL while filtering it through a
-        different, private representation.
+        Public attributes, calculations and aggregates may be handled. A handler takes precedence
+        over the field's normal filtering, so a field that is not filterable on its own (for
+        example a non-expression calculation, or one marked `filterable? false`) still gets a
+        filter input field when a handler is configured. This makes it possible to expose a
+        logical field in GraphQL while filtering it through a different, private representation.
 
         Example:
 
@@ -3322,7 +3321,8 @@ defmodule AshGraphql.Resource do
     resource
     |> Ash.Resource.Info.public_attributes()
     |> Enum.filter(
-      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) && filterable?(&1, resource))
+      &(AshGraphql.Resource.Info.show_field?(resource, &1.name) &&
+          (filterable?(&1, resource) || filter_handled?(resource, &1)))
     )
     |> Enum.flat_map(&filter_type(&1, resource, schema))
   end
@@ -3828,7 +3828,10 @@ defmodule AshGraphql.Resource do
 
     resource
     |> Ash.Resource.Info.public_attributes()
-    |> Enum.filter(&(filterable_and_shown_field?(resource, &1) && filterable?(&1, resource)))
+    |> Enum.filter(
+      &(filterable_and_shown_field?(resource, &1) &&
+          (filterable?(&1, resource) || filter_handled?(resource, &1)))
+    )
     |> Enum.flat_map(fn attribute ->
       [
         %Absinthe.Blueprint.Schema.FieldDefinition{

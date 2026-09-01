@@ -42,6 +42,7 @@ defmodule AshGraphql.VerifyFilterHandlersTest do
       uuid_primary_key(:id)
       attribute(:name, :string, public?: true)
       attribute(:parent_id, :uuid, public?: true)
+      attribute(:secret, :string, public?: false)
     end
 
     relationships do
@@ -72,7 +73,7 @@ defmodule AshGraphql.VerifyFilterHandlersTest do
     Keyword.merge([type: :string, handler: {SomeModule, :some_fun, []}], extra)
   end
 
-  test "accepts an attribute" do
+  test "accepts a public attribute" do
     dsl = set_filter_handlers(dsl_state(), name: handler_config())
 
     assert :ok = VerifyFilterHandlers.verify(dsl)
@@ -82,6 +83,14 @@ defmodule AshGraphql.VerifyFilterHandlersTest do
     dsl = set_filter_handlers(dsl_state(), public_calc: handler_config())
 
     assert :ok = VerifyFilterHandlers.verify(dsl)
+  end
+
+  test "raises for a private attribute" do
+    dsl = set_filter_handlers(dsl_state(), secret: handler_config())
+
+    assert_raise Spark.Error.DslError, ~r/`:secret`.*filter_handlers/s, fn ->
+      VerifyFilterHandlers.verify(dsl)
+    end
   end
 
   test "accepts a public aggregate" do

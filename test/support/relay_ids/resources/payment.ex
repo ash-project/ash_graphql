@@ -21,6 +21,12 @@ defmodule AshGraphql.Test.RelayIds.Payment do
                       handler:
                         {AshGraphql.Test.RelayIds.BlindIndex, :filter, [:card_number_hash]},
                       description: "Filter by card number using its blind index"
+                    ],
+                    account_number: [
+                      type: :string,
+                      handler:
+                        {AshGraphql.Test.RelayIds.BlindIndex, :filter, [:account_number_hash]},
+                      description: "Filter by account number using its blind index"
                     ]
 
     queries do
@@ -47,6 +53,20 @@ defmodule AshGraphql.Test.RelayIds.Payment do
           AshGraphql.Test.RelayIds.BlindIndex.hash(card_number)
         )
       end)
+
+      change(fn changeset, _ ->
+        case Ash.Changeset.get_attribute(changeset, :account_number) do
+          nil ->
+            changeset
+
+          account_number ->
+            Ash.Changeset.force_change_attribute(
+              changeset,
+              :account_number_hash,
+              AshGraphql.Test.RelayIds.BlindIndex.hash(account_number)
+            )
+        end
+      end)
     end
   end
 
@@ -55,6 +75,10 @@ defmodule AshGraphql.Test.RelayIds.Payment do
     attribute(:description, :string, public?: true)
     attribute(:stored_card_number, :string, public?: false)
     attribute(:card_number_hash, :string, public?: false)
+
+    # Exposed in GraphQL, but filterable only through its blind index.
+    attribute(:account_number, :string, public?: true, filterable?: false)
+    attribute(:account_number_hash, :string, public?: false)
   end
 
   relationships do

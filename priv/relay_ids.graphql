@@ -289,6 +289,7 @@ type Post implements Node {
 enum PaymentSortField {
   ID
   DESCRIPTION
+  ACCOUNT_NUMBER
   CUSTOMER_ID
 }
 
@@ -336,6 +337,22 @@ input PaymentFilterCustomerId {
   isNotDistinctFrom: ID
 }
 
+input PaymentFilterAccountNumber {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  contains: String
+  isDistinctFrom: String
+  isNotDistinctFrom: String
+  stringEndsWith: String
+  stringStartsWith: String
+}
+
 input PaymentFilterDescription {
   isNil: Boolean
   eq: String
@@ -371,6 +388,7 @@ input PaymentFilterInput {
   not: [PaymentFilterInput!]
   id: PaymentFilterId
   description: PaymentFilterDescription
+  accountNumber: PaymentFilterAccountNumber
   customerId: PaymentFilterCustomerId
   customer: CustomerFilterInput
   cardNumber: PaymentFilterCardNumber
@@ -384,6 +402,7 @@ input PaymentSortInput {
 type Payment {
   id: ID!
   description: String
+  accountNumber: String
   customerId: ID
   customer: Customer
   cardNumber: String
