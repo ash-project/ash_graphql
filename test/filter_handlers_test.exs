@@ -121,6 +121,53 @@ defmodule AshGraphql.FilterHandlersTest do
     end
   end
 
+  describe "filter_handlers for non-filterable attributes" do
+    test "generates a filter input field for a filterable? false attribute with a handler" do
+      sdl = File.read!("priv/relay_ids.graphql")
+      assert sdl =~ "accountNumber: PaymentFilterAccountNumber"
+      assert sdl =~ "input PaymentFilterAccountNumber"
+    end
+
+    test "list query filters a filterable? false attribute through its blind index" do
+      Payment
+      |> Ash.Changeset.for_create(:create, %{
+        description: "salary",
+        card_number: "1111111111",
+        account_number: "1234567890"
+      })
+      |> Ash.create!()
+
+      Payment
+      |> Ash.Changeset.for_create(:create, %{
+        description: "refund",
+        card_number: "2222222222",
+        account_number: "9999999999"
+      })
+      |> Ash.create!()
+
+      assert {:ok, result} =
+               """
+               query ListPayments($filter: PaymentFilterInput) {
+                 listPayments(filter: $filter) {
+                   results {
+                     description
+                     accountNumber
+                   }
+                 }
+               }
+               """
+               |> Absinthe.run(Schema,
+                 variables: %{"filter" => %{"accountNumber" => %{"eq" => "1234567890"}}}
+               )
+
+      refute Map.has_key?(result, :errors)
+
+      assert result.data["listPayments"]["results"] == [
+               %{"description" => "salary", "accountNumber" => "1234567890"}
+             ]
+    end
+  end
+
   describe "filter_handlers for aggregates" do
     test "generates a filter input field for a non-filterable aggregate with a handler" do
       sdl = File.read!("priv/relay_ids.graphql")
