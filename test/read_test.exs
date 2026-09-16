@@ -1969,4 +1969,78 @@ defmodule AshGraphql.ReadTest do
     # Verify that the tracer configuration is correctly retrieved
     assert AshGraphql.Domain.Info.tracer(TestDomainWithTracer) == [MyApp.Tracer]
   end
+
+  describe "boolean filter combinators" do
+    setup do
+      for text <- ["foo", "bar"] do
+        AshGraphql.Test.Post
+        |> Ash.Changeset.for_create(:create, text: text, published: true)
+        |> Ash.create!()
+      end
+
+      :ok
+    end
+
+    test "a null `and`, `or` or `not` is ignored" do
+      for key <- ["and", "or", "not"] do
+        resp =
+          """
+          query {
+            postLibrary(filter: {#{key}: null}) {
+              text
+            }
+          }
+          """
+          |> Absinthe.run(AshGraphql.Test.Schema)
+
+        assert {:ok, %{data: %{"postLibrary" => posts}}} = resp
+        refute Map.has_key?(elem(resp, 1), :errors)
+        assert Enum.sort(Enum.map(posts, & &1["text"])) == ["bar", "foo"]
+      end
+    end
+
+    test "an empty `not` list is ignored" do
+      resp =
+        """
+        query {
+          postLibrary(filter: {not: []}) {
+            text
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, %{data: %{"postLibrary" => posts}}} = resp
+      refute Map.has_key?(elem(resp, 1), :errors)
+      assert Enum.sort(Enum.map(posts, & &1["text"])) == ["bar", "foo"]
+    end
+
+    test "a `not` list with several entries negates their conjunction" do
+      resp =
+        """
+        query {
+          postLibrary(filter: {not: [{text: {eq: "foo"}}, {published: {eq: true}}]}) {
+            text
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, %{data: %{"postLibrary" => [%{"text" => "bar"}]}}} = resp
+    end
+
+    test "a `not` list with one entry still negates it" do
+      resp =
+        """
+        query {
+          postLibrary(filter: {not: [{text: {eq: "foo"}}]}) {
+            text
+          }
+        }
+        """
+        |> Absinthe.run(AshGraphql.Test.Schema)
+
+      assert {:ok, %{data: %{"postLibrary" => [%{"text" => "bar"}]}}} = resp
+    end
+  end
 end

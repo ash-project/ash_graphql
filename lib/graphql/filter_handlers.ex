@@ -166,9 +166,21 @@ defmodule AshGraphql.Graphql.FilterHandlers do
     end
   end
 
-  defp process_boolean_filter(resource, :not, [value], context, {exprs, rest}) do
-    {sub_exprs, sub_rest} = process_filter(resource, value, context)
-    {exprs ++ sub_exprs, Map.put(rest, :not, [sub_rest])}
+  # `and`, `or` and `not` are nullable lists in the schema, so `null` reaches
+  # here as `nil`. Treat it, and an empty `not` list, as no filter at all, the
+  # same way an empty `and`/`or` list is dropped below.
+  defp process_boolean_filter(_resource, _key, nil, _context, acc), do: acc
+
+  defp process_boolean_filter(_resource, :not, [], _context, acc), do: acc
+
+  defp process_boolean_filter(resource, :not, values, context, {exprs, rest})
+       when is_list(values) do
+    {sub_exprs, sub_rests} =
+      values
+      |> Enum.map(&process_filter(resource, &1, context))
+      |> Enum.unzip()
+
+    {exprs ++ List.flatten(sub_exprs), Map.put(rest, :not, sub_rests)}
   end
 
   defp process_boolean_filter(resource, :not, value, context, acc) when is_map(value) do
