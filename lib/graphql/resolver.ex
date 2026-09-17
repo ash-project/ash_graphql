@@ -1297,16 +1297,16 @@ defmodule AshGraphql.Graphql.Resolver do
          max_page_size: max_page_size,
          default_limit: default_limit
        }) do
-    limit =
-      case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
-        %{limit: limit} ->
-          min(limit, max_page_size)
+    case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
+      %{limit: limit} when limit < 1 ->
+        {:error, page_size_error(:limit)}
 
-        _ ->
-          default_limit || max_page_size
-      end
+      %{limit: limit} ->
+        {:ok, Keyword.put(opts, :limit, min(limit, max_page_size))}
 
-    {:ok, Keyword.put(opts, :limit, limit)}
+      _ ->
+        {:ok, Keyword.put(opts, :limit, default_limit || max_page_size)}
+    end
   end
 
   defp validate_offset_opts(opts, _, _) do
@@ -1342,6 +1342,12 @@ defmodule AshGraphql.Graphql.Resolver do
            field: :last
          }}
 
+      %{first: first} when first < 1 ->
+        {:error, page_size_error(:first)}
+
+      %{last: last} when last < 1 ->
+        {:error, page_size_error(:last)}
+
       %{first: first} ->
         {:ok, opts |> Keyword.delete(:first) |> Keyword.put(:limit, min(first, max_page_size))}
 
@@ -1362,6 +1368,15 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp validate_keyset_opts(opts, _, _) do
     {:ok, opts}
+  end
+
+  # Ash requires a positive page size, and a zero or negative one would
+  # otherwise surface as an unrendered `Ash.Error.Unknown`
+  defp page_size_error(field) do
+    %Ash.Error.Query.InvalidQuery{
+      message: "`#{field}` must be a positive integer",
+      field: field
+    }
   end
 
   defp get_result_fields(:keyset, true) do
@@ -3495,6 +3510,10 @@ defmodule AshGraphql.Graphql.Resolver do
     )
   end
 
+  # A page size below zero is rejected later, in `page_opts/7` or
+  # `apply_load_arguments/5`; clamp it here so the complexity analysis never
+  # returns a negative value, which Absinthe treats as an analyzer bug and
+  # raises on instead of rendering an error.
   def query_complexity(
         %{limit: limit},
         child_complexity,
@@ -3504,7 +3523,7 @@ defmodule AshGraphql.Graphql.Resolver do
     if child_complexity == 0 do
       1
     else
-      limit * child_complexity
+      max(limit, 0) * child_complexity
     end
   end
 
@@ -3520,7 +3539,7 @@ defmodule AshGraphql.Graphql.Resolver do
     if child_complexity == 0 do
       1
     else
-      first * child_complexity
+      max(first, 0) * child_complexity
     end
   end
 
@@ -3533,7 +3552,7 @@ defmodule AshGraphql.Graphql.Resolver do
     if child_complexity == 0 do
       1
     else
-      last * child_complexity
+      max(last, 0) * child_complexity
     end
   end
 
@@ -3576,6 +3595,12 @@ defmodule AshGraphql.Graphql.Resolver do
 
   defp apply_load_arguments(arguments, query, will_paginate?, context, relay_ids?) do
     Enum.reduce(arguments, query, fn
+      {:limit, limit}, query when is_integer(limit) and limit < 0 and not will_paginate? ->
+        Ash.Query.add_error(query, :limit, %Ash.Error.Query.InvalidQuery{
+          message: "`limit` must not be negative",
+          field: :limit
+        })
+
       {:limit, limit}, query when is_integer(limit) and not will_paginate? ->
         Ash.Query.limit(query, limit)
 
