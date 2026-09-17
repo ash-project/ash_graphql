@@ -34,3 +34,5 @@ if Mix.env() == :dev do
     ],
     version_tag_prefix: "v"
 end
+
+config :ash, default_string_length_count: :codepoints
