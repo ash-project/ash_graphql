@@ -11,6 +11,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.12.0](https://github.com/ash-project/ash_graphql/compare/v1.11.0...v1.12.0) (2026-09-18)
+
+
+
+
+### Features:
+
+* apply filter_handlers rules consistently to attributes (#469) by [@nallwhy](https://github.com/nallwhy) [(#469)](https://github.com/ash-project/ash_graphql/pull/469)
+
+* allow filter_handlers for public aggregates (#465) by [@nallwhy](https://github.com/nallwhy) [(#465)](https://github.com/ash-project/ash_graphql/pull/465)
+
+* allow filter_handlers for public calculations (#464) by [@nallwhy](https://github.com/nallwhy) [(#464)](https://github.com/ash-project/ash_graphql/pull/464)
+
+### Improvements:
+
+* compile escape the socket -> domains in installer by [@zachdaniel](https://github.com/zachdaniel)
+
+### Bug Fixes:
+
+* reject zero and negative page sizes with a rendered error (#476) by grempe [(#476)](https://github.com/ash-project/ash_graphql/pull/476)
+
+* accept null and list-shaped boolean filter combinators (#475) by grempe [(#475)](https://github.com/ash-project/ash_graphql/pull/475)
+
 ## [v1.11.0](https://github.com/ash-project/ash_graphql/compare/v1.10.1...v1.11.0) (2026-08-30)
 
 
