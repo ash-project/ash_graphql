@@ -77,7 +77,6 @@ defmodule AshGraphql.MixProject do
         "documentation/topics/modifying-the-resolution.md",
         "documentation/topics/relay.md",
         "documentation/topics/custom-queries-and-mutations.md",
-        "documentation/topics/compile-times.md",
         "documentation/topics/upgrade.md",
         {"documentation/dsls/DSL-AshGraphql.Domain.md",
          search_data: Spark.Docs.search_data_for(AshGraphql.Domain)},
