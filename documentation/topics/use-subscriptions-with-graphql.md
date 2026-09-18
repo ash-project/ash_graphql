@@ -56,6 +56,23 @@ First you'll need to do some setup, follow the the
 in the absinthe docs, but instead of using `Absinthe.Pheonix.Endpoint` use
 `AshGraphql.Subscription.Endpoint`.
 
+When you define your socket, reference the schema with `Module.concat/1`:
+
+```elixir
+defmodule MyAppWeb.GraphqlSocket do
+  use Phoenix.Socket
+
+  use Absinthe.Phoenix.Socket,
+    schema: Module.concat(["MyAppWeb.GraphqlSchema"])
+
+  ...
+end
+```
+
+A direct reference makes the socket, and through it the endpoint and much of
+your web layer, stale whenever any resource changes. See the
+[compile times guide](/documentation/topics/compile-times.md) for details.
+
 By default subscriptions are resolved synchronously as part of the mutation.
 This means that a resolver is run for every subscriber that is not deduplicated.
 If you have a lot of subscribers you can add the

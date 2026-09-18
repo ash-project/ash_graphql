@@ -95,6 +95,8 @@ end
 > ### Whats up with `Module.concat/1`? {: .info}
 >
 > This `Module.concat/1` prevents a [compile-time dependency](https://dashbit.co/blog/speeding-up-re-compilation-of-elixir-projects) from this router module to the schema module. It is an implementation detail of how `forward/2` works that you end up with a compile-time dependency on the schema, but there is no need for this dependency, and that dependency can have _drastic_ impacts on your compile times in certain scenarios.
+>
+> The same applies to your `Absinthe.Phoenix.Socket` module if you set one up for subscriptions: use `schema: Module.concat(["Helpdesk.GraphqlSchema"])` there as well. See the [compile times guide](/documentation/topics/compile-times.md) for why, and for how to check your project.
 
 If you started with `mix new ...` instead of `mix phx.new ...` and you want to
 still use Phoenix, the fastest path that way is typically to just create a new

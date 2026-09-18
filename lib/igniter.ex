@@ -233,8 +233,11 @@ if Code.ensure_loaded?(Igniter) do
         """
         use Phoenix.Socket
 
+        # `Module.concat/1` keeps this module from depending on the schema, which
+        # would otherwise make the socket and endpoint stale whenever a resource
+        # changes. See the "Compile Times" guide in the AshGraphql docs.
         use Absinthe.Phoenix.Socket,
-          schema: #{inspect(schema_name)}
+          schema: Module.concat(["#{inspect(schema_name)}"])
 
         @impl true
         def connect(_params, socket, _connect_info) do
