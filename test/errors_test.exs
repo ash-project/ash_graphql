@@ -732,6 +732,56 @@ defmodule AshGraphql.ErrorsTest do
            ] == errors
   end
 
+  describe "invalid filter values" do
+    test "render with a code and the value, not the error's own message" do
+      # ash_postgres puts the whole Ecto query in `context` when a cast fails;
+      # `Exception.message/1` would interpolate it
+      context = %{from: %{source: {"posts", AshGraphql.Test.Post}}, wheres: [:secret]}
+
+      errors =
+        AshGraphql.Errors.to_errors(
+          [Ash.Error.Query.InvalidFilterValue.exception(value: "not-a-uuid", context: context)],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil
+        )
+
+      assert [
+               %{
+                 code: "invalid_filter_value",
+                 message: ~s(Invalid filter value "not-a-uuid"),
+                 short_message: "invalid filter value",
+                 fields: [],
+                 vars: %{value: ~s("not-a-uuid")}
+               }
+             ] = errors
+
+      refute inspect(errors) =~ "secret"
+    end
+
+    test "append the parser's message when there is one" do
+      errors =
+        AshGraphql.Errors.to_errors(
+          [
+            Ash.Error.Query.InvalidFilterValue.exception(
+              value: "x",
+              message: "No matching types. Possible types: [[:any, {:array, :same}]]"
+            )
+          ],
+          %{},
+          AshGraphql.Test.Domain,
+          nil,
+          nil
+        )
+
+      assert [%{code: "invalid_filter_value", message: message}] = errors
+
+      assert message ==
+               ~s(Invalid filter value "x": No matching types. Possible types: [[:any, {:array, :same}]])
+    end
+  end
+
   describe "path field" do
     test "path field is included in error responses with camelCase field name" do
       errors =

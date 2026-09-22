@@ -32,6 +32,33 @@ defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidQuery do
   end
 end
 
+defimpl AshGraphql.Error, for: Ash.Error.Query.InvalidFilterValue do
+  # The error's own `message/1` interpolates `context`, which a data layer may
+  # set to the whole query (ash_postgres puts the Ecto query there when a cast
+  # fails), so the rendered text is built here from the value alone. The
+  # `message` field is appended only when it is a plain string from Ash's own
+  # parser, such as "No matching types".
+  def to_error(%{message: message} = error) when is_binary(message) do
+    %{
+      message: "Invalid filter value %{value}: #{message}",
+      short_message: "invalid filter value",
+      code: "invalid_filter_value",
+      vars: Map.merge(Map.new(error.vars), %{value: inspect(error.value)}),
+      fields: []
+    }
+  end
+
+  def to_error(error) do
+    %{
+      message: "Invalid filter value %{value}",
+      short_message: "invalid filter value",
+      code: "invalid_filter_value",
+      vars: Map.merge(Map.new(error.vars), %{value: inspect(error.value)}),
+      fields: []
+    }
+  end
+end
+
 defimpl AshGraphql.Error, for: Ash.Error.Page.InvalidKeyset do
   def to_error(error) do
     %{
