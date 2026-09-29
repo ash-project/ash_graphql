@@ -25,6 +25,11 @@ defmodule AshGraphql.Domain.Info do
     Extension.get_opt(domain, [:graphql], :root_level_errors?, false, true)
   end
 
+  @doc "Whether Ash-specific error metadata is placed in the GraphQL extensions key"
+  def error_extensions?(domain) do
+    Extension.get_opt(domain, [:graphql], :error_extensions?, false, true)
+  end
+
   @doc "An error handler for errors produced by the domain"
   def error_handler(domain) do
     Extension.get_opt(

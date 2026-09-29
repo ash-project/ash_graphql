@@ -134,6 +134,12 @@ defmodule AshGraphql.Domain do
         doc:
           "By default, mutation errors are shown in their result object's errors key, but this setting places those errors in the top level errors list"
       ],
+      error_extensions?: [
+        type: :boolean,
+        default: false,
+        doc:
+          "Whether Ash-specific GraphQL error metadata should be placed under the GraphQL extensions key"
+      ],
       error_handler: [
         type: :mfa,
         default: {AshGraphql.DefaultErrorHandler, :handle_error, []},

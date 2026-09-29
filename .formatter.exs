@@ -31,6 +31,7 @@ spark_locals_without_parens = [
   destroy: 3,
   destroy: 4,
   encode_primary_key?: 1,
+  error_extensions?: 1,
   error_handler: 1,
   error_location: 1,
   field_names: 1,
