@@ -10,7 +10,7 @@ defmodule AshGraphql.Test.ErrorExtensionsDomain do
     otp_app: :ash_graphql
 
   graphql do
-    error_extensions?(true)
+    custom_error_field_placement(:extensions)
   end
 
   resources do
