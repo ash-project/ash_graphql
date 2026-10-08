@@ -25,6 +25,17 @@ defmodule AshGraphql.Domain.Info do
     Extension.get_opt(domain, [:graphql], :root_level_errors?, false, true)
   end
 
+  @doc "Where custom GraphQL error fields are placed"
+  def custom_error_field_placement(domain) do
+    Extension.get_opt(
+      domain,
+      [:graphql],
+      :custom_error_field_placement,
+      :merged,
+      true
+    )
+  end
+
   @doc "An error handler for errors produced by the domain"
   def error_handler(domain) do
     Extension.get_opt(

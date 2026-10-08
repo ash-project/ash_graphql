@@ -43,6 +43,7 @@ end
 | [`authorize?`](#graphql-authorize?){: #graphql-authorize? } | `boolean` | `true` | Whether or not to perform authorization for this domain |
 | [`tracer`](#graphql-tracer){: #graphql-tracer } | `atom` |  | A tracer to use to trace execution in the graphql. Will use `config :ash, :tracer` if it is set. |
 | [`root_level_errors?`](#graphql-root_level_errors?){: #graphql-root_level_errors? } | `boolean` | `false` | By default, mutation errors are shown in their result object's errors key, but this setting places those errors in the top level errors list |
+| [`custom_error_field_placement`](#graphql-custom_error_field_placement){: #graphql-custom_error_field_placement } | `:merged \| :extensions` | `:merged` | Controls whether custom error fields are merged into the GraphQL error or placed under the extensions key |
 | [`error_handler`](#graphql-error_handler){: #graphql-error_handler } | `mfa` | `{AshGraphql.DefaultErrorHandler, :handle_error, []}` | Set an MFA to intercept/handle any errors that are generated. |
 | [`show_raised_errors?`](#graphql-show_raised_errors?){: #graphql-show_raised_errors? } | `boolean` | `false` | For security purposes, if an error is *raised* then Ash simply shows a generic error. If you want to show those errors, set this to true. |
 

@@ -3646,13 +3646,16 @@ defmodule AshGraphql.Graphql.Resolver do
        if AshGraphql.Error.impl_for(error) do
          error = AshGraphql.Error.to_error(error)
 
-         case AshGraphql.Domain.Info.error_handler(domain) do
-           nil ->
-             error
+         error =
+           case AshGraphql.Domain.Info.error_handler(domain) do
+             nil ->
+               error
 
-           {m, f, a} ->
-             apply(m, f, [error, context | a])
-         end
+             {m, f, a} ->
+               apply(m, f, [error, context | a])
+           end
+
+         place_custom_error_fields(error, domain)
        else
          uuid = Ash.UUID.generate()
 
@@ -3685,6 +3688,24 @@ defmodule AshGraphql.Graphql.Resolver do
        end
      end)}
   end
+
+  defp place_custom_error_fields(error, domain) when is_map(error) do
+    case AshGraphql.Domain.Info.custom_error_field_placement(domain) do
+      :extensions ->
+        extension_keys = [:code, :fields, :short_message, :vars]
+
+        extensions = Map.take(error, extension_keys)
+
+        error
+        |> Map.drop(extension_keys)
+        |> Map.put(:extensions, extensions)
+
+      :merged ->
+        error
+    end
+  end
+
+  defp place_custom_error_fields(error, _domain), do: error
 
   def resolve_group_root(resolution, _) do
     Absinthe.Resolution.put_result(resolution, {:ok, %{}})

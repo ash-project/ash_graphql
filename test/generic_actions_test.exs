@@ -80,6 +80,35 @@ defmodule AshGraphql.GenericActionsTest do
            } == result
   end
 
+  test "generic action errors use extensions when configured" do
+    resp =
+      """
+      query {
+        errorExtensionsCount
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.ErrorExtensionsSchema)
+
+    assert {:ok, result} = resp
+
+    assert %{
+             data: nil,
+             errors: [
+               %{
+                 message: "forbidden",
+                 path: ["errorExtensionsCount"],
+                 locations: [%{line: 2, column: 3}],
+                 extensions: %{
+                   code: "forbidden",
+                   fields: [],
+                   vars: %{},
+                   short_message: "forbidden"
+                 }
+               }
+             ]
+           } == result
+  end
+
   test "generic action mutations can be run" do
     post =
       AshGraphql.Test.Post
