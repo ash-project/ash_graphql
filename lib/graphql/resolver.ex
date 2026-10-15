@@ -1297,6 +1297,8 @@ defmodule AshGraphql.Graphql.Resolver do
          max_page_size: max_page_size,
          default_limit: default_limit
        }) do
+    opts = Keyword.put_new(opts, :offset, 0)
+
     case opts |> Keyword.take([:limit]) |> Enum.into(%{}) do
       %{limit: limit} when limit < 1 ->
         {:error, page_size_error(:limit)}

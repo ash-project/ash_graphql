@@ -546,6 +546,42 @@ defmodule AshGraphql.PaginateTest do
                 }
               }} = Absinthe.run(doc, AshGraphql.Test.Schema, variables: variables)
     end
+
+    test "returns an offset page without an offset when the action also supports keyset and the default page type is keyset" do
+      Application.put_env(:ash, :default_page_type, :keyset)
+      on_exit(fn -> Application.delete_env(:ash, :default_page_type) end)
+
+      doc = """
+      query OtherOffsetPaginatedPosts {
+        otherOffsetPaginatedPosts(limit: 2, sort: [{field: TEXT}]) {
+          count
+          hasNextPage
+          hasPreviousPage
+          pageNumber
+          lastPage
+          results{
+            text
+          }
+        }
+      }
+      """
+
+      assert {:ok,
+              %{
+                data: %{
+                  "otherOffsetPaginatedPosts" => %{
+                    "count" => 5,
+                    "hasNextPage" => true,
+                    "hasPreviousPage" => false,
+                    "pageNumber" => 1,
+                    "lastPage" => 3,
+                    "results" => [%{"text" => "a"}, %{"text" => "b"}]
+                  }
+                }
+              } = result} = Absinthe.run(doc, AshGraphql.Test.Schema)
+
+      refute Map.has_key?(result, :errors)
+    end
   end
 
   describe "pagination errors" do

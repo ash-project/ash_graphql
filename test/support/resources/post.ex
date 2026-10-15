@@ -207,6 +207,7 @@ defmodule AshGraphql.Test.Post do
       list :paginated_posts, :paginated
       list :keyset_paginated_posts, :keyset_paginated
       list :other_keyset_paginated_posts, :keyset_and_offset_paginated, paginate_with: :keyset
+      list :other_offset_paginated_posts, :keyset_and_offset_paginated, paginate_with: :offset
       list :keyset_paginated_posts_with_default_limit, :keyset_paginated_with_default_limit
       list :paginated_posts_without_limit, :paginated_without_limit
       list :paginated_posts_limit_not_required, :paginated_limit_not_required

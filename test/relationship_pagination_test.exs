@@ -165,6 +165,58 @@ defmodule AshGraphql.RelationshipPaginationTest do
     assert [%{"text" => "Review 2"} | _] = results
   end
 
+  test ":offset strategy returns an offset page without an offset when the default page type is keyset" do
+    Application.put_env(:ash, :default_page_type, :keyset)
+    on_exit(fn -> Application.delete_env(:ash, :default_page_type) end)
+
+    movie =
+      AshGraphql.Test.Movie
+      |> Ash.Changeset.for_create(:create, title: "Foo")
+      |> Ash.create!()
+
+    for i <- 1..5 do
+      AshGraphql.Test.Review
+      |> Ash.Changeset.for_create(:create, text: "Review #{i}")
+      |> Ash.Changeset.manage_relationship(:movie, movie, type: :append)
+      |> Ash.create!()
+    end
+
+    document =
+      """
+      query Movies {
+        getMovies {
+          reviews(limit: 2, sort: [{field: TEXT}]) {
+            results {
+              text
+            }
+            count
+            hasNextPage
+            hasPreviousPage
+          }
+        }
+      }
+      """
+
+    resp = Absinthe.run(document, AshGraphql.Test.Schema)
+    assert {:ok, result} = resp
+    refute Map.has_key?(result, :errors)
+
+    assert %{
+             data: %{
+               "getMovies" => [
+                 %{
+                   "reviews" => %{
+                     "count" => 5,
+                     "results" => [%{"text" => "Review 1"}, %{"text" => "Review 2"}],
+                     "hasNextPage" => true,
+                     "hasPreviousPage" => false
+                   }
+                 }
+               ]
+             }
+           } = result
+  end
+
   test "works with :keyset strategy" do
     movie =
       AshGraphql.Test.Movie
