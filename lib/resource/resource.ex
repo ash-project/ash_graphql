@@ -472,7 +472,7 @@ defmodule AshGraphql.Resource do
         type: :keyword_list,
         default: [],
         doc:
-          "A keyword list indicating which kind of pagination should be used for each `has_many` and `many_to_many` relationships, e.g. `related_things: :keyset, other_related_things: :offset`. Valid pagination values are `nil`, `:none`, `:offset`, `:keyset` and `:relay`."
+          "A keyword list indicating which kind of pagination should be used for each `has_many` and `many_to_many` relationships, e.g. `related_things: :keyset, other_related_things: :offset`. Valid pagination values are `nil`, `:none`, `:offset`, `:keyset` and `:relay`. Manual relationships can't be paginated, and are always treated as `:none`."
       ],
       field_names: [
         type: :keyword_list,
@@ -520,9 +520,9 @@ defmodule AshGraphql.Resource do
           "If a composite primary key exists, this can be set to determine delimiter used in the `id` field value."
       ],
       depth_limit: [
-        type: :integer,
+        type: :non_neg_integer,
         doc: """
-        A simple way to prevent massive queries.
+        A simple way to prevent massive queries. The maximum number of relationships that a query, mutation or subscription on this resource may nest. With `depth_limit 1`, `listPosts { comments { text } }` is allowed, but `listPosts { comments { author { name } } }` is refused. Only relationships count towards the depth, so pagination fields, embedded types and calculations don't.
         """
       ],
       complexity: [
@@ -837,6 +837,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              depth_limit_middleware(resource) ++
               metadata_middleware(query.meta) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
@@ -880,6 +881,7 @@ defmodule AshGraphql.Resource do
           middleware:
             action_middleware ++
               domain_middleware(domain) ++
+              depth_limit_middleware(resource) ++
               metadata_middleware(query.meta) ++
               id_translation_middleware(query.relay_id_translations, relay_ids?) ++
               [
@@ -917,6 +919,7 @@ defmodule AshGraphql.Resource do
         middleware:
           action_middleware ++
             domain_middleware(domain) ++
+            depth_limit_middleware(resource) ++
             metadata_middleware(mutation.meta) ++
             id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
             [
@@ -938,6 +941,7 @@ defmodule AshGraphql.Resource do
         middleware:
           action_middleware ++
             domain_middleware(domain) ++
+            depth_limit_middleware(resource) ++
             metadata_middleware(mutation.meta) ++
             id_translation_middleware(mutation.relay_id_translations, relay_ids?) ++
             [{{AshGraphql.Graphql.Resolver, :mutate}, {domain, resource, mutation, relay_ids?}}],
@@ -1830,6 +1834,13 @@ defmodule AshGraphql.Resource do
     [{{AshGraphql.Graphql.DomainMiddleware, :set_domain}, domain}]
   end
 
+  defp depth_limit_middleware(resource) do
+    case AshGraphql.Resource.Info.depth_limit(resource) do
+      nil -> []
+      depth_limit -> [{{AshGraphql.Graphql.DepthLimitMiddleware, :check_depth}, depth_limit}]
+    end
+  end
+
   defp metadata_middleware(metadata) do
     [{{AshGraphql.Graphql.MetadataMiddleware, :set_metadata}, metadata}]
   end
@@ -1897,6 +1908,7 @@ defmodule AshGraphql.Resource do
         middleware:
           action_middleware ++
             domain_middleware(domain) ++
+            depth_limit_middleware(resource) ++
             metadata_middleware(subscription.meta) ++
             id_translation_middleware(subscription.relay_id_translations, relay_ids?) ++
             [
@@ -2149,10 +2161,16 @@ defmodule AshGraphql.Resource do
 
   @doc false
   def relationship_pagination_strategy(resource, relationship_name, action) do
-    resource
-    |> AshGraphql.Resource.Info.paginate_relationship_with()
-    |> Keyword.get(relationship_name)
-    |> pagination_strategy(action, true)
+    # Ash loads a manual relationship for all parents in one call, so it can't
+    # apply a limit, offset or page to it.
+    if resource |> Ash.Resource.Info.relationship(relationship_name) |> Map.get(:manual) do
+      :none
+    else
+      resource
+      |> AshGraphql.Resource.Info.paginate_relationship_with()
+      |> Keyword.get(relationship_name)
+      |> pagination_strategy(action, true)
+    end
   end
 
   defp pagination_strategy(strategy, action, allow_relay? \\ false)
@@ -3341,13 +3359,12 @@ defmodule AshGraphql.Resource do
     do: type
 
   defp attribute_or_aggregate_type(
-         %Ash.Resource.Aggregate{kind: kind, field: field, relationship_path: relationship_path},
+         %Ash.Resource.Aggregate{kind: kind, field: field} = aggregate,
          resource
        ) do
     field_type =
       with field when not is_nil(field) <- field,
-           related when not is_nil(related) <-
-             Ash.Resource.Info.related(resource, relationship_path),
+           related when not is_nil(related) <- aggregate_field_resource(resource, aggregate),
            attr when not is_nil(attr) <- Ash.Resource.Info.field(related, field) do
         attr.type
       end
@@ -3907,7 +3924,7 @@ defmodule AshGraphql.Resource do
     attribute =
       with field when not is_nil(field) <- aggregate.field,
            related when not is_nil(related) <-
-             Ash.Resource.Info.related(resource, aggregate.relationship_path),
+             aggregate_field_resource(resource, aggregate),
            attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
         attr
       end
@@ -3968,7 +3985,7 @@ defmodule AshGraphql.Resource do
     attribute =
       with field when not is_nil(field) <- aggregate.field,
            related when not is_nil(related) <-
-             Ash.Resource.Info.related(resource, aggregate.relationship_path),
+             aggregate_field_resource(resource, aggregate),
            attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
         attr
       end
@@ -5336,6 +5353,7 @@ defmodule AshGraphql.Resource do
             :one_related
             |> args(relationship.destination, read_action, schema)
             |> apply_relationship_argument_defaults(relationship),
+          __private__: [meta: [ash_relationship: true]],
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc_one},
              {domain, relationship, materialized_singular_relationship?(resource, relationship)}}
@@ -5368,6 +5386,7 @@ defmodule AshGraphql.Resource do
           name: to_string(name),
           description: relationship.description,
           complexity: type_complexity || {AshGraphql.Graphql.Resolver, :query_complexity},
+          __private__: [meta: [ash_relationship: true]],
           middleware: [
             {{AshGraphql.Graphql.Resolver, :resolve_assoc_many},
              {domain, relationship, pagination_strategy}}
@@ -5580,13 +5599,13 @@ defmodule AshGraphql.Resource do
     type_resource =
       if nullable? do
         if field do
-          Ash.Resource.Info.related(resource, aggregate.relationship_path)
+          aggregate_field_resource(resource, aggregate)
         else
           resource
         end
       else
         if field && aggregate.type in [:first, :list] do
-          Ash.Resource.Info.related(resource, aggregate.relationship_path)
+          aggregate_field_resource(resource, aggregate)
         else
           resource
         end
@@ -5606,7 +5625,7 @@ defmodule AshGraphql.Resource do
     {field, field_type, constraints} =
       with field when not is_nil(field) <- aggregate.field,
            related when not is_nil(related) <-
-             Ash.Resource.Info.related(resource, aggregate.relationship_path),
+             aggregate_field_resource(resource, aggregate),
            attr when not is_nil(attr) <- Ash.Resource.Info.field(related, aggregate.field) do
         {attr, attr.type, attr.constraints}
       else
@@ -5619,6 +5638,14 @@ defmodule AshGraphql.Resource do
 
     {field, agg_type, constraints}
   end
+
+  # The resource that an aggregate's field lives on. Unrelated aggregates have an
+  # empty relationship path and name their resource directly.
+  defp aggregate_field_resource(_resource, %{related?: false, resource: aggregate_resource}),
+    do: aggregate_resource
+
+  defp aggregate_field_resource(resource, aggregate),
+    do: Ash.Resource.Info.related(resource, aggregate.relationship_path)
 
   defp middleware_for_field(resource, field, name, {:array, type}, constraints, domain) do
     case middleware_for_field(resource, field, name, type, constraints, domain) do
@@ -5778,7 +5805,7 @@ defmodule AshGraphql.Resource do
          opts
        ) do
     with related when not is_nil(related) <-
-           Ash.Resource.Info.related(resource, aggregate.relationship_path),
+           aggregate_field_resource(resource, aggregate),
          attr when not is_nil(related) <- Ash.Resource.Info.attribute(related, aggregate.field) do
       if attr.allow_nil? do
         %Absinthe.Blueprint.TypeReference.List{

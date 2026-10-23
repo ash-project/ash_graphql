@@ -19,10 +19,16 @@ defmodule AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith do
   ]
 
   def verify(dsl) do
-    many_relationship_names =
+    many_relationships =
       dsl
       |> Verifier.get_entities([:relationships])
       |> Enum.filter(&(&1.cardinality == :many))
+
+    many_relationship_names = Enum.map(many_relationships, & &1.name)
+
+    manual_relationship_names =
+      many_relationships
+      |> Enum.filter(&Map.get(&1, :manual))
       |> Enum.map(& &1.name)
 
     dsl
@@ -50,6 +56,18 @@ defmodule AshGraphql.Resource.Verifiers.VerifyPaginateRelationshipWith do
             #{inspect(strategy)} is not a valid pagination strategy for relationships.
 
             Available strategies: #{choices}
+            """
+
+        relationship_name in manual_relationship_names and strategy not in [nil, :none] ->
+          module = Verifier.get_persisted(dsl, :module)
+
+          raise Spark.Error.DslError,
+            module: module,
+            path: [:graphql, :paginate_relationship_with],
+            message: """
+            #{relationship_name} is a manual relationship, which can't be paginated.
+
+            Ash loads a manual relationship for all parents in one call, so it can't apply a limit, offset or page to it.
             """
 
         true ->

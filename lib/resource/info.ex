@@ -344,4 +344,9 @@ defmodule AshGraphql.Resource.Info do
   def complexity(resource) do
     Extension.get_opt(resource, [:graphql], :complexity, nil)
   end
+
+  @doc "The maximum number of relationships a query, mutation or subscription on this resource may nest"
+  def depth_limit(resource) do
+    Extension.get_opt(resource, [:graphql], :depth_limit, nil)
+  end
 end

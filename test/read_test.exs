@@ -1395,6 +1395,26 @@ defmodule AshGraphql.ReadTest do
              Absinthe.run(doc, AshGraphql.Test.Schema, variables: %{"id" => post_1.id})
   end
 
+  test "manual relationships aren't offered limit or offset" do
+    doc = """
+    query ($id: ID!) {
+      getPost(id: $id) {
+        relatedPosts(limit: 1, offset: 1) {
+          text
+        }
+      }
+    }
+    """
+
+    assert {:ok, %{errors: errors}} =
+             Absinthe.run(doc, AshGraphql.Test.Schema, variables: %{"id" => Ash.UUID.generate()})
+
+    assert Enum.map(errors, & &1.message) == [
+             ~s|Unknown argument "limit" on field "relatedPosts" of type "Post".|,
+             ~s|Unknown argument "offset" on field "relatedPosts" of type "Post".|
+           ]
+  end
+
   describe "loading through types" do
     test "loading through an embed works" do
       AshGraphql.Test.Post
