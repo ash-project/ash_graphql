@@ -155,4 +155,38 @@ defmodule AshGraphql.FilterSortTest do
     assert sort_fields |> Enum.find(fn field -> field["name"] == "POPULARITY" end)
     refute sort_fields |> Enum.find(fn field -> field["name"] == "NAME" end)
   end
+
+  test "field?: false calculations are included in filter input" do
+    resp =
+      """
+      query {
+        __type(name: "PostFilterInput") {
+          inputFields {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"inputFields" => input_fields}}}} = resp
+    assert Enum.any?(input_fields, &(&1["name"] == "nonFieldCalc"))
+  end
+
+  test "field?: false calculations are included in sort fields" do
+    resp =
+      """
+      query {
+        __type(name: "PostSortField") {
+          enumValues {
+            name
+          }
+        }
+      }
+      """
+      |> Absinthe.run(AshGraphql.Test.Schema)
+
+    assert {:ok, %{data: %{"__type" => %{"enumValues" => sort_fields}}}} = resp
+    assert Enum.any?(sort_fields, &(&1["name"] == "NON_FIELD_CALC"))
+  end
 end
