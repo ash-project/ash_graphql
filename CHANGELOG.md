@@ -11,6 +11,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.13.0](https://github.com/ash-project/ash_graphql/compare/v1.12.0...v1.13.0) (2026-10-25)
+
+
+
+
+### Features:
+
+* Add opt-in GraphQL error extensions (#478) by LukeFrandsen
+
+### Bug Fixes:
+
+* manual relationship pagination, unrelated aggregate types, and depth_limit by [@zachdaniel](https://github.com/zachdaniel)
+
+* set `offset: 0` when doing offset pagination to ensure we get offset page back by [@zachdaniel](https://github.com/zachdaniel)
+
+* render Ash.Error.Query.InvalidFilterValue with a code (#477) by grempe
+
 ## [v1.12.0](https://github.com/ash-project/ash_graphql/compare/v1.11.0...v1.12.0) (2026-09-18)
 
 
