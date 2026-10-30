@@ -160,6 +160,7 @@ defmodule AshGraphql.MixProject do
       {:absinthe_plug, "~> 1.4"},
       {:absinthe, "~> 1.7"},
       {:absinthe_phoenix, "~> 2.0", optional: true},
+      {:ash_authentication, ">= 4.0.0", optional: true},
       {:jason, "~> 1.2"},
       {:igniter, "~> 0.5 and >= 0.5.28", optional: true},
       {:spark, ">= 2.2.10"},
