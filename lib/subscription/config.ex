@@ -10,6 +10,8 @@ defmodule AshGraphql.Subscription.Config do
   """
   alias AshGraphql.Resource.Subscription
 
+  # The module name comes from the resource and its DSL-defined subscription name.
+  # sobelow_skip ["DOS.ModuleConcat"]
   def create_config(%Subscription{} = subscription, _domain, resource, relay_ids?) do
     config_module =
       Module.concat([
